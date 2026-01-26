@@ -2,8 +2,8 @@
  * MAILERSEND EMAIL LIBRARY
  * 
  * Sends TWO separate emails:
- * 1. Customer Receipt - sent to the customer
- * 2. Admin Full Report - sent to realestatephoto2video@gmail.com
+ * 1. Customer Receipt - sent to the customer email
+ * 2. Admin Notification - sent to realestatephoto2video@gmail.com with ALL order data
  * 
  * Both emails MUST have explicit subject fields to avoid MS42209 error.
  * MAILERSEND_SENDER_EMAIL must be set to a verified domain email.
@@ -21,8 +21,10 @@ const ADMIN_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "";
  * These are the EXACT variable names that MUST be in the personalization block:
  */
 export interface PersonalizationData {
-  // Core order info
+  // ORDER ID: Must be passed to template (not blank)
   order_id: string;
+  
+  // Core customer info
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -34,16 +36,16 @@ export interface PersonalizationData {
   voiceover_fee: string;
   edited_photos_fee: string;
   
-  // Photos
+  // Photos/Images - mapped from order.photos
   photo_count: string;
   image_urls: string;
   
-  // Music
+  // Music - mapped from order.musicSelection
   music_choice: string;
   custom_audio_filename: string;
   custom_audio_url: string;
   
-  // Branding
+  // Branding - mapped from order.branding
   branding_type: string;
   branding_logo_url: string;
   agent_name: string;
@@ -51,6 +53,7 @@ export interface PersonalizationData {
   agent_phone: string;
   agent_email: string;
   agent_website: string;
+  branding_info: string;
   
   // Voiceover
   voiceover_included: string;
@@ -62,6 +65,9 @@ export interface PersonalizationData {
   
   // Legacy field (for backward compatibility with templates)
   video_titles: string;
+  
+  // Database status (for debugging)
+  db_status: string;
 }
 
 /**
@@ -85,7 +91,7 @@ function validateEnvironment(): { valid: boolean; errors: string[] } {
 /**
  * EMAIL 1: CUSTOMER RECEIPT
  * 
- * Sends to: session.customer_details.email (customer_email)
+ * Sends to: customer_email from personalization data
  * Subject: "Order Confirmation - #{{order_id}}"
  */
 export async function sendCustomerEmail(
@@ -109,12 +115,12 @@ export async function sendCustomerEmail(
     return { success: false, error: "No customer email provided" };
   }
 
-  // SUBJECT LINE (explicit to avoid MS42209)
+  // SUBJECT LINE with ORDER_ID (explicit to avoid MS42209)
   const subject = `Order Confirmation - #${data.order_id}`;
 
   console.log("[MailerSend] Recipient:", data.customer_email);
   console.log("[MailerSend] Subject:", subject);
-  console.log("[MailerSend] Personalization:", JSON.stringify(data, null, 2));
+  console.log("[MailerSend] Order ID:", data.order_id);
 
   try {
     let requestBody: Record<string, unknown>;
@@ -130,8 +136,9 @@ export async function sendCustomerEmail(
           {
             email: data.customer_email,
             data: {
-              // Core order info
+              // ORDER ID: Ensure this is not blank
               order_id: data.order_id,
+              // Customer info
               customer_name: data.customer_name,
               customer_email: data.customer_email,
               customer_phone: data.customer_phone,
@@ -141,16 +148,17 @@ export async function sendCustomerEmail(
               branding_fee: data.branding_fee,
               voiceover_fee: data.voiceover_fee,
               edited_photos_fee: data.edited_photos_fee,
-              // Photos
+              // Photos - mapped from order.photos
               photo_count: data.photo_count,
               image_urls: data.image_urls,
-              // Music
+              // Music - mapped from order.musicSelection
               music_choice: data.music_choice,
               custom_audio_filename: data.custom_audio_filename,
               custom_audio_url: data.custom_audio_url,
-              // Branding
+              // Branding - mapped from order.branding
               branding_type: data.branding_type,
               branding_logo_url: data.branding_logo_url,
+              branding_info: data.branding_info,
               agent_name: data.agent_name,
               company_name: data.company_name,
               agent_phone: data.agent_phone,
@@ -170,7 +178,7 @@ export async function sendCustomerEmail(
       };
       console.log("[MailerSend] Using template ID:", CUSTOMER_TEMPLATE_ID);
     } else {
-      // Fallback HTML email
+      // Fallback HTML email with ORDER_ID
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #1a365d;">Order Confirmation</h1>
@@ -179,7 +187,9 @@ export async function sendCustomerEmail(
           <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Order ID:</strong> ${data.order_id}</p>
             <p><strong>Total:</strong> ${data.price}</p>
+            <p><strong>Photos:</strong> ${data.photo_count} photos</p>
             <p><strong>Music Selection:</strong> ${data.music_choice}</p>
+            <p><strong>Branding:</strong> ${data.branding_type}</p>
           </div>
           <p>If you have any questions, please reply to this email.</p>
           <p>Best regards,<br>Real Estate Photo2Video Team</p>
@@ -189,9 +199,9 @@ export async function sendCustomerEmail(
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
-        subject: subject, // EXPLICIT SUBJECT - prevents MS42209
+        subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
-        text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Total: ${data.price}. Your video will be delivered within 3 business days.`,
+        text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Total: ${data.price}. Photos: ${data.photo_count}. Music: ${data.music_choice}. Your video will be delivered within 3 business days.`,
       };
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
@@ -225,16 +235,24 @@ export async function sendCustomerEmail(
 }
 
 /**
- * EMAIL 2: ADMIN FULL REPORT
+ * EMAIL 2: ADMIN NOTIFICATION (REQUIRED SEPARATE CALL)
  * 
  * Sends to: realestatephoto2video@gmail.com
- * Subject: "🚨 NEW ORDER: {{customer_name}} - #{{order_id}}"
+ * Subject: "NEW ORDER: {{customer_name}} - #{{order_id}}"
+ * 
+ * This function sends ALL order data including:
+ * - order.photos (images) with URLs
+ * - order.musicSelection
+ * - order.branding with all fields
+ * - All pricing breakdown
+ * - Database connection status
  */
-export async function sendAdminEmail(
+export async function sendAdminNotificationEmail(
   data: PersonalizationData
 ): Promise<{ success: boolean; error?: string }> {
   console.log("[MailerSend] ========================================");
-  console.log("[MailerSend] EMAIL 2: ADMIN FULL REPORT");
+  console.log("[MailerSend] EMAIL 2: ADMIN NOTIFICATION");
+  console.log("[MailerSend] Recipient: realestatephoto2video@gmail.com");
   console.log("[MailerSend] ========================================");
 
   // VALIDATION: Check MAILERSEND_SENDER_EMAIL is set
@@ -245,18 +263,18 @@ export async function sendAdminEmail(
   }
   console.log("[MailerSend] MAILERSEND_SENDER_EMAIL verified:", FROM_EMAIL);
 
-  // SUBJECT LINE (explicit to avoid MS42209)
-  const subject = `🚨 NEW ORDER: ${data.customer_name} - #${data.order_id}`;
+  // SUBJECT LINE with ORDER_ID (explicit to avoid MS42209)
+  const subject = `NEW ORDER: ${data.customer_name} - #${data.order_id}`;
 
-  console.log("[MailerSend] Recipient:", ADMIN_EMAIL);
   console.log("[MailerSend] Subject:", subject);
-  console.log("[MailerSend] Personalization:", JSON.stringify(data, null, 2));
+  console.log("[MailerSend] Order ID:", data.order_id);
+  console.log("[MailerSend] Database Status:", data.db_status);
 
   try {
     let requestBody: Record<string, unknown>;
 
     if (ADMIN_TEMPLATE_ID) {
-      // Use template with personalization - pass ALL fields for template flexibility
+      // Use template with personalization - pass ALL fields
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: ADMIN_EMAIL, name: "Admin" }],
@@ -266,8 +284,9 @@ export async function sendAdminEmail(
           {
             email: ADMIN_EMAIL,
             data: {
-              // Core order info
+              // ORDER ID: Must not be blank
               order_id: data.order_id,
+              // Customer info
               customer_name: data.customer_name,
               customer_email: data.customer_email,
               customer_phone: data.customer_phone,
@@ -277,16 +296,17 @@ export async function sendAdminEmail(
               branding_fee: data.branding_fee,
               voiceover_fee: data.voiceover_fee,
               edited_photos_fee: data.edited_photos_fee,
-              // Photos
+              // Photos - mapped from order.photos
               photo_count: data.photo_count,
               image_urls: data.image_urls,
-              // Music
+              // Music - mapped from order.musicSelection
               music_choice: data.music_choice,
               custom_audio_filename: data.custom_audio_filename,
               custom_audio_url: data.custom_audio_url,
-              // Branding
+              // Branding - mapped from order.branding
               branding_type: data.branding_type,
               branding_logo_url: data.branding_logo_url,
+              branding_info: data.branding_info,
               agent_name: data.agent_name,
               company_name: data.company_name,
               agent_phone: data.agent_phone,
@@ -300,6 +320,8 @@ export async function sendAdminEmail(
               special_requests: data.special_requests,
               // Legacy
               video_titles: data.video_titles,
+              // Database status
+              db_status: data.db_status,
             },
           },
         ],
@@ -397,6 +419,17 @@ export async function sendAdminEmail(
         </table>
       ` : "";
 
+      // Database status section (for debugging)
+      const dbStatusHtml = `
+        <h2 style="color: #2d3748; margin-top: 30px;">Database Status</h2>
+        <table style="width: 100%; border-collapse: collapse; background: ${data.db_status.includes("Error") ? "#fed7d7" : "#c6f6d5"}; border-radius: 8px;">
+          <tr>
+            <td style="padding: 12px; font-weight: bold; width: 150px;">Status:</td>
+            <td style="padding: 12px; color: ${data.db_status.includes("Error") ? "#c53030" : "#2f855a"};">${data.db_status}</td>
+          </tr>
+        </table>
+      `;
+
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #1a365d; border-bottom: 3px solid #ecc94b; padding-bottom: 15px;">
@@ -484,6 +517,8 @@ export async function sendAdminEmail(
             </tbody>
           </table>
 
+          ${dbStatusHtml}
+
           <p style="margin-top: 30px; padding: 15px; background: #fef3c7; border-radius: 8px; color: #744210;">
             Video to be delivered within 3 business days.
           </p>
@@ -540,6 +575,10 @@ IMAGE URLS (CLOUDINARY)
 -----------------------
 ${data.image_urls}
 
+DATABASE STATUS
+---------------
+${data.db_status}
+
 ========================================
 Video to be delivered within 3 business days.
       `.trim();
@@ -547,14 +586,14 @@ Video to be delivered within 3 business days.
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: ADMIN_EMAIL, name: "Admin" }],
-        subject: subject, // EXPLICIT SUBJECT - prevents MS42209
+        subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
         text: text,
       };
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
 
-    console.log("[MailerSend] Sending request to MailerSend API...");
+    console.log("[MailerSend] Sending admin notification to MailerSend API...");
 
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
@@ -570,14 +609,17 @@ Video to be delivered within 3 business days.
     console.log("[MailerSend] Response body:", responseText);
 
     if (!response.ok) {
-      console.error("[MailerSend] Admin email FAILED");
+      console.error("[MailerSend] Admin notification email FAILED");
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
-    console.log("[MailerSend] Admin email sent SUCCESSFULLY");
+    console.log("[MailerSend] Admin notification email sent SUCCESSFULLY to", ADMIN_EMAIL);
     return { success: true };
   } catch (error) {
     console.error("[MailerSend] Exception:", error);
     return { success: false, error: String(error) };
   }
 }
+
+// Legacy export for backward compatibility
+export const sendAdminEmail = sendAdminNotificationEmail;
