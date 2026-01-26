@@ -15,23 +15,56 @@ function getErrorMessage(error: unknown): string {
 }
 
 /**
- * MONGODB FIX: Robust try/catch wrapper
- * - Logs exact error if DB fails
- * - Does NOT stop the script - emails will still be sent with Stripe data
+ * MONGODB FIX: Build a properly encoded MongoDB URI
+ * Handles special characters in the password using encodeURIComponent
+ */
+function buildMongoUri(): string | null {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) return null;
+
+  try {
+    // Parse the URI to extract components
+    // Format: mongodb+srv://username:password@cluster.mongodb.net/database?options
+    const match = uri.match(/^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/);
+    
+    if (match) {
+      const [, protocol, username, password, rest] = match;
+      // Encode the password to handle special characters like @, $, #, etc.
+      const encodedPassword = encodeURIComponent(password);
+      const encodedUri = `${protocol}${encodeURIComponent(username)}:${encodedPassword}@${rest}`;
+      console.log("[Webhook] MongoDB URI rebuilt with encoded credentials");
+      return encodedUri;
+    }
+    
+    // If URI doesn't match expected format, return as-is
+    console.log("[Webhook] MongoDB URI format not matched, using as-is");
+    return uri;
+  } catch (error) {
+    console.error("[Webhook] Error parsing MongoDB URI:", getErrorMessage(error));
+    return uri;
+  }
+}
+
+/**
+ * DATABASE FETCH: Robust try/catch wrapper
+ * - Extracts orderId from Stripe metadata
+ * - Fetches order document from MongoDB
+ * - Handles special characters in MONGODB_URI
+ * - Logs exact error if DB fails but does NOT stop the script
  * - Returns null for order if DB connection fails
  */
 async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | null; dbError: string | null }> {
   console.log("[Webhook] ========================================");
-  console.log("[Webhook] MONGODB: Attempting to fetch order data");
+  console.log("[Webhook] DATABASE: Attempting to fetch order");
+  console.log("[Webhook] Order ID:", orderId);
   console.log("[Webhook] ========================================");
 
-  const uri = process.env.MONGODB_URI;
+  // Build URI with encoded credentials
+  const uri = buildMongoUri();
 
-  // Check if MONGODB_URI is configured
   if (!uri) {
     const error = "MONGODB_URI environment variable is not set";
-    console.error("[Webhook] MONGODB ERROR:", error);
-    console.error("[Webhook] Continuing without database data - emails will use Stripe session data only");
+    console.error("[Webhook] DATABASE ERROR:", error);
     return { order: null, dbError: error };
   }
 
@@ -59,7 +92,7 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
     console.log("[Webhook] MongoDB connection SUCCESSFUL");
 
     const db: Db = client.db("photo2video");
-    console.log("[Webhook] Fetching order with orderId:", orderId);
+    console.log("[Webhook] Fetching order document...");
 
     // Fetch the order document
     const order = await db.collection<Order>("orders").findOne({ orderId });
@@ -76,6 +109,7 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
       console.log("[Webhook]   - musicSelection:", order.musicSelection);
       console.log("[Webhook]   - brandingType:", order.branding?.type);
       console.log("[Webhook]   - totalPrice:", order.totalPrice);
+      console.log("[Webhook]   - specialInstructions:", order.specialInstructions || "None");
 
       // Update order status to paid/processing
       try {
@@ -92,59 +126,53 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
         console.log("[Webhook] Order status updated to paid/processing");
       } catch (updateError) {
         console.error("[Webhook] Failed to update order status:", getErrorMessage(updateError));
-        // Don't fail - we still have the order data
       }
 
       return { order, dbError: null };
     } else {
-      const error = `Order not found in database: ${orderId}`;
-      console.warn("[Webhook] MONGODB WARNING:", error);
+      const error = `Order not found with orderId: ${orderId}`;
+      console.warn("[Webhook] DATABASE WARNING:", error);
       return { order: null, dbError: error };
     }
   } catch (error) {
-    // LOG THE EXACT ERROR - but don't stop the script
     const errorMessage = getErrorMessage(error);
     console.error("[Webhook] ========================================");
-    console.error("[Webhook] MONGODB ERROR - EXACT ERROR MESSAGE:");
+    console.error("[Webhook] DATABASE ERROR - EXACT MESSAGE:");
     console.error("[Webhook]", errorMessage);
     console.error("[Webhook] ========================================");
 
-    // Provide specific guidance for common errors
+    // Specific diagnosis for common errors
     if (errorMessage.includes("bad auth") || errorMessage.includes("Authentication failed")) {
       console.error("[Webhook] DIAGNOSIS: Bad Authentication");
-      console.error("[Webhook]   - Password may contain special characters needing URL encoding");
-      console.error("[Webhook]   - @ -> %40, $ -> %24, # -> %23, : -> %3A");
-      console.error("[Webhook]   - Username or password may be incorrect");
-      console.error("[Webhook]   - Database user may lack proper permissions");
+      console.error("[Webhook]   - Password may contain special characters");
+      console.error("[Webhook]   - encodeURIComponent should handle: @ $ # : / ? etc.");
+      console.error("[Webhook]   - Verify username/password in MongoDB Atlas");
+      console.error("[Webhook]   - Check database user has readWrite permissions");
     }
 
     if (errorMessage.includes("ENOTFOUND") || errorMessage.includes("getaddrinfo")) {
       console.error("[Webhook] DIAGNOSIS: DNS Resolution Failed");
-      console.error("[Webhook]   - The cluster hostname could not be resolved");
-      console.error("[Webhook]   - Check if the cluster name is correct");
+      console.error("[Webhook]   - Cluster hostname could not be resolved");
     }
 
     if (errorMessage.includes("ETIMEDOUT") || errorMessage.includes("timeout")) {
       console.error("[Webhook] DIAGNOSIS: Connection Timeout");
-      console.error("[Webhook]   - Network/firewall may be blocking the connection");
-      console.error("[Webhook]   - MongoDB Atlas IP allowlist may need updating");
+      console.error("[Webhook]   - Check MongoDB Atlas IP allowlist (add 0.0.0.0/0 for Vercel)");
     }
 
     console.error("[Webhook] ========================================");
-    console.error("[Webhook] CONTINUING WITHOUT DB DATA");
-    console.error("[Webhook] Emails will be sent using Stripe session data only");
-    console.error("[Webhook] Cloudinary links and music selection will NOT be available");
+    console.error("[Webhook] CONTINUING WITHOUT DATABASE DATA");
+    console.error("[Webhook] Emails will use Stripe data + 'Unknown' for DB fields");
     console.error("[Webhook] ========================================");
 
     return { order: null, dbError: errorMessage };
   } finally {
-    // Always close the connection
     if (client) {
       try {
         await client.close();
         console.log("[Webhook] MongoDB connection closed");
       } catch (closeError) {
-        console.error("[Webhook] Error closing MongoDB connection:", getErrorMessage(closeError));
+        console.error("[Webhook] Error closing MongoDB:", getErrorMessage(closeError));
       }
     }
   }
@@ -152,7 +180,7 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
 
 export async function POST(request: Request) {
   console.log("[Webhook] ========================================");
-  console.log("[Webhook] Stripe webhook received");
+  console.log("[Webhook] STRIPE WEBHOOK RECEIVED");
   console.log("[Webhook] Timestamp:", new Date().toISOString());
   console.log("[Webhook] ========================================");
 
@@ -206,7 +234,9 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const orderId = session.metadata?.orderId;
+        
+        // EXTRACT ORDER ID FROM STRIPE METADATA
+        const orderId = session.metadata?.orderId || "Unknown";
 
         console.log("[Webhook] ----------------------------------------");
         console.log("[Webhook] EVENT: checkout.session.completed");
@@ -216,69 +246,85 @@ export async function POST(request: Request) {
         console.log("[Webhook] ----------------------------------------");
 
         // STRIPE SESSION DATA (always available)
-        const stripeSessionData = {
-          customerName: session.customer_details?.name || null,
-          customerEmail: session.customer_details?.email || null,
-          customerPhone: session.customer_details?.phone || null,
-          amountTotal: session.amount_total,
-        };
+        const customerName = session.customer_details?.name || "Customer";
+        const customerEmail = session.customer_details?.email || "";
+        const customerPhone = session.customer_details?.phone || "Not provided";
+        const amountTotal = session.amount_total || 0;
+        const price = `$${(amountTotal / 100).toFixed(2)}`;
 
-        console.log("[Webhook] Stripe session data:");
-        console.log("[Webhook]   - customerName:", stripeSessionData.customerName);
-        console.log("[Webhook]   - customerEmail:", stripeSessionData.customerEmail);
-        console.log("[Webhook]   - customerPhone:", stripeSessionData.customerPhone);
-        console.log("[Webhook]   - amountTotal:", stripeSessionData.amountTotal);
+        console.log("[Webhook] Stripe Session Data:");
+        console.log("[Webhook]   - customer_name:", customerName);
+        console.log("[Webhook]   - customer_email:", customerEmail);
+        console.log("[Webhook]   - customer_phone:", customerPhone);
+        console.log("[Webhook]   - price:", price);
 
-        // MONGODB: Fetch order (wrapped in robust try/catch)
+        // DATABASE: Fetch order (wrapped in try/catch)
         let order: Order | null = null;
         let dbError: string | null = null;
 
-        if (orderId) {
-          const dbResult = await getOrderFromDatabase(orderId);
-          order = dbResult.order;
-          dbError = dbResult.dbError;
-        } else {
-          dbError = "No orderId in session metadata - cannot fetch from database";
-          console.warn("[Webhook]", dbError);
+        // TRY/CATCH BLOCK 1: Database fetch
+        try {
+          if (orderId && orderId !== "Unknown") {
+            const dbResult = await getOrderFromDatabase(orderId);
+            order = dbResult.order;
+            dbError = dbResult.dbError;
+          } else {
+            dbError = "No orderId in session metadata";
+            console.warn("[Webhook]", dbError);
+          }
+        } catch (dbFetchError) {
+          dbError = getErrorMessage(dbFetchError);
+          console.error("[Webhook] Database fetch exception:", dbError);
         }
 
-        // Log data availability summary
-        console.log("[Webhook] ----------------------------------------");
-        console.log("[Webhook] DATA AVAILABILITY SUMMARY:");
-        console.log("[Webhook]   - Stripe session data: AVAILABLE");
-        console.log("[Webhook]   - Database order data:", order ? "AVAILABLE" : "NOT AVAILABLE");
-        if (dbError) {
-          console.log("[Webhook]   - DB Error:", dbError);
-        }
-        if (order) {
-          console.log("[Webhook]   - Cloudinary photos:", order.photos?.length || 0);
-          console.log("[Webhook]   - Music selection:", order.musicSelection);
-          console.log("[Webhook]   - Branding info:", order.branding?.type);
-        }
-        console.log("[Webhook] ----------------------------------------");
+        // BUILD PERSONALIZATION DATA
+        // If database fails, use "Unknown" for DB fields
+        const personalizationData = {
+          order_id: orderId,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
+          price: price,
+          music_choice: order?.musicSelection || "Unknown",
+          video_titles: order?.branding ? buildVideoTitles(order.branding) : "Unknown",
+          special_requests: order?.specialInstructions || "None",
+          image_urls: order?.photos ? buildImageUrls(order.photos) : "Unknown (database connection failed)",
+        };
 
-        // TWO SEPARATE EMAIL REQUESTS
-        console.log("[Webhook] ========================================");
-        console.log("[Webhook] STARTING EMAIL SENDS");
-        console.log("[Webhook] ========================================");
+        console.log("[Webhook] ----------------------------------------");
+        console.log("[Webhook] PERSONALIZATION DATA:");
+        console.log("[Webhook]   - order_id:", personalizationData.order_id);
+        console.log("[Webhook]   - customer_name:", personalizationData.customer_name);
+        console.log("[Webhook]   - customer_email:", personalizationData.customer_email);
+        console.log("[Webhook]   - customer_phone:", personalizationData.customer_phone);
+        console.log("[Webhook]   - price:", personalizationData.price);
+        console.log("[Webhook]   - music_choice:", personalizationData.music_choice);
+        console.log("[Webhook]   - video_titles:", personalizationData.video_titles);
+        console.log("[Webhook]   - special_requests:", personalizationData.special_requests);
+        console.log("[Webhook]   - image_urls length:", personalizationData.image_urls.length);
+        console.log("[Webhook] ----------------------------------------");
 
         // Check MailerSend environment
         const mailersendApiKey = process.env.MAILERSEND_API_KEY;
         const mailersendSenderEmail = process.env.MAILERSEND_SENDER_EMAIL;
-        console.log("[Webhook] MAILERSEND_API_KEY configured:", !!mailersendApiKey);
-        console.log("[Webhook] MAILERSEND_SENDER_EMAIL configured:", !!mailersendSenderEmail);
-        if (mailersendSenderEmail) {
-          console.log("[Webhook] MAILERSEND_SENDER_EMAIL value:", mailersendSenderEmail);
-        }
+        console.log("[Webhook] MAILERSEND_API_KEY set:", !!mailersendApiKey);
+        console.log("[Webhook] MAILERSEND_SENDER_EMAIL:", mailersendSenderEmail || "NOT SET");
 
-        // REQUEST 1: Customer Receipt Email
+        // TWO SEPARATE EMAIL CALLS
+        console.log("[Webhook] ========================================");
+        console.log("[Webhook] SENDING EMAILS");
+        console.log("[Webhook] ========================================");
+
+        // TRY/CATCH BLOCK 2: Customer Email
         console.log("[Webhook] ----------------------------------------");
-        console.log("[Webhook] REQUEST 1: CUSTOMER RECEIPT EMAIL");
+        console.log("[Webhook] EMAIL 1: Customer Receipt");
+        console.log("[Webhook] Recipient:", customerEmail);
+        console.log("[Webhook] Subject: Order Confirmation - #" + orderId);
         console.log("[Webhook] ----------------------------------------");
 
-        if (stripeSessionData.customerEmail) {
+        if (customerEmail) {
           try {
-            const customerResult = await sendCustomerEmail(order, stripeSessionData);
+            const customerResult = await sendCustomerEmail(personalizationData);
             if (customerResult.success) {
               console.log("[Webhook] Customer email: SUCCESS");
             } else {
@@ -288,17 +334,18 @@ export async function POST(request: Request) {
             console.error("[Webhook] Customer email: EXCEPTION -", getErrorMessage(customerEmailError));
           }
         } else {
-          console.warn("[Webhook] Customer email: SKIPPED - No customer email available");
+          console.warn("[Webhook] Customer email: SKIPPED - No email address");
         }
 
-        // REQUEST 2: Admin Full Report Email
+        // TRY/CATCH BLOCK 3: Admin Email
         console.log("[Webhook] ----------------------------------------");
-        console.log("[Webhook] REQUEST 2: ADMIN FULL REPORT EMAIL");
+        console.log("[Webhook] EMAIL 2: Admin Full Report");
         console.log("[Webhook] Recipient: realestatephoto2video@gmail.com");
+        console.log("[Webhook] Subject: NEW ORDER:", customerName, "- #" + orderId);
         console.log("[Webhook] ----------------------------------------");
 
         try {
-          const adminResult = await sendAdminEmail(order, stripeSessionData);
+          const adminResult = await sendAdminEmail(personalizationData);
           if (adminResult.success) {
             console.log("[Webhook] Admin email: SUCCESS");
           } else {
@@ -317,14 +364,9 @@ export async function POST(request: Request) {
 
       case "payment_intent.payment_failed": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        const orderId = paymentIntent.metadata?.orderId;
-
         console.log("[Webhook] EVENT: payment_intent.payment_failed");
         console.log("[Webhook] Payment Intent ID:", paymentIntent.id);
-        console.log("[Webhook] Order ID:", orderId);
         console.log("[Webhook] Failure reason:", paymentIntent.last_payment_error?.message);
-
-        // Log but don't crash
         break;
       }
 
@@ -332,8 +374,6 @@ export async function POST(request: Request) {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         console.log("[Webhook] EVENT: payment_intent.succeeded");
         console.log("[Webhook] Payment Intent ID:", paymentIntent.id);
-        console.log("[Webhook] Amount:", (paymentIntent.amount / 100).toFixed(2), paymentIntent.currency.toUpperCase());
-        // Main logic handled by checkout.session.completed
         break;
       }
 
@@ -341,10 +381,30 @@ export async function POST(request: Request) {
         console.log("[Webhook] Unhandled event type:", event.type);
     }
   } catch (err) {
-    // Log error but return 200 to prevent Stripe retries
     console.error("[Webhook] Error processing event:", getErrorMessage(err));
   }
 
   console.log("[Webhook] Processing complete - returning 200");
   return NextResponse.json({ received: true });
+}
+
+// Helper: Build video titles string from branding
+function buildVideoTitles(branding: Order["branding"]): string {
+  if (!branding) return "Unbranded";
+  if (branding.type === "unbranded") return "Unbranded";
+
+  const parts: string[] = [];
+  if (branding.agentName) parts.push(`Agent: ${branding.agentName}`);
+  if (branding.companyName) parts.push(`Company: ${branding.companyName}`);
+  if (branding.phone) parts.push(`Phone: ${branding.phone}`);
+  if (branding.email) parts.push(`Email: ${branding.email}`);
+  if (branding.website) parts.push(`Website: ${branding.website}`);
+
+  return parts.length > 0 ? parts.join(" | ") : branding.type;
+}
+
+// Helper: Build image URLs string from photos array
+function buildImageUrls(photos: Order["photos"]): string {
+  if (!photos || photos.length === 0) return "No images uploaded";
+  return photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
 }
