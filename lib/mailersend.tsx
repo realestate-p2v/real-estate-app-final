@@ -1,10 +1,11 @@
 import type { Order } from "@/lib/types/order";
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
-const BUSINESS_EMAIL = "realestatephoto2video@gmail.com";
-const FROM_EMAIL = "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Update this with your verified domain
-const ORDER_TEMPLATE_ID = "zr6ke4n6kzelon12";
-const CUSTOMER_RECEIPT_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || ""; // Add your customer receipt template ID
+const BUSINESS_EMAIL = process.env.MAILERSEND_BUSINESS_EMAIL || "realestatephoto2video@gmail.com";
+const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL || "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Must be from your verified domain
+const FROM_NAME = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
+const ORDER_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "zr6ke4n6kzelon12";
+const CUSTOMER_RECEIPT_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "";
 
 interface EmailRecipient {
   email: string;
@@ -47,7 +48,7 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
       body: JSON.stringify({
         from: {
           email: FROM_EMAIL,
-          name: "Real Estate Photo2Video",
+          name: FROM_NAME,
         },
         to,
         subject,
@@ -189,7 +190,7 @@ export async function sendCustomerReceiptEmail(order: Order) {
     const requestBody = {
       from: {
         email: FROM_EMAIL,
-        name: "Real Estate Photo2Video",
+        name: FROM_NAME,
       },
       to: [
         {
@@ -197,6 +198,7 @@ export async function sendCustomerReceiptEmail(order: Order) {
           name: order.customer.name,
         },
       ],
+      subject: `Order Confirmation - #${order.orderId}`,
       template_id: CUSTOMER_RECEIPT_TEMPLATE_ID,
       personalization: [
         {
@@ -301,7 +303,7 @@ export async function sendOrderTemplateEmail(order: Order) {
     const requestBody = {
       from: {
         email: FROM_EMAIL,
-        name: "Real Estate Photo2Video",
+        name: FROM_NAME,
       },
       to: [
         {
@@ -309,6 +311,7 @@ export async function sendOrderTemplateEmail(order: Order) {
           name: "Real Estate Photo2Video",
         },
       ],
+      subject: `New Order Received - #${order.orderId}`,
       template_id: ORDER_TEMPLATE_ID,
       personalization: [
         {
@@ -326,9 +329,13 @@ export async function sendOrderTemplateEmail(order: Order) {
             music_selection: order.musicSelection,
             branding_type: getBrandingLabel(order.branding.type),
             voiceover: order.voiceover ? "Yes" : "No",
-            voiceover_script: order.voiceoverScript || "",
-            special_instructions: order.specialInstructions || "",
+            voiceover_script: order.voiceoverScript || "N/A",
+            special_instructions: order.specialInstructions || "None",
             payment_status: order.paymentStatus,
+            order_date: formatDate(order.createdAt),
+            base_price: formatCurrency(order.basePrice),
+            branding_fee: formatCurrency(order.brandingFee),
+            voiceover_fee: formatCurrency(order.voiceoverFee),
           },
         },
       ],
