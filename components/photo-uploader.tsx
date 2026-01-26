@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react"
+import GripVertical from "lucide-react"; // Import GripVertical
 
 import { useState, useCallback } from "react";
 import Image from "next/image";
@@ -9,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import {
   Upload,
   X,
-  GripVertical,
+  ChevronUp,
+  ChevronDown,
   ImageIcon,
   AlertCircle,
   Phone,
@@ -87,6 +89,26 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
     setDragOverIndex(null);
   };
 
+  const moveUp = useCallback(
+    (index: number) => {
+      if (index === 0) return;
+      const newPhotos = [...photos];
+      [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
+      onPhotosChange(newPhotos);
+    },
+    [photos, onPhotosChange]
+  );
+
+  const moveDown = useCallback(
+    (index: number) => {
+      if (index === photos.length - 1) return;
+      const newPhotos = [...photos];
+      [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]];
+      onPhotosChange(newPhotos);
+    },
+    [photos, onPhotosChange]
+  );
+
   const showTooManyPhotosWarning = photos.length > 35;
 
   return (
@@ -156,32 +178,51 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
         </div>
       )}
 
-      {/* Photo List - Single column for easy mobile reordering */}
+      {/* Photo List - Single column with easy reorder buttons */}
       {photos.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {photos.map((photo, index) => (
             <div
               key={photo.id}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`relative bg-card border rounded-xl overflow-hidden transition-all flex items-center gap-3 p-2 ${
-                dragOverIndex === index ? "border-primary border-2 bg-primary/5" : "border-border"
-              } ${draggedIndex === index ? "opacity-50 scale-95" : ""}`}
+              className="relative bg-card border border-border rounded-xl overflow-hidden transition-all flex items-center gap-2 p-2 sm:p-3"
             >
-              {/* Drag Handle */}
-              <div className="cursor-grab active:cursor-grabbing touch-none p-2 text-muted-foreground hover:text-foreground">
-                <GripVertical className="h-5 w-5" />
+              {/* Reorder Buttons */}
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => moveUp(index)}
+                  disabled={index === 0}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    index === 0
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                  aria-label="Move up"
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveDown(index)}
+                  disabled={index === photos.length - 1}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    index === photos.length - 1
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                  aria-label="Move down"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
               </div>
 
               {/* Photo Number */}
-              <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-sm font-bold flex-shrink-0">
+              <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
                 {index + 1}
               </div>
 
               {/* Thumbnail */}
-              <div className="h-16 w-24 relative rounded-lg overflow-hidden flex-shrink-0">
+              <div className="h-14 w-20 sm:h-16 sm:w-24 relative rounded-lg overflow-hidden flex-shrink-0">
                 <Image
                   src={photo.preview || "/placeholder.svg"}
                   alt={photo.description || `Photo ${index + 1}`}
@@ -191,7 +232,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
               </div>
 
               {/* Description */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 hidden sm:block">
                 <Input
                   placeholder="Description (optional)"
                   value={photo.description}
@@ -207,7 +248,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
               <button
                 type="button"
                 onClick={() => handleRemove(photo.id)}
-                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0"
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0 ml-auto"
                 aria-label="Remove photo"
               >
                 <X className="h-5 w-5" />
