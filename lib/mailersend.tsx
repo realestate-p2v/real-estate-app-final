@@ -24,9 +24,12 @@ interface OrderArrayItem {
 
 async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   if (!MAILERSEND_API_KEY) {
-    console.error("MAILERSEND_API_KEY is not configured");
+    console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
   }
+
+  console.log("[v0] Sending email to:", to.map(r => r.email).join(", "));
+  console.log("[v0] Subject:", subject);
 
   try {
     const response = await fetch("https://api.mailersend.com/v1/email", {
@@ -47,12 +50,15 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
       }),
     });
 
+    console.log("[v0] MailerSend response status:", response.status);
+
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("MailerSend error:", errorData);
+      console.error("[v0] MailerSend error:", errorData);
       return { success: false, error: errorData };
     }
 
+    console.log("[v0] Email sent successfully");
     return { success: true };
   } catch (error) {
     console.error("Failed to send email:", error);
@@ -128,55 +134,62 @@ function buildOrderArray(order: Order): OrderArrayItem[] {
 
 export async function sendOrderTemplateEmail(order: Order) {
   if (!MAILERSEND_API_KEY) {
-    console.error("MAILERSEND_API_KEY is not configured");
+    console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
   }
+
+  console.log("[v0] Sending template email for order:", order.orderId);
+  console.log("[v0] Using template ID:", ORDER_TEMPLATE_ID);
+  console.log("[v0] Sending to:", BUSINESS_EMAIL);
 
   const orderArray = buildOrderArray(order);
 
   try {
+    const requestBody = {
+      from: {
+        email: FROM_EMAIL,
+        name: "Real Estate Photo2Video",
+      },
+      to: [
+        {
+          email: BUSINESS_EMAIL,
+          name: "Real Estate Photo2Video",
+        },
+      ],
+      template_id: ORDER_TEMPLATE_ID,
+      personalization: [
+        {
+          email: BUSINESS_EMAIL,
+          data: {
+            order: {
+              array: orderArray,
+            },
+            order_id: order.orderId,
+            customer_name: order.customer.name,
+            customer_email: order.customer.email,
+            customer_phone: order.customer.phone || "N/A",
+            photo_count: String(order.photoCount),
+            total_price: formatCurrency(order.totalPrice),
+            music_selection: order.musicSelection,
+            branding_type: getBrandingLabel(order.branding.type),
+            voiceover: order.voiceover ? "Yes" : "No",
+            voiceover_script: order.voiceoverScript || "",
+            special_instructions: order.specialInstructions || "",
+            payment_status: order.paymentStatus,
+          },
+        },
+      ],
+    };
+
+    console.log("[v0] Template email request body:", JSON.stringify(requestBody, null, 2));
+
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${MAILERSEND_API_KEY}`,
       },
-      body: JSON.stringify({
-        from: {
-          email: FROM_EMAIL,
-          name: "Real Estate Photo2Video",
-        },
-        to: [
-          {
-            email: BUSINESS_EMAIL,
-            name: "Real Estate Photo2Video",
-          },
-        ],
-        template_id: ORDER_TEMPLATE_ID,
-        personalization: [
-          {
-            email: BUSINESS_EMAIL,
-            data: {
-              order: {
-                array: orderArray,
-              },
-              // Also include flat values for direct access in template
-              order_id: order.orderId,
-              customer_name: order.customer.name,
-              customer_email: order.customer.email,
-              customer_phone: order.customer.phone || "N/A",
-              photo_count: String(order.photoCount),
-              total_price: formatCurrency(order.totalPrice),
-              music_selection: order.musicSelection,
-              branding_type: getBrandingLabel(order.branding.type),
-              voiceover: order.voiceover ? "Yes" : "No",
-              voiceover_script: order.voiceoverScript || "",
-              special_instructions: order.specialInstructions || "",
-              payment_status: order.paymentStatus,
-            },
-          },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
