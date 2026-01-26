@@ -26,6 +26,7 @@ export function OrderForm() {
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
   const [voiceoverSelection, setVoiceoverSelection] = useState("none");
+  const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -55,8 +56,12 @@ export function OrderForm() {
     return voiceoverSelection === "voiceover" ? 25 : 0;
   };
 
+  const getEditedPhotosPrice = () => {
+    return includeEditedPhotos ? 15 : 0;
+  };
+
   const getTotalPrice = () => {
-    return getBasePrice() + getBrandingPrice() + getVoiceoverPrice();
+    return getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice();
   };
 
   const handleInputChange = (
@@ -203,6 +208,7 @@ export function OrderForm() {
             type: brandingSelection,
           },
           voiceover: voiceoverSelection === "voiceover",
+          includeEditedPhotos,
           specialInstructions: formData.notes,
         }),
       });
@@ -344,6 +350,41 @@ export function OrderForm() {
                         selected={voiceoverSelection}
                         onSelect={setVoiceoverSelection}
                       />
+                    </div>
+
+                    {/* Include Edited Photos Option */}
+                    <div className="border-t border-border pt-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-foreground">
+                            Include Edited Photos
+                          </h3>
+                          <span className="text-sm font-medium text-primary">+$15</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Receive professionally enhanced versions of all your photos along with your video.
+                        </p>
+                        <label
+                          htmlFor="include-edited-photos"
+                          className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-colors border-2 ${
+                            includeEditedPhotos 
+                              ? "bg-primary/10 border-primary" 
+                              : "bg-muted/30 border-transparent hover:border-border"
+                          }`}
+                        >
+                          <Checkbox
+                            id="include-edited-photos"
+                            checked={includeEditedPhotos}
+                            onCheckedChange={(checked) => setIncludeEditedPhotos(checked === true)}
+                            className="h-5 w-5"
+                          />
+                          <div className="flex-1">
+                            <span className="font-medium text-foreground">
+                              Yes, include edited photos with my order
+                            </span>
+                          </div>
+                        </label>
+                      </div>
                     </div>
                   </>
                 )}
@@ -499,6 +540,7 @@ export function OrderForm() {
           photoCount={photoCount}
           brandingOption={brandingSelection}
           voiceoverOption={voiceoverSelection}
+          includeEditedPhotos={includeEditedPhotos}
         />
       </div>
     </div>

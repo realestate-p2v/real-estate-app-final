@@ -2,10 +2,23 @@ import type { Order } from "@/lib/types/order";
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const BUSINESS_EMAIL = process.env.MAILERSEND_BUSINESS_EMAIL || "realestatephoto2video@gmail.com";
-const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL || "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Must be from your verified domain
+// IMPORTANT: FROM_EMAIL must be from your verified domain in MailerSend
+// Set MAILERSEND_SENDER_EMAIL in your environment variables to your verified sender email
+const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL;
 const FROM_NAME = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
 const ORDER_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "zr6ke4n6kzelon12";
 const CUSTOMER_RECEIPT_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "";
+
+// Validation function to ensure FROM_EMAIL is configured
+function validateFromEmail(): { valid: boolean; error?: string } {
+  if (!FROM_EMAIL) {
+    return { 
+      valid: false, 
+      error: "MAILERSEND_SENDER_EMAIL is not configured. This must be set to an email from your verified domain." 
+    };
+  }
+  return { valid: true };
+}
 
 interface EmailRecipient {
   email: string;
@@ -32,6 +45,13 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
+  }
+
+  // Validate FROM_EMAIL is set (must be from verified domain)
+  const fromValidation = validateFromEmail();
+  if (!fromValidation.valid) {
+    console.error("[v0] FROM_EMAIL validation failed:", fromValidation.error);
+    return { success: false, error: fromValidation.error };
   }
 
   console.log("[v0] Sending email to:", to.map(r => r.email).join(", "));
@@ -86,9 +106,11 @@ function buildOrderArray(order: Order): OrderArrayItem[] {
     { name: "Music Selection", value: order.musicSelection },
     { name: "Branding Type", value: getBrandingLabel(order.branding.type) },
     { name: "Voiceover", value: order.voiceover ? "Yes" : "No" },
+    { name: "Include Edited Photos", value: order.includeEditedPhotos ? "Yes" : "No" },
     { name: "Base Price", value: formatCurrency(order.basePrice) },
     { name: "Branding Fee", value: formatCurrency(order.brandingFee) },
     { name: "Voiceover Fee", value: formatCurrency(order.voiceoverFee) },
+    { name: "Edited Photos Fee", value: formatCurrency(order.editedPhotosFee || 0) },
     { name: "Total Price", value: formatCurrency(order.totalPrice) },
     { name: "Payment Status", value: order.paymentStatus },
   ];
@@ -154,6 +176,13 @@ export async function sendCustomerReceiptEmail(order: Order) {
     return { success: false, error: "API key not configured" };
   }
 
+  // Validate FROM_EMAIL is set (must be from verified domain)
+  const fromValidation = validateFromEmail();
+  if (!fromValidation.valid) {
+    console.error("[v0] FROM_EMAIL validation failed:", fromValidation.error);
+    return { success: false, error: fromValidation.error };
+  }
+
   // If no template ID is configured, fall back to the HTML email
   if (!CUSTOMER_RECEIPT_TEMPLATE_ID) {
     console.log("[v0] CUSTOMER_RECEIPT_TEMPLATE_ID not configured, skipping template receipt email");
@@ -185,6 +214,24 @@ export async function sendCustomerReceiptEmail(order: Order) {
       amount: formatCurrency(order.voiceoverFee),
     });
   }
+
+  // Add edited photos fee if applicable
+  const editedPhotosFee = order.editedPhotosFee || 0;
+  if (editedPhotosFee > 0) {
+    lineItems.push({
+      description: "Edited Photos Package",
+      amount: formatCurrency(editedPhotosFee),
+    });
+  }
+
+  // Build image URLs list from Cloudinary photos
+  const imageUrls = order.photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
+  const imageUrlsHtml = order.photos.map((photo, index) => 
+    `<a href="${photo.secure_url}" target="_blank">Photo ${index + 1}</a>`
+  ).join(" | ");
+
+  // Delivery message (3 business days notice)
+  const deliveryMessage = "Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.";
 
   try {
     const requestBody = {
@@ -218,12 +265,14 @@ export async function sendCustomerReceiptEmail(order: Order) {
             music_selection: order.musicSelection,
             branding_type: getBrandingLabel(order.branding.type),
             has_voiceover: order.voiceover ? "Yes" : "No",
-            voiceover_script: order.voiceoverScript || "",
+            voiceover_script: order.voiceoverScript || "None",
+            include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
 
             // Pricing
             base_price: formatCurrency(order.basePrice),
             branding_fee: formatCurrency(order.brandingFee),
             voiceover_fee: formatCurrency(order.voiceoverFee),
+            edited_photos_fee: formatCurrency(editedPhotosFee),
             total_price: formatCurrency(order.totalPrice),
 
             // For template iteration
@@ -235,22 +284,40 @@ export async function sendCustomerReceiptEmail(order: Order) {
 
             // Branding details (if applicable)
             has_branding: order.branding.type !== "unbranded",
-            agent_name: order.branding.agentName || "",
-            company_name: order.branding.companyName || "",
-            branding_phone: order.branding.phone || "",
-            branding_email: order.branding.email || "",
-            branding_website: order.branding.website || "",
+            agent_name: order.branding.agentName || "None",
+            company_name: order.branding.companyName || "None",
+            branding_phone: order.branding.phone || "None",
+            branding_email: order.branding.email || "None",
+            branding_website: order.branding.website || "None",
 
-            // Special instructions
+            // Special instructions (use "None" if empty for MailerSend)
             has_special_instructions: !!order.specialInstructions,
-            special_instructions: order.specialInstructions || "",
+            special_instructions: order.specialInstructions || "None",
+
+            // Cloudinary Image URLs (important for order reference)
+            image_urls: imageUrls,
+            image_urls_html: imageUrlsHtml,
+            photo_urls: order.photos.map(p => ({ url: p.secure_url, id: p.public_id })),
+
+            // Delivery message
+            delivery_message: deliveryMessage,
 
             // Support info
             support_email: BUSINESS_EMAIL,
+            
+            // Ensure personalization is never empty - MailerSend requires at least one variable
+            _timestamp: new Date().toISOString(),
           },
         },
       ],
     };
+
+    // Validate personalization data is not empty
+    const personalizationData = requestBody.personalization[0]?.data;
+    if (!personalizationData || Object.keys(personalizationData).length === 0) {
+      console.error("[v0] Personalization data is empty - MailerSend templates require variables");
+      return { success: false, error: "Personalization data cannot be empty" };
+    }
 
     console.log("[v0] Customer receipt email request body:", JSON.stringify(requestBody, null, 2));
     console.log("[v0] Sending email now... (customer receipt via template)");
@@ -293,11 +360,30 @@ export async function sendOrderTemplateEmail(order: Order) {
     return { success: false, error: "API key not configured" };
   }
 
+  // Validate FROM_EMAIL is set (must be from verified domain)
+  const fromValidation = validateFromEmail();
+  if (!fromValidation.valid) {
+    console.error("[v0] FROM_EMAIL validation failed:", fromValidation.error);
+    return { success: false, error: fromValidation.error };
+  }
+
   console.log("[v0] Sending template email for order:", order.orderId);
   console.log("[v0] Using template ID:", ORDER_TEMPLATE_ID);
   console.log("[v0] Sending to:", BUSINESS_EMAIL);
 
   const orderArray = buildOrderArray(order);
+
+  // Build image URLs list from Cloudinary photos
+  const imageUrls = order.photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
+  const imageUrlsHtml = order.photos.map((photo, index) => 
+    `<a href="${photo.secure_url}" target="_blank">Photo ${index + 1}</a>`
+  ).join(" | ");
+
+  // Delivery message
+  const deliveryMessage = "Video to be delivered within 3 business days.";
+
+  // Edited photos fee
+  const editedPhotosFee = order.editedPhotosFee || 0;
 
   try {
     const requestBody = {
@@ -329,17 +415,45 @@ export async function sendOrderTemplateEmail(order: Order) {
             music_selection: order.musicSelection,
             branding_type: getBrandingLabel(order.branding.type),
             voiceover: order.voiceover ? "Yes" : "No",
-            voiceover_script: order.voiceoverScript || "N/A",
+            voiceover_script: order.voiceoverScript || "None",
+            include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
             special_instructions: order.specialInstructions || "None",
             payment_status: order.paymentStatus,
             order_date: formatDate(order.createdAt),
             base_price: formatCurrency(order.basePrice),
             branding_fee: formatCurrency(order.brandingFee),
             voiceover_fee: formatCurrency(order.voiceoverFee),
+            edited_photos_fee: formatCurrency(editedPhotosFee),
+            
+            // Cloudinary Image URLs (important for order processing)
+            image_urls: imageUrls,
+            image_urls_html: imageUrlsHtml,
+            photo_urls: order.photos.map(p => ({ url: p.secure_url, id: p.public_id })),
+            
+            // Branding details
+            agent_name: order.branding.agentName || "None",
+            company_name: order.branding.companyName || "None",
+            branding_phone: order.branding.phone || "None",
+            branding_email: order.branding.email || "None",
+            branding_website: order.branding.website || "None",
+            logo_url: order.branding.logoUrl || "None",
+
+            // Delivery message
+            delivery_message: deliveryMessage,
+            
+            // Ensure personalization is never empty - MailerSend requires at least one variable
+            _timestamp: new Date().toISOString(),
           },
         },
       ],
     };
+
+    // Validate personalization data is not empty
+    const personalizationData = requestBody.personalization[0]?.data;
+    if (!personalizationData || Object.keys(personalizationData).length === 0) {
+      console.error("[v0] Personalization data is empty - MailerSend templates require variables");
+      return { success: false, error: "Personalization data cannot be empty" };
+    }
 
     console.log("[v0] Template email request body:", JSON.stringify(requestBody, null, 2));
     console.log("[v0] Sending email now... (business template)");
@@ -492,6 +606,7 @@ function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
             <p style="margin: 5px 0;"><strong>Music Selection:</strong> ${order.musicSelection}</p>
             <p style="margin: 5px 0;"><strong>Branding:</strong> ${getBrandingLabel(order.branding.type)}</p>
             <p style="margin: 5px 0;"><strong>Voiceover:</strong> ${order.voiceover ? "Yes" : "No"}</p>
+            <p style="margin: 5px 0;"><strong>Include Edited Photos:</strong> ${order.includeEditedPhotos ? "Yes" : "No"}</p>
             ${order.customAudio ? `<p style="margin: 5px 0;"><strong>Custom Audio:</strong> ${order.customAudio.filename}</p>` : ""}
           </div>
           
@@ -534,6 +649,16 @@ function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
             `
                 : ""
             }
+            ${
+              (order.editedPhotosFee || 0) > 0
+                ? `
+              <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                <span>Edited Photos:</span>
+                <span>${formatCurrency(order.editedPhotosFee || 0)}</span>
+              </div>
+            `
+                : ""
+            }
             <hr style="border: none; border-top: 1px solid #d1d5db; margin: 15px 0;">
             <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; color: #10b981;">
               <span>Total Paid:</span>
@@ -544,10 +669,16 @@ function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
           ${
             isCustomer
               ? `
-            <div style="margin-top: 30px; padding: 20px; background: #ecfdf5; border-radius: 8px; text-align: center;">
+            <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-radius: 8px; text-align: center; border: 1px solid #f59e0b;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;">
+                <strong>Delivery Notice</strong><br>
+                Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.
+              </p>
+            </div>
+            <div style="margin-top: 15px; padding: 20px; background: #ecfdf5; border-radius: 8px; text-align: center;">
               <p style="margin: 0; color: #065f46; font-size: 14px;">
                 <strong>What's Next?</strong><br>
-                Our team will begin working on your video right away. You'll receive another email with the final video link once it's ready (typically within 24-48 hours).
+                Our team will begin working on your video right away.
               </p>
             </div>
           `
@@ -587,6 +718,7 @@ function generateOrderEmailText(order: Order, isCustomer: boolean): string {
     `Music Selection: ${order.musicSelection}`,
     `Branding: ${getBrandingLabel(order.branding.type)}`,
     `Voiceover: ${order.voiceover ? "Yes" : "No"}`,
+    `Include Edited Photos: ${order.includeEditedPhotos ? "Yes" : "No"}`,
   ];
 
   if (order.branding.type !== "unbranded") {
@@ -624,13 +756,19 @@ function generateOrderEmailText(order: Order, isCustomer: boolean): string {
   if (order.voiceoverFee > 0) {
     lines.push(`Voiceover: ${formatCurrency(order.voiceoverFee)}`);
   }
+  if ((order.editedPhotosFee || 0) > 0) {
+    lines.push(`Edited Photos: ${formatCurrency(order.editedPhotosFee || 0)}`);
+  }
   lines.push(`TOTAL PAID: ${formatCurrency(order.totalPrice)}`);
 
   if (isCustomer) {
     lines.push(
       "",
+      "DELIVERY NOTICE:",
+      "Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.",
+      "",
       "What's Next?",
-      "Our team will begin working on your video right away. You'll receive another email with the final video link once it's ready (typically within 24-48 hours)."
+      "Our team will begin working on your video right away."
     );
   }
 

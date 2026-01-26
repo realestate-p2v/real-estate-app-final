@@ -49,11 +49,13 @@ export interface Order {
   voiceover: boolean;
   voiceoverScript?: string;
   specialInstructions?: string;
+  includeEditedPhotos: boolean;
   
   // Pricing
   basePrice: number;
   brandingFee: number;
   voiceoverFee: number;
+  editedPhotosFee: number;
   totalPrice: number;
   
   // Payment

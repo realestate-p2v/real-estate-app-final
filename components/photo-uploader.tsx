@@ -15,6 +15,8 @@ import {
   ImageIcon,
   AlertCircle,
   Phone,
+  Info,
+  Camera,
 } from "lucide-react";
 
 export interface PhotoItem {
@@ -111,8 +113,56 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
 
   const showTooManyPhotosWarning = photos.length > 35;
 
+  const [showPhotoTips, setShowPhotoTips] = useState(false);
+
   return (
     <div className="space-y-6">
+      {/* Photo Quality Note */}
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              Results may vary based on original photo quality
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowPhotoTips(!showPhotoTips)}
+              className="text-sm text-amber-700 dark:text-amber-300 hover:underline mt-1 flex items-center gap-1"
+            >
+              <Camera className="h-4 w-4" />
+              {showPhotoTips ? "Hide" : "View"} smartphone photography tips
+            </button>
+            
+            {showPhotoTips && (
+              <div className="mt-3 p-3 bg-white dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                  Tips for best results with your smartphone:
+                </p>
+                <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">1.</span>
+                    <span>Enable HDR mode if available on your camera settings</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">2.</span>
+                    <span>Zoom out - use the 0.5x ultra-wide lens on iPhone for best results</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">3.</span>
+                    <span>Shoot from the corners of the room to capture more space</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">4.</span>
+                    <span>Keep your phone level - avoid crooked or tilted photos</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Upload Area */}
       <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
         <input

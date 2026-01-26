@@ -51,7 +51,8 @@ export async function POST(request: Request) {
     const basePrice = calculateBasePrice(uploadedPhotos.length);
     const brandingFee = input.branding.type === "custom" ? 25 : 0;
     const voiceoverFee = input.voiceover ? 25 : 0;
-    const totalPrice = basePrice + brandingFee + voiceoverFee;
+    const editedPhotosFee = input.includeEditedPhotos ? 15 : 0;
+    const totalPrice = basePrice + brandingFee + voiceoverFee + editedPhotosFee;
 
     // Create order document
     const order: Order = {
@@ -68,9 +69,11 @@ export async function POST(request: Request) {
       voiceover: input.voiceover,
       voiceoverScript: input.voiceoverScript,
       specialInstructions: input.specialInstructions,
+      includeEditedPhotos: input.includeEditedPhotos || false,
       basePrice,
       brandingFee,
       voiceoverFee,
+      editedPhotosFee,
       totalPrice,
       paymentStatus: "pending",
     };
