@@ -21,15 +21,47 @@ const ADMIN_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "";
  * These are the EXACT variable names that MUST be in the personalization block:
  */
 export interface PersonalizationData {
+  // Core order info
   order_id: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  
+  // Pricing
   price: string;
-  music_choice: string;
-  video_titles: string;
-  special_requests: string;
+  base_price: string;
+  branding_fee: string;
+  voiceover_fee: string;
+  edited_photos_fee: string;
+  
+  // Photos
+  photo_count: string;
   image_urls: string;
+  
+  // Music
+  music_choice: string;
+  custom_audio_filename: string;
+  custom_audio_url: string;
+  
+  // Branding
+  branding_type: string;
+  branding_logo_url: string;
+  agent_name: string;
+  company_name: string;
+  agent_phone: string;
+  agent_email: string;
+  agent_website: string;
+  
+  // Voiceover
+  voiceover_included: string;
+  voiceover_script: string;
+  
+  // Extras
+  include_edited_photos: string;
+  special_requests: string;
+  
+  // Legacy field (for backward compatibility with templates)
+  video_titles: string;
 }
 
 /**
@@ -88,7 +120,7 @@ export async function sendCustomerEmail(
     let requestBody: Record<string, unknown>;
 
     if (CUSTOMER_TEMPLATE_ID) {
-      // Use template with personalization
+      // Use template with personalization - pass ALL fields for template flexibility
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
@@ -98,15 +130,40 @@ export async function sendCustomerEmail(
           {
             email: data.customer_email,
             data: {
+              // Core order info
               order_id: data.order_id,
               customer_name: data.customer_name,
               customer_email: data.customer_email,
               customer_phone: data.customer_phone,
+              // Pricing
               price: data.price,
-              music_choice: data.music_choice,
-              video_titles: data.video_titles,
-              special_requests: data.special_requests,
+              base_price: data.base_price,
+              branding_fee: data.branding_fee,
+              voiceover_fee: data.voiceover_fee,
+              edited_photos_fee: data.edited_photos_fee,
+              // Photos
+              photo_count: data.photo_count,
               image_urls: data.image_urls,
+              // Music
+              music_choice: data.music_choice,
+              custom_audio_filename: data.custom_audio_filename,
+              custom_audio_url: data.custom_audio_url,
+              // Branding
+              branding_type: data.branding_type,
+              branding_logo_url: data.branding_logo_url,
+              agent_name: data.agent_name,
+              company_name: data.company_name,
+              agent_phone: data.agent_phone,
+              agent_email: data.agent_email,
+              agent_website: data.agent_website,
+              // Voiceover
+              voiceover_included: data.voiceover_included,
+              voiceover_script: data.voiceover_script,
+              // Extras
+              include_edited_photos: data.include_edited_photos,
+              special_requests: data.special_requests,
+              // Legacy
+              video_titles: data.video_titles,
             },
           },
         ],
@@ -199,7 +256,7 @@ export async function sendAdminEmail(
     let requestBody: Record<string, unknown>;
 
     if (ADMIN_TEMPLATE_ID) {
-      // Use template with personalization
+      // Use template with personalization - pass ALL fields for template flexibility
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: ADMIN_EMAIL, name: "Admin" }],
@@ -209,15 +266,40 @@ export async function sendAdminEmail(
           {
             email: ADMIN_EMAIL,
             data: {
+              // Core order info
               order_id: data.order_id,
               customer_name: data.customer_name,
               customer_email: data.customer_email,
               customer_phone: data.customer_phone,
+              // Pricing
               price: data.price,
-              music_choice: data.music_choice,
-              video_titles: data.video_titles,
-              special_requests: data.special_requests,
+              base_price: data.base_price,
+              branding_fee: data.branding_fee,
+              voiceover_fee: data.voiceover_fee,
+              edited_photos_fee: data.edited_photos_fee,
+              // Photos
+              photo_count: data.photo_count,
               image_urls: data.image_urls,
+              // Music
+              music_choice: data.music_choice,
+              custom_audio_filename: data.custom_audio_filename,
+              custom_audio_url: data.custom_audio_url,
+              // Branding
+              branding_type: data.branding_type,
+              branding_logo_url: data.branding_logo_url,
+              agent_name: data.agent_name,
+              company_name: data.company_name,
+              agent_phone: data.agent_phone,
+              agent_email: data.agent_email,
+              agent_website: data.agent_website,
+              // Voiceover
+              voiceover_included: data.voiceover_included,
+              voiceover_script: data.voiceover_script,
+              // Extras
+              include_edited_photos: data.include_edited_photos,
+              special_requests: data.special_requests,
+              // Legacy
+              video_titles: data.video_titles,
             },
           },
         ],
@@ -242,10 +324,83 @@ export async function sendAdminEmail(
         })
         .join("");
 
+      // Build branding info section
+      const brandingHtml = data.branding_type !== "unbranded" ? `
+        <h2 style="color: #2d3748; margin-top: 30px;">Branding Information</h2>
+        <table style="width: 100%; border-collapse: collapse; background: #e6fffa; border-radius: 8px;">
+          <tr>
+            <td style="padding: 12px; font-weight: bold; width: 150px;">Branding Type:</td>
+            <td style="padding: 12px;">${data.branding_type}</td>
+          </tr>
+          ${data.branding_logo_url && data.branding_logo_url !== "None" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Logo URL:</td>
+            <td style="padding: 12px;"><a href="${data.branding_logo_url}" target="_blank" style="color: #3182ce;">${data.branding_logo_url}</a></td>
+          </tr>` : ""}
+          ${data.agent_name && data.agent_name !== "N/A" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Agent Name:</td>
+            <td style="padding: 12px;">${data.agent_name}</td>
+          </tr>` : ""}
+          ${data.company_name && data.company_name !== "N/A" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Company Name:</td>
+            <td style="padding: 12px;">${data.company_name}</td>
+          </tr>` : ""}
+          ${data.agent_phone && data.agent_phone !== "N/A" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Agent Phone:</td>
+            <td style="padding: 12px;">${data.agent_phone}</td>
+          </tr>` : ""}
+          ${data.agent_email && data.agent_email !== "N/A" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Agent Email:</td>
+            <td style="padding: 12px;"><a href="mailto:${data.agent_email}">${data.agent_email}</a></td>
+          </tr>` : ""}
+          ${data.agent_website && data.agent_website !== "N/A" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Agent Website:</td>
+            <td style="padding: 12px;"><a href="${data.agent_website}" target="_blank">${data.agent_website}</a></td>
+          </tr>` : ""}
+        </table>
+      ` : "";
+
+      // Build voiceover section
+      const voiceoverHtml = data.voiceover_included === "Yes" ? `
+        <h2 style="color: #2d3748; margin-top: 30px;">Voiceover</h2>
+        <table style="width: 100%; border-collapse: collapse; background: #faf5ff; border-radius: 8px;">
+          <tr>
+            <td style="padding: 12px; font-weight: bold; width: 150px;">Voiceover:</td>
+            <td style="padding: 12px; color: #2f855a; font-weight: bold;">Included</td>
+          </tr>
+          ${data.voiceover_script && data.voiceover_script !== "None" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold; vertical-align: top;">Script:</td>
+            <td style="padding: 12px; white-space: pre-wrap;">${data.voiceover_script}</td>
+          </tr>` : ""}
+        </table>
+      ` : "";
+
+      // Build custom audio section
+      const customAudioHtml = data.custom_audio_filename && data.custom_audio_filename !== "None" ? `
+        <h2 style="color: #2d3748; margin-top: 30px;">Custom Audio</h2>
+        <table style="width: 100%; border-collapse: collapse; background: #fff5f5; border-radius: 8px;">
+          <tr>
+            <td style="padding: 12px; font-weight: bold; width: 150px;">Filename:</td>
+            <td style="padding: 12px;">${data.custom_audio_filename}</td>
+          </tr>
+          ${data.custom_audio_url && data.custom_audio_url !== "None" ? `
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Audio URL:</td>
+            <td style="padding: 12px;"><a href="${data.custom_audio_url}" target="_blank" style="color: #3182ce;">${data.custom_audio_url}</a></td>
+          </tr>` : ""}
+        </table>
+      ` : "";
+
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #1a365d; border-bottom: 3px solid #ecc94b; padding-bottom: 15px;">
-            🚨 NEW ORDER - #${data.order_id}
+            NEW ORDER - #${data.order_id}
           </h1>
           
           <h2 style="color: #2d3748; margin-top: 30px;">Customer Information</h2>
@@ -271,22 +426,50 @@ export async function sendAdminEmail(
               <td style="padding: 12px;">${data.order_id}</td>
             </tr>
             <tr>
-              <td style="padding: 12px; font-weight: bold;">Price:</td>
-              <td style="padding: 12px; font-size: 18px; color: #2f855a; font-weight: bold;">${data.price}</td>
+              <td style="padding: 12px; font-weight: bold;">Photo Count:</td>
+              <td style="padding: 12px;">${data.photo_count} photos</td>
             </tr>
             <tr>
               <td style="padding: 12px; font-weight: bold;">Music Choice:</td>
               <td style="padding: 12px;">${data.music_choice}</td>
             </tr>
             <tr>
-              <td style="padding: 12px; font-weight: bold;">Video Titles:</td>
-              <td style="padding: 12px;">${data.video_titles}</td>
+              <td style="padding: 12px; font-weight: bold;">Include Edited Photos:</td>
+              <td style="padding: 12px;">${data.include_edited_photos}</td>
             </tr>
             <tr>
               <td style="padding: 12px; font-weight: bold;">Special Requests:</td>
-              <td style="padding: 12px;">${data.special_requests}</td>
+              <td style="padding: 12px;">${data.special_requests || "None"}</td>
             </tr>
           </table>
+
+          <h2 style="color: #2d3748; margin-top: 30px;">Pricing Breakdown</h2>
+          <table style="width: 100%; border-collapse: collapse; background: #f0fff4; border-radius: 8px;">
+            <tr>
+              <td style="padding: 12px; font-weight: bold; width: 150px;">Base Price:</td>
+              <td style="padding: 12px;">${data.base_price}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; font-weight: bold;">Branding Fee:</td>
+              <td style="padding: 12px;">${data.branding_fee}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; font-weight: bold;">Voiceover Fee:</td>
+              <td style="padding: 12px;">${data.voiceover_fee}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; font-weight: bold;">Edited Photos Fee:</td>
+              <td style="padding: 12px;">${data.edited_photos_fee}</td>
+            </tr>
+            <tr style="background: #c6f6d5;">
+              <td style="padding: 12px; font-weight: bold; font-size: 18px;">TOTAL:</td>
+              <td style="padding: 12px; font-size: 18px; color: #2f855a; font-weight: bold;">${data.price}</td>
+            </tr>
+          </table>
+
+          ${brandingHtml}
+          ${voiceoverHtml}
+          ${customAudioHtml}
 
           <h2 style="color: #2d3748; margin-top: 30px;">Image URLs (Cloudinary)</h2>
           <table style="width: 100%; border-collapse: collapse; background: #edf2f7; border-radius: 8px;">
@@ -302,13 +485,13 @@ export async function sendAdminEmail(
           </table>
 
           <p style="margin-top: 30px; padding: 15px; background: #fef3c7; border-radius: 8px; color: #744210;">
-            ⏰ Video to be delivered within 3 business days.
+            Video to be delivered within 3 business days.
           </p>
         </div>
       `;
 
       const text = `
-🚨 NEW ORDER - #${data.order_id}
+NEW ORDER - #${data.order_id}
 ========================================
 
 CUSTOMER INFORMATION
@@ -320,10 +503,38 @@ Phone: ${data.customer_phone}
 ORDER DETAILS
 -------------
 Order ID: ${data.order_id}
-Price: ${data.price}
+Photo Count: ${data.photo_count}
 Music Choice: ${data.music_choice}
-Video Titles: ${data.video_titles}
+Include Edited Photos: ${data.include_edited_photos}
 Special Requests: ${data.special_requests}
+
+PRICING BREAKDOWN
+-----------------
+Base Price: ${data.base_price}
+Branding Fee: ${data.branding_fee}
+Voiceover Fee: ${data.voiceover_fee}
+Edited Photos Fee: ${data.edited_photos_fee}
+TOTAL: ${data.price}
+
+BRANDING
+--------
+Type: ${data.branding_type}
+Logo URL: ${data.branding_logo_url}
+Agent Name: ${data.agent_name}
+Company Name: ${data.company_name}
+Agent Phone: ${data.agent_phone}
+Agent Email: ${data.agent_email}
+Agent Website: ${data.agent_website}
+
+VOICEOVER
+---------
+Included: ${data.voiceover_included}
+Script: ${data.voiceover_script}
+
+CUSTOM AUDIO
+------------
+Filename: ${data.custom_audio_filename}
+URL: ${data.custom_audio_url}
 
 IMAGE URLS (CLOUDINARY)
 -----------------------

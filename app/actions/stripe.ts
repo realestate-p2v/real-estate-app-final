@@ -10,6 +10,8 @@ export async function createCheckoutSession(productId: string) {
     return { error: "Product not found" };
   }
 
+  const orderId = `product-${productId}-${Date.now()}`;
+  
   const session = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
     payment_method_types: ["card"],
@@ -28,6 +30,11 @@ export async function createCheckoutSession(productId: string) {
     ],
     mode: "payment",
     return_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/order/success?session_id={CHECKOUT_SESSION_ID}`,
+    metadata: {
+      orderId: orderId,
+      productId: productId,
+      productName: product.name,
+    },
   });
 
   return { clientSecret: session.client_secret };

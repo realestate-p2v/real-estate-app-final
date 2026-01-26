@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
       tierName = "Premium";
     }
 
+    const orderId = `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
     const session = await stripe.checkout.sessions.create({
       ui_mode: "embedded",
       payment_method_types: ["card"],
@@ -41,6 +43,7 @@ export async function POST(request: NextRequest) {
       mode: "payment",
       return_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/order/success?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
+        orderId: orderId,
         customerName,
         photoCount: photoCount.toString(),
       },
