@@ -65,6 +65,11 @@ export function Navigation() {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-primary-foreground/20">
             <div className="flex flex-col gap-4">
+              {/* Countdown Timer for Mobile */}
+              <div className="flex items-center justify-center gap-2 text-primary-foreground text-sm py-2">
+                <span className="opacity-80">Sale ends:</span>
+                <CountdownTimer />
+              </div>
               <a
                 href="#demo"
                 className="text-primary-foreground hover:text-secondary font-medium px-2 py-2"

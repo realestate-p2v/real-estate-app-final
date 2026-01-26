@@ -1,5 +1,42 @@
 import { MongoClient, type Db, type MongoClientOptions } from "mongodb";
 
+/**
+ * MONGODB_URI CONFIGURATION FOR VERCEL
+ * =====================================
+ * 
+ * Format: mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
+ * 
+ * IMPORTANT: Special characters in your password MUST be URL-encoded:
+ *   @ -> %40
+ *   : -> %3A
+ *   / -> %2F
+ *   ? -> %3F
+ *   # -> %23
+ *   [ -> %5B
+ *   ] -> %5D
+ *   % -> %25
+ *   $ -> %24
+ *   & -> %26
+ *   + -> %2B
+ *   , -> %2C
+ *   ; -> %3B
+ *   = -> %3D
+ *   space -> %20
+ * 
+ * Example: If your password is "pass@word!" you should encode it as "pass%40word!"
+ * 
+ * The "bad auth" error typically means:
+ * 1. Password contains special characters that aren't URL-encoded
+ * 2. Username or password is incorrect
+ * 3. The database user doesn't have access to the specified database
+ * 
+ * To fix "bad auth" in Vercel:
+ * 1. Go to your Vercel project settings -> Environment Variables
+ * 2. Delete the existing MONGODB_URI
+ * 3. Add it again with the properly URL-encoded password
+ * 4. Redeploy the project
+ */
+
 const uri = process.env.MONGODB_URI || "";
 
 // Parse the URI to check if it already has query parameters
@@ -55,6 +92,10 @@ function createClientPromise(): Promise<MongoClient> {
   console.log("[v0] Creating MongoDB client...");
   console.log("[v0] MongoDB URI configured:", !!uri);
   console.log("[v0] URI has query params:", hasQueryParams);
+  
+  // Log a sanitized version of the URI for debugging (hide password)
+  const sanitizedUri = uri.replace(/:([^:@]+)@/, ':***@');
+  console.log("[v0] Sanitized MongoDB URI:", sanitizedUri);
 
   const mongoClient = new MongoClient(connectionUri, options);
 
@@ -67,6 +108,16 @@ function createClientPromise(): Promise<MongoClient> {
       console.error("[v0] MongoDB connection failed:", error.message);
       console.error("[v0] MongoDB error name:", error.name);
       console.error("[v0] MongoDB error code:", error.code);
+      
+      // Provide helpful guidance for common errors
+      if (error.message?.includes("bad auth") || error.code === 8000) {
+        console.error("[v0] BAD AUTH ERROR - This usually means:");
+        console.error("[v0]   1. Password has special characters that need URL encoding");
+        console.error("[v0]   2. Username or password is incorrect");
+        console.error("[v0]   3. Database user doesn't have proper permissions");
+        console.error("[v0] See lib/mongodb.ts for password encoding instructions.");
+      }
+      
       throw error;
     }
   );
