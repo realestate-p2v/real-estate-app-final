@@ -106,9 +106,11 @@ function buildOrderArray(order: Order): OrderArrayItem[] {
     { name: "Music Selection", value: order.musicSelection },
     { name: "Branding Type", value: getBrandingLabel(order.branding.type) },
     { name: "Voiceover", value: order.voiceover ? "Yes" : "No" },
+    { name: "Include Edited Photos", value: order.includeEditedPhotos ? "Yes" : "No" },
     { name: "Base Price", value: formatCurrency(order.basePrice) },
     { name: "Branding Fee", value: formatCurrency(order.brandingFee) },
     { name: "Voiceover Fee", value: formatCurrency(order.voiceoverFee) },
+    { name: "Edited Photos Fee", value: formatCurrency(order.editedPhotosFee || 0) },
     { name: "Total Price", value: formatCurrency(order.totalPrice) },
     { name: "Payment Status", value: order.paymentStatus },
   ];
@@ -213,6 +215,24 @@ export async function sendCustomerReceiptEmail(order: Order) {
     });
   }
 
+  // Add edited photos fee if applicable
+  const editedPhotosFee = order.editedPhotosFee || 0;
+  if (editedPhotosFee > 0) {
+    lineItems.push({
+      description: "Edited Photos Package",
+      amount: formatCurrency(editedPhotosFee),
+    });
+  }
+
+  // Build image URLs list from Cloudinary photos
+  const imageUrls = order.photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
+  const imageUrlsHtml = order.photos.map((photo, index) => 
+    `<a href="${photo.secure_url}" target="_blank">Photo ${index + 1}</a>`
+  ).join(" | ");
+
+  // Delivery message (3 business days notice)
+  const deliveryMessage = "Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.";
+
   try {
     const requestBody = {
       from: {
@@ -245,12 +265,14 @@ export async function sendCustomerReceiptEmail(order: Order) {
             music_selection: order.musicSelection,
             branding_type: getBrandingLabel(order.branding.type),
             has_voiceover: order.voiceover ? "Yes" : "No",
-            voiceover_script: order.voiceoverScript || "",
+            voiceover_script: order.voiceoverScript || "None",
+            include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
 
             // Pricing
             base_price: formatCurrency(order.basePrice),
             branding_fee: formatCurrency(order.brandingFee),
             voiceover_fee: formatCurrency(order.voiceoverFee),
+            edited_photos_fee: formatCurrency(editedPhotosFee),
             total_price: formatCurrency(order.totalPrice),
 
             // For template iteration
@@ -262,15 +284,23 @@ export async function sendCustomerReceiptEmail(order: Order) {
 
             // Branding details (if applicable)
             has_branding: order.branding.type !== "unbranded",
-            agent_name: order.branding.agentName || "",
-            company_name: order.branding.companyName || "",
-            branding_phone: order.branding.phone || "",
-            branding_email: order.branding.email || "",
-            branding_website: order.branding.website || "",
+            agent_name: order.branding.agentName || "None",
+            company_name: order.branding.companyName || "None",
+            branding_phone: order.branding.phone || "None",
+            branding_email: order.branding.email || "None",
+            branding_website: order.branding.website || "None",
 
-            // Special instructions
+            // Special instructions (use "None" if empty for MailerSend)
             has_special_instructions: !!order.specialInstructions,
-            special_instructions: order.specialInstructions || "",
+            special_instructions: order.specialInstructions || "None",
+
+            // Cloudinary Image URLs (important for order reference)
+            image_urls: imageUrls,
+            image_urls_html: imageUrlsHtml,
+            photo_urls: order.photos.map(p => ({ url: p.secure_url, id: p.public_id })),
+
+            // Delivery message
+            delivery_message: deliveryMessage,
 
             // Support info
             support_email: BUSINESS_EMAIL,
@@ -343,6 +373,18 @@ export async function sendOrderTemplateEmail(order: Order) {
 
   const orderArray = buildOrderArray(order);
 
+  // Build image URLs list from Cloudinary photos
+  const imageUrls = order.photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
+  const imageUrlsHtml = order.photos.map((photo, index) => 
+    `<a href="${photo.secure_url}" target="_blank">Photo ${index + 1}</a>`
+  ).join(" | ");
+
+  // Delivery message
+  const deliveryMessage = "Video to be delivered within 3 business days.";
+
+  // Edited photos fee
+  const editedPhotosFee = order.editedPhotosFee || 0;
+
   try {
     const requestBody = {
       from: {
@@ -373,13 +415,31 @@ export async function sendOrderTemplateEmail(order: Order) {
             music_selection: order.musicSelection,
             branding_type: getBrandingLabel(order.branding.type),
             voiceover: order.voiceover ? "Yes" : "No",
-            voiceover_script: order.voiceoverScript || "N/A",
+            voiceover_script: order.voiceoverScript || "None",
+            include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
             special_instructions: order.specialInstructions || "None",
             payment_status: order.paymentStatus,
             order_date: formatDate(order.createdAt),
             base_price: formatCurrency(order.basePrice),
             branding_fee: formatCurrency(order.brandingFee),
             voiceover_fee: formatCurrency(order.voiceoverFee),
+            edited_photos_fee: formatCurrency(editedPhotosFee),
+            
+            // Cloudinary Image URLs (important for order processing)
+            image_urls: imageUrls,
+            image_urls_html: imageUrlsHtml,
+            photo_urls: order.photos.map(p => ({ url: p.secure_url, id: p.public_id })),
+            
+            // Branding details
+            agent_name: order.branding.agentName || "None",
+            company_name: order.branding.companyName || "None",
+            branding_phone: order.branding.phone || "None",
+            branding_email: order.branding.email || "None",
+            branding_website: order.branding.website || "None",
+            logo_url: order.branding.logoUrl || "None",
+
+            // Delivery message
+            delivery_message: deliveryMessage,
             
             // Ensure personalization is never empty - MailerSend requires at least one variable
             _timestamp: new Date().toISOString(),
@@ -546,6 +606,7 @@ function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
             <p style="margin: 5px 0;"><strong>Music Selection:</strong> ${order.musicSelection}</p>
             <p style="margin: 5px 0;"><strong>Branding:</strong> ${getBrandingLabel(order.branding.type)}</p>
             <p style="margin: 5px 0;"><strong>Voiceover:</strong> ${order.voiceover ? "Yes" : "No"}</p>
+            <p style="margin: 5px 0;"><strong>Include Edited Photos:</strong> ${order.includeEditedPhotos ? "Yes" : "No"}</p>
             ${order.customAudio ? `<p style="margin: 5px 0;"><strong>Custom Audio:</strong> ${order.customAudio.filename}</p>` : ""}
           </div>
           
@@ -588,6 +649,16 @@ function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
             `
                 : ""
             }
+            ${
+              (order.editedPhotosFee || 0) > 0
+                ? `
+              <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                <span>Edited Photos:</span>
+                <span>${formatCurrency(order.editedPhotosFee || 0)}</span>
+              </div>
+            `
+                : ""
+            }
             <hr style="border: none; border-top: 1px solid #d1d5db; margin: 15px 0;">
             <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; color: #10b981;">
               <span>Total Paid:</span>
@@ -598,10 +669,16 @@ function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
           ${
             isCustomer
               ? `
-            <div style="margin-top: 30px; padding: 20px; background: #ecfdf5; border-radius: 8px; text-align: center;">
+            <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-radius: 8px; text-align: center; border: 1px solid #f59e0b;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;">
+                <strong>Delivery Notice</strong><br>
+                Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.
+              </p>
+            </div>
+            <div style="margin-top: 15px; padding: 20px; background: #ecfdf5; border-radius: 8px; text-align: center;">
               <p style="margin: 0; color: #065f46; font-size: 14px;">
                 <strong>What's Next?</strong><br>
-                Our team will begin working on your video right away. You'll receive another email with the final video link once it's ready (typically within 24-48 hours).
+                Our team will begin working on your video right away.
               </p>
             </div>
           `
@@ -641,6 +718,7 @@ function generateOrderEmailText(order: Order, isCustomer: boolean): string {
     `Music Selection: ${order.musicSelection}`,
     `Branding: ${getBrandingLabel(order.branding.type)}`,
     `Voiceover: ${order.voiceover ? "Yes" : "No"}`,
+    `Include Edited Photos: ${order.includeEditedPhotos ? "Yes" : "No"}`,
   ];
 
   if (order.branding.type !== "unbranded") {
@@ -678,13 +756,19 @@ function generateOrderEmailText(order: Order, isCustomer: boolean): string {
   if (order.voiceoverFee > 0) {
     lines.push(`Voiceover: ${formatCurrency(order.voiceoverFee)}`);
   }
+  if ((order.editedPhotosFee || 0) > 0) {
+    lines.push(`Edited Photos: ${formatCurrency(order.editedPhotosFee || 0)}`);
+  }
   lines.push(`TOTAL PAID: ${formatCurrency(order.totalPrice)}`);
 
   if (isCustomer) {
     lines.push(
       "",
+      "DELIVERY NOTICE:",
+      "Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.",
+      "",
       "What's Next?",
-      "Our team will begin working on your video right away. You'll receive another email with the final video link once it's ready (typically within 24-48 hours)."
+      "Our team will begin working on your video right away."
     );
   }
 
