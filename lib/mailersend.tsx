@@ -3,6 +3,7 @@ import type { Order } from "@/lib/types/order";
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const BUSINESS_EMAIL = "realestatephoto2video@gmail.com";
 const FROM_EMAIL = "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Update this with your verified domain
+const ORDER_TEMPLATE_ID = "zr6ke4n6kzelon12";
 
 interface EmailRecipient {
   email: string;
@@ -14,6 +15,11 @@ interface SendEmailParams {
   subject: string;
   html: string;
   text: string;
+}
+
+interface OrderArrayItem {
+  name: string;
+  value: string;
 }
 
 async function sendEmail({ to, subject, html, text }: SendEmailParams) {
@@ -50,6 +56,139 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
     return { success: true };
   } catch (error) {
     console.error("Failed to send email:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
+function buildOrderArray(order: Order): OrderArrayItem[] {
+  const orderArray: OrderArrayItem[] = [
+    { name: "Order ID", value: order.orderId },
+    { name: "Customer Name", value: order.customer.name },
+    { name: "Customer Email", value: order.customer.email },
+    { name: "Customer Phone", value: order.customer.phone || "N/A" },
+    { name: "Order Date", value: formatDate(order.createdAt) },
+    { name: "Status", value: order.status },
+    { name: "Photo Count", value: String(order.photoCount) },
+    { name: "Music Selection", value: order.musicSelection },
+    { name: "Branding Type", value: getBrandingLabel(order.branding.type) },
+    { name: "Voiceover", value: order.voiceover ? "Yes" : "No" },
+    { name: "Base Price", value: formatCurrency(order.basePrice) },
+    { name: "Branding Fee", value: formatCurrency(order.brandingFee) },
+    { name: "Voiceover Fee", value: formatCurrency(order.voiceoverFee) },
+    { name: "Total Price", value: formatCurrency(order.totalPrice) },
+    { name: "Payment Status", value: order.paymentStatus },
+  ];
+
+  // Add branding details if applicable
+  if (order.branding.type !== "unbranded") {
+    if (order.branding.agentName) {
+      orderArray.push({ name: "Agent Name", value: order.branding.agentName });
+    }
+    if (order.branding.companyName) {
+      orderArray.push({ name: "Company Name", value: order.branding.companyName });
+    }
+    if (order.branding.phone) {
+      orderArray.push({ name: "Branding Phone", value: order.branding.phone });
+    }
+    if (order.branding.email) {
+      orderArray.push({ name: "Branding Email", value: order.branding.email });
+    }
+    if (order.branding.website) {
+      orderArray.push({ name: "Branding Website", value: order.branding.website });
+    }
+    if (order.branding.logoUrl) {
+      orderArray.push({ name: "Logo URL", value: order.branding.logoUrl });
+    }
+  }
+
+  // Add voiceover script if applicable
+  if (order.voiceover && order.voiceoverScript) {
+    orderArray.push({ name: "Voiceover Script", value: order.voiceoverScript });
+  }
+
+  // Add special instructions if provided
+  if (order.specialInstructions) {
+    orderArray.push({ name: "Special Instructions", value: order.specialInstructions });
+  }
+
+  // Add custom audio if provided
+  if (order.customAudio) {
+    orderArray.push({ name: "Custom Audio Filename", value: order.customAudio.filename });
+    orderArray.push({ name: "Custom Audio URL", value: order.customAudio.secure_url });
+  }
+
+  // Add all photo URLs
+  order.photos.forEach((photo, index) => {
+    orderArray.push({ name: `Photo ${index + 1} URL`, value: photo.secure_url });
+    orderArray.push({ name: `Photo ${index + 1} ID`, value: photo.public_id });
+  });
+
+  return orderArray;
+}
+
+export async function sendOrderTemplateEmail(order: Order) {
+  if (!MAILERSEND_API_KEY) {
+    console.error("MAILERSEND_API_KEY is not configured");
+    return { success: false, error: "API key not configured" };
+  }
+
+  const orderArray = buildOrderArray(order);
+
+  try {
+    const response = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${MAILERSEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: {
+          email: FROM_EMAIL,
+          name: "Real Estate Photo2Video",
+        },
+        to: [
+          {
+            email: BUSINESS_EMAIL,
+            name: "Real Estate Photo2Video",
+          },
+        ],
+        template_id: ORDER_TEMPLATE_ID,
+        personalization: [
+          {
+            email: BUSINESS_EMAIL,
+            data: {
+              order: {
+                array: orderArray,
+              },
+              // Also include flat values for direct access in template
+              order_id: order.orderId,
+              customer_name: order.customer.name,
+              customer_email: order.customer.email,
+              customer_phone: order.customer.phone || "N/A",
+              photo_count: String(order.photoCount),
+              total_price: formatCurrency(order.totalPrice),
+              music_selection: order.musicSelection,
+              branding_type: getBrandingLabel(order.branding.type),
+              voiceover: order.voiceover ? "Yes" : "No",
+              voiceover_script: order.voiceoverScript || "",
+              special_instructions: order.specialInstructions || "",
+              payment_status: order.paymentStatus,
+            },
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("MailerSend template email error:", errorData);
+      return { success: false, error: errorData };
+    }
+
+    console.log(`Order template email sent successfully for order ${order.orderId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send order template email:", error);
     return { success: false, error: String(error) };
   }
 }
