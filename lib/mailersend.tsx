@@ -24,6 +24,10 @@ interface OrderArrayItem {
 }
 
 async function sendEmail({ to, subject, html, text }: SendEmailParams) {
+  console.log("[v0] sendEmail called - checking API key...");
+  console.log("[v0] MAILERSEND_API_KEY exists:", !!MAILERSEND_API_KEY);
+  console.log("[v0] MAILERSEND_API_KEY length:", MAILERSEND_API_KEY?.length || 0);
+  
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
@@ -31,6 +35,7 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
 
   console.log("[v0] Sending email to:", to.map(r => r.email).join(", "));
   console.log("[v0] Subject:", subject);
+  console.log("[v0] Sending email now...");
 
   try {
     const response = await fetch("https://api.mailersend.com/v1/email", {
@@ -52,17 +57,18 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
     });
 
     console.log("[v0] MailerSend response status:", response.status);
+    const responseText = await response.text();
+    console.log("[v0] MailerSend response body:", responseText);
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("[v0] MailerSend error:", errorData);
-      return { success: false, error: errorData };
+      console.error("[v0] MailerSend error:", responseText);
+      return { success: false, error: responseText };
     }
 
     console.log("[v0] Email sent successfully");
     return { success: true };
   } catch (error) {
-    console.error("Failed to send email:", error);
+    console.error("[v0] Failed to send email:", error);
     return { success: false, error: String(error) };
   }
 }
@@ -138,6 +144,10 @@ function buildOrderArray(order: Order): OrderArrayItem[] {
  * This is separate from the HTML confirmation email and provides a clean, branded receipt.
  */
 export async function sendCustomerReceiptEmail(order: Order) {
+  console.log("[v0] sendCustomerReceiptEmail called");
+  console.log("[v0] MAILERSEND_API_KEY exists:", !!MAILERSEND_API_KEY);
+  console.log("[v0] MAILERSEND_API_KEY length:", MAILERSEND_API_KEY?.length || 0);
+  
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
@@ -241,6 +251,7 @@ export async function sendCustomerReceiptEmail(order: Order) {
     };
 
     console.log("[v0] Customer receipt email request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[v0] Sending email now... (customer receipt via template)");
 
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
@@ -252,14 +263,16 @@ export async function sendCustomerReceiptEmail(order: Order) {
     });
 
     const responseStatus = response.status;
+    const responseText = await response.text();
     console.log("[v0] MailerSend customer receipt response status:", responseStatus);
+    console.log("[v0] MailerSend customer receipt response body:", responseText);
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("[v0] MailerSend customer receipt error:", errorData);
-      return { success: false, error: errorData, status: responseStatus };
+      console.error("[v0] MailerSend customer receipt error:", responseText);
+      return { success: false, error: responseText, status: responseStatus };
     }
 
+    console.log("[v0] Email sent successfully (customer receipt template)");
     console.log("[v0] Customer receipt email sent successfully for order", order.orderId);
     return { success: true };
   } catch (error) {
@@ -269,6 +282,10 @@ export async function sendCustomerReceiptEmail(order: Order) {
 }
 
 export async function sendOrderTemplateEmail(order: Order) {
+  console.log("[v0] sendOrderTemplateEmail called");
+  console.log("[v0] MAILERSEND_API_KEY exists:", !!MAILERSEND_API_KEY);
+  console.log("[v0] MAILERSEND_API_KEY length:", MAILERSEND_API_KEY?.length || 0);
+  
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
@@ -318,6 +335,7 @@ export async function sendOrderTemplateEmail(order: Order) {
     };
 
     console.log("[v0] Template email request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[v0] Sending email now... (business template)");
 
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
@@ -328,16 +346,21 @@ export async function sendOrderTemplateEmail(order: Order) {
       body: JSON.stringify(requestBody),
     });
 
+    const responseStatus = response.status;
+    const responseText = await response.text();
+    console.log("[v0] MailerSend template email response status:", responseStatus);
+    console.log("[v0] MailerSend template email response body:", responseText);
+
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("MailerSend template email error:", errorData);
-      return { success: false, error: errorData };
+      console.error("[v0] MailerSend template email error:", responseText);
+      return { success: false, error: responseText };
     }
 
-    console.log(`Order template email sent successfully for order ${order.orderId}`);
+    console.log("[v0] Email sent successfully (business template)");
+    console.log(`[v0] Order template email sent successfully for order ${order.orderId}`);
     return { success: true };
   } catch (error) {
-    console.error("Failed to send order template email:", error);
+    console.error("[v0] Failed to send order template email:", error);
     return { success: false, error: String(error) };
   }
 }

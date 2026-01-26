@@ -206,12 +206,20 @@ export async function POST(request: Request) {
         }
 
         // Send emails independently - each email attempt is isolated
+        // IMPORTANT: All email sends must complete before returning 200
         if (order) {
+          // Verify MailerSend API key is available
+          const mailersendApiKey = process.env.MAILERSEND_API_KEY;
+          console.log("[v0] MAILERSEND_API_KEY configured:", !!mailersendApiKey);
+          console.log("[v0] MAILERSEND_API_KEY length:", mailersendApiKey?.length || 0);
+          
           // Send customer receipt email (template-based receipt)
           try {
-            console.log("[v0] Sending customer receipt email...");
+            console.log("[v0] Sending email now... (customer receipt)");
+            console.log("[v0] Customer email:", order.customer?.email);
             const receiptResult = await sendCustomerReceiptEmail(order);
-            console.log("[v0] Customer receipt email result:", receiptResult);
+            console.log("[v0] Email sent successfully (customer receipt)");
+            console.log("[v0] Customer receipt email result:", JSON.stringify(receiptResult));
           } catch (receiptError) {
             console.error(
               "[v0] Failed to send customer receipt email:",
@@ -221,9 +229,10 @@ export async function POST(request: Request) {
 
           // Send confirmation emails to customer and business (HTML emails)
           try {
-            console.log("[v0] Sending confirmation emails...");
+            console.log("[v0] Sending email now... (confirmation emails)");
             const emailResults = await sendOrderConfirmationEmails(order);
-            console.log("[v0] Confirmation emails result:", emailResults);
+            console.log("[v0] Email sent successfully (confirmation emails)");
+            console.log("[v0] Confirmation emails result:", JSON.stringify(emailResults));
           } catch (emailError) {
             console.error(
               "[v0] Failed to send confirmation emails:",
@@ -233,15 +242,18 @@ export async function POST(request: Request) {
 
           // Send order details via template email to business
           try {
-            console.log("[v0] Sending business template email...");
+            console.log("[v0] Sending email now... (business template)");
             const templateEmailResult = await sendOrderTemplateEmail(order);
-            console.log("[v0] Business template email result:", templateEmailResult);
+            console.log("[v0] Email sent successfully (business template)");
+            console.log("[v0] Business template email result:", JSON.stringify(templateEmailResult));
           } catch (templateError) {
             console.error(
               "[v0] Failed to send template email:",
               getErrorMessage(templateError)
             );
           }
+          
+          console.log("[v0] All email operations completed for order:", order.orderId);
         } else {
           console.warn("[v0] No order data available, skipping email notifications");
         }
