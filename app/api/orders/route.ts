@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Order, OrderPhoto } from "@/lib/types/order";
-import { getDatabase } from "@/lib/mongodb";
+import { createClient } from "@/lib/supabase/server";
 
 function generateOrderId(): string {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -54,14 +54,63 @@ export async function POST(request: Request) {
     const editedPhotosFee = input.includeEditedPhotos ? 15 : 0;
     const totalPrice = basePrice + brandingFee + voiceoverFee + editedPhotosFee;
 
-    // Create order document
+    const orderId = generateOrderId();
+
+    // Create order document for Supabase
+    const orderData = {
+      order_id: orderId,
+      customer_name: input.customer.name,
+      customer_email: input.customer.email,
+      customer_phone: input.customer.phone || null,
+      photos: uploadedPhotos.sort((a: OrderPhoto, b: OrderPhoto) => a.order - b.order),
+      photo_count: uploadedPhotos.length,
+      music_selection: input.musicSelection,
+      custom_audio: customAudio || null,
+      branding: input.branding,
+      voiceover: input.voiceover || false,
+      voiceover_script: input.voiceoverScript || null,
+      special_instructions: input.specialInstructions || null,
+      include_edited_photos: input.includeEditedPhotos || false,
+      base_price: basePrice,
+      branding_fee: brandingFee,
+      voiceover_fee: voiceoverFee,
+      edited_photos_fee: editedPhotosFee,
+      total_price: totalPrice,
+      payment_status: "pending",
+    };
+
+    // Save to Supabase
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("orders")
+      .insert(orderData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[Orders API] Supabase insert error:", error);
+      // Don't fail the order - return data anyway so payment can proceed
+      return NextResponse.json({
+        success: true,
+        data: {
+          orderId: orderId,
+          totalPrice,
+          photoCount: uploadedPhotos.length,
+          photos: uploadedPhotos,
+          customer: input.customer,
+          dbError: error.message,
+        },
+      });
+    }
+
+    // Build the Order object for response
     const order: Order = {
-      orderId: generateOrderId(),
+      orderId: orderId,
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date(),
       customer: input.customer,
-      photos: uploadedPhotos.sort((a, b) => a.order - b.order),
+      photos: uploadedPhotos.sort((a: OrderPhoto, b: OrderPhoto) => a.order - b.order),
       photoCount: uploadedPhotos.length,
       musicSelection: input.musicSelection,
       customAudio,
@@ -78,32 +127,19 @@ export async function POST(request: Request) {
       paymentStatus: "pending",
     };
 
-    // Save to MongoDB with fallback
-    let mongoId = null;
-    try {
-      const db = await getDatabase();
-      const result = await db.collection<Order>("orders").insertOne(order);
-      mongoId = result.insertedId;
-    } catch (dbError) {
-      // Log the database error but continue - order data is preserved in the response
-      console.error("[v0] MongoDB save failed:", dbError);
-      // Don't fail the order - we have all the data and can process it manually if needed
-    }
-
     return NextResponse.json({
       success: true,
       data: {
         orderId: order.orderId,
-        _id: mongoId,
+        _id: data?.id,
         totalPrice,
         photoCount: uploadedPhotos.length,
-        // Include photo URLs so order can still be processed
         photos: uploadedPhotos,
         customer: order.customer,
       },
     });
   } catch (error) {
-    console.error("[v0] Create order error:", error);
+    console.error("[Orders API] Create order error:", error);
     const errorMessage = error instanceof Error ? error.message : "Failed to create order";
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -124,15 +160,47 @@ export async function GET(request: Request) {
       );
     }
 
-    const db = await getDatabase();
-    const order = await db.collection<Order>("orders").findOne({ orderId });
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("order_id", orderId)
+      .single();
 
-    if (!order) {
+    if (error || !data) {
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
       );
     }
+
+    // Map Supabase data back to Order format
+    const order: Order = {
+      orderId: data.order_id,
+      status: data.payment_status === "paid" ? "processing" : "pending",
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      customer: {
+        name: data.customer_name,
+        email: data.customer_email,
+        phone: data.customer_phone,
+      },
+      photos: data.photos || [],
+      photoCount: data.photo_count,
+      musicSelection: data.music_selection,
+      customAudio: data.custom_audio,
+      branding: data.branding,
+      voiceover: data.voiceover,
+      voiceoverScript: data.voiceover_script,
+      specialInstructions: data.special_instructions,
+      includeEditedPhotos: data.include_edited_photos,
+      basePrice: parseFloat(data.base_price),
+      brandingFee: parseFloat(data.branding_fee),
+      voiceoverFee: parseFloat(data.voiceover_fee),
+      editedPhotosFee: parseFloat(data.edited_photos_fee),
+      totalPrice: parseFloat(data.total_price),
+      paymentStatus: data.payment_status,
+    };
 
     return NextResponse.json({
       success: true,

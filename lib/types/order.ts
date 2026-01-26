@@ -1,5 +1,3 @@
-import type { ObjectId } from "mongodb";
-
 export interface OrderPhoto {
   public_id: string;
   secure_url: string;
@@ -25,7 +23,7 @@ export interface OrderBranding {
 }
 
 export interface Order {
-  _id?: ObjectId;
+  id?: string;
   orderId: string;
   status: "pending" | "processing" | "completed" | "cancelled";
   createdAt: Date;
