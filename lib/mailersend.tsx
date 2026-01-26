@@ -1,0 +1,356 @@
+import type { Order } from "@/lib/types/order";
+
+const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
+const BUSINESS_EMAIL = "realestatephoto2video@gmail.com";
+const FROM_EMAIL = "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Update this with your verified domain
+
+interface EmailRecipient {
+  email: string;
+  name?: string;
+}
+
+interface SendEmailParams {
+  to: EmailRecipient[];
+  subject: string;
+  html: string;
+  text: string;
+}
+
+async function sendEmail({ to, subject, html, text }: SendEmailParams) {
+  if (!MAILERSEND_API_KEY) {
+    console.error("MAILERSEND_API_KEY is not configured");
+    return { success: false, error: "API key not configured" };
+  }
+
+  try {
+    const response = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${MAILERSEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: {
+          email: FROM_EMAIL,
+          name: "Real Estate Photo2Video",
+        },
+        to,
+        subject,
+        html,
+        text,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("MailerSend error:", errorData);
+      return { success: false, error: errorData };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send email:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+}
+
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "full",
+    timeStyle: "short",
+  }).format(new Date(date));
+}
+
+function getBrandingLabel(type: string): string {
+  switch (type) {
+    case "unbranded":
+      return "Unbranded";
+    case "basic":
+      return "Basic Branding";
+    case "custom":
+      return "Custom Branding";
+    default:
+      return type;
+  }
+}
+
+function generateOrderEmailHtml(order: Order, isCustomer: boolean): string {
+  const brandingDetails =
+    order.branding.type !== "unbranded"
+      ? `
+        <div style="margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+          <p style="margin: 0 0 5px 0;"><strong>Branding Details:</strong></p>
+          ${order.branding.agentName ? `<p style="margin: 2px 0;">Agent: ${order.branding.agentName}</p>` : ""}
+          ${order.branding.companyName ? `<p style="margin: 2px 0;">Company: ${order.branding.companyName}</p>` : ""}
+          ${order.branding.phone ? `<p style="margin: 2px 0;">Phone: ${order.branding.phone}</p>` : ""}
+          ${order.branding.email ? `<p style="margin: 2px 0;">Email: ${order.branding.email}</p>` : ""}
+          ${order.branding.website ? `<p style="margin: 2px 0;">Website: ${order.branding.website}</p>` : ""}
+        </div>
+      `
+      : "";
+
+  const voiceoverDetails = order.voiceover
+    ? `
+        <div style="margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+          <p style="margin: 0 0 5px 0;"><strong>Voiceover Script:</strong></p>
+          <p style="margin: 0; white-space: pre-wrap;">${order.voiceoverScript || "No script provided"}</p>
+        </div>
+      `
+    : "";
+
+  const specialInstructions = order.specialInstructions
+    ? `
+        <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 6px;">
+          <p style="margin: 0 0 5px 0;"><strong>Special Instructions:</strong></p>
+          <p style="margin: 0; white-space: pre-wrap;">${order.specialInstructions}</p>
+        </div>
+      `
+    : "";
+
+  const photosList = order.photos
+    .map(
+      (photo, index) =>
+        `<li style="margin: 5px 0;">Photo ${index + 1}: <a href="${photo.secure_url}" style="color: #10b981;">View Image</a></li>`
+    )
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Order Confirmation</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">
+            ${isCustomer ? "Thank You For Your Order!" : "New Order Received"}
+          </h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">
+            Order #${order.orderId}
+          </p>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          ${
+            isCustomer
+              ? `
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+              Hi ${order.customer.name},<br><br>
+              Your payment has been received and your order is now being processed. We'll have your stunning property video ready soon!
+            </p>
+          `
+              : `
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+              A new order has been placed and payment received. See details below.
+            </p>
+          `
+          }
+          
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+          
+          <!-- Customer Information -->
+          <h2 style="color: #111827; font-size: 18px; margin: 0 0 15px 0;">Customer Information</h2>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Name:</strong> ${order.customer.name}</p>
+            <p style="margin: 5px 0;"><strong>Email:</strong> ${order.customer.email}</p>
+            <p style="margin: 5px 0;"><strong>Phone:</strong> ${order.customer.phone}</p>
+          </div>
+          
+          <!-- Order Details -->
+          <h2 style="color: #111827; font-size: 18px; margin: 0 0 15px 0;">Order Details</h2>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Order Date:</strong> ${formatDate(order.createdAt)}</p>
+            <p style="margin: 5px 0;"><strong>Number of Photos:</strong> ${order.photoCount}</p>
+            <p style="margin: 5px 0;"><strong>Music Selection:</strong> ${order.musicSelection}</p>
+            <p style="margin: 5px 0;"><strong>Branding:</strong> ${getBrandingLabel(order.branding.type)}</p>
+            <p style="margin: 5px 0;"><strong>Voiceover:</strong> ${order.voiceover ? "Yes" : "No"}</p>
+            ${order.customAudio ? `<p style="margin: 5px 0;"><strong>Custom Audio:</strong> ${order.customAudio.filename}</p>` : ""}
+          </div>
+          
+          ${brandingDetails}
+          ${voiceoverDetails}
+          ${specialInstructions}
+          
+          <!-- Photos -->
+          <h2 style="color: #111827; font-size: 18px; margin: 25px 0 15px 0;">Uploaded Photos</h2>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <ul style="margin: 0; padding-left: 20px;">
+              ${photosList}
+            </ul>
+          </div>
+          
+          <!-- Receipt -->
+          <h2 style="color: #111827; font-size: 18px; margin: 25px 0 15px 0;">Receipt</h2>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+              <span>Base Price (${order.photoCount} photos):</span>
+              <span>${formatCurrency(order.basePrice)}</span>
+            </div>
+            ${
+              order.brandingFee > 0
+                ? `
+              <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                <span>${getBrandingLabel(order.branding.type)}:</span>
+                <span>${formatCurrency(order.brandingFee)}</span>
+              </div>
+            `
+                : ""
+            }
+            ${
+              order.voiceoverFee > 0
+                ? `
+              <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                <span>Voiceover:</span>
+                <span>${formatCurrency(order.voiceoverFee)}</span>
+              </div>
+            `
+                : ""
+            }
+            <hr style="border: none; border-top: 1px solid #d1d5db; margin: 15px 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; color: #10b981;">
+              <span>Total Paid:</span>
+              <span>${formatCurrency(order.totalPrice)}</span>
+            </div>
+          </div>
+          
+          ${
+            isCustomer
+              ? `
+            <div style="margin-top: 30px; padding: 20px; background: #ecfdf5; border-radius: 8px; text-align: center;">
+              <p style="margin: 0; color: #065f46; font-size: 14px;">
+                <strong>What's Next?</strong><br>
+                Our team will begin working on your video right away. You'll receive another email with the final video link once it's ready (typically within 24-48 hours).
+              </p>
+            </div>
+          `
+              : ""
+          }
+          
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0 20px 0;">
+          
+          <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">
+            Real Estate Photo2Video<br>
+            Questions? Reply to this email or contact us at ${BUSINESS_EMAIL}
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateOrderEmailText(order: Order, isCustomer: boolean): string {
+  const lines = [
+    isCustomer ? "Thank You For Your Order!" : "New Order Received",
+    `Order #${order.orderId}`,
+    "",
+    isCustomer
+      ? `Hi ${order.customer.name},\n\nYour payment has been received and your order is now being processed.`
+      : "A new order has been placed and payment received.",
+    "",
+    "--- CUSTOMER INFORMATION ---",
+    `Name: ${order.customer.name}`,
+    `Email: ${order.customer.email}`,
+    `Phone: ${order.customer.phone}`,
+    "",
+    "--- ORDER DETAILS ---",
+    `Order Date: ${formatDate(order.createdAt)}`,
+    `Number of Photos: ${order.photoCount}`,
+    `Music Selection: ${order.musicSelection}`,
+    `Branding: ${getBrandingLabel(order.branding.type)}`,
+    `Voiceover: ${order.voiceover ? "Yes" : "No"}`,
+  ];
+
+  if (order.branding.type !== "unbranded") {
+    lines.push("", "--- BRANDING DETAILS ---");
+    if (order.branding.agentName) lines.push(`Agent: ${order.branding.agentName}`);
+    if (order.branding.companyName) lines.push(`Company: ${order.branding.companyName}`);
+    if (order.branding.phone) lines.push(`Phone: ${order.branding.phone}`);
+    if (order.branding.email) lines.push(`Email: ${order.branding.email}`);
+    if (order.branding.website) lines.push(`Website: ${order.branding.website}`);
+  }
+
+  if (order.voiceover && order.voiceoverScript) {
+    lines.push("", "--- VOICEOVER SCRIPT ---", order.voiceoverScript);
+  }
+
+  if (order.specialInstructions) {
+    lines.push("", "--- SPECIAL INSTRUCTIONS ---", order.specialInstructions);
+  }
+
+  lines.push(
+    "",
+    "--- UPLOADED PHOTOS ---",
+    ...order.photos.map((photo, i) => `Photo ${i + 1}: ${photo.secure_url}`)
+  );
+
+  lines.push(
+    "",
+    "--- RECEIPT ---",
+    `Base Price (${order.photoCount} photos): ${formatCurrency(order.basePrice)}`
+  );
+
+  if (order.brandingFee > 0) {
+    lines.push(`${getBrandingLabel(order.branding.type)}: ${formatCurrency(order.brandingFee)}`);
+  }
+  if (order.voiceoverFee > 0) {
+    lines.push(`Voiceover: ${formatCurrency(order.voiceoverFee)}`);
+  }
+  lines.push(`TOTAL PAID: ${formatCurrency(order.totalPrice)}`);
+
+  if (isCustomer) {
+    lines.push(
+      "",
+      "What's Next?",
+      "Our team will begin working on your video right away. You'll receive another email with the final video link once it's ready (typically within 24-48 hours)."
+    );
+  }
+
+  lines.push("", "---", "Real Estate Photo2Video", `Questions? Contact us at ${BUSINESS_EMAIL}`);
+
+  return lines.join("\n");
+}
+
+export async function sendOrderConfirmationEmails(order: Order) {
+  const results = {
+    customer: { success: false, error: null as string | null },
+    business: { success: false, error: null as string | null },
+  };
+
+  // Send email to customer
+  const customerResult = await sendEmail({
+    to: [{ email: order.customer.email, name: order.customer.name }],
+    subject: `Order Confirmation - #${order.orderId}`,
+    html: generateOrderEmailHtml(order, true),
+    text: generateOrderEmailText(order, true),
+  });
+  results.customer = {
+    success: customerResult.success,
+    error: customerResult.error || null,
+  };
+
+  // Send email to business
+  const businessResult = await sendEmail({
+    to: [{ email: BUSINESS_EMAIL, name: "Real Estate Photo2Video" }],
+    subject: `New Order Received - #${order.orderId} - ${order.customer.name}`,
+    html: generateOrderEmailHtml(order, false),
+    text: generateOrderEmailText(order, false),
+  });
+  results.business = {
+    success: businessResult.success,
+    error: businessResult.error || null,
+  };
+
+  console.log("Email results:", results);
+  return results;
+}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { getDatabase } from "@/lib/mongodb";
+import { sendOrderConfirmationEmails } from "@/lib/mailersend";
 import type { Order } from "@/lib/types/order";
 import type Stripe from "stripe";
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
       const orderId = session.metadata?.orderId;
 
       if (orderId) {
+        // Update order status
         await db.collection<Order>("orders").updateOne(
           { orderId },
           {
@@ -51,6 +53,20 @@ export async function POST(request: Request) {
           }
         );
         console.log(`Order ${orderId} marked as paid`);
+
+        // Fetch the complete order to send emails
+        const order = await db.collection<Order>("orders").findOne({ orderId });
+        
+        if (order) {
+          // Send confirmation emails to customer and business
+          try {
+            const emailResults = await sendOrderConfirmationEmails(order);
+            console.log(`Order ${orderId} confirmation emails sent:`, emailResults);
+          } catch (emailError) {
+            console.error(`Failed to send confirmation emails for order ${orderId}:`, emailError);
+            // Don't fail the webhook if emails fail - order is still valid
+          }
+        }
       }
       break;
     }
