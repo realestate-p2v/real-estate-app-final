@@ -13,6 +13,22 @@ export interface Product {
 
 export const PRODUCTS: Product[] = [
   {
+    id: "test-product",
+    name: "Test Product",
+    description: "For testing with 1 photo",
+    priceInCents: 100,
+    originalPriceInCents: 100,
+    photoLimit: "1 photo only",
+    deliveryTime: "72-hour delivery",
+    revisions: 1,
+    features: [
+      "HD 1080p video output",
+      "Single photo video",
+      "72-hour delivery",
+      "1 revision included",
+    ],
+  },
+  {
     id: "standard-video",
     name: "Standard",
     description: "Perfect for smaller listings",
