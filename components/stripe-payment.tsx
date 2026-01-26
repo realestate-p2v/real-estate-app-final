@@ -24,24 +24,29 @@ export default function StripePayment({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Automatically redirect to Stripe checkout when orderId is available
+  // Automatically redirect to Stripe checkout when component mounts with valid data
   useEffect(() => {
-    if (orderId) {
+    if (amount > 0 && customerEmail) {
       redirectToCheckout();
     }
-  }, [orderId]);
+  }, []);
 
   const redirectToCheckout = async () => {
-    if (!orderId) return;
-    
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/orders/create-checkout", {
+      // Pass order data directly to checkout - no MongoDB lookup needed
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({
+          amount,
+          customerName,
+          customerEmail,
+          photoCount,
+          orderId,
+        }),
       });
 
       const data = await response.json();
