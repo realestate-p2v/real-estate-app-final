@@ -53,9 +53,9 @@ export function DemoSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="flex flex-col md:grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center">
           {/* Photos Side */}
-          <div className="relative">
+          <div className="w-full">
             <div className="bg-card rounded-2xl p-4 sm:p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <Images className="h-6 w-6 text-primary" />
@@ -84,15 +84,15 @@ export function DemoSection() {
           </div>
 
           {/* Arrow */}
-          <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 z-10">
-            <div className="bg-secondary rounded-full p-4">
-              <ArrowRight className="h-8 w-8 text-secondary-foreground" />
+          <div className="flex items-center justify-center">
+            <div className="bg-secondary rounded-full p-3 md:p-4">
+              <ArrowRight className="h-6 w-6 md:h-8 md:w-8 text-secondary-foreground rotate-90 md:rotate-0" />
             </div>
           </div>
 
           {/* Video Side */}
-          <div className="relative">
-            <div className="bg-card rounded-2xl p-6 shadow-lg">
+          <div className="w-full">
+            <div className="bg-card rounded-2xl p-4 sm:p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <Play className="h-6 w-6 text-accent" />
                 <span className="font-semibold text-foreground">Your HD Walkthrough Video</span>
