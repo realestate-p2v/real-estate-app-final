@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const FROM_EMAIL = "noreply@realestatephoto2video.com"; // Your verified domain
-const TO_EMAIL = "info@realestatephoto2video.com"; // Your business email
+const TO_EMAIL = "realestatephoto2video@gmail.com"; // Your business email
 
 interface ContactFormData {
   name: string;
