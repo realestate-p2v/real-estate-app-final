@@ -40,6 +40,7 @@ export function OrderForm() {
   const canProceed = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
 
   const getBasePrice = () => {
+    if (photoCount === 1) return 1;
     if (photoCount <= 12) return 99;
     if (photoCount <= 25) return 149;
     if (photoCount <= 35) return 199;
