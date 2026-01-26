@@ -81,20 +81,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Step 4: Connect to database
-  let db;
-  try {
-    db = await getDatabase();
-    console.log("[v0] Database connection established");
-  } catch (err) {
-    console.error("[v0] Database connection failed:", getErrorMessage(err));
-    return NextResponse.json(
-      { error: "Database connection failed" },
-      { status: 500 }
-    );
-  }
-
-  // Step 5: Handle event types
+  // Step 4: Handle event types
+  // Note: Database and email operations are now independent - emails will attempt to send
+  // even if database operations fail
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -112,52 +101,113 @@ export async function POST(request: Request) {
           break;
         }
 
-        // Update order status in database
-        try {
-          const updateResult = await db.collection<Order>("orders").updateOne(
-            { orderId },
-            {
-              $set: {
-                paymentStatus: "paid",
-                stripePaymentIntentId: session.payment_intent as string,
-                status: "processing",
-                updatedAt: new Date(),
-              },
-            }
-          );
-          console.log("[v0] Order update result:", {
-            matchedCount: updateResult.matchedCount,
-            modifiedCount: updateResult.modifiedCount,
-          });
-
-          if (updateResult.matchedCount === 0) {
-            console.error("[v0] Order not found in database:", orderId);
-          }
-        } catch (dbErr) {
-          console.error("[v0] Failed to update order:", getErrorMessage(dbErr));
-          // Continue to try fetching and sending emails
-        }
-
-        // Fetch the complete order to send emails
+        // Try to connect to database (non-blocking for emails)
+        let db = null;
         let order: Order | null = null;
+        let dbConnectionSucceeded = false;
+
         try {
-          order = await db.collection<Order>("orders").findOne({ orderId });
-          console.log("[v0] Order fetched:", order ? "success" : "not found");
-          if (order) {
-            console.log("[v0] Order details:", {
-              orderId: order.orderId,
-              customerEmail: order.customer?.email,
-              customerName: order.customer?.name,
-              totalPrice: order.totalPrice,
-              photoCount: order.photoCount,
-            });
-          }
-        } catch (fetchErr) {
-          console.error("[v0] Failed to fetch order:", getErrorMessage(fetchErr));
+          db = await getDatabase();
+          dbConnectionSucceeded = true;
+          console.log("[v0] Database connection established");
+        } catch (dbConnErr) {
+          console.error("[v0] Database connection failed (will still attempt emails):", getErrorMessage(dbConnErr));
         }
 
+        // Update order status in database (if connected)
+        if (db && dbConnectionSucceeded) {
+          try {
+            const updateResult = await db.collection<Order>("orders").updateOne(
+              { orderId },
+              {
+                $set: {
+                  paymentStatus: "paid",
+                  stripePaymentIntentId: session.payment_intent as string,
+                  status: "processing",
+                  updatedAt: new Date(),
+                },
+              }
+            );
+            console.log("[v0] Order update result:", {
+              matchedCount: updateResult.matchedCount,
+              modifiedCount: updateResult.modifiedCount,
+            });
+
+            if (updateResult.matchedCount === 0) {
+              console.error("[v0] Order not found in database:", orderId);
+            }
+          } catch (dbErr) {
+            console.error("[v0] Failed to update order:", getErrorMessage(dbErr));
+          }
+
+          // Fetch the complete order to send emails
+          try {
+            order = await db.collection<Order>("orders").findOne({ orderId });
+            console.log("[v0] Order fetched:", order ? "success" : "not found");
+            if (order) {
+              console.log("[v0] Order details:", {
+                orderId: order.orderId,
+                customerEmail: order.customer?.email,
+                customerName: order.customer?.name,
+                totalPrice: order.totalPrice,
+                photoCount: order.photoCount,
+              });
+            }
+          } catch (fetchErr) {
+            console.error("[v0] Failed to fetch order:", getErrorMessage(fetchErr));
+          }
+        }
+
+        // If we couldn't get the order from DB but have session data, construct a minimal order for emails
+        // This ensures emails can still be sent even if DB is down
+        if (!order && session.customer_details?.email) {
+          console.log("[v0] Constructing fallback order from Stripe session data for emails");
+          
+          // Parse metadata to reconstruct order details
+          const metadata = session.metadata || {};
+          order = {
+            orderId: orderId,
+            customer: {
+              name: session.customer_details?.name || metadata.customerName || "Customer",
+              email: session.customer_details?.email,
+              phone: metadata.customerPhone || "",
+            },
+            photos: [], // We don't have photo URLs in session
+            photoCount: parseInt(metadata.photoCount || "0", 10),
+            musicSelection: metadata.musicSelection || "Unknown",
+            branding: {
+              type: (metadata.brandingType as "unbranded" | "basic" | "custom") || "unbranded",
+              agentName: metadata.agentName,
+              companyName: metadata.companyName,
+              phone: metadata.brandingPhone,
+              email: metadata.brandingEmail,
+              website: metadata.brandingWebsite,
+              logoUrl: metadata.logoUrl,
+            },
+            voiceover: metadata.voiceover === "true",
+            voiceoverScript: metadata.voiceoverScript,
+            specialInstructions: metadata.specialInstructions,
+            basePrice: parseFloat(metadata.basePrice || "0"),
+            brandingFee: parseFloat(metadata.brandingFee || "0"),
+            voiceoverFee: parseFloat(metadata.voiceoverFee || "0"),
+            totalPrice: (session.amount_total || 0) / 100,
+            paymentStatus: "paid",
+            status: "processing",
+            stripePaymentIntentId: session.payment_intent as string,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as Order;
+          
+          console.log("[v0] Fallback order constructed:", {
+            orderId: order.orderId,
+            customerEmail: order.customer?.email,
+            totalPrice: order.totalPrice,
+          });
+        }
+
+        // Send emails independently - each email attempt is isolated
         if (order) {
-          // Send customer receipt email (new template-based receipt)
+          // Send customer receipt email (template-based receipt)
           try {
             console.log("[v0] Sending customer receipt email...");
             const receiptResult = await sendCustomerReceiptEmail(order);
@@ -193,7 +243,7 @@ export async function POST(request: Request) {
             );
           }
         } else {
-          console.warn("[v0] Order not found, skipping email notifications");
+          console.warn("[v0] No order data available, skipping email notifications");
         }
         break;
       }
@@ -208,23 +258,33 @@ export async function POST(request: Request) {
         console.log("[v0] Failure reason:", paymentIntent.last_payment_error?.message);
 
         if (orderId) {
+          // Try to connect to database for updating failed status
+          let db = null;
           try {
-            const updateResult = await db.collection<Order>("orders").updateOne(
-              { orderId },
-              {
-                $set: {
-                  paymentStatus: "failed",
-                  paymentFailureReason: paymentIntent.last_payment_error?.message || "Unknown",
-                  updatedAt: new Date(),
-                },
-              }
-            );
-            console.log("[v0] Order marked as failed:", {
-              matchedCount: updateResult.matchedCount,
-              modifiedCount: updateResult.modifiedCount,
-            });
-          } catch (dbErr) {
-            console.error("[v0] Failed to update order status:", getErrorMessage(dbErr));
+            db = await getDatabase();
+          } catch (dbConnErr) {
+            console.error("[v0] Database connection failed for payment_failed event:", getErrorMessage(dbConnErr));
+          }
+
+          if (db) {
+            try {
+              const updateResult = await db.collection<Order>("orders").updateOne(
+                { orderId },
+                {
+                  $set: {
+                    paymentStatus: "failed",
+                    paymentFailureReason: paymentIntent.last_payment_error?.message || "Unknown",
+                    updatedAt: new Date(),
+                  },
+                }
+              );
+              console.log("[v0] Order marked as failed:", {
+                matchedCount: updateResult.matchedCount,
+                modifiedCount: updateResult.modifiedCount,
+              });
+            } catch (dbErr) {
+              console.error("[v0] Failed to update order status:", getErrorMessage(dbErr));
+            }
           }
         }
         break;

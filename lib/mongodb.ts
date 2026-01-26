@@ -32,12 +32,16 @@ const options: MongoClientOptions = {
   maxPoolSize: 1,
   minPoolSize: 0,
   maxIdleTimeMS: 10000,
-  serverSelectionTimeoutMS: 10000, // Increased from 5000 for reliability
+  serverSelectionTimeoutMS: 15000, // Increased for reliability
   socketTimeoutMS: 45000,
-  connectTimeoutMS: 10000,
+  connectTimeoutMS: 15000,
   // Retry settings
   retryWrites: true,
   retryReads: true,
+  // TLS settings for compatibility (fixes SSL alert number 80)
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
 };
 
 let client: MongoClient;
