@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { getDatabase } from "@/lib/mongodb";
-import { sendOrderConfirmationEmails } from "@/lib/mailersend";
+import { sendOrderConfirmationEmails, sendOrderTemplateEmail } from "@/lib/mailersend";
 import type { Order } from "@/lib/types/order";
 import type Stripe from "stripe";
 
@@ -65,6 +65,15 @@ export async function POST(request: Request) {
           } catch (emailError) {
             console.error(`Failed to send confirmation emails for order ${orderId}:`, emailError);
             // Don't fail the webhook if emails fail - order is still valid
+          }
+
+          // Send order details via template email to business
+          try {
+            const templateEmailResult = await sendOrderTemplateEmail(order);
+            console.log(`Order ${orderId} template email sent:`, templateEmailResult);
+          } catch (templateError) {
+            console.error(`Failed to send template email for order ${orderId}:`, templateError);
+            // Don't fail the webhook if template email fails
           }
         }
       }
