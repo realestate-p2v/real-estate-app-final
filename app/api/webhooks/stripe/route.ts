@@ -280,15 +280,47 @@ export async function POST(request: Request) {
         // BUILD PERSONALIZATION DATA
         // If database fails, use "Unknown" for DB fields
         const personalizationData = {
+          // Core order info
           order_id: orderId,
           customer_name: customerName,
           customer_email: customerEmail,
           customer_phone: customerPhone,
+          
+          // Pricing
           price: price,
-          music_choice: order?.musicSelection || "Unknown",
-          video_titles: order?.branding ? buildVideoTitles(order.branding) : "Unknown",
-          special_requests: order?.specialInstructions || "None",
+          base_price: order?.basePrice ? `$${order.basePrice.toFixed(2)}` : "Unknown",
+          branding_fee: order?.brandingFee ? `$${order.brandingFee.toFixed(2)}` : "$0.00",
+          voiceover_fee: order?.voiceoverFee ? `$${order.voiceoverFee.toFixed(2)}` : "$0.00",
+          edited_photos_fee: order?.editedPhotosFee ? `$${order.editedPhotosFee.toFixed(2)}` : "$0.00",
+          
+          // Photos
+          photo_count: order?.photoCount?.toString() || "Unknown",
           image_urls: order?.photos ? buildImageUrls(order.photos) : "Unknown (database connection failed)",
+          
+          // Music
+          music_choice: order?.musicSelection || "Unknown",
+          custom_audio_filename: order?.customAudio?.filename || "None",
+          custom_audio_url: order?.customAudio?.secure_url || "None",
+          
+          // Branding
+          branding_type: order?.branding?.type || "unbranded",
+          branding_logo_url: order?.branding?.logoUrl || "None",
+          agent_name: order?.branding?.agentName || "N/A",
+          company_name: order?.branding?.companyName || "N/A",
+          agent_phone: order?.branding?.phone || "N/A",
+          agent_email: order?.branding?.email || "N/A",
+          agent_website: order?.branding?.website || "N/A",
+          
+          // Voiceover
+          voiceover_included: order?.voiceover ? "Yes" : "No",
+          voiceover_script: order?.voiceoverScript || "None",
+          
+          // Extras
+          include_edited_photos: order?.includeEditedPhotos ? "Yes" : "No",
+          special_requests: order?.specialInstructions || "None",
+          
+          // Legacy field (for backward compatibility with templates)
+          video_titles: order?.branding ? buildVideoTitles(order.branding) : "Unknown",
         };
 
         console.log("[Webhook] ----------------------------------------");
