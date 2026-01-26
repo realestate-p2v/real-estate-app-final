@@ -85,10 +85,10 @@ export function ContactSection() {
                 <div>
                   <p className="font-semibold text-foreground">Email</p>
                   <a
-                    href="mailto:info@realestatephoto2video.com"
+                    href="mailto:realestatephoto2video@gmail.com"
                     className="text-muted-foreground hover:text-primary"
                   >
-                    info@realestatephoto2video.com
+                    realestatephoto2video@gmail.com
                   </a>
                 </div>
               </div>
