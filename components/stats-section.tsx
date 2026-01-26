@@ -31,9 +31,12 @@ export function StatsSection() {
   return (
     <section className="bg-gradient-to-r from-primary via-primary/95 to-primary py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground text-center mb-10">
+        <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground text-center mb-3">
           Why Video Wins in Real Estate
         </h2>
+        <p className="text-center text-primary-foreground/80 max-w-2xl mx-auto mb-10 text-sm md:text-base">
+          Video dominates social media and digital marketing. Without video content, you are falling behind your competition.
+        </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
           {stats.map((stat) => (
             <div
