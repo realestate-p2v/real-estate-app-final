@@ -17,6 +17,13 @@ function getErrorMessage(error: unknown): string {
 /**
  * MONGODB FIX: Build a properly encoded MongoDB URI
  * Uses encodeURIComponent on the password to handle special characters like @, $, #, etc.
+ * 
+ * IMPORTANT: If you're getting "bad auth" errors, your password likely contains special characters.
+ * MongoDB connection strings require URL-encoding for passwords with: @ : / ? # [ ] $ & + , ; = %
+ * 
+ * This function automatically handles encoding, but if issues persist:
+ * 1. Go to MongoDB Atlas and reset your database user password to something simpler (letters/numbers only)
+ * 2. Or manually URL-encode your password in the MONGODB_URI environment variable
  */
 function buildMongoUri(): string | null {
   const uri = process.env.MONGODB_URI;
@@ -25,21 +32,56 @@ function buildMongoUri(): string | null {
   try {
     // Parse the URI to extract components
     // Format: mongodb+srv://username:password@cluster.mongodb.net/database?options
-    const match = uri.match(/^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/);
+    // Note: Password may contain special characters including @, so we need careful parsing
     
-    if (match) {
-      const [, protocol, username, password, rest] = match;
-      // AUTH FIX: Encode BOTH username and password to handle special characters
-      const encodedUsername = encodeURIComponent(username);
-      const encodedPassword = encodeURIComponent(password);
-      const encodedUri = `${protocol}${encodedUsername}:${encodedPassword}@${rest}`;
-      console.log("[Webhook] MongoDB URI rebuilt with encodeURIComponent on credentials");
-      return encodedUri;
+    // First, check if URI starts with valid protocol
+    const protocolMatch = uri.match(/^(mongodb(?:\+srv)?:\/\/)/);
+    if (!protocolMatch) {
+      console.log("[Webhook] MongoDB URI doesn't have valid protocol, using as-is");
+      return uri;
     }
     
-    // If URI doesn't match expected format, return as-is
-    console.log("[Webhook] MongoDB URI format not matched, using as-is");
-    return uri;
+    const protocol = protocolMatch[1];
+    const rest = uri.slice(protocol.length);
+    
+    // Find the @ that separates credentials from host (it's the LAST @ before the first . or /)
+    // This handles passwords that contain @
+    const atIndex = rest.lastIndexOf("@");
+    if (atIndex === -1) {
+      console.log("[Webhook] MongoDB URI has no credentials, using as-is");
+      return uri;
+    }
+    
+    const credentials = rest.slice(0, atIndex);
+    const hostAndRest = rest.slice(atIndex + 1);
+    
+    // Split credentials into username and password at the FIRST colon
+    const colonIndex = credentials.indexOf(":");
+    if (colonIndex === -1) {
+      console.log("[Webhook] MongoDB URI has no password, using as-is");
+      return uri;
+    }
+    
+    const username = credentials.slice(0, colonIndex);
+    const password = credentials.slice(colonIndex + 1);
+    
+    // Check if already encoded (contains %XX patterns)
+    const isAlreadyEncoded = /%[0-9A-Fa-f]{2}/.test(password);
+    
+    if (isAlreadyEncoded) {
+      console.log("[Webhook] MongoDB password appears already encoded, using as-is");
+      return uri;
+    }
+    
+    // AUTH FIX: Encode BOTH username and password to handle special characters
+    const encodedUsername = encodeURIComponent(username);
+    const encodedPassword = encodeURIComponent(password);
+    const encodedUri = `${protocol}${encodedUsername}:${encodedPassword}@${hostAndRest}`;
+    
+    console.log("[Webhook] MongoDB URI rebuilt with encodeURIComponent on credentials");
+    console.log("[Webhook] Original password length:", password.length, "Encoded length:", encodedPassword.length);
+    
+    return encodedUri;
   } catch (error) {
     console.error("[Webhook] Error parsing MongoDB URI:", getErrorMessage(error));
     return uri;
@@ -284,17 +326,42 @@ export async function POST(request: Request) {
         console.log("[Webhook] ----------------------------------------");
 
         // STRIPE SESSION DATA (always available)
-        const customerName = session.customer_details?.name || "Customer";
+        const customerName = session.customer_details?.name || session.metadata?.customerName || "Customer";
         const customerEmail = session.customer_details?.email || "";
-        const customerPhone = session.customer_details?.phone || "Not provided";
+        const customerPhone = session.customer_details?.phone || session.metadata?.customerPhone || "Not provided";
         const amountTotal = session.amount_total || 0;
         const price = `$${(amountTotal / 100).toFixed(2)}`;
+
+        // METADATA FALLBACK: Extract all order details from Stripe metadata
+        // This ensures we have all info even if MongoDB fails
+        const metaMusicSelection = session.metadata?.musicSelection || "";
+        const metaSpecialInstructions = session.metadata?.specialInstructions || "";
+        const metaBrandingType = session.metadata?.brandingType || "unbranded";
+        const metaVoiceoverIncluded = session.metadata?.voiceoverIncluded || "No";
+        const metaIncludeEditedPhotos = session.metadata?.includeEditedPhotos || "No";
+        const metaPhotoCount = session.metadata?.photoCount || "0";
+
+        // Reconstruct photo URLs from chunked metadata
+        let metaPhotoUrls = "";
+        for (let i = 0; i < 10; i++) {
+          const chunk = session.metadata?.[`photoUrls_${i}`];
+          if (chunk) {
+            metaPhotoUrls += chunk;
+          } else {
+            break;
+          }
+        }
 
         console.log("[Webhook] Stripe Session Data:");
         console.log("[Webhook]   - customer_name:", customerName);
         console.log("[Webhook]   - customer_email:", customerEmail);
         console.log("[Webhook]   - customer_phone:", customerPhone);
         console.log("[Webhook]   - price:", price);
+        console.log("[Webhook] Stripe Metadata Backup:");
+        console.log("[Webhook]   - musicSelection:", metaMusicSelection);
+        console.log("[Webhook]   - specialInstructions:", metaSpecialInstructions);
+        console.log("[Webhook]   - brandingType:", metaBrandingType);
+        console.log("[Webhook]   - photoUrls length:", metaPhotoUrls.length);
 
         // DATABASE: Fetch order (wrapped in try/catch)
         let order: Order | null = null;
@@ -315,9 +382,19 @@ export async function POST(request: Request) {
           console.error("[Webhook] Database fetch exception:", dbError);
         }
 
+        // Helper function to build image URLs from metadata format
+        function buildImageUrlsFromMetadata(metaUrls: string): string {
+          if (!metaUrls) return "No images";
+          // Format is: "1:url|2:url|3:url"
+          const lines = metaUrls.split("|").map(item => {
+            const [num, url] = item.split(":", 2);
+            return url ? `Photo ${num}: ${url}` : item;
+          });
+          return lines.join("\n");
+        }
+
         // DATA MAPPING: Build personalization data
-        // If order is found, map order.photos (images), order.musicSelection, and order.branding correctly
-        // If database fails, use "Unknown" for DB fields
+        // Priority: 1) Database order, 2) Stripe metadata, 3) Default values
         const personalizationData = {
           // ORDER ID: Ensure this is passed to the template
           order_id: orderId,
@@ -329,40 +406,42 @@ export async function POST(request: Request) {
           
           // Pricing (from Stripe amount_total, with DB breakdown if available)
           price: price,
-          base_price: order?.basePrice ? `$${order.basePrice.toFixed(2)}` : "Unknown",
+          base_price: order?.basePrice ? `$${order.basePrice.toFixed(2)}` : "See total",
           branding_fee: order?.brandingFee ? `$${order.brandingFee.toFixed(2)}` : "$0.00",
           voiceover_fee: order?.voiceoverFee ? `$${order.voiceoverFee.toFixed(2)}` : "$0.00",
           edited_photos_fee: order?.editedPhotosFee ? `$${order.editedPhotosFee.toFixed(2)}` : "$0.00",
           
-          // DATA MAPPING: Photos/Images - map order.photos array correctly
-          photo_count: order?.photoCount?.toString() || order?.photos?.length?.toString() || "Unknown",
-          image_urls: order?.photos ? buildImageUrls(order.photos) : (dbError ? `Unknown (${dbError})` : "No images"),
+          // DATA MAPPING: Photos/Images - DB first, then metadata fallback
+          photo_count: order?.photoCount?.toString() || order?.photos?.length?.toString() || metaPhotoCount,
+          image_urls: order?.photos 
+            ? buildImageUrls(order.photos) 
+            : (metaPhotoUrls ? buildImageUrlsFromMetadata(metaPhotoUrls) : "No images available"),
           
-          // DATA MAPPING: Music - map order.musicSelection correctly
-          music_choice: order?.musicSelection || "Unknown",
+          // DATA MAPPING: Music - DB first, then metadata fallback
+          music_choice: order?.musicSelection || metaMusicSelection || "Not specified",
           custom_audio_filename: order?.customAudio?.filename || "None",
           custom_audio_url: order?.customAudio?.secure_url || "None",
           
-          // DATA MAPPING: Branding - map order.branding correctly
-          branding_type: order?.branding?.type || "unbranded",
+          // DATA MAPPING: Branding - DB first, then metadata fallback
+          branding_type: order?.branding?.type || metaBrandingType || "unbranded",
           branding_logo_url: order?.branding?.logoUrl || "None",
           agent_name: order?.branding?.agentName || "N/A",
           company_name: order?.branding?.companyName || "N/A",
           agent_phone: order?.branding?.phone || "N/A",
           agent_email: order?.branding?.email || "N/A",
           agent_website: order?.branding?.website || "N/A",
-          branding_info: order?.branding ? buildBrandingInfo(order.branding) : "Unknown",
+          branding_info: order?.branding ? buildBrandingInfo(order.branding) : (metaBrandingType || "unbranded"),
           
-          // Voiceover
-          voiceover_included: order?.voiceover ? "Yes" : "No",
+          // Voiceover - DB first, then metadata fallback
+          voiceover_included: order?.voiceover ? "Yes" : metaVoiceoverIncluded,
           voiceover_script: order?.voiceoverScript || "None",
           
-          // Extras
-          include_edited_photos: order?.includeEditedPhotos ? "Yes" : "No",
-          special_requests: order?.specialInstructions || "None",
+          // Extras - DB first, then metadata fallback
+          include_edited_photos: order?.includeEditedPhotos ? "Yes" : metaIncludeEditedPhotos,
+          special_requests: order?.specialInstructions || metaSpecialInstructions || "None",
           
           // Legacy field (for backward compatibility with templates)
-          video_titles: order?.branding ? buildBrandingInfo(order.branding) : "Unknown",
+          video_titles: order?.branding ? buildBrandingInfo(order.branding) : (metaBrandingType || "unbranded"),
           
           // Database status (for debugging in email)
           db_status: dbError ? `Database Error: ${dbError}` : "Connected successfully",

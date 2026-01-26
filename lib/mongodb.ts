@@ -37,7 +37,52 @@ import { MongoClient, type Db, type MongoClientOptions } from "mongodb";
  * 4. Redeploy the project
  */
 
-const uri = process.env.MONGODB_URI || "";
+const rawUri = process.env.MONGODB_URI || "";
+
+/**
+ * MONGODB URI ENCODING FIX
+ * Handles passwords with special characters by properly URL-encoding them.
+ * This fixes "bad auth" errors when password contains: @ : / ? # [ ] $ & + , ; = %
+ */
+function encodeMongoUri(uri: string): string {
+  if (!uri) return uri;
+
+  try {
+    // Check if URI starts with valid protocol
+    const protocolMatch = uri.match(/^(mongodb(?:\+srv)?:\/\/)/);
+    if (!protocolMatch) return uri;
+    
+    const protocol = protocolMatch[1];
+    const rest = uri.slice(protocol.length);
+    
+    // Find the @ that separates credentials from host (last @ before host)
+    const atIndex = rest.lastIndexOf("@");
+    if (atIndex === -1) return uri;
+    
+    const credentials = rest.slice(0, atIndex);
+    const hostAndRest = rest.slice(atIndex + 1);
+    
+    // Split credentials at first colon
+    const colonIndex = credentials.indexOf(":");
+    if (colonIndex === -1) return uri;
+    
+    const username = credentials.slice(0, colonIndex);
+    const password = credentials.slice(colonIndex + 1);
+    
+    // Check if already encoded
+    if (/%[0-9A-Fa-f]{2}/.test(password)) return uri;
+    
+    // Encode credentials
+    const encodedUsername = encodeURIComponent(username);
+    const encodedPassword = encodeURIComponent(password);
+    
+    return `${protocol}${encodedUsername}:${encodedPassword}@${hostAndRest}`;
+  } catch {
+    return uri;
+  }
+}
+
+const uri = encodeMongoUri(rawUri);
 
 // Parse the URI to check if it already has query parameters
 const hasQueryParams = uri.includes("?");
