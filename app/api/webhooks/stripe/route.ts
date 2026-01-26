@@ -20,14 +20,21 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
 
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
   try {
-    // For now, we'll parse without webhook secret verification
-    // In production, add STRIPE_WEBHOOK_SECRET env var
-    event = JSON.parse(body) as Stripe.Event;
+    if (webhookSecret) {
+      // Verify the webhook signature using the secret
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } else {
+      // Fallback: parse without verification (not recommended for production)
+      console.warn("STRIPE_WEBHOOK_SECRET not configured - parsing without verification");
+      event = JSON.parse(body) as Stripe.Event;
+    }
   } catch (err) {
-    console.error("Webhook parsing error:", err);
+    console.error("Webhook signature verification failed:", err);
     return NextResponse.json(
-      { error: "Invalid payload" },
+      { error: "Webhook signature verification failed" },
       { status: 400 }
     );
   }
