@@ -37,6 +37,14 @@ interface OrderArrayItem {
   value: string;
 }
 
+// Stripe session data passed from webhook
+interface StripeSessionData {
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  amountTotal: number | null;
+}
+
 async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   console.log("[v0] sendEmail called - checking API key...");
   console.log("[v0] MAILERSEND_API_KEY exists:", !!MAILERSEND_API_KEY);
@@ -165,11 +173,19 @@ function buildOrderArray(order: Order): OrderArrayItem[] {
 /**
  * Send a receipt email to the customer using a MailerSend template.
  * This is separate from the HTML confirmation email and provides a clean, branded receipt.
+ * 
+ * @param order - The order data from the database (may be null if DB fetch failed)
+ * @param stripeSession - Data extracted from the Stripe session (always available)
  */
-export async function sendCustomerReceiptEmail(order: Order) {
+export async function sendCustomerReceiptEmail(
+  order: Order | null,
+  stripeSession: StripeSessionData
+) {
   console.log("[v0] sendCustomerReceiptEmail called");
   console.log("[v0] MAILERSEND_API_KEY exists:", !!MAILERSEND_API_KEY);
   console.log("[v0] MAILERSEND_API_KEY length:", MAILERSEND_API_KEY?.length || 0);
+  console.log("[v0] Order data available:", !!order);
+  console.log("[v0] Stripe session data:", JSON.stringify(stripeSession));
   
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
@@ -189,51 +205,79 @@ export async function sendCustomerReceiptEmail(order: Order) {
     return { success: false, error: "Customer receipt template ID not configured" };
   }
 
-  console.log("[v0] Sending customer receipt email for order:", order.orderId);
+  // Determine recipient email - prefer Stripe session data as it's always available
+  const recipientEmail = stripeSession.customerEmail || order?.customer?.email;
+  if (!recipientEmail) {
+    console.error("[v0] No customer email available from Stripe session or order");
+    return { success: false, error: "No customer email available" };
+  }
+
+  // Use Stripe session data as primary source, fall back to order data
+  const customerName = stripeSession.customerName || order?.customer?.name || "Customer";
+  const customerEmail = recipientEmail;
+  const customerPhone = stripeSession.customerPhone || order?.customer?.phone || "Not provided";
+  const price = stripeSession.amountTotal !== null 
+    ? (stripeSession.amountTotal / 100).toFixed(2) 
+    : order?.totalPrice?.toFixed(2) || "0.00";
+
+  console.log("[v0] Sending customer receipt email for order:", order?.orderId || "unknown");
   console.log("[v0] Using template ID:", CUSTOMER_RECEIPT_TEMPLATE_ID);
-  console.log("[v0] Sending to:", order.customer.email);
+  console.log("[v0] Sending to:", recipientEmail);
 
-  // Build line items for the receipt
-  const lineItems = [
-    {
-      description: `Video Creation (${order.photoCount} photos)`,
-      amount: formatCurrency(order.basePrice),
-    },
-  ];
+  // Build image URLs from order if available (Cloudinary URLs)
+  const imageUrls = order?.photos && order.photos.length > 0
+    ? order.photos.map(photo => photo.secure_url).join(", ")
+    : "Images not available - contact support";
 
-  if (order.brandingFee > 0) {
-    lineItems.push({
-      description: getBrandingLabel(order.branding.type),
-      amount: formatCurrency(order.brandingFee),
-    });
-  }
+  // Get music choice and video titles (branding) from order
+  const musicChoice = order?.musicSelection || "Standard";
+  const videoTitles = order?.branding?.type === "unbranded" 
+    ? "Unbranded" 
+    : order?.branding?.agentName || order?.branding?.companyName || "Unbranded";
 
-  if (order.voiceoverFee > 0) {
-    lineItems.push({
-      description: "Professional Voiceover",
-      amount: formatCurrency(order.voiceoverFee),
-    });
-  }
+  // Special requests
+  const specialRequests = order?.specialInstructions || "None";
 
-  // Add edited photos fee if applicable
-  const editedPhotosFee = order.editedPhotosFee || 0;
-  if (editedPhotosFee > 0) {
-    lineItems.push({
-      description: "Edited Photos Package",
-      amount: formatCurrency(editedPhotosFee),
-    });
-  }
-
-  // Build image URLs list from Cloudinary photos
-  const imageUrls = order.photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
-  const imageUrlsHtml = order.photos.map((photo, index) => 
-    `<a href="${photo.secure_url}" target="_blank">Photo ${index + 1}</a>`
-  ).join(" | ");
-
-  // Delivery message (3 business days notice)
-  const deliveryMessage = "Your video will be delivered within 3 business days. You will receive an email with the download link once your video is ready.";
+  // Delivery message
+  const deliveryMessage = "Thank you for your purchase! Your video will be ready within 3 business days.";
 
   try {
+    // Build the personalization data object with EXACT keys requested:
+    // customer_name, product_name, price, image_urls, special_requests,
+    // customer_email, customer_phone, music_choice, video_titles, delivery_message
+    const personalizationData = {
+      // REQUIRED FIELDS (exact keys as specified)
+      customer_name: customerName,
+      product_name: "Real Estate Video Package",
+      price: price,
+      image_urls: imageUrls,
+      special_requests: specialRequests,
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      music_choice: musicChoice,
+      video_titles: videoTitles,
+      delivery_message: deliveryMessage,
+
+      // Additional fields that may be useful in templates
+      order_id: order?.orderId || "N/A",
+      order_date: order?.createdAt ? formatDate(order.createdAt) : formatDate(new Date()),
+      photo_count: String(order?.photoCount || 0),
+      total_price: `$${price}`,
+      payment_status: "Paid",
+      order_status: "Processing",
+
+      // Branding details (if applicable)
+      branding_type: order?.branding ? getBrandingLabel(order.branding.type) : "Unbranded",
+      agent_name: order?.branding?.agentName || "None",
+      company_name: order?.branding?.companyName || "None",
+
+      // Support info
+      support_email: BUSINESS_EMAIL,
+      
+      // Timestamp to ensure personalization is never empty
+      _timestamp: new Date().toISOString(),
+    };
+
     const requestBody = {
       from: {
         email: FROM_EMAIL,
@@ -241,73 +285,16 @@ export async function sendCustomerReceiptEmail(order: Order) {
       },
       to: [
         {
-          email: order.customer.email,
-          name: order.customer.name,
+          email: recipientEmail,
+          name: customerName,
         },
       ],
-      subject: `Order Confirmation - #${order.orderId}`,
+      subject: `Order Confirmation - #${order?.orderId || "New Order"}`,
       template_id: CUSTOMER_RECEIPT_TEMPLATE_ID,
       personalization: [
         {
-          email: order.customer.email,
-          data: {
-            // Customer info
-            customer_name: order.customer.name,
-            customer_email: order.customer.email,
-            customer_phone: order.customer.phone || "N/A",
-
-            // Order info
-            order_id: order.orderId,
-            order_date: formatDate(order.createdAt),
-            photo_count: String(order.photoCount),
-
-            // Selections
-            music_selection: order.musicSelection,
-            branding_type: getBrandingLabel(order.branding.type),
-            has_voiceover: order.voiceover ? "Yes" : "No",
-            voiceover_script: order.voiceoverScript || "None",
-            include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
-
-            // Pricing
-            base_price: formatCurrency(order.basePrice),
-            branding_fee: formatCurrency(order.brandingFee),
-            voiceover_fee: formatCurrency(order.voiceoverFee),
-            edited_photos_fee: formatCurrency(editedPhotosFee),
-            total_price: formatCurrency(order.totalPrice),
-
-            // For template iteration
-            line_items: lineItems,
-
-            // Status
-            payment_status: "Paid",
-            order_status: "Processing",
-
-            // Branding details (if applicable)
-            has_branding: order.branding.type !== "unbranded",
-            agent_name: order.branding.agentName || "None",
-            company_name: order.branding.companyName || "None",
-            branding_phone: order.branding.phone || "None",
-            branding_email: order.branding.email || "None",
-            branding_website: order.branding.website || "None",
-
-            // Special instructions (use "None" if empty for MailerSend)
-            has_special_instructions: !!order.specialInstructions,
-            special_instructions: order.specialInstructions || "None",
-
-            // Cloudinary Image URLs (important for order reference)
-            image_urls: imageUrls,
-            image_urls_html: imageUrlsHtml,
-            photo_urls: order.photos.map(p => ({ url: p.secure_url, id: p.public_id })),
-
-            // Delivery message
-            delivery_message: deliveryMessage,
-
-            // Support info
-            support_email: BUSINESS_EMAIL,
-            
-            // Ensure personalization is never empty - MailerSend requires at least one variable
-            _timestamp: new Date().toISOString(),
-          },
+          email: recipientEmail,
+          data: personalizationData,
         },
       ],
     };

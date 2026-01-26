@@ -205,19 +205,33 @@ export async function POST(request: Request) {
           });
         }
 
+        // Build Stripe session data object for email (always available even if DB fails)
+        const stripeSessionData = {
+          customerName: session.customer_details?.name || null,
+          customerEmail: session.customer_details?.email || null,
+          customerPhone: session.customer_details?.phone || null,
+          amountTotal: session.amount_total,
+        };
+        
+        console.log("[v0] Stripe session data for email:", JSON.stringify(stripeSessionData));
+
         // Send emails independently - each email attempt is isolated
         // IMPORTANT: All email sends must complete before returning 200
-        if (order) {
-          // Verify MailerSend API key is available
-          const mailersendApiKey = process.env.MAILERSEND_API_KEY;
-          console.log("[v0] MAILERSEND_API_KEY configured:", !!mailersendApiKey);
-          console.log("[v0] MAILERSEND_API_KEY length:", mailersendApiKey?.length || 0);
-          
-          // Send customer receipt email (template-based receipt)
+        // Even if DB fetch fails, we still try to send emails with Stripe data
+        
+        // Verify MailerSend API key is available
+        const mailersendApiKey = process.env.MAILERSEND_API_KEY;
+        console.log("[v0] MAILERSEND_API_KEY configured:", !!mailersendApiKey);
+        console.log("[v0] MAILERSEND_API_KEY length:", mailersendApiKey?.length || 0);
+        
+        // Send customer receipt email (template-based receipt)
+        // This will use Stripe session data even if order is null
+        if (stripeSessionData.customerEmail) {
           try {
             console.log("[v0] Sending email now... (customer receipt)");
-            console.log("[v0] Customer email:", order.customer?.email);
-            const receiptResult = await sendCustomerReceiptEmail(order);
+            console.log("[v0] Customer email:", stripeSessionData.customerEmail);
+            console.log("[v0] Order data available:", !!order);
+            const receiptResult = await sendCustomerReceiptEmail(order, stripeSessionData);
             console.log("[v0] Email sent successfully (customer receipt)");
             console.log("[v0] Customer receipt email result:", JSON.stringify(receiptResult));
           } catch (receiptError) {
@@ -226,8 +240,12 @@ export async function POST(request: Request) {
               getErrorMessage(receiptError)
             );
           }
+        } else {
+          console.warn("[v0] No customer email in Stripe session, skipping receipt email");
+        }
 
-          // Send confirmation emails to customer and business (HTML emails)
+        // Send confirmation emails to customer and business (HTML emails) - requires order data
+        if (order) {
           try {
             console.log("[v0] Sending email now... (confirmation emails)");
             const emailResults = await sendOrderConfirmationEmails(order);
@@ -255,7 +273,8 @@ export async function POST(request: Request) {
           
           console.log("[v0] All email operations completed for order:", order.orderId);
         } else {
-          console.warn("[v0] No order data available, skipping email notifications");
+          console.warn("[v0] Order data not available from DB, skipping confirmation and business template emails");
+          console.log("[v0] Customer receipt email was still attempted with Stripe session data");
         }
         break;
       }
