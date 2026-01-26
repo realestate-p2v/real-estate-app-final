@@ -15,25 +15,34 @@ function getErrorMessage(error: unknown): string {
 }
 
 /**
- * RESILIENT MONGODB CONNECTION
- * Handles special characters and provides detailed error logging without crashing
+ * MONGODB FIX: Robust try/catch wrapper
+ * - Logs exact error if DB fails
+ * - Does NOT stop the script - emails will still be sent with Stripe data
+ * - Returns null for order if DB connection fails
  */
-async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | null; error: string | null }> {
+async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | null; dbError: string | null }> {
+  console.log("[Webhook] ========================================");
+  console.log("[Webhook] MONGODB: Attempting to fetch order data");
+  console.log("[Webhook] ========================================");
+
   const uri = process.env.MONGODB_URI;
 
+  // Check if MONGODB_URI is configured
   if (!uri) {
-    console.error("[v0] MONGODB_URI environment variable is not set");
-    return { order: null, error: "MONGODB_URI not configured" };
+    const error = "MONGODB_URI environment variable is not set";
+    console.error("[Webhook] MONGODB ERROR:", error);
+    console.error("[Webhook] Continuing without database data - emails will use Stripe session data only");
+    return { order: null, dbError: error };
   }
 
-  // Log sanitized URI for debugging
+  // Log sanitized URI for debugging (hide password)
   const sanitizedUri = uri.replace(/:([^:@]+)@/, ":***@");
-  console.log("[v0] Attempting MongoDB connection with URI:", sanitizedUri);
+  console.log("[Webhook] MongoDB URI (sanitized):", sanitizedUri);
 
   let client: MongoClient | null = null;
 
   try {
-    // Create client with options optimized for serverless
+    // Create client with serverless-optimized settings
     client = new MongoClient(uri, {
       maxPoolSize: 1,
       minPoolSize: 0,
@@ -45,109 +54,131 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
       tls: true,
     });
 
-    console.log("[v0] Connecting to MongoDB...");
+    console.log("[Webhook] Connecting to MongoDB...");
     await client.connect();
-    console.log("[v0] MongoDB connected successfully");
+    console.log("[Webhook] MongoDB connection SUCCESSFUL");
 
     const db: Db = client.db("photo2video");
-    console.log("[v0] Fetching order with orderId:", orderId);
+    console.log("[Webhook] Fetching order with orderId:", orderId);
 
-    // FULL DATA RETRIEVAL: Use findOne with orderId from Stripe metadata
+    // Fetch the order document
     const order = await db.collection<Order>("orders").findOne({ orderId });
 
     if (order) {
-      console.log("[v0] Order found successfully");
-      console.log("[v0] Order details:", {
-        orderId: order.orderId,
-        customerEmail: order.customer?.email,
-        customerName: order.customer?.name,
-        photoCount: order.photoCount,
-        totalPrice: order.totalPrice,
-        musicSelection: order.musicSelection,
-        brandingType: order.branding?.type,
-      });
+      console.log("[Webhook] Order FOUND in database");
+      console.log("[Webhook] Order details:");
+      console.log("[Webhook]   - orderId:", order.orderId);
+      console.log("[Webhook]   - customerEmail:", order.customer?.email);
+      console.log("[Webhook]   - customerName:", order.customer?.name);
+      console.log("[Webhook]   - customerPhone:", order.customer?.phone);
+      console.log("[Webhook]   - photoCount:", order.photoCount);
+      console.log("[Webhook]   - photos array length:", order.photos?.length || 0);
+      console.log("[Webhook]   - musicSelection:", order.musicSelection);
+      console.log("[Webhook]   - brandingType:", order.branding?.type);
+      console.log("[Webhook]   - totalPrice:", order.totalPrice);
 
-      // Update payment status while we have the connection
-      await db.collection<Order>("orders").updateOne(
-        { orderId },
-        {
-          $set: {
-            paymentStatus: "paid",
-            status: "processing",
-            updatedAt: new Date(),
-          },
-        }
-      );
-      console.log("[v0] Order status updated to paid/processing");
+      // Update order status to paid/processing
+      try {
+        await db.collection<Order>("orders").updateOne(
+          { orderId },
+          {
+            $set: {
+              paymentStatus: "paid",
+              status: "processing",
+              updatedAt: new Date(),
+            },
+          }
+        );
+        console.log("[Webhook] Order status updated to paid/processing");
+      } catch (updateError) {
+        console.error("[Webhook] Failed to update order status:", getErrorMessage(updateError));
+        // Don't fail - we still have the order data
+      }
 
-      return { order, error: null };
+      return { order, dbError: null };
     } else {
-      console.warn("[v0] Order not found in database:", orderId);
-      return { order: null, error: `Order not found: ${orderId}` };
+      const error = `Order not found in database: ${orderId}`;
+      console.warn("[Webhook] MONGODB WARNING:", error);
+      return { order: null, dbError: error };
     }
   } catch (error) {
+    // LOG THE EXACT ERROR - but don't stop the script
     const errorMessage = getErrorMessage(error);
-    console.error("[v0] MongoDB operation failed:", errorMessage);
+    console.error("[Webhook] ========================================");
+    console.error("[Webhook] MONGODB ERROR - EXACT ERROR MESSAGE:");
+    console.error("[Webhook]", errorMessage);
+    console.error("[Webhook] ========================================");
 
     // Provide specific guidance for common errors
     if (errorMessage.includes("bad auth") || errorMessage.includes("Authentication failed")) {
-      console.error("[v0] BAD AUTH ERROR - Common causes:");
-      console.error("[v0]   1. Password contains special characters that need URL encoding");
-      console.error("[v0]   2. Example: @ -> %40, $ -> %24, # -> %23");
-      console.error("[v0]   3. Username or password is incorrect");
-      console.error("[v0]   4. Database user lacks proper permissions");
+      console.error("[Webhook] DIAGNOSIS: Bad Authentication");
+      console.error("[Webhook]   - Password may contain special characters needing URL encoding");
+      console.error("[Webhook]   - @ -> %40, $ -> %24, # -> %23, : -> %3A");
+      console.error("[Webhook]   - Username or password may be incorrect");
+      console.error("[Webhook]   - Database user may lack proper permissions");
     }
 
     if (errorMessage.includes("ENOTFOUND") || errorMessage.includes("getaddrinfo")) {
-      console.error("[v0] DNS ERROR - The cluster hostname could not be resolved");
+      console.error("[Webhook] DIAGNOSIS: DNS Resolution Failed");
+      console.error("[Webhook]   - The cluster hostname could not be resolved");
+      console.error("[Webhook]   - Check if the cluster name is correct");
     }
 
     if (errorMessage.includes("ETIMEDOUT") || errorMessage.includes("timeout")) {
-      console.error("[v0] TIMEOUT ERROR - Connection took too long. Check network/firewall settings.");
+      console.error("[Webhook] DIAGNOSIS: Connection Timeout");
+      console.error("[Webhook]   - Network/firewall may be blocking the connection");
+      console.error("[Webhook]   - MongoDB Atlas IP allowlist may need updating");
     }
 
-    return { order: null, error: errorMessage };
+    console.error("[Webhook] ========================================");
+    console.error("[Webhook] CONTINUING WITHOUT DB DATA");
+    console.error("[Webhook] Emails will be sent using Stripe session data only");
+    console.error("[Webhook] Cloudinary links and music selection will NOT be available");
+    console.error("[Webhook] ========================================");
+
+    return { order: null, dbError: errorMessage };
   } finally {
-    // Always close the connection in serverless environment
+    // Always close the connection
     if (client) {
       try {
         await client.close();
-        console.log("[v0] MongoDB connection closed");
+        console.log("[Webhook] MongoDB connection closed");
       } catch (closeError) {
-        console.error("[v0] Error closing MongoDB connection:", getErrorMessage(closeError));
+        console.error("[Webhook] Error closing MongoDB connection:", getErrorMessage(closeError));
       }
     }
   }
 }
 
 export async function POST(request: Request) {
-  console.log("[v0] ========================================");
-  console.log("[v0] Stripe webhook received at:", new Date().toISOString());
-  console.log("[v0] ========================================");
+  console.log("[Webhook] ========================================");
+  console.log("[Webhook] Stripe webhook received");
+  console.log("[Webhook] Timestamp:", new Date().toISOString());
+  console.log("[Webhook] ========================================");
 
-  // Step 1: Get raw body for signature verification
+  // Step 1: Read request body
   let body: string;
   try {
     body = await request.text();
-    console.log("[v0] Webhook body length:", body.length);
+    console.log("[Webhook] Request body length:", body.length);
   } catch (err) {
-    console.error("[v0] Failed to read request body:", getErrorMessage(err));
+    console.error("[Webhook] Failed to read request body:", getErrorMessage(err));
     return NextResponse.json({ error: "Failed to read request body" }, { status: 400 });
   }
 
-  // Step 2: Get headers
+  // Step 2: Get Stripe signature header
   let signature: string | null;
   try {
     const headersList = await headers();
     signature = headersList.get("stripe-signature");
-    console.log("[v0] Stripe signature present:", !!signature);
+    console.log("[Webhook] Stripe signature present:", !!signature);
   } catch (err) {
-    console.error("[v0] Failed to get headers:", getErrorMessage(err));
+    console.error("[Webhook] Failed to get headers:", getErrorMessage(err));
     return NextResponse.json({ error: "Failed to read headers" }, { status: 400 });
   }
 
   if (!signature) {
-    console.error("[v0] Missing stripe-signature header");
+    console.error("[Webhook] Missing stripe-signature header");
     return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
@@ -156,39 +187,35 @@ export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    console.error("[v0] STRIPE_WEBHOOK_SECRET is not configured");
+    console.error("[Webhook] STRIPE_WEBHOOK_SECRET is not configured");
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
   }
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    console.log("[v0] Webhook signature verified successfully");
-    console.log("[v0] Event type:", event.type);
-    console.log("[v0] Event ID:", event.id);
+    console.log("[Webhook] Signature verified successfully");
+    console.log("[Webhook] Event type:", event.type);
+    console.log("[Webhook] Event ID:", event.id);
   } catch (err) {
-    console.error("[v0] Webhook signature verification failed:", getErrorMessage(err));
+    console.error("[Webhook] Signature verification failed:", getErrorMessage(err));
     return NextResponse.json({ error: "Webhook signature verification failed" }, { status: 400 });
   }
 
-  // Step 4: Handle event types
+  // Step 4: Handle event
   try {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const orderId = session.metadata?.orderId;
 
-        console.log("[v0] ----------------------------------------");
-        console.log("[v0] Processing checkout.session.completed");
-        console.log("[v0] Session ID:", session.id);
-        console.log("[v0] Order ID from metadata:", orderId);
-        console.log("[v0] Payment Intent:", session.payment_intent);
-        console.log("[v0] Customer Email:", session.customer_details?.email);
-        console.log("[v0] Customer Name:", session.customer_details?.name);
-        console.log("[v0] Customer Phone:", session.customer_details?.phone);
-        console.log("[v0] Amount Total:", session.amount_total);
-        console.log("[v0] ----------------------------------------");
+        console.log("[Webhook] ----------------------------------------");
+        console.log("[Webhook] EVENT: checkout.session.completed");
+        console.log("[Webhook] Session ID:", session.id);
+        console.log("[Webhook] Order ID (from metadata):", orderId);
+        console.log("[Webhook] Payment Intent:", session.payment_intent);
+        console.log("[Webhook] ----------------------------------------");
 
-        // Build Stripe session data (ALWAYS available)
+        // STRIPE SESSION DATA (always available)
         const stripeSessionData = {
           customerName: session.customer_details?.name || null,
           customerEmail: session.customer_details?.email || null,
@@ -196,69 +223,94 @@ export async function POST(request: Request) {
           amountTotal: session.amount_total,
         };
 
-        console.log("[v0] Stripe session data:", JSON.stringify(stripeSessionData));
+        console.log("[Webhook] Stripe session data:");
+        console.log("[Webhook]   - customerName:", stripeSessionData.customerName);
+        console.log("[Webhook]   - customerEmail:", stripeSessionData.customerEmail);
+        console.log("[Webhook]   - customerPhone:", stripeSessionData.customerPhone);
+        console.log("[Webhook]   - amountTotal:", stripeSessionData.amountTotal);
 
-        // REQUIREMENT 2: Full Data Retrieval from MongoDB
+        // MONGODB: Fetch order (wrapped in robust try/catch)
         let order: Order | null = null;
         let dbError: string | null = null;
 
         if (orderId) {
-          console.log("[v0] Attempting to fetch order from database...");
           const dbResult = await getOrderFromDatabase(orderId);
           order = dbResult.order;
-          dbError = dbResult.error;
-
-          if (dbError) {
-            console.warn("[v0] Database error (will continue with Stripe data):", dbError);
-          }
+          dbError = dbResult.dbError;
         } else {
-          console.warn("[v0] No orderId in session metadata - cannot fetch order from DB");
+          dbError = "No orderId in session metadata - cannot fetch from database";
+          console.warn("[Webhook]", dbError);
         }
 
-        // Log what data we have available
-        console.log("[v0] Data availability:");
-        console.log("[v0]   - Stripe session data: YES");
-        console.log("[v0]   - Order from database:", order ? "YES" : "NO");
+        // Log data availability summary
+        console.log("[Webhook] ----------------------------------------");
+        console.log("[Webhook] DATA AVAILABILITY SUMMARY:");
+        console.log("[Webhook]   - Stripe session data: AVAILABLE");
+        console.log("[Webhook]   - Database order data:", order ? "AVAILABLE" : "NOT AVAILABLE");
+        if (dbError) {
+          console.log("[Webhook]   - DB Error:", dbError);
+        }
         if (order) {
-          console.log("[v0]   - Photos count:", order.photos?.length || 0);
-          console.log("[v0]   - Music selection:", order.musicSelection);
-          console.log("[v0]   - Branding type:", order.branding?.type);
+          console.log("[Webhook]   - Cloudinary photos:", order.photos?.length || 0);
+          console.log("[Webhook]   - Music selection:", order.musicSelection);
+          console.log("[Webhook]   - Branding info:", order.branding?.type);
+        }
+        console.log("[Webhook] ----------------------------------------");
+
+        // TWO SEPARATE EMAIL REQUESTS
+        console.log("[Webhook] ========================================");
+        console.log("[Webhook] STARTING EMAIL SENDS");
+        console.log("[Webhook] ========================================");
+
+        // Check MailerSend environment
+        const mailersendApiKey = process.env.MAILERSEND_API_KEY;
+        const mailersendSenderEmail = process.env.MAILERSEND_SENDER_EMAIL;
+        console.log("[Webhook] MAILERSEND_API_KEY configured:", !!mailersendApiKey);
+        console.log("[Webhook] MAILERSEND_SENDER_EMAIL configured:", !!mailersendSenderEmail);
+        if (mailersendSenderEmail) {
+          console.log("[Webhook] MAILERSEND_SENDER_EMAIL value:", mailersendSenderEmail);
         }
 
-        // REQUIREMENT 3: Dual-Email Logic
-        console.log("[v0] ========================================");
-        console.log("[v0] Starting email sends...");
-        console.log("[v0] ========================================");
+        // REQUEST 1: Customer Receipt Email
+        console.log("[Webhook] ----------------------------------------");
+        console.log("[Webhook] REQUEST 1: CUSTOMER RECEIPT EMAIL");
+        console.log("[Webhook] ----------------------------------------");
 
-        // Verify MailerSend API key
-        const mailersendApiKey = process.env.MAILERSEND_API_KEY;
-        console.log("[v0] MAILERSEND_API_KEY configured:", !!mailersendApiKey);
-
-        // CUSTOMER EMAIL: Send to session.customer_details.email
         if (stripeSessionData.customerEmail) {
-          console.log("[v0] --- Sending CUSTOMER email ---");
           try {
             const customerResult = await sendCustomerEmail(order, stripeSessionData);
-            console.log("[v0] Customer email result:", JSON.stringify(customerResult));
+            if (customerResult.success) {
+              console.log("[Webhook] Customer email: SUCCESS");
+            } else {
+              console.error("[Webhook] Customer email: FAILED -", customerResult.error);
+            }
           } catch (customerEmailError) {
-            console.error("[v0] Customer email failed:", getErrorMessage(customerEmailError));
+            console.error("[Webhook] Customer email: EXCEPTION -", getErrorMessage(customerEmailError));
           }
         } else {
-          console.warn("[v0] No customer email available - skipping customer email");
+          console.warn("[Webhook] Customer email: SKIPPED - No customer email available");
         }
 
-        // ADMIN EMAIL: Send to realestatephoto2video@gmail.com with ALL details
-        console.log("[v0] --- Sending ADMIN email ---");
+        // REQUEST 2: Admin Full Report Email
+        console.log("[Webhook] ----------------------------------------");
+        console.log("[Webhook] REQUEST 2: ADMIN FULL REPORT EMAIL");
+        console.log("[Webhook] Recipient: realestatephoto2video@gmail.com");
+        console.log("[Webhook] ----------------------------------------");
+
         try {
           const adminResult = await sendAdminEmail(order, stripeSessionData);
-          console.log("[v0] Admin email result:", JSON.stringify(adminResult));
+          if (adminResult.success) {
+            console.log("[Webhook] Admin email: SUCCESS");
+          } else {
+            console.error("[Webhook] Admin email: FAILED -", adminResult.error);
+          }
         } catch (adminEmailError) {
-          console.error("[v0] Admin email failed:", getErrorMessage(adminEmailError));
+          console.error("[Webhook] Admin email: EXCEPTION -", getErrorMessage(adminEmailError));
         }
 
-        console.log("[v0] ========================================");
-        console.log("[v0] Email sends completed");
-        console.log("[v0] ========================================");
+        console.log("[Webhook] ========================================");
+        console.log("[Webhook] EMAIL SENDS COMPLETED");
+        console.log("[Webhook] ========================================");
 
         break;
       }
@@ -267,34 +319,32 @@ export async function POST(request: Request) {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const orderId = paymentIntent.metadata?.orderId;
 
-        console.log("[v0] Processing payment_intent.payment_failed");
-        console.log("[v0] Payment Intent ID:", paymentIntent.id);
-        console.log("[v0] Order ID:", orderId);
-        console.log("[v0] Failure reason:", paymentIntent.last_payment_error?.message);
+        console.log("[Webhook] EVENT: payment_intent.payment_failed");
+        console.log("[Webhook] Payment Intent ID:", paymentIntent.id);
+        console.log("[Webhook] Order ID:", orderId);
+        console.log("[Webhook] Failure reason:", paymentIntent.last_payment_error?.message);
 
-        // Log the failure but don't crash
-        if (orderId) {
-          console.log("[v0] Would update order status to failed for:", orderId);
-        }
+        // Log but don't crash
         break;
       }
 
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log("[v0] Payment intent succeeded:", paymentIntent.id);
-        console.log("[v0] Amount:", paymentIntent.amount / 100, paymentIntent.currency);
-        // Handled by checkout.session.completed
+        console.log("[Webhook] EVENT: payment_intent.succeeded");
+        console.log("[Webhook] Payment Intent ID:", paymentIntent.id);
+        console.log("[Webhook] Amount:", (paymentIntent.amount / 100).toFixed(2), paymentIntent.currency.toUpperCase());
+        // Main logic handled by checkout.session.completed
         break;
       }
 
       default:
-        console.log("[v0] Unhandled event type:", event.type);
+        console.log("[Webhook] Unhandled event type:", event.type);
     }
   } catch (err) {
-    // Log error but still return 200 to prevent Stripe retries
-    console.error("[v0] Error processing webhook event:", getErrorMessage(err));
+    // Log error but return 200 to prevent Stripe retries
+    console.error("[Webhook] Error processing event:", getErrorMessage(err));
   }
 
-  console.log("[v0] Webhook processing complete - returning 200");
+  console.log("[Webhook] Processing complete - returning 200");
   return NextResponse.json({ received: true });
 }
