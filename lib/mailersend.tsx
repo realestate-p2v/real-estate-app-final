@@ -4,6 +4,7 @@ const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const BUSINESS_EMAIL = "realestatephoto2video@gmail.com";
 const FROM_EMAIL = "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Update this with your verified domain
 const ORDER_TEMPLATE_ID = "zr6ke4n6kzelon12";
+const CUSTOMER_RECEIPT_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || ""; // Add your customer receipt template ID
 
 interface EmailRecipient {
   email: string;
@@ -130,6 +131,141 @@ function buildOrderArray(order: Order): OrderArrayItem[] {
   });
 
   return orderArray;
+}
+
+/**
+ * Send a receipt email to the customer using a MailerSend template.
+ * This is separate from the HTML confirmation email and provides a clean, branded receipt.
+ */
+export async function sendCustomerReceiptEmail(order: Order) {
+  if (!MAILERSEND_API_KEY) {
+    console.error("[v0] MAILERSEND_API_KEY is not configured");
+    return { success: false, error: "API key not configured" };
+  }
+
+  // If no template ID is configured, fall back to the HTML email
+  if (!CUSTOMER_RECEIPT_TEMPLATE_ID) {
+    console.log("[v0] CUSTOMER_RECEIPT_TEMPLATE_ID not configured, skipping template receipt email");
+    return { success: false, error: "Customer receipt template ID not configured" };
+  }
+
+  console.log("[v0] Sending customer receipt email for order:", order.orderId);
+  console.log("[v0] Using template ID:", CUSTOMER_RECEIPT_TEMPLATE_ID);
+  console.log("[v0] Sending to:", order.customer.email);
+
+  // Build line items for the receipt
+  const lineItems = [
+    {
+      description: `Video Creation (${order.photoCount} photos)`,
+      amount: formatCurrency(order.basePrice),
+    },
+  ];
+
+  if (order.brandingFee > 0) {
+    lineItems.push({
+      description: getBrandingLabel(order.branding.type),
+      amount: formatCurrency(order.brandingFee),
+    });
+  }
+
+  if (order.voiceoverFee > 0) {
+    lineItems.push({
+      description: "Professional Voiceover",
+      amount: formatCurrency(order.voiceoverFee),
+    });
+  }
+
+  try {
+    const requestBody = {
+      from: {
+        email: FROM_EMAIL,
+        name: "Real Estate Photo2Video",
+      },
+      to: [
+        {
+          email: order.customer.email,
+          name: order.customer.name,
+        },
+      ],
+      template_id: CUSTOMER_RECEIPT_TEMPLATE_ID,
+      personalization: [
+        {
+          email: order.customer.email,
+          data: {
+            // Customer info
+            customer_name: order.customer.name,
+            customer_email: order.customer.email,
+            customer_phone: order.customer.phone || "N/A",
+
+            // Order info
+            order_id: order.orderId,
+            order_date: formatDate(order.createdAt),
+            photo_count: String(order.photoCount),
+
+            // Selections
+            music_selection: order.musicSelection,
+            branding_type: getBrandingLabel(order.branding.type),
+            has_voiceover: order.voiceover ? "Yes" : "No",
+            voiceover_script: order.voiceoverScript || "",
+
+            // Pricing
+            base_price: formatCurrency(order.basePrice),
+            branding_fee: formatCurrency(order.brandingFee),
+            voiceover_fee: formatCurrency(order.voiceoverFee),
+            total_price: formatCurrency(order.totalPrice),
+
+            // For template iteration
+            line_items: lineItems,
+
+            // Status
+            payment_status: "Paid",
+            order_status: "Processing",
+
+            // Branding details (if applicable)
+            has_branding: order.branding.type !== "unbranded",
+            agent_name: order.branding.agentName || "",
+            company_name: order.branding.companyName || "",
+            branding_phone: order.branding.phone || "",
+            branding_email: order.branding.email || "",
+            branding_website: order.branding.website || "",
+
+            // Special instructions
+            has_special_instructions: !!order.specialInstructions,
+            special_instructions: order.specialInstructions || "",
+
+            // Support info
+            support_email: BUSINESS_EMAIL,
+          },
+        },
+      ],
+    };
+
+    console.log("[v0] Customer receipt email request body:", JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${MAILERSEND_API_KEY}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseStatus = response.status;
+    console.log("[v0] MailerSend customer receipt response status:", responseStatus);
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("[v0] MailerSend customer receipt error:", errorData);
+      return { success: false, error: errorData, status: responseStatus };
+    }
+
+    console.log("[v0] Customer receipt email sent successfully for order", order.orderId);
+    return { success: true };
+  } catch (error) {
+    console.error("[v0] Failed to send customer receipt email:", error);
+    return { success: false, error: String(error) };
+  }
 }
 
 export async function sendOrderTemplateEmail(order: Order) {
