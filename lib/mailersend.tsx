@@ -2,10 +2,23 @@ import type { Order } from "@/lib/types/order";
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const BUSINESS_EMAIL = process.env.MAILERSEND_BUSINESS_EMAIL || "realestatephoto2video@gmail.com";
-const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL || "noreply@trial-pq3enl6z5pzl2vwr.mlsender.net"; // Must be from your verified domain
+// IMPORTANT: FROM_EMAIL must be from your verified domain in MailerSend
+// Set MAILERSEND_SENDER_EMAIL in your environment variables to your verified sender email
+const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL;
 const FROM_NAME = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
 const ORDER_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "zr6ke4n6kzelon12";
 const CUSTOMER_RECEIPT_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "";
+
+// Validation function to ensure FROM_EMAIL is configured
+function validateFromEmail(): { valid: boolean; error?: string } {
+  if (!FROM_EMAIL) {
+    return { 
+      valid: false, 
+      error: "MAILERSEND_SENDER_EMAIL is not configured. This must be set to an email from your verified domain." 
+    };
+  }
+  return { valid: true };
+}
 
 interface EmailRecipient {
   email: string;
@@ -32,6 +45,13 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
+  }
+
+  // Validate FROM_EMAIL is set (must be from verified domain)
+  const fromValidation = validateFromEmail();
+  if (!fromValidation.valid) {
+    console.error("[v0] FROM_EMAIL validation failed:", fromValidation.error);
+    return { success: false, error: fromValidation.error };
   }
 
   console.log("[v0] Sending email to:", to.map(r => r.email).join(", "));
@@ -154,6 +174,13 @@ export async function sendCustomerReceiptEmail(order: Order) {
     return { success: false, error: "API key not configured" };
   }
 
+  // Validate FROM_EMAIL is set (must be from verified domain)
+  const fromValidation = validateFromEmail();
+  if (!fromValidation.valid) {
+    console.error("[v0] FROM_EMAIL validation failed:", fromValidation.error);
+    return { success: false, error: fromValidation.error };
+  }
+
   // If no template ID is configured, fall back to the HTML email
   if (!CUSTOMER_RECEIPT_TEMPLATE_ID) {
     console.log("[v0] CUSTOMER_RECEIPT_TEMPLATE_ID not configured, skipping template receipt email");
@@ -247,10 +274,20 @@ export async function sendCustomerReceiptEmail(order: Order) {
 
             // Support info
             support_email: BUSINESS_EMAIL,
+            
+            // Ensure personalization is never empty - MailerSend requires at least one variable
+            _timestamp: new Date().toISOString(),
           },
         },
       ],
     };
+
+    // Validate personalization data is not empty
+    const personalizationData = requestBody.personalization[0]?.data;
+    if (!personalizationData || Object.keys(personalizationData).length === 0) {
+      console.error("[v0] Personalization data is empty - MailerSend templates require variables");
+      return { success: false, error: "Personalization data cannot be empty" };
+    }
 
     console.log("[v0] Customer receipt email request body:", JSON.stringify(requestBody, null, 2));
     console.log("[v0] Sending email now... (customer receipt via template)");
@@ -291,6 +328,13 @@ export async function sendOrderTemplateEmail(order: Order) {
   if (!MAILERSEND_API_KEY) {
     console.error("[v0] MAILERSEND_API_KEY is not configured");
     return { success: false, error: "API key not configured" };
+  }
+
+  // Validate FROM_EMAIL is set (must be from verified domain)
+  const fromValidation = validateFromEmail();
+  if (!fromValidation.valid) {
+    console.error("[v0] FROM_EMAIL validation failed:", fromValidation.error);
+    return { success: false, error: fromValidation.error };
   }
 
   console.log("[v0] Sending template email for order:", order.orderId);
@@ -336,10 +380,20 @@ export async function sendOrderTemplateEmail(order: Order) {
             base_price: formatCurrency(order.basePrice),
             branding_fee: formatCurrency(order.brandingFee),
             voiceover_fee: formatCurrency(order.voiceoverFee),
+            
+            // Ensure personalization is never empty - MailerSend requires at least one variable
+            _timestamp: new Date().toISOString(),
           },
         },
       ],
     };
+
+    // Validate personalization data is not empty
+    const personalizationData = requestBody.personalization[0]?.data;
+    if (!personalizationData || Object.keys(personalizationData).length === 0) {
+      console.error("[v0] Personalization data is empty - MailerSend templates require variables");
+      return { success: false, error: "Personalization data cannot be empty" };
+    }
 
     console.log("[v0] Template email request body:", JSON.stringify(requestBody, null, 2));
     console.log("[v0] Sending email now... (business template)");
