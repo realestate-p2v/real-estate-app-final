@@ -2,113 +2,251 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { getDatabase } from "@/lib/mongodb";
-import { sendOrderConfirmationEmails, sendOrderTemplateEmail } from "@/lib/mailersend";
+import {
+  sendOrderConfirmationEmails,
+  sendOrderTemplateEmail,
+  sendCustomerReceiptEmail,
+} from "@/lib/mailersend";
 import type { Order } from "@/lib/types/order";
 import type Stripe from "stripe";
 
+// Helper function to safely stringify errors
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}${error.stack ? `\nStack: ${error.stack}` : ""}`;
+  }
+  return String(error);
+}
+
 export async function POST(request: Request) {
-  const body = await request.text();
-  const headersList = await headers();
-  const signature = headersList.get("stripe-signature");
+  console.log("[v0] Stripe webhook received at:", new Date().toISOString());
+
+  // Step 1: Get raw body for signature verification
+  let body: string;
+  try {
+    body = await request.text();
+    console.log("[v0] Webhook body length:", body.length);
+  } catch (err) {
+    console.error("[v0] Failed to read request body:", getErrorMessage(err));
+    return NextResponse.json(
+      { error: "Failed to read request body" },
+      { status: 400 }
+    );
+  }
+
+  // Step 2: Get headers
+  let signature: string | null;
+  try {
+    const headersList = await headers();
+    signature = headersList.get("stripe-signature");
+    console.log("[v0] Stripe signature present:", !!signature);
+  } catch (err) {
+    console.error("[v0] Failed to get headers:", getErrorMessage(err));
+    return NextResponse.json(
+      { error: "Failed to read headers" },
+      { status: 400 }
+    );
+  }
 
   if (!signature) {
+    console.error("[v0] Missing stripe-signature header");
     return NextResponse.json(
       { error: "Missing stripe-signature header" },
       { status: 400 }
     );
   }
 
+  // Step 3: Verify webhook signature
   let event: Stripe.Event;
-
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+  if (!webhookSecret) {
+    console.error("[v0] STRIPE_WEBHOOK_SECRET is not configured");
+    return NextResponse.json(
+      { error: "Webhook secret not configured" },
+      { status: 500 }
+    );
+  }
+
   try {
-    if (webhookSecret) {
-      // Verify the webhook signature using the secret
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } else {
-      // Fallback: parse without verification (not recommended for production)
-      console.warn("STRIPE_WEBHOOK_SECRET not configured - parsing without verification");
-      event = JSON.parse(body) as Stripe.Event;
-    }
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    console.log("[v0] Webhook signature verified successfully");
+    console.log("[v0] Event type:", event.type);
+    console.log("[v0] Event ID:", event.id);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    console.error("[v0] Webhook signature verification failed:", getErrorMessage(err));
     return NextResponse.json(
       { error: "Webhook signature verification failed" },
       { status: 400 }
     );
   }
 
-  const db = await getDatabase();
+  // Step 4: Connect to database
+  let db;
+  try {
+    db = await getDatabase();
+    console.log("[v0] Database connection established");
+  } catch (err) {
+    console.error("[v0] Database connection failed:", getErrorMessage(err));
+    return NextResponse.json(
+      { error: "Database connection failed" },
+      { status: 500 }
+    );
+  }
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const orderId = session.metadata?.orderId;
+  // Step 5: Handle event types
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orderId = session.metadata?.orderId;
 
-      if (orderId) {
-        // Update order status
-        await db.collection<Order>("orders").updateOne(
-          { orderId },
-          {
-            $set: {
-              paymentStatus: "paid",
-              stripePaymentIntentId: session.payment_intent as string,
-              status: "processing",
-              updatedAt: new Date(),
-            },
+        console.log("[v0] Processing checkout.session.completed");
+        console.log("[v0] Session ID:", session.id);
+        console.log("[v0] Order ID from metadata:", orderId);
+        console.log("[v0] Payment Intent:", session.payment_intent);
+        console.log("[v0] Customer Email:", session.customer_details?.email);
+
+        if (!orderId) {
+          console.warn("[v0] No orderId in session metadata - skipping");
+          break;
+        }
+
+        // Update order status in database
+        try {
+          const updateResult = await db.collection<Order>("orders").updateOne(
+            { orderId },
+            {
+              $set: {
+                paymentStatus: "paid",
+                stripePaymentIntentId: session.payment_intent as string,
+                status: "processing",
+                updatedAt: new Date(),
+              },
+            }
+          );
+          console.log("[v0] Order update result:", {
+            matchedCount: updateResult.matchedCount,
+            modifiedCount: updateResult.modifiedCount,
+          });
+
+          if (updateResult.matchedCount === 0) {
+            console.error("[v0] Order not found in database:", orderId);
           }
-        );
-        console.log(`Order ${orderId} marked as paid`);
+        } catch (dbErr) {
+          console.error("[v0] Failed to update order:", getErrorMessage(dbErr));
+          // Continue to try fetching and sending emails
+        }
 
         // Fetch the complete order to send emails
-        const order = await db.collection<Order>("orders").findOne({ orderId });
-        
+        let order: Order | null = null;
+        try {
+          order = await db.collection<Order>("orders").findOne({ orderId });
+          console.log("[v0] Order fetched:", order ? "success" : "not found");
+          if (order) {
+            console.log("[v0] Order details:", {
+              orderId: order.orderId,
+              customerEmail: order.customer?.email,
+              customerName: order.customer?.name,
+              totalPrice: order.totalPrice,
+              photoCount: order.photoCount,
+            });
+          }
+        } catch (fetchErr) {
+          console.error("[v0] Failed to fetch order:", getErrorMessage(fetchErr));
+        }
+
         if (order) {
-          // Send confirmation emails to customer and business
+          // Send customer receipt email (new template-based receipt)
           try {
+            console.log("[v0] Sending customer receipt email...");
+            const receiptResult = await sendCustomerReceiptEmail(order);
+            console.log("[v0] Customer receipt email result:", receiptResult);
+          } catch (receiptError) {
+            console.error(
+              "[v0] Failed to send customer receipt email:",
+              getErrorMessage(receiptError)
+            );
+          }
+
+          // Send confirmation emails to customer and business (HTML emails)
+          try {
+            console.log("[v0] Sending confirmation emails...");
             const emailResults = await sendOrderConfirmationEmails(order);
-            console.log(`Order ${orderId} confirmation emails sent:`, emailResults);
+            console.log("[v0] Confirmation emails result:", emailResults);
           } catch (emailError) {
-            console.error(`Failed to send confirmation emails for order ${orderId}:`, emailError);
-            // Don't fail the webhook if emails fail - order is still valid
+            console.error(
+              "[v0] Failed to send confirmation emails:",
+              getErrorMessage(emailError)
+            );
           }
 
           // Send order details via template email to business
           try {
+            console.log("[v0] Sending business template email...");
             const templateEmailResult = await sendOrderTemplateEmail(order);
-            console.log(`Order ${orderId} template email sent:`, templateEmailResult);
+            console.log("[v0] Business template email result:", templateEmailResult);
           } catch (templateError) {
-            console.error(`Failed to send template email for order ${orderId}:`, templateError);
-            // Don't fail the webhook if template email fails
+            console.error(
+              "[v0] Failed to send template email:",
+              getErrorMessage(templateError)
+            );
+          }
+        } else {
+          console.warn("[v0] Order not found, skipping email notifications");
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const orderId = paymentIntent.metadata?.orderId;
+
+        console.log("[v0] Processing payment_intent.payment_failed");
+        console.log("[v0] Payment Intent ID:", paymentIntent.id);
+        console.log("[v0] Order ID from metadata:", orderId);
+        console.log("[v0] Failure reason:", paymentIntent.last_payment_error?.message);
+
+        if (orderId) {
+          try {
+            const updateResult = await db.collection<Order>("orders").updateOne(
+              { orderId },
+              {
+                $set: {
+                  paymentStatus: "failed",
+                  paymentFailureReason: paymentIntent.last_payment_error?.message || "Unknown",
+                  updatedAt: new Date(),
+                },
+              }
+            );
+            console.log("[v0] Order marked as failed:", {
+              matchedCount: updateResult.matchedCount,
+              modifiedCount: updateResult.modifiedCount,
+            });
+          } catch (dbErr) {
+            console.error("[v0] Failed to update order status:", getErrorMessage(dbErr));
           }
         }
+        break;
       }
-      break;
-    }
 
-    case "payment_intent.payment_failed": {
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const orderId = paymentIntent.metadata?.orderId;
-
-      if (orderId) {
-        await db.collection<Order>("orders").updateOne(
-          { orderId },
-          {
-            $set: {
-              paymentStatus: "failed",
-              updatedAt: new Date(),
-            },
-          }
-        );
-        console.log(`Order ${orderId} payment failed`);
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log("[v0] Payment intent succeeded:", paymentIntent.id);
+        console.log("[v0] Amount:", paymentIntent.amount / 100, paymentIntent.currency);
+        // This is handled by checkout.session.completed, just log for debugging
+        break;
       }
-      break;
-    }
 
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
+      default:
+        console.log("[v0] Unhandled event type:", event.type);
+    }
+  } catch (err) {
+    console.error("[v0] Error processing webhook event:", getErrorMessage(err));
+    // Still return 200 to prevent Stripe from retrying
+    // The error is logged for debugging
   }
 
+  console.log("[v0] Webhook processing complete");
   return NextResponse.json({ received: true });
 }
