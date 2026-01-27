@@ -50,17 +50,27 @@ export function OrderDetailModal({
   const [copiedScript, setCopiedScript] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
-  // Track the order status - only sync from prop when order ID changes (new order selected)
+  // Track the order status - sync from prop when order ID changes or when modal opens
   const [localStatus, setLocalStatus] = useState(order?.status || "New")
   const [trackedOrderId, setTrackedOrderId] = useState(order?.id || null)
 
-  // Only sync local status when a DIFFERENT order is selected
+  // Sync local status when a DIFFERENT order is selected OR when the order prop status changes
   useEffect(() => {
-    if (order && order.id !== trackedOrderId) {
-      setLocalStatus(order.status || "New")
-      setTrackedOrderId(order.id)
+    if (order) {
+      if (order.id !== trackedOrderId) {
+        // New order selected - sync everything
+        setLocalStatus(order.status || "New")
+        setTrackedOrderId(order.id)
+      }
     }
   }, [order, trackedOrderId])
+
+  // Keep local status in sync with the order prop status (for when parent updates after API call)
+  useEffect(() => {
+    if (order && order.id === trackedOrderId && order.status) {
+      setLocalStatus(order.status)
+    }
+  }, [order?.status, order?.id, trackedOrderId])
 
   if (!order) return null
 
