@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDatabase } from "@/lib/mongodb";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
-import type { Order } from "@/lib/types/order";
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +13,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get order from database
-    const db = await getDatabase();
-    const order = await db.collection<Order>("orders").findOne({ orderId });
+    // Get order from Supabase using admin client
+    const supabase = createAdminClient();
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("order_id", orderId)
+      .single();
 
-    if (!order) {
+    if (error || !order) {
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
@@ -33,10 +36,10 @@ export async function POST(request: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Real Estate Video - ${order.photoCount} Photos`,
-              description: `Professional walkthrough video with ${order.photoCount} photos${order.voiceover ? ", voiceover" : ""}${order.branding.type === "custom" ? ", custom branding" : ""}`,
+              name: `Real Estate Video - ${order.photo_count} Photos`,
+              description: `Professional walkthrough video with ${order.photo_count} photos${order.voiceover ? ", voiceover" : ""}${order.branding?.type === "custom" ? ", custom branding" : ""}`,
             },
-            unit_amount: order.totalPrice * 100, // Convert to cents
+            unit_amount: Math.round(parseFloat(order.total_price) * 100),
           },
           quantity: 1,
         },
@@ -44,22 +47,20 @@ export async function POST(request: Request) {
       mode: "payment",
       success_url: `${request.headers.get("origin")}/order/success?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.headers.get("origin")}/order?cancelled=true`,
-      customer_email: order.customer.email,
+      customer_email: order.customer_email,
       metadata: {
-        orderId: order.orderId,
+        orderId: order.order_id,
       },
     });
 
     // Update order with Stripe session ID
-    await db.collection<Order>("orders").updateOne(
-      { orderId },
-      {
-        $set: {
-          stripeSessionId: session.id,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    await supabase
+      .from("orders")
+      .update({
+        stripe_session_id: session.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("order_id", orderId);
 
     return NextResponse.json({
       success: true,
