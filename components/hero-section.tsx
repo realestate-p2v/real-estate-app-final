@@ -37,6 +37,9 @@ export function HeroSection() {
               Professional HD walkthrough videos from your existing photos,
               delivered in just 72 hours.
             </p>
+            <p className="mt-4 text-sm font-medium text-secondary uppercase tracking-wider">
+              Get started in seconds
+            </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Button
                 asChild
