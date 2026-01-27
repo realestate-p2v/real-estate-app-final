@@ -8,13 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -76,14 +71,11 @@ export function OrderDetailModal({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "New":
-        return "bg-blue-500/10 text-blue-600 border-blue-500/20"
-      case "Processing":
-        return "bg-amber-500/10 text-amber-600 border-amber-500/20"
       case "Delivered":
         return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+      case "New":
       default:
-        return "bg-muted text-muted-foreground"
+        return "bg-red-500/10 text-red-600 border-red-500/20"
     }
   }
 
@@ -116,23 +108,26 @@ export function OrderDetailModal({
                 {order.order_id}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Label htmlFor="status-switch" className="text-sm font-medium text-muted-foreground">
+                  New
+                </Label>
+                <Switch
+                  id="status-switch"
+                  checked={order.status === "Delivered"}
+                  onCheckedChange={(checked) => 
+                    onStatusUpdate(order.id, checked ? "Delivered" : "New")
+                  }
+                  className="data-[state=checked]:bg-emerald-500"
+                />
+                <Label htmlFor="status-switch" className="text-sm font-medium text-muted-foreground">
+                  Delivered
+                </Label>
+              </div>
               <Badge className={getStatusColor(order.status || "New")}>
                 {order.status || "New"}
               </Badge>
-              <Select
-                value={order.status || "New"}
-                onValueChange={(value) => onStatusUpdate(order.id, value)}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="Processing">Processing</SelectItem>
-                  <SelectItem value="Delivered">Delivered</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </DialogHeader>
