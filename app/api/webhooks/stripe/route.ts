@@ -54,9 +54,9 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
     return { order: null, dbError: error };
   }
 
-  // RETRY LOGIC: 3 attempts with exponential backoff
-  const MAX_RETRIES = 3;
-  const RETRY_DELAYS = [1000, 2000, 4000]; // 1s, 2s, 4s
+  // RETRY LOGIC: 5 attempts with 2-second delays (race condition fix)
+  const MAX_RETRIES = 5;
+  const RETRY_DELAYS = [2000, 2000, 2000, 2000, 2000]; // 2s each attempt
   
   let lastError: string | null = null;
   
@@ -482,6 +482,11 @@ export async function POST(request: Request) {
         console.log("[Webhook] WEBHOOK PROCESSING COMPLETE");
         console.log("[Webhook] ========================================");
 
+        // BLOCKING REQUIREMENT: Only return 200 after ALL email operations are complete
+        // The email sending above uses await, so we've already waited for them
+        // If either email failed, we still return 200 to Stripe (to prevent retries)
+        // but we've logged the failures above for debugging
+        
         break;
       }
 
