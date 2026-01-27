@@ -79,6 +79,7 @@ export async function POST(request: Request) {
       branding: input.branding,
       voiceover: input.voiceover || false,
       voiceover_script: input.voiceoverScript || null,
+      voiceover_voice: input.voiceoverVoice || null,
       special_instructions: input.specialInstructions || null,
       include_edited_photos: input.includeEditedPhotos || false,
       base_price: basePrice,

@@ -1,116 +1,158 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
-import { sendCustomerEmail, sendAdminNotificationEmail } from "@/lib/mailersend";
+import { sendCustomerEmail, sendAdminNotificationEmail, type PersonalizationData } from "@/lib/mailersend";
 import type { Order } from "@/lib/types/order";
 import type Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-// Helper function to safely stringify errors
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return `${error.name}: ${error.message}`;
-  }
-  return String(error);
-}
-
-// Create Supabase admin client for webhook (service role)
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return null;
-  }
-  
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
 /**
- * RETRY HELPER: Sleep function for retry delays
+ * STRIPE WEBHOOK HANDLER - Production Grade
+ * 
+ * REQUIREMENTS IMPLEMENTED:
+ * 1. Extract orderId from success_url query param AND metadata
+ * 2. Extract customer_email from session.customer_details.email
+ * 3. ONLY proceed if session.payment_status === 'paid'
+ * 4. BLOCKING execution - await MailerSend before returning 200
+ * 5. image_urls as array of strings from Supabase photos column
+ * 6. BCC hardcoded to realestatephoto2video@gmail.com
+ * 7. Domain safety for sender email
  */
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const SUPABASE_RETRY_ATTEMPTS = 4;
+const SUPABASE_RETRY_DELAY_MS = 2500;
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!url || !key) {
+    console.error("[WEBHOOK] Supabase not configured");
+    return null;
+  }
+  
+  return createClient(url, key);
+}
+
 /**
- * DATABASE FETCH: Fetch order from Supabase with RETRY LOGIC (3 attempts)
- * 
- * Implements retry logic in case the database is still processing the record
- * when the webhook hits. This is critical for race conditions where the order
- * creation and Stripe webhook fire at nearly the same time.
+ * Extract orderId from session - checks BOTH metadata AND success_url query param
  */
-async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | null; dbError: string | null }> {
-  console.log("[Webhook] ========================================");
-  console.log("[Webhook] DATABASE: Attempting to fetch order from Supabase");
-  console.log("[Webhook] Searching Supabase for Order:", orderId);
-  console.log("[Webhook] ========================================");
+function extractOrderId(session: Stripe.Checkout.Session): string | null {
+  // 1. First try metadata.orderId
+  if (session.metadata?.orderId) {
+    console.log("[WEBHOOK] Found orderId in metadata:", session.metadata.orderId);
+    return session.metadata.orderId;
+  }
+  
+  // 2. Try client_reference_id
+  if (session.client_reference_id) {
+    console.log("[WEBHOOK] Found orderId in client_reference_id:", session.client_reference_id);
+    return session.client_reference_id;
+  }
+  
+  // 3. Extract from success_url query parameter
+  if (session.success_url) {
+    try {
+      const url = new URL(session.success_url);
+      const orderIdParam = url.searchParams.get("orderId") || url.searchParams.get("order_id");
+      if (orderIdParam) {
+        console.log("[WEBHOOK] Found orderId in success_url:", orderIdParam);
+        return orderIdParam;
+      }
+      
+      // Also check path for patterns like /order/success/P2V-XXXX
+      const pathMatch = url.pathname.match(/P2V-[A-Z0-9]+-[A-Z0-9]+/i);
+      if (pathMatch) {
+        console.log("[WEBHOOK] Found orderId in success_url path:", pathMatch[0]);
+        return pathMatch[0];
+      }
+    } catch (e) {
+      console.error("[WEBHOOK] Failed to parse success_url:", e);
+    }
+  }
+  
+  return null;
+}
+
+function getVoiceName(voiceId: string | undefined): string {
+  if (!voiceId) return "";
+  const map: Record<string, string> = {
+    "male-1": "Matt (Male)",
+    "male-2": "Blake (Male)",
+    "female-1": "Maya (Female)",
+    "female-2": "Amara (Female)",
+  };
+  return map[voiceId] || voiceId;
+}
+
+/**
+ * Build image_urls as ARRAY of strings from photos column
+ */
+function buildImageUrlsArray(photos: Order["photos"]): string[] {
+  if (!photos || photos.length === 0) return [];
+  return photos.map((p) => p.secure_url);
+}
+
+/**
+ * Build image_urls as STRING (newline separated) for template
+ */
+function buildImageUrlsString(photos: Order["photos"]): string {
+  if (!photos || photos.length === 0) return "No images uploaded";
+  return photos.map((p, i) => `Photo ${i + 1}: ${p.secure_url}`).join("\n");
+}
+
+// ============================================================================
+// SUPABASE ORDER FETCH WITH RETRY (Supabase Race Fix)
+// ============================================================================
+
+async function fetchOrderWithRetry(orderId: string): Promise<Order> {
+  console.log(`[WEBHOOK] Starting Supabase fetch for order: ${orderId}`);
+  console.log(`[WEBHOOK] Will attempt ${SUPABASE_RETRY_ATTEMPTS} times with ${SUPABASE_RETRY_DELAY_MS}ms delay`);
 
   const supabase = getSupabaseAdmin();
   
   if (!supabase) {
-    const error = "Supabase environment variables not configured";
-    console.error("[Webhook] DATABASE ERROR:", error);
-    return { order: null, dbError: error };
+    throw new Error("SUPABASE_NOT_CONFIGURED");
   }
 
-  // RETRY LOGIC: 5 attempts with 2-second delays (race condition fix)
-  const MAX_RETRIES = 5;
-  const RETRY_DELAYS = [2000, 2000, 2000, 2000, 2000]; // 2s each attempt
-  
-  let lastError: string | null = null;
-  
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    console.log(`[Webhook] Database fetch attempt ${attempt}/${MAX_RETRIES}`);
+  for (let attempt = 1; attempt <= SUPABASE_RETRY_ATTEMPTS; attempt++) {
+    console.log(`[WEBHOOK] Supabase attempt ${attempt}/${SUPABASE_RETRY_ATTEMPTS}`);
     
-    try {
-      const { data, error } = await supabase
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("order_id", orderId)
+      .single();
+
+    if (error && error.code !== "PGRST116") { // PGRST116 = no rows returned
+      console.log(`[WEBHOOK] Attempt ${attempt} database error: ${error.message}`);
+    }
+
+    if (data) {
+      console.log(`[WEBHOOK] Order found on attempt ${attempt}`);
+
+      // Update payment status to paid
+      await supabase
         .from("orders")
-        .select("*")
-        .eq("order_id", orderId)
-        .single();
+        .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+        .eq("order_id", orderId);
 
-      if (error) {
-        lastError = error.message;
-        console.error(`[Webhook] Supabase query error (attempt ${attempt}):`, error.message);
-        
-        // If not found and we have retries left, wait and try again
-        if (attempt < MAX_RETRIES) {
-          const delay = RETRY_DELAYS[attempt - 1];
-          console.log(`[Webhook] Waiting ${delay}ms before retry...`);
-          await sleep(delay);
-          continue;
-        }
-        
-        return { order: null, dbError: lastError };
-      }
-
-      if (!data) {
-        lastError = `Order not found with orderId: ${orderId}`;
-        console.warn(`[Webhook] DATABASE WARNING (attempt ${attempt}):`, lastError);
-        
-        // If not found and we have retries left, wait and try again
-        if (attempt < MAX_RETRIES) {
-          const delay = RETRY_DELAYS[attempt - 1];
-          console.log(`[Webhook] Order not yet in database. Waiting ${delay}ms before retry...`);
-          await sleep(delay);
-          continue;
-        }
-        
-        return { order: null, dbError: lastError };
-      }
-
-      // SUCCESS: Order found
-      console.log(`[Webhook] Order FOUND in Supabase on attempt ${attempt}`);
-      
-      // Log Cloudinary URLs count
-      const photos = data.photos || [];
-      console.log("[Webhook] Cloudinary URLs found:", photos.length);
-    
-      // Map Supabase data to Order format
+      // Map to Order type
       const order: Order = {
         orderId: data.order_id,
-        status: data.payment_status === "paid" ? "processing" : "pending",
+        status: "processing",
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
         customer: {
@@ -118,13 +160,14 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
           email: data.customer_email,
           phone: data.customer_phone,
         },
-        photos: photos,
+        photos: data.photos || [],
         photoCount: data.photo_count,
         musicSelection: data.music_selection,
         customAudio: data.custom_audio,
         branding: data.branding,
         voiceover: data.voiceover,
         voiceoverScript: data.voiceover_script,
+        voiceoverVoice: data.voiceover_voice,
         specialInstructions: data.special_instructions,
         includeEditedPhotos: data.include_edited_photos,
         basePrice: parseFloat(data.base_price) || 0,
@@ -132,384 +175,311 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
         voiceoverFee: parseFloat(data.voiceover_fee) || 0,
         editedPhotosFee: parseFloat(data.edited_photos_fee) || 0,
         totalPrice: parseFloat(data.total_price) || 0,
-        paymentStatus: data.payment_status,
+        paymentStatus: "paid",
       };
 
-      console.log("[Webhook] Order details:");
-      console.log("[Webhook]   - customerEmail:", order.customer?.email);
-      console.log("[Webhook]   - customerName:", order.customer?.name);
-      console.log("[Webhook]   - customerPhone:", order.customer?.phone);
-      console.log("[Webhook]   - photoCount:", order.photoCount);
-      console.log("[Webhook]   - musicSelection:", order.musicSelection);
-      console.log("[Webhook]   - specialInstructions:", order.specialInstructions);
+      return order;
+    }
 
-      // Update order status to paid/processing
-      try {
-        await supabase
-          .from("orders")
-          .update({
-            payment_status: "paid",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("order_id", orderId);
-        console.log("[Webhook] Order status updated to paid");
-      } catch (updateError) {
-        console.error("[Webhook] Failed to update order status:", getErrorMessage(updateError));
-      }
-
-      return { order, dbError: null };
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error(`[Webhook] DATABASE ERROR (attempt ${attempt}):`, errorMessage);
-      lastError = errorMessage;
-      
-      // If we have retries left, wait and try again
-      if (attempt < MAX_RETRIES) {
-        const delay = RETRY_DELAYS[attempt - 1];
-        console.log(`[Webhook] Waiting ${delay}ms before retry...`);
-        await sleep(delay);
-        continue;
-      }
-      
-      return { order: null, dbError: errorMessage };
+    // Order not found yet - wait before retry
+    if (attempt < SUPABASE_RETRY_ATTEMPTS) {
+      console.log(`[WEBHOOK] Order not found, waiting ${SUPABASE_RETRY_DELAY_MS}ms...`);
+      await sleep(SUPABASE_RETRY_DELAY_MS);
     }
   }
-  
-  // All retries exhausted
-  console.error("[Webhook] All retry attempts exhausted");
-  return { order: null, dbError: lastError || "Unknown error after retries" };
+
+  // CRITICAL: Throw error - do NOT try to send email without order data
+  throw new Error(`ORDER_NOT_FOUND: Order ${orderId} not in database after ${SUPABASE_RETRY_ATTEMPTS} attempts (${SUPABASE_RETRY_ATTEMPTS * SUPABASE_RETRY_DELAY_MS / 1000}s total wait)`);
 }
 
-/**
- * DATA MAPPING: Build image URLs string from photos array
- */
-function buildImageUrls(photos: Order["photos"]): string {
-  if (!photos || photos.length === 0) return "No images uploaded";
-  return photos.map((photo, index) => `Photo ${index + 1}: ${photo.secure_url}`).join("\n");
+// ============================================================================
+// BUILD PERSONALIZATION DATA
+// ============================================================================
+
+function buildPersonalizationData(
+  order: Order, 
+  session: Stripe.Checkout.Session, 
+  productName: string
+): PersonalizationData {
+  // CRITICAL: Extract customer_email from session.customer_details.email
+  const customerEmail = session.customer_details?.email || order.customer.email || "";
+  const customerName = session.customer_details?.name || order.customer.name || "Customer";
+  const customerPhone = session.customer_details?.phone || order.customer.phone || "Not provided";
+
+  return {
+    order_id: order.orderId,
+    order_date: new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }),
+    customer_name: customerName,
+    customer_email: customerEmail,
+    customer_phone: customerPhone,
+    product_name: productName || "Video Package",
+    photo_count: String(order.photoCount || order.photos?.length || 0),
+    base_price: `$${(order.basePrice || 0).toFixed(2)}`,
+    branding_fee: `$${(order.brandingFee || 0).toFixed(2)}`,
+    voiceover_fee: `$${(order.voiceoverFee || 0).toFixed(2)}`,
+    edited_photos_fee: `$${(order.editedPhotosFee || 0).toFixed(2)}`,
+    total_price: `$${(order.totalPrice || 0).toFixed(2)}`,
+    music_choice: order.musicSelection || "Not specified",
+    custom_audio_url: order.customAudio?.secure_url || "",
+    custom_audio_filename: order.customAudio?.filename || "",
+    branding_type: order.branding?.type || "unbranded",
+    branding_logo_url: order.branding?.logoUrl || "",
+    branding_agent_name: order.branding?.agentName || "",
+    branding_company_name: order.branding?.companyName || "",
+    branding_phone: order.branding?.phone || "",
+    branding_email: order.branding?.email || "",
+    branding_website: order.branding?.website || "",
+    voiceover_enabled: order.voiceover ? "Yes" : "No",
+    voiceover_voice: getVoiceName(order.voiceoverVoice),
+    voiceover_script: order.voiceoverScript || "",
+    include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
+    special_requests: order.specialInstructions || "",
+    // image_urls as string for template (newline separated)
+    image_urls: buildImageUrlsString(order.photos),
+    // Also provide as array if template needs it
+    image_urls_array: buildImageUrlsArray(order.photos),
+  } as PersonalizationData & { image_urls_array: string[] };
 }
 
-/**
- * DATA MAPPING: Build branding info string from branding object
- */
-function buildBrandingInfo(branding: Order["branding"]): string {
-  if (!branding) return "Unbranded";
-  if (branding.type === "unbranded") return "Unbranded";
-
-  const parts: string[] = [`Type: ${branding.type}`];
-  if (branding.agentName) parts.push(`Agent: ${branding.agentName}`);
-  if (branding.companyName) parts.push(`Company: ${branding.companyName}`);
-  if (branding.phone) parts.push(`Phone: ${branding.phone}`);
-  if (branding.email) parts.push(`Email: ${branding.email}`);
-  if (branding.website) parts.push(`Website: ${branding.website}`);
-  if (branding.logoUrl) parts.push(`Logo: ${branding.logoUrl}`);
-
-  return parts.join(" | ");
-}
+// ============================================================================
+// MAIN WEBHOOK HANDLER
+// ============================================================================
 
 export async function POST(request: Request) {
-  console.log("[Webhook] ========================================");
-  console.log("[Webhook] STRIPE WEBHOOK RECEIVED");
-  console.log("[Webhook] Timestamp:", new Date().toISOString());
-  console.log("[Webhook] ========================================");
+  console.log("========================================");
+  console.log("[WEBHOOK] STRIPE WEBHOOK RECEIVED");
+  console.log("[WEBHOOK] Timestamp:", new Date().toISOString());
+  console.log("========================================");
 
-  // Step 1: Read request body
-  let body: string;
-  try {
-    body = await request.text();
-    console.log("[Webhook] Request body length:", body.length);
-  } catch (err) {
-    console.error("[Webhook] Failed to read request body:", getErrorMessage(err));
-    return NextResponse.json({ error: "Failed to read request body" }, { status: 400 });
-  }
+  // Variables to track state - NO early returns until the end
+  let emailSent = false;
+  let emailError: string | null = null;
 
-  // Step 2: Get Stripe signature header
-  let signature: string | null;
   try {
+    // ========================================================================
+    // STEP 1: Parse and verify webhook signature
+    // ========================================================================
+    
+    const body = await request.text();
     const headersList = await headers();
-    signature = headersList.get("stripe-signature");
-    console.log("[Webhook] Stripe signature present:", !!signature);
-  } catch (err) {
-    console.error("[Webhook] Failed to get headers:", getErrorMessage(err));
-    return NextResponse.json({ error: "Failed to read headers" }, { status: 400 });
-  }
+    const signature = headersList.get("stripe-signature");
 
-  if (!signature) {
-    console.error("[Webhook] Missing stripe-signature header");
-    return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
-  }
-
-  // Step 3: Verify webhook signature
-  let event: Stripe.Event;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.error("[Webhook] STRIPE_WEBHOOK_SECRET is not configured");
-    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
-  }
-
-  try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    console.log("[Webhook] Signature verified successfully");
-    console.log("[Webhook] Event type:", event.type);
-    console.log("[Webhook] Event ID:", event.id);
-  } catch (err) {
-    console.error("[Webhook] Signature verification failed:", getErrorMessage(err));
-    return NextResponse.json({ error: "Webhook signature verification failed" }, { status: 400 });
-  }
-
-  // Step 4: Handle event
-  try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        
-        // CRITICAL LOG: Stripe session received
-        console.log("[Webhook] ========================================");
-        console.log("[Webhook] Stripe session received:", session.id);
-        console.log("[Webhook] ========================================");
-        
-        const orderId = session.metadata?.orderId || session.client_reference_id || "Unknown";
-
-        console.log("[Webhook] ----------------------------------------");
-        console.log("[Webhook] EVENT: checkout.session.completed");
-        console.log("[Webhook] Session ID:", session.id);
-        console.log("[Webhook] Order ID (from metadata):", session.metadata?.orderId);
-        console.log("[Webhook] Client Reference ID:", session.client_reference_id);
-        console.log("[Webhook] Using Order ID:", orderId);
-        console.log("[Webhook] ----------------------------------------");
-
-        // STRIPE SESSION DATA (always available)
-        // IMPORTANT: Check metadata first as customer_details may not be populated
-        const customerName = session.customer_details?.name || session.metadata?.customerName || "Customer";
-        const customerEmail = session.customer_details?.email || session.metadata?.customerEmail || "";
-        const customerPhone = session.customer_details?.phone || session.metadata?.customerPhone || "Not provided";
-        const amountTotal = session.amount_total || 0;
-        const price = `$${(amountTotal / 100).toFixed(2)}`;
-
-        // METADATA FALLBACK
-        const metaMusicSelection = session.metadata?.musicSelection || "";
-        const metaSpecialInstructions = session.metadata?.specialInstructions || "";
-        const metaBrandingType = session.metadata?.brandingType || "unbranded";
-        const metaVoiceoverIncluded = session.metadata?.voiceoverIncluded || "No";
-        const metaIncludeEditedPhotos = session.metadata?.includeEditedPhotos || "No";
-        const metaPhotoCount = session.metadata?.photoCount || "0";
-        const metaProductName = session.metadata?.productName || "";
-
-        // Get product name from Stripe line items
-        let productName = metaProductName;
-        if (!productName) {
-          try {
-            const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
-            if (lineItems.data.length > 0 && lineItems.data[0].description) {
-              productName = lineItems.data[0].description;
-            } else if (lineItems.data.length > 0 && lineItems.data[0].price?.product) {
-              // Try to get the product name from the price object
-              const priceData = lineItems.data[0].price;
-              if (typeof priceData.product === 'object' && priceData.product !== null && 'name' in priceData.product) {
-                productName = (priceData.product as { name?: string }).name || "";
-              }
-            }
-          } catch (lineItemError) {
-            console.warn("[Webhook] Could not retrieve line items:", getErrorMessage(lineItemError));
-          }
-        }
-        // Fallback: construct product name from photo count
-        if (!productName) {
-          const photoCount = parseInt(metaPhotoCount) || 0;
-          if (photoCount <= 12) {
-            productName = "Standard Video";
-          } else if (photoCount <= 25) {
-            productName = "Premium Video";
-          } else {
-            productName = "Professional Video";
-          }
-        }
-
-        // Reconstruct photo URLs from chunked metadata
-        let metaPhotoUrls = "";
-        for (let i = 0; i < 10; i++) {
-          const chunk = session.metadata?.[`photoUrls_${i}`];
-          if (chunk) {
-            metaPhotoUrls += chunk;
-          } else {
-            break;
-          }
-        }
-
-        console.log("[Webhook] Stripe Session Data:");
-        console.log("[Webhook]   - customer_name:", customerName);
-        console.log("[Webhook]   - customer_email:", customerEmail);
-        console.log("[Webhook]   - customer_phone:", customerPhone);
-        console.log("[Webhook]   - price:", price);
-
-        // DATABASE: Fetch order from Supabase
-        let order: Order | null = null;
-        let dbError: string | null = null;
-
-        try {
-          if (orderId && orderId !== "Unknown") {
-            const dbResult = await getOrderFromDatabase(orderId);
-            order = dbResult.order;
-            dbError = dbResult.dbError;
-          } else {
-            dbError = "No orderId in session metadata";
-            console.warn("[Webhook]", dbError);
-          }
-        } catch (dbFetchError) {
-          dbError = getErrorMessage(dbFetchError);
-          console.error("[Webhook] Database fetch exception:", dbError);
-        }
-
-        // Helper function to build image URLs from metadata format
-        function buildImageUrlsFromMetadata(metaUrls: string): string {
-          if (!metaUrls) return "No images";
-          const lines = metaUrls.split("|").map(item => {
-            const [num, url] = item.split(":", 2);
-            return url ? `Photo ${num}: ${url}` : item;
-          });
-          return lines.join("\n");
-        }
-
-        // DATA MAPPING: Build personalization data
-        const personalizationData = {
-          order_id: orderId,
-          product_name: productName,
-          customer_name: order?.customer?.name || customerName,
-          customer_email: order?.customer?.email || customerEmail,
-          customer_phone: order?.customer?.phone || customerPhone,
-          price: price,
-          base_price: order?.basePrice ? `$${order.basePrice.toFixed(2)}` : "See total",
-          branding_fee: order?.brandingFee ? `$${order.brandingFee.toFixed(2)}` : "$0.00",
-          voiceover_fee: order?.voiceoverFee ? `$${order.voiceoverFee.toFixed(2)}` : "$0.00",
-          edited_photos_fee: order?.editedPhotosFee ? `$${order.editedPhotosFee.toFixed(2)}` : "$0.00",
-          photo_count: order?.photoCount?.toString() || order?.photos?.length?.toString() || metaPhotoCount,
-          image_urls: order?.photos 
-            ? buildImageUrls(order.photos) 
-            : (metaPhotoUrls ? buildImageUrlsFromMetadata(metaPhotoUrls) : "No images available"),
-          music_choice: order?.musicSelection || metaMusicSelection || "Not specified",
-          custom_audio_filename: order?.customAudio?.filename || "None",
-          custom_audio_url: order?.customAudio?.secure_url || "None",
-          branding_type: order?.branding?.type || metaBrandingType || "unbranded",
-          branding_logo_url: order?.branding?.logoUrl || "None",
-          agent_name: order?.branding?.agentName || "N/A",
-          company_name: order?.branding?.companyName || "N/A",
-          agent_phone: order?.branding?.phone || "N/A",
-          agent_email: order?.branding?.email || "N/A",
-          agent_website: order?.branding?.website || "N/A",
-          branding_info: order?.branding ? buildBrandingInfo(order.branding) : (metaBrandingType || "unbranded"),
-          voiceover_included: order?.voiceover ? "Yes" : metaVoiceoverIncluded,
-          voiceover_script: order?.voiceoverScript || "None",
-          include_edited_photos: order?.includeEditedPhotos ? "Yes" : metaIncludeEditedPhotos,
-          special_requests: order?.specialInstructions || metaSpecialInstructions || "None",
-          video_titles: order?.branding ? buildBrandingInfo(order.branding) : (metaBrandingType || "unbranded"),
-          db_status: dbError ? `Database Error: ${dbError}` : "Connected successfully",
-        };
-
-        console.log("[Webhook] ----------------------------------------");
-        console.log("[Webhook] PERSONALIZATION DATA PREPARED");
-        console.log("[Webhook] ----------------------------------------");
-
-        // SEND EMAILS - EXECUTION SAFETY: Await all MailerSend responses before returning 200
-        console.log("[Webhook] ========================================");
-        console.log("[Webhook] EMAIL SENDING DEBUG");
-        console.log("[Webhook] ========================================");
-        console.log("[Webhook] customer_email value:", personalizationData.customer_email);
-        console.log("[Webhook] customer_email type:", typeof personalizationData.customer_email);
-        console.log("[Webhook] customer_email truthy?:", !!personalizationData.customer_email);
-        console.log("[Webhook] session.customer_details:", JSON.stringify(session.customer_details, null, 2));
-        console.log("[Webhook] session.metadata:", JSON.stringify(session.metadata, null, 2));
-        console.log("[Webhook] order?.customer?.email:", order?.customer?.email);
-        
-        // Check environment variables for email
-        console.log("[Webhook] MAILERSEND_API_KEY set?:", !!process.env.MAILERSEND_API_KEY);
-        console.log("[Webhook] MAILERSEND_API_KEY length:", process.env.MAILERSEND_API_KEY?.length || 0);
-        console.log("[Webhook] MAILERSEND_SENDER_EMAIL:", process.env.MAILERSEND_SENDER_EMAIL);
-        console.log("[Webhook] CUSTOMER_RECEIPT_TEMPLATE_ID:", process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "zr6ke4n6kzelon12 (default)");
-        console.log("[Webhook] MAILERSEND_ORDER_TEMPLATE_ID:", process.env.MAILERSEND_ORDER_TEMPLATE_ID);
-        
-        // Log Supabase env vars status
-        console.log("[Webhook] NEXT_PUBLIC_SUPABASE_URL set?:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
-        console.log("[Webhook] SUPABASE_SERVICE_ROLE_KEY set?:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-        
-        // Track email results for logging
-        let customerEmailSuccess = false;
-        let adminEmailSuccess = false;
-        
-        if (personalizationData.customer_email) {
-          // TRY/CATCH BLOCK: Customer email
-          try {
-            console.log("[Webhook] Attempting MailerSend dispatch for CUSTOMER email...");
-            console.log("[Webhook] Customer email address:", personalizationData.customer_email);
-            const customerEmailResult = await sendCustomerEmail(personalizationData);
-            customerEmailSuccess = customerEmailResult.success;
-            console.log("[Webhook] Customer email result success:", customerEmailResult.success);
-            if (!customerEmailResult.success) {
-              console.error("[Webhook] Customer email FAILED with error:", customerEmailResult.error);
-            } else {
-              console.log("[Webhook] Customer email sent SUCCESSFULLY");
-            }
-          } catch (emailError) {
-            console.error("[Webhook] Customer email EXCEPTION:", getErrorMessage(emailError));
-          }
-
-          // TRY/CATCH BLOCK: Admin email
-          try {
-            console.log("[Webhook] Attempting MailerSend dispatch for ADMIN email...");
-            const adminEmailResult = await sendAdminNotificationEmail(personalizationData);
-            adminEmailSuccess = adminEmailResult.success;
-            console.log("[Webhook] Admin email result success:", adminEmailResult.success);
-            if (!adminEmailResult.success) {
-              console.error("[Webhook] Admin email FAILED with error:", adminEmailResult.error);
-            } else {
-              console.log("[Webhook] Admin email sent SUCCESSFULLY");
-            }
-          } catch (emailError) {
-            console.error("[Webhook] Admin email EXCEPTION:", getErrorMessage(emailError));
-          }
-          
-          // Summary of email dispatch
-          console.log("[Webhook] ----------------------------------------");
-          console.log("[Webhook] EMAIL DISPATCH SUMMARY:");
-          console.log("[Webhook]   - Customer email:", customerEmailSuccess ? "SUCCESS" : "FAILED");
-          console.log("[Webhook]   - Admin email:", adminEmailSuccess ? "SUCCESS" : "FAILED");
-          console.log("[Webhook] ----------------------------------------");
-        } else {
-          console.error("[Webhook] NO CUSTOMER EMAIL - Skipping all emails!");
-          console.error("[Webhook] This means neither Stripe session nor database had an email");
-        }
-
-        console.log("[Webhook] ========================================");
-        console.log("[Webhook] WEBHOOK PROCESSING COMPLETE");
-        console.log("[Webhook] ========================================");
-
-        // BLOCKING REQUIREMENT: Only return 200 after ALL email operations are complete
-        // The email sending above uses await, so we've already waited for them
-        // If either email failed, we still return 200 to Stripe (to prevent retries)
-        // but we've logged the failures above for debugging
-        
-        break;
-      }
-
-      case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log("[Webhook] Payment succeeded:", paymentIntent.id);
-        break;
-      }
-
-      case "payment_intent.payment_failed": {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log("[Webhook] Payment failed:", paymentIntent.id);
-        console.log("[Webhook] Failure message:", paymentIntent.last_payment_error?.message);
-        break;
-      }
-
-      default:
-        console.log("[Webhook] Unhandled event type:", event.type);
+    if (!signature) {
+      console.error("[WEBHOOK] Missing stripe-signature header");
+      return NextResponse.json({ error: "Missing signature" }, { status: 400 });
     }
 
-    return NextResponse.json({ received: true });
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("[WEBHOOK] STRIPE_WEBHOOK_SECRET not configured");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+    }
+
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[WEBHOOK] Invalid signature:", message);
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
+
+    console.log("[WEBHOOK] Event type:", event.type);
+    console.log("[WEBHOOK] Event ID:", event.id);
+
+    // ========================================================================
+    // STEP 2: Handle checkout.session.completed
+    // ========================================================================
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      
+      console.log("========================================");
+      console.log("[WEBHOOK] CHECKOUT SESSION COMPLETED");
+      console.log("[WEBHOOK] Session ID:", session.id);
+      console.log("[WEBHOOK] Payment Status:", session.payment_status);
+      console.log("[WEBHOOK] Amount:", session.amount_total);
+      console.log("========================================");
+
+      // ======================================================================
+      // CRITICAL CHECK: Only proceed if payment_status === 'paid'
+      // ======================================================================
+      
+      if (session.payment_status !== "paid") {
+        console.log("[WEBHOOK] Skipping: Session is not paid yet. Status:", session.payment_status);
+        // Return 200 but don't process - Stripe may send another webhook when paid
+        return NextResponse.json({ 
+          received: true, 
+          processed: false, 
+          reason: "Payment not yet completed" 
+        });
+      }
+
+      console.log("[WEBHOOK] Payment confirmed as PAID - proceeding with order processing");
+
+      // ======================================================================
+      // STEP 3: Extract orderId from metadata AND success_url
+      // ======================================================================
+      
+      const orderId = extractOrderId(session);
+
+      if (!orderId) {
+        console.error("[WEBHOOK] CRITICAL: Could not extract orderId from session");
+        console.error("[WEBHOOK] Session metadata:", JSON.stringify(session.metadata));
+        console.error("[WEBHOOK] Session success_url:", session.success_url);
+        console.error("[WEBHOOK] Session client_reference_id:", session.client_reference_id);
+        
+        emailError = "No orderId found in session";
+      } else {
+        console.log("[WEBHOOK] Order ID extracted:", orderId);
+
+        // ==================================================================
+        // STEP 4: Fetch order from Supabase WITH RETRY
+        // ==================================================================
+
+        let order: Order | null = null;
+        
+        try {
+          order = await fetchOrderWithRetry(orderId);
+          console.log("[WEBHOOK] Order fetched successfully");
+          console.log("[WEBHOOK] Photos count:", order.photos?.length || 0);
+        } catch (dbError) {
+          const message = dbError instanceof Error ? dbError.message : String(dbError);
+          console.error("[WEBHOOK] CRITICAL: Database fetch failed");
+          console.error("MAILERSEND_CRITICAL_FAILURE", {
+            reason: "DATABASE_FETCH_FAILED",
+            order_id: orderId,
+            error: message
+          });
+          emailError = message;
+        }
+
+        // ==================================================================
+        // STEP 5: Send emails ONLY if we have order data
+        // ==================================================================
+
+        if (order) {
+          // Get product name
+          let productName = session.metadata?.productName || "";
+          if (!productName) {
+            try {
+              const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+              productName = lineItems.data[0]?.description || "Video Package";
+            } catch {
+              productName = "Video Package";
+            }
+          }
+
+          // Build personalization data
+          // CRITICAL: customer_email from session.customer_details.email
+          const personalizationData = buildPersonalizationData(order, session, productName);
+
+          console.log("[WEBHOOK] Customer email (from session):", session.customer_details?.email);
+          console.log("[WEBHOOK] Customer email (final):", personalizationData.customer_email);
+
+          if (!personalizationData.customer_email) {
+            console.error("MAILERSEND_CRITICAL_FAILURE", {
+              reason: "NO_CUSTOMER_EMAIL",
+              order_id: orderId,
+              session_customer_details: session.customer_details
+            });
+            emailError = "No customer email available";
+          } else {
+            // ================================================================
+            // STEP 6: SEND EMAILS - BLOCKING AWAIT
+            // DO NOT return 200 to Stripe until these complete
+            // ================================================================
+
+            console.log("========================================");
+            console.log("[WEBHOOK] SENDING EMAILS - BLOCKING");
+            console.log("========================================");
+
+            // Send customer email (with template)
+            try {
+              console.log("[WEBHOOK] Awaiting customer email send...");
+              const customerResult = await sendCustomerEmail(personalizationData);
+              
+              if (customerResult.success) {
+                console.log("[WEBHOOK] Customer email: SUCCESS");
+                emailSent = true;
+              } else {
+                console.error("MAILERSEND_CRITICAL_FAILURE", {
+                  type: "CUSTOMER_EMAIL",
+                  order_id: orderId,
+                  error: customerResult.error,
+                  statusCode: customerResult.statusCode
+                });
+                emailError = customerResult.error || "Customer email failed";
+              }
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              console.error("MAILERSEND_CRITICAL_FAILURE", {
+                type: "CUSTOMER_EMAIL_EXCEPTION",
+                order_id: orderId,
+                error: msg
+              });
+              emailError = msg;
+            }
+
+            // Send admin notification email
+            try {
+              console.log("[WEBHOOK] Awaiting admin email send...");
+              const adminResult = await sendAdminNotificationEmail(personalizationData);
+              
+              if (adminResult.success) {
+                console.log("[WEBHOOK] Admin email: SUCCESS");
+              } else {
+                console.error("MAILERSEND_CRITICAL_FAILURE", {
+                  type: "ADMIN_EMAIL",
+                  order_id: orderId,
+                  error: adminResult.error
+                });
+              }
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              console.error("MAILERSEND_CRITICAL_FAILURE", {
+                type: "ADMIN_EMAIL_EXCEPTION",
+                order_id: orderId,
+                error: msg
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // ========================================================================
+    // STEP 7: FINAL RESPONSE TO STRIPE
+    // This is the ABSOLUTE LAST LINE after all awaits have completed
+    // ========================================================================
+
+    console.log("========================================");
+    console.log("[WEBHOOK] PROCESSING COMPLETE");
+    console.log("[WEBHOOK] Email sent:", emailSent);
+    console.log("[WEBHOOK] Email error:", emailError || "None");
+    console.log("========================================");
+
+    return NextResponse.json({ 
+      received: true,
+      emailSent,
+      error: emailError
+    });
+
   } catch (error) {
-    console.error("[Webhook] Error processing event:", getErrorMessage(error));
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[WEBHOOK] UNHANDLED EXCEPTION:", message);
+    
+    // Always return 200 to prevent Stripe retries flooding
+    return NextResponse.json({ 
+      received: true, 
+      processed: false,
+      error: message
+    });
   }
 }

@@ -46,6 +46,7 @@ export interface Order {
   branding: OrderBranding;
   voiceover: boolean;
   voiceoverScript?: string;
+  voiceoverVoice?: string;
   specialInstructions?: string;
   includeEditedPhotos: boolean;
   
