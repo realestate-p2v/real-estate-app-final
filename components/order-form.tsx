@@ -28,6 +28,7 @@ export function OrderForm() {
   const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
   const [voiceoverSelection, setVoiceoverSelection] = useState("none");
   const [voiceoverScript, setVoiceoverScript] = useState("");
+  const [selectedVoice, setSelectedVoice] = useState("");
   const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -227,6 +228,7 @@ export function OrderForm() {
           },
 voiceover: voiceoverSelection === "voiceover",
   voiceoverScript: voiceoverSelection === "voiceover" ? voiceoverScript : undefined,
+  voiceoverVoice: voiceoverSelection === "voiceover" ? selectedVoice : undefined,
   includeEditedPhotos,
   specialInstructions: formData.notes,
         }),
@@ -372,6 +374,8 @@ voiceover: voiceoverSelection === "voiceover",
   onSelect={setVoiceoverSelection}
   script={voiceoverScript}
   onScriptChange={setVoiceoverScript}
+  selectedVoice={selectedVoice}
+  onVoiceSelect={setSelectedVoice}
   />
                     </div>
 
