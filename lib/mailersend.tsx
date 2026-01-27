@@ -11,11 +11,18 @@
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const ADMIN_EMAIL = "realestatephoto2video@gmail.com";
-const BCC_EMAIL = process.env.MAILERSEND_BCC_EMAIL || "info@realestatephoto2video.com"; // BCC on customer receipts
+const ADMIN_EMAIL_2 = "info@realestatephoto2video.com";
 const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL;
 const FROM_NAME = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
-const CUSTOMER_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "";
+// Template ID: Use the specific template requested, fallback to env var
+const CUSTOMER_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "zr6ke4n6kzelon12";
 const ADMIN_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "";
+
+// BCC Recipients - Array of objects format for MailerSend API
+const BCC_RECIPIENTS = [
+  { email: ADMIN_EMAIL, name: "Admin" },
+  { email: ADMIN_EMAIL_2, name: "Admin 2" },
+];
 
 /**
  * PERSONALIZATION DATA INTERFACE
@@ -398,7 +405,7 @@ Real Estate Photo2Video Team
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
-        bcc: [{ email: BCC_EMAIL, name: "Admin BCC" }], // BCC admin on all customer receipts (customer won't see)
+        bcc: BCC_RECIPIENTS, // BCC both admin emails on all customer receipts
         subject: subject, // EXPLICIT SUBJECT - prevents MS42209
         template_id: CUSTOMER_TEMPLATE_ID,
         personalization: [
@@ -453,7 +460,7 @@ Real Estate Photo2Video Team
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
-        bcc: [{ email: BCC_EMAIL, name: "Admin BCC" }], // BCC admin on all customer receipts (customer won't see)
+        bcc: BCC_RECIPIENTS, // BCC both admin emails on all customer receipts
         subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
         text: text,
@@ -461,12 +468,13 @@ Real Estate Photo2Video Team
       console.log("[MailerSend] Using comprehensive HTML email (no template)");
     }
 
-    console.log("[v0] ========================================");
-    console.log("[v0] MAILERSEND CUSTOMER EMAIL REQUEST");
-    console.log("[v0] ========================================");
-    console.log("[v0] FROM_EMAIL:", FROM_EMAIL);
-    console.log("[v0] TO:", data.customer_email);
-    console.log("[v0] BCC:", BCC_EMAIL);
+    console.log("[MailerSend] ========================================");
+    console.log("[MailerSend] MAILERSEND CUSTOMER EMAIL REQUEST");
+    console.log("[MailerSend] ========================================");
+    console.log("[MailerSend] Attempting MailerSend dispatch...");
+    console.log("[MailerSend] FROM_EMAIL:", FROM_EMAIL);
+    console.log("[MailerSend] TO:", data.customer_email);
+    console.log("[MailerSend] BCC:", JSON.stringify(BCC_RECIPIENTS));
     console.log("[v0] TEMPLATE_ID:", CUSTOMER_TEMPLATE_ID || "NONE - using HTML fallback");
     console.log("[v0] Full request body:", JSON.stringify(requestBody, null, 2));
     console.log("[v0] ========================================");
@@ -481,17 +489,30 @@ Real Estate Photo2Video Team
     });
 
     const responseText = await response.text();
-    console.log("[v0] MailerSend API Response status:", response.status);
-    console.log("[v0] MailerSend API Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
-    console.log("[v0] MailerSend API Response body:", responseText);
+    console.log("[MailerSend] MailerSend API Response status:", response.status);
+    console.log("[MailerSend] MailerSend API Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+    console.log("[MailerSend] MailerSend API Response body:", responseText);
 
     if (!response.ok) {
-      console.error("[v0] Customer email FAILED - Status:", response.status);
-      console.error("[v0] Error details:", responseText);
+      console.error("[MailerSend] Customer email FAILED - Status:", response.status);
+      console.error("[MailerSend] Error details (error.body):", responseText);
+      // Parse error body for template validation issues
+      try {
+        const errorBody = JSON.parse(responseText);
+        console.error("[MailerSend] Parsed error body:", JSON.stringify(errorBody, null, 2));
+        if (errorBody.message) {
+          console.error("[MailerSend] Error message:", errorBody.message);
+        }
+        if (errorBody.errors) {
+          console.error("[MailerSend] Validation errors:", JSON.stringify(errorBody.errors, null, 2));
+        }
+      } catch {
+        console.error("[MailerSend] Could not parse error body as JSON");
+      }
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
-    console.log("[v0] Customer email sent SUCCESSFULLY to:", data.customer_email);
+    console.log("[MailerSend] Customer email sent SUCCESSFULLY to:", data.customer_email);
     return { success: true };
   } catch (error) {
     console.error("[MailerSend] Exception:", error);
@@ -517,7 +538,7 @@ export async function sendAdminNotificationEmail(
 ): Promise<{ success: boolean; error?: string }> {
   console.log("[MailerSend] ========================================");
   console.log("[MailerSend] EMAIL 2: ADMIN NOTIFICATION");
-  console.log("[MailerSend] Recipient: realestatephoto2video@gmail.com");
+  console.log("[MailerSend] Recipients:", ADMIN_EMAIL, "and", ADMIN_EMAIL_2);
   console.log("[MailerSend] ========================================");
 
   // VALIDATION: Check MAILERSEND_SENDER_EMAIL is set
@@ -542,7 +563,7 @@ export async function sendAdminNotificationEmail(
       // Use template with personalization - pass ALL fields
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
-        to: [{ email: ADMIN_EMAIL, name: "Admin" }],
+        to: [{ email: ADMIN_EMAIL, name: "Admin" }, { email: ADMIN_EMAIL_2, name: "Admin 2" }],
         subject: subject, // EXPLICIT SUBJECT - prevents MS42209
         template_id: ADMIN_TEMPLATE_ID,
         personalization: [
@@ -857,7 +878,7 @@ Video to be delivered within 3 business days.
 
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
-        to: [{ email: ADMIN_EMAIL, name: "Admin" }],
+        to: [{ email: ADMIN_EMAIL, name: "Admin" }, { email: ADMIN_EMAIL_2, name: "Admin 2" }],
         subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
         text: text,
@@ -865,14 +886,15 @@ Video to be delivered within 3 business days.
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
 
-    console.log("[v0] ========================================");
-    console.log("[v0] MAILERSEND ADMIN EMAIL REQUEST");
-    console.log("[v0] ========================================");
-    console.log("[v0] FROM_EMAIL:", FROM_EMAIL);
-    console.log("[v0] TO:", ADMIN_EMAIL);
-    console.log("[v0] TEMPLATE_ID:", ADMIN_TEMPLATE_ID || "NONE - using HTML fallback");
-    console.log("[v0] Full request body:", JSON.stringify(requestBody, null, 2));
-    console.log("[v0] ========================================");
+    console.log("[MailerSend] ========================================");
+    console.log("[MailerSend] MAILERSEND ADMIN EMAIL REQUEST");
+    console.log("[MailerSend] ========================================");
+    console.log("[MailerSend] Attempting MailerSend dispatch...");
+    console.log("[MailerSend] FROM_EMAIL:", FROM_EMAIL);
+    console.log("[MailerSend] TO:", ADMIN_EMAIL, "and", ADMIN_EMAIL_2);
+    console.log("[MailerSend] TEMPLATE_ID:", ADMIN_TEMPLATE_ID || "NONE - using HTML fallback");
+    console.log("[MailerSend] Full request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[MailerSend] ========================================");
 
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
@@ -884,17 +906,30 @@ Video to be delivered within 3 business days.
     });
 
     const responseText = await response.text();
-    console.log("[v0] MailerSend Admin API Response status:", response.status);
-    console.log("[v0] MailerSend Admin API Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
-    console.log("[v0] MailerSend Admin API Response body:", responseText);
+    console.log("[MailerSend] MailerSend Admin API Response status:", response.status);
+    console.log("[MailerSend] MailerSend Admin API Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+    console.log("[MailerSend] MailerSend Admin API Response body:", responseText);
 
     if (!response.ok) {
-      console.error("[v0] Admin email FAILED - Status:", response.status);
-      console.error("[v0] Error details:", responseText);
+      console.error("[MailerSend] Admin email FAILED - Status:", response.status);
+      console.error("[MailerSend] Error details (error.body):", responseText);
+      // Parse error body for template validation issues
+      try {
+        const errorBody = JSON.parse(responseText);
+        console.error("[MailerSend] Parsed error body:", JSON.stringify(errorBody, null, 2));
+        if (errorBody.message) {
+          console.error("[MailerSend] Error message:", errorBody.message);
+        }
+        if (errorBody.errors) {
+          console.error("[MailerSend] Validation errors:", JSON.stringify(errorBody.errors, null, 2));
+        }
+      } catch {
+        console.error("[MailerSend] Could not parse error body as JSON");
+      }
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
-    console.log("[v0] Admin email sent SUCCESSFULLY to:", ADMIN_EMAIL);
+    console.log("[MailerSend] Admin email sent SUCCESSFULLY to:", ADMIN_EMAIL, "and", ADMIN_EMAIL_2);
     return { success: true };
   } catch (error) {
     console.error("[MailerSend] Exception:", error);
@@ -902,5 +937,6 @@ Video to be delivered within 3 business days.
   }
 }
 
-// Legacy export for backward compatibility
+// Legacy exports for backward compatibility
 export const sendAdminEmail = sendAdminNotificationEmail;
+export const sendCustomerReceiptEmail = sendCustomerEmail;
