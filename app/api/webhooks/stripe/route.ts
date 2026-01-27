@@ -410,23 +410,29 @@ export async function POST(request: Request) {
             // SEND CUSTOMER EMAIL - WRAPPED IN TRY/CATCH WITH error.body LOGGING
             // ================================================================
             try {
-              console.log("[WEBHOOK] === SENDING CUSTOMER EMAIL ===");
+              console.log("[WEBHOOK] === PREPARING TO SEND CUSTOMER EMAIL ===");
               console.log("[WEBHOOK] To:", personalizationData.customer_email);
               console.log("[WEBHOOK] Template ID: zr6ke4n6kzelon12");
               console.log("[WEBHOOK] BCC: realestatephoto2video@gmail.com");
               console.log("[WEBHOOK] Image URLs count:", buildImageUrlsArray(order.photos).length);
+              console.log("[WEBHOOK] MAILERSEND_API_KEY present:", !!process.env.MAILERSEND_API_KEY);
+              console.log("[WEBHOOK] MAILERSEND_SENDER_EMAIL:", process.env.MAILERSEND_SENDER_EMAIL || "(not set - using fallback)");
               
               const customerResult = await sendCustomerEmail(personalizationData);
               
               if (customerResult.success) {
-                console.log("[WEBHOOK] Customer email: SUCCESS");
+                console.log("[WEBHOOK] Customer email: SUCCESS (status:", customerResult.statusCode, ")");
                 emailSent = true;
               } else {
                 // LOG error.body FOR VALIDATION FAILURES
                 console.error("[WEBHOOK] === MAILERSEND CUSTOMER EMAIL FAILED ===");
                 console.error("[WEBHOOK] error:", customerResult.error);
                 console.error("[WEBHOOK] statusCode:", customerResult.statusCode);
-                console.error("[WEBHOOK] error.body:", JSON.stringify(customerResult.responseBody, null, 2));
+                console.error("[WEBHOOK] responseBody:", JSON.stringify(customerResult.responseBody, null, 2));
+                console.error("[WEBHOOK] TROUBLESHOOTING:");
+                console.error("[WEBHOOK]   1. Verify MAILERSEND_API_KEY is correct");
+                console.error("[WEBHOOK]   2. Verify MAILERSEND_SENDER_EMAIL is from a verified domain in MailerSend");
+                console.error("[WEBHOOK]   3. Check MailerSend dashboard for domain verification status");
                 emailError = customerResult.error || "Customer email failed";
               }
             } catch (err: unknown) {
