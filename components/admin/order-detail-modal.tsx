@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import {
   Dialog,
@@ -52,9 +52,11 @@ export function OrderDetailModal({
   const [localStatus, setLocalStatus] = useState(order?.status || "New")
 
   // Sync local status when order changes
-  if (order && order.status !== localStatus && !isUpdatingStatus) {
-    setLocalStatus(order.status || "New")
-  }
+  useEffect(() => {
+    if (order && !isUpdatingStatus) {
+      setLocalStatus(order.status || "New")
+    }
+  }, [order, isUpdatingStatus])
 
   if (!order) return null
 
