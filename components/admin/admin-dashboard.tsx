@@ -15,6 +15,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { OrderDetailModal } from "./order-detail-modal"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -65,6 +66,7 @@ export function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const supabase = createClient()
 
   const fetchOrders = useCallback(async () => {
@@ -116,6 +118,7 @@ export function AdminDashboard() {
   }
 
   const handleStatusUpdate = async (orderId: string, newStatus: string): Promise<void> => {
+    setUpdatingStatusId(orderId)
     try {
       const response = await fetch("/api/admin/orders", {
         method: "PATCH",
@@ -143,6 +146,8 @@ export function AdminDashboard() {
     } catch (error) {
       console.error("Error updating status:", error)
       throw error
+    } finally {
+      setUpdatingStatusId(null)
     }
   }
 
@@ -260,84 +265,106 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {filteredOrders.map((order) => {
               const isDelivered = order.status === "Delivered"
-              const isNew = !isDelivered
               const photoCount = order.photo_count || (Array.isArray(order.photos) ? order.photos.length : 0)
+              const isUpdating = updatingStatusId === order.id
 
               return (
-                <Card
-                  key={order.id}
-                  className="group relative cursor-pointer overflow-hidden border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
-                  onClick={() => handleOrderClick(order)}
-                >
-                  {/* Status Tab */}
-                  <div
-                    className={`absolute left-0 top-0 h-full w-1 ${
-                      isDelivered ? "bg-emerald-500" : "bg-red-500"
-                    }`}
-                  />
-                  
-                  <CardContent className="p-3 pl-4">
-                    {/* Header Row */}
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-sm font-semibold text-zinc-900">
-                          {order.customer_name || "No Name"}
-                        </h3>
-                        <p className="text-xs text-zinc-500">{formatDate(order.created_at)}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {formatPrice(order.total_price)}
-                        </p>
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            isDelivered
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {isDelivered ? "Delivered" : "New"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Info Row */}
-                    <div className="mb-2 flex items-center gap-3 text-xs text-zinc-500">
-                      <div className="flex items-center gap-1">
-                        <Images className="h-3 w-3" />
-                        <span>{photoCount}</span>
-                      </div>
-                      {order.customer_email && (
-                        <div className="flex min-w-0 flex-1 items-center gap-1">
-                          <Mail className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{order.customer_email}</span>
+                <div key={order.id} className="relative">
+                  <Card
+                    className="group relative cursor-pointer overflow-hidden border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
+                    onClick={() => handleOrderClick(order)}
+                  >
+                    {/* Status Tab */}
+                    <div
+                      className={`absolute left-0 top-0 h-full w-1 ${
+                        isDelivered ? "bg-emerald-500" : "bg-red-500"
+                      }`}
+                    />
+                    
+                    <CardContent className="p-3 pl-4">
+                      {/* Header Row */}
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-sm font-semibold text-zinc-900">
+                            {order.customer_name || "No Name"}
+                          </h3>
+                          <p className="text-xs text-zinc-500">{formatDate(order.created_at)}</p>
                         </div>
-                      )}
-                    </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {formatPrice(order.total_price)}
+                          </p>
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              isDelivered
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {isDelivered ? "Delivered" : "New"}
+                          </span>
+                        </div>
+                      </div>
 
-                    {/* Features Row */}
-                    <div className="flex flex-wrap gap-1">
-                      {order.voiceover && (
-                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-                          Voiceover
-                        </span>
-                      )}
-                      {order.branding?.type && order.branding.type !== "unbranded" && (
-                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-                          {order.branding.type === "basic" ? "Branding" : "Custom"}
-                        </span>
-                      )}
-                      {order.include_edited_photos && (
-                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-                          Edited
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                      {/* Info Row */}
+                      <div className="mb-2 flex items-center gap-3 text-xs text-zinc-500">
+                        <div className="flex items-center gap-1">
+                          <Images className="h-3 w-3" />
+                          <span>{photoCount}</span>
+                        </div>
+                        {order.customer_email && (
+                          <div className="flex min-w-0 flex-1 items-center gap-1">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{order.customer_email}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Features Row */}
+                      <div className="flex flex-wrap gap-1">
+                        {order.voiceover && (
+                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
+                            Voiceover
+                          </span>
+                        )}
+                        {order.branding?.type && order.branding.type !== "unbranded" && (
+                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
+                            {order.branding.type === "basic" ? "Branding" : "Custom"}
+                          </span>
+                        )}
+                        {order.include_edited_photos && (
+                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
+                            Edited
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Status Switch - Outside Card */}
+                  <div 
+                    className="absolute -bottom-2 right-3 z-10 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2 py-1 shadow-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className={`text-[10px] font-medium ${isDelivered ? "text-zinc-400" : "text-red-600"}`}>
+                      New
+                    </span>
+                    <Switch
+                      checked={isDelivered}
+                      onCheckedChange={(checked) => {
+                        handleStatusUpdate(order.id, checked ? "Delivered" : "New")
+                      }}
+                      disabled={isUpdating}
+                      className="h-4 w-7 data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
+                    />
+                    <span className={`text-[10px] font-medium ${isDelivered ? "text-emerald-600" : "text-zinc-400"}`}>
+                      Done
+                    </span>
+                  </div>
+                </div>
               )
             })}
           </div>
