@@ -1,6 +1,5 @@
 import { Navigation } from "@/components/navigation";
 import { HeroSection } from "@/components/hero-section";
-import { StatsSection } from "@/components/stats-section";
 import { DemoSection } from "@/components/demo-section";
 import { ProcessSection } from "@/components/process-section";
 import { PricingSection } from "@/components/pricing-section";
@@ -15,7 +14,6 @@ export default function HomePage() {
       <Navigation />
       <HeroSection />
       <DemoSection />
-      <StatsSection />
       <ProcessSection />
       <PricingSection />
       <CTASection />

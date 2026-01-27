@@ -1,5 +1,32 @@
 import Image from "next/image";
-import { Images, ArrowRight, Play, Building2 } from "lucide-react";
+import { Images, ArrowRight, Play, Building2, TrendingUp, Eye, Clock, DollarSign } from "lucide-react";
+
+const stats = [
+  {
+    icon: TrendingUp,
+    value: "403%",
+    label: "More Inquiries",
+    description: "Video listings get 4x more buyer inquiries",
+  },
+  {
+    icon: Eye,
+    value: "85%",
+    label: "More Views",
+    description: "Buyers watch videos before scheduling tours",
+  },
+  {
+    icon: Clock,
+    value: "72hrs",
+    label: "Fast Delivery",
+    description: "Your video delivered in 3 business days",
+  },
+  {
+    icon: DollarSign,
+    value: "10x",
+    label: "ROI",
+    description: "Video marketing outperforms static images",
+  },
+];
 
 const listingPhotos = [
   {
@@ -116,48 +143,87 @@ export function DemoSection() {
           </div>
         </div>
 
-        {/* Commercial Space Demo */}
-        <div className="mt-20">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-4 py-2 mb-4">
-              <Building2 className="h-4 w-4 text-secondary" />
-              <span className="text-sm font-medium text-secondary">Commercial Spaces</span>
+        {/* Two Column Section: Commercial + Stats */}
+        <div className="mt-20 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* Commercial Space Demo - Left Column */}
+          <div className="flex flex-col">
+            <div className="text-center lg:text-left mb-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-4 py-2 mb-4">
+                <Building2 className="h-4 w-4 text-secondary" />
+                <span className="text-sm font-medium text-secondary">Commercial Spaces</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold text-foreground text-balance">
+                Perfect for Commercial Properties Too
+              </h3>
+              <p className="mt-3 text-muted-foreground">
+                Showcase retail spaces, offices, restaurants, and more with vertical social-ready videos
+              </p>
             </div>
-            <h3 className="text-2xl md:text-3xl font-bold text-foreground text-balance">
-              Perfect for Commercial Properties Too
-            </h3>
-            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Showcase retail spaces, offices, restaurants, and more with vertical social-ready videos
-            </p>
+
+            <div className="flex justify-center lg:justify-start flex-1">
+              <div className="bg-card rounded-2xl p-4 sm:p-6 shadow-lg max-w-sm w-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <Play className="h-6 w-6 text-accent" />
+                  <span className="font-semibold text-foreground">Commercial Walkthrough</span>
+                </div>
+                {/* 9x16 Vertical Video Placeholder */}
+                <div className="aspect-[9/16] rounded-xl overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 relative">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80">
+                    <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
+                      <Play className="h-8 w-8 text-white fill-white/20" />
+                    </div>
+                    <p className="text-sm font-medium">Commercial Space Video</p>
+                    <p className="text-xs text-white/60 mt-1">9:16 Vertical Format</p>
+                  </div>
+                  {/* Decorative elements */}
+                  <div className="absolute top-4 left-4 right-4">
+                    <div className="h-1 w-12 bg-white/20 rounded-full" />
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4 flex gap-2">
+                    <div className="h-1 flex-1 bg-white/20 rounded-full" />
+                    <div className="h-1 w-8 bg-white/40 rounded-full" />
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-muted-foreground text-center">
+                  Optimized for Instagram Reels, TikTok & YouTube Shorts
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-center">
-            <div className="bg-card rounded-2xl p-4 sm:p-6 shadow-lg max-w-sm w-full">
-              <div className="flex items-center gap-3 mb-4">
-                <Play className="h-6 w-6 text-accent" />
-                <span className="font-semibold text-foreground">Commercial Walkthrough</span>
+          {/* Why Video Wins - Right Column */}
+          <div className="flex flex-col">
+            <div className="text-center lg:text-left mb-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 mb-4">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-primary">Video Marketing</span>
               </div>
-              {/* 9x16 Vertical Video Placeholder */}
-              <div className="aspect-[9/16] rounded-xl overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 relative">
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80">
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
-                    <Play className="h-8 w-8 text-white fill-white/20" />
-                  </div>
-                  <p className="text-sm font-medium">Commercial Space Video</p>
-                  <p className="text-xs text-white/60 mt-1">9:16 Vertical Format</p>
-                </div>
-                {/* Decorative elements */}
-                <div className="absolute top-4 left-4 right-4">
-                  <div className="h-1 w-12 bg-white/20 rounded-full" />
-                </div>
-                <div className="absolute bottom-4 left-4 right-4 flex gap-2">
-                  <div className="h-1 flex-1 bg-white/20 rounded-full" />
-                  <div className="h-1 w-8 bg-white/40 rounded-full" />
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground text-center">
-                Optimized for Instagram Reels, TikTok & YouTube Shorts
+              <h3 className="text-2xl md:text-3xl font-bold text-foreground text-balance">
+                Why Video Wins in Real Estate
+              </h3>
+              <p className="mt-3 text-muted-foreground">
+                Video dominates social media and digital marketing. Without video content, you are falling behind your competition.
               </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 flex-1 content-start">
+              {stats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="bg-card rounded-xl p-4 sm:p-5 text-center border border-border hover:shadow-md transition-shadow"
+                >
+                  <stat.icon className="h-7 w-7 text-primary mx-auto mb-2" />
+                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
+                    {stat.value}
+                  </div>
+                  <div className="text-xs sm:text-sm font-semibold text-foreground mb-1">
+                    {stat.label}
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
+                    {stat.description}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
