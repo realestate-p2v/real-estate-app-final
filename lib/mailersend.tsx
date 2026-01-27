@@ -24,6 +24,9 @@ export interface PersonalizationData {
   // ORDER ID: Must be passed to template (not blank)
   order_id: string;
   
+  // Product name
+  product_name: string;
+  
   // Core customer info
   customer_name: string;
   customer_email: string;
@@ -138,6 +141,8 @@ export async function sendCustomerEmail(
             data: {
               // ORDER ID: Ensure this is not blank
               order_id: data.order_id,
+              // Product name
+              product_name: data.product_name,
               // Customer info
               customer_name: data.customer_name,
               customer_email: data.customer_email,
@@ -186,6 +191,7 @@ export async function sendCustomerEmail(
           <p>Thank you for your order! Your real estate video will be delivered within 3 business days.</p>
           <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Order ID:</strong> ${data.order_id}</p>
+            <p><strong>Product:</strong> ${data.product_name}</p>
             <p><strong>Total:</strong> ${data.price}</p>
             <p><strong>Photos:</strong> ${data.photo_count} photos</p>
             <p><strong>Music Selection:</strong> ${data.music_choice}</p>
@@ -201,7 +207,7 @@ export async function sendCustomerEmail(
         to: [{ email: data.customer_email, name: data.customer_name }],
         subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
-        text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Total: ${data.price}. Photos: ${data.photo_count}. Music: ${data.music_choice}. Your video will be delivered within 3 business days.`,
+        text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Product: ${data.product_name}. Total: ${data.price}. Photos: ${data.photo_count}. Music: ${data.music_choice}. Your video will be delivered within 3 business days.`,
       };
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
@@ -286,6 +292,8 @@ export async function sendAdminNotificationEmail(
             data: {
               // ORDER ID: Must not be blank
               order_id: data.order_id,
+              // Product name
+              product_name: data.product_name,
               // Customer info
               customer_name: data.customer_name,
               customer_email: data.customer_email,
@@ -459,6 +467,10 @@ export async function sendAdminNotificationEmail(
               <td style="padding: 12px;">${data.order_id}</td>
             </tr>
             <tr>
+              <td style="padding: 12px; font-weight: bold;">Product:</td>
+              <td style="padding: 12px;">${data.product_name}</td>
+            </tr>
+            <tr>
               <td style="padding: 12px; font-weight: bold;">Photo Count:</td>
               <td style="padding: 12px;">${data.photo_count} photos</td>
             </tr>
@@ -538,6 +550,7 @@ Phone: ${data.customer_phone}
 ORDER DETAILS
 -------------
 Order ID: ${data.order_id}
+Product: ${data.product_name}
 Photo Count: ${data.photo_count}
 Music Choice: ${data.music_choice}
 Include Edited Photos: ${data.include_edited_photos}
