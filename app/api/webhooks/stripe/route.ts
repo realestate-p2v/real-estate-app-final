@@ -138,6 +138,22 @@ function buildBrandingInfo(branding: Order["branding"]): string {
   return parts.join(" | ");
 }
 
+/**
+ * Map voice ID to friendly name
+ */
+function getVoiceName(voiceId: string | undefined): string {
+  if (!voiceId) return "";
+  
+  const voiceMap: Record<string, string> = {
+    "male-1": "Matt (Male)",
+    "male-2": "Blake (Male)",
+    "female-1": "Maya (Female)",
+    "female-2": "Amara (Female)",
+  };
+  
+  return voiceMap[voiceId] || voiceId;
+}
+
 export async function POST(request: Request) {
   console.log("[v0] ========================================");
   console.log("[v0] STRIPE WEBHOOK RECEIVED");
@@ -268,7 +284,7 @@ export async function POST(request: Request) {
         
         // Voiceover details
         voiceover_enabled: order?.voiceover ? "Yes" : "No",
-        voiceover_voice: order?.voiceoverVoice || "",
+        voiceover_voice: getVoiceName(order?.voiceoverVoice),
         voiceover_script: order?.voiceoverScript || "",
         
         // Edited photos
