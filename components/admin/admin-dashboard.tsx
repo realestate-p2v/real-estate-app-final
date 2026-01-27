@@ -355,9 +355,14 @@ export function AdminDashboard() {
                     className="absolute -bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 shadow-sm"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <span className={`text-xs font-medium ${isDelivered ? "text-zinc-400" : "text-red-600"}`}>
+                    <button
+                      type="button"
+                      onClick={() => !isUpdating && handleStatusUpdate(order.id, "New")}
+                      disabled={isUpdating}
+                      className={`text-xs font-medium transition-colors ${isDelivered ? "text-zinc-500 hover:text-red-600" : "text-red-600"} disabled:opacity-50`}
+                    >
                       New
-                    </span>
+                    </button>
                     <Switch
                       checked={isDelivered}
                       onCheckedChange={(checked) => {
@@ -366,9 +371,14 @@ export function AdminDashboard() {
                       disabled={isUpdating}
                       className="h-5 w-9 data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
                     />
-                    <span className={`text-xs font-medium ${isDelivered ? "text-emerald-600" : "text-zinc-400"}`}>
+                    <button
+                      type="button"
+                      onClick={() => !isUpdating && handleStatusUpdate(order.id, "Delivered")}
+                      disabled={isUpdating}
+                      className={`text-xs font-medium transition-colors ${isDelivered ? "text-emerald-600" : "text-zinc-500 hover:text-emerald-600"} disabled:opacity-50`}
+                    >
                       Done
-                    </span>
+                    </button>
                   </div>
                 </div>
               )
