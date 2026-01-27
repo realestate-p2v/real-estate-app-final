@@ -9,7 +9,9 @@ import {
   Search,
   Images,
   Mail,
+  ArrowLeft,
 } from "lucide-react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -114,20 +116,22 @@ export function AdminDashboard() {
   }
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
-    console.log("[v0] Updating order status:", { orderId, newStatus })
-    
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq("id", orderId)
-      .select()
+    try {
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId, status: newStatus }),
+      })
 
-    console.log("[v0] Status update result:", { data, error })
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("Error updating status:", errorData)
+        return
+      }
 
-    if (error) {
-      console.error("[v0] Error updating status:", error)
-    } else {
-      console.log("[v0] Status updated successfully, updating local state")
+      // Update local state on success
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -136,6 +140,8 @@ export function AdminDashboard() {
       if (selectedOrder?.id === orderId) {
         setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null))
       }
+    } catch (error) {
+      console.error("Error updating status:", error)
     }
   }
 
@@ -147,11 +153,11 @@ export function AdminDashboard() {
     })
   }
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (priceInCents: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(price)
+    }).format(priceInCents / 100)
   }
 
   const newCount = orders.filter((o) => o.status === "New" || o.status === "Processing" || !o.status).length
@@ -162,13 +168,20 @@ export function AdminDashboard() {
       {/* Header */}
       <header className="border-b bg-white">
         <div className="flex items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900">
-              <LayoutDashboard className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-zinc-900">Orders</h1>
-              <p className="text-sm text-zinc-500">Manage video orders</p>
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900">
+                <LayoutDashboard className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-zinc-900">Orders</h1>
+                <p className="text-sm text-zinc-500">Manage video orders</p>
+              </div>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={fetchOrders} disabled={isLoading} className="gap-2">
