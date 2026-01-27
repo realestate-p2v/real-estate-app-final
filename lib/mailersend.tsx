@@ -214,7 +214,15 @@ export async function sendCustomerEmail(
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
 
-    console.log("[MailerSend] Sending request to MailerSend API...");
+    console.log("[v0] ========================================");
+    console.log("[v0] MAILERSEND CUSTOMER EMAIL REQUEST");
+    console.log("[v0] ========================================");
+    console.log("[v0] FROM_EMAIL:", FROM_EMAIL);
+    console.log("[v0] TO:", data.customer_email);
+    console.log("[v0] BCC: realestatephoto2video@gmail.com");
+    console.log("[v0] TEMPLATE_ID:", CUSTOMER_TEMPLATE_ID || "NONE - using HTML fallback");
+    console.log("[v0] Full request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[v0] ========================================");
 
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
@@ -226,15 +234,17 @@ export async function sendCustomerEmail(
     });
 
     const responseText = await response.text();
-    console.log("[MailerSend] Response status:", response.status);
-    console.log("[MailerSend] Response body:", responseText);
+    console.log("[v0] MailerSend API Response status:", response.status);
+    console.log("[v0] MailerSend API Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+    console.log("[v0] MailerSend API Response body:", responseText);
 
     if (!response.ok) {
-      console.error("[MailerSend] Customer email FAILED");
+      console.error("[v0] Customer email FAILED - Status:", response.status);
+      console.error("[v0] Error details:", responseText);
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
-    console.log("[MailerSend] Customer email sent SUCCESSFULLY");
+    console.log("[v0] Customer email sent SUCCESSFULLY to:", data.customer_email);
     return { success: true };
   } catch (error) {
     console.error("[MailerSend] Exception:", error);
@@ -608,7 +618,14 @@ Video to be delivered within 3 business days.
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
 
-    console.log("[MailerSend] Sending admin notification to MailerSend API...");
+    console.log("[v0] ========================================");
+    console.log("[v0] MAILERSEND ADMIN EMAIL REQUEST");
+    console.log("[v0] ========================================");
+    console.log("[v0] FROM_EMAIL:", FROM_EMAIL);
+    console.log("[v0] TO:", ADMIN_EMAIL);
+    console.log("[v0] TEMPLATE_ID:", ADMIN_TEMPLATE_ID || "NONE - using HTML fallback");
+    console.log("[v0] Full request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[v0] ========================================");
 
     const response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
@@ -620,15 +637,17 @@ Video to be delivered within 3 business days.
     });
 
     const responseText = await response.text();
-    console.log("[MailerSend] Response status:", response.status);
-    console.log("[MailerSend] Response body:", responseText);
+    console.log("[v0] MailerSend Admin API Response status:", response.status);
+    console.log("[v0] MailerSend Admin API Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+    console.log("[v0] MailerSend Admin API Response body:", responseText);
 
     if (!response.ok) {
-      console.error("[MailerSend] Admin notification email FAILED");
+      console.error("[v0] Admin email FAILED - Status:", response.status);
+      console.error("[v0] Error details:", responseText);
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
-    console.log("[MailerSend] Admin notification email sent SUCCESSFULLY to", ADMIN_EMAIL);
+    console.log("[v0] Admin email sent SUCCESSFULLY to:", ADMIN_EMAIL);
     return { success: true };
   } catch (error) {
     console.error("[MailerSend] Exception:", error);
