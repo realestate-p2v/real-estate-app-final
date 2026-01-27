@@ -115,7 +115,7 @@ export function AdminDashboard() {
     setIsModalOpen(true)
   }
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: string): Promise<void> => {
     try {
       const response = await fetch("/api/admin/orders", {
         method: "PATCH",
@@ -128,7 +128,7 @@ export function AdminDashboard() {
       if (!response.ok) {
         const errorData = await response.json()
         console.error("Error updating status:", errorData)
-        return
+        throw new Error(errorData.error || "Failed to update status")
       }
 
       // Update local state on success
@@ -142,6 +142,7 @@ export function AdminDashboard() {
       }
     } catch (error) {
       console.error("Error updating status:", error)
+      throw error
     }
   }
 
