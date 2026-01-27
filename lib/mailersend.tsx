@@ -14,8 +14,8 @@ const ADMIN_EMAIL = "realestatephoto2video@gmail.com";
 const ADMIN_EMAIL_2 = "info@realestatephoto2video.com";
 const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL;
 const FROM_NAME = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
-// Template ID: Use the specific template requested, fallback to env var
-const CUSTOMER_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "zr6ke4n6kzelon12";
+// Template ID: HARDCODED per requirements - zr6ke4n6kzelon12
+const CUSTOMER_TEMPLATE_ID = "zr6ke4n6kzelon12";
 const ADMIN_TEMPLATE_ID = process.env.MAILERSEND_ORDER_TEMPLATE_ID || "";
 
 // BCC Recipients - Array of objects format for MailerSend API
@@ -496,10 +496,10 @@ Real Estate Photo2Video Team
     if (!response.ok) {
       console.error("[MailerSend] Customer email FAILED - Status:", response.status);
       console.error("[MailerSend] Error details (error.body):", responseText);
-      // Parse error body for template validation issues
+      // Parse error body for template validation issues - THIS IS WHERE THE "WHY" IS HIDDEN
       try {
         const errorBody = JSON.parse(responseText);
-        console.error("[MailerSend] Parsed error body:", JSON.stringify(errorBody, null, 2));
+        console.error("[MailerSend] FULL error.body:", JSON.stringify(errorBody, null, 2));
         if (errorBody.message) {
           console.error("[MailerSend] Error message:", errorBody.message);
         }
@@ -512,6 +512,10 @@ Real Estate Photo2Video Team
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
+    // CRITICAL: Only log success AFTER API returns 202 (accepted)
+    if (response.status === 202) {
+      console.log("[MailerSend] Handoff to MailerSend successful - Status 202");
+    }
     console.log("[MailerSend] Customer email sent SUCCESSFULLY to:", data.customer_email);
     return { success: true };
   } catch (error) {
@@ -913,10 +917,10 @@ Video to be delivered within 3 business days.
     if (!response.ok) {
       console.error("[MailerSend] Admin email FAILED - Status:", response.status);
       console.error("[MailerSend] Error details (error.body):", responseText);
-      // Parse error body for template validation issues
+      // Parse error body for template validation issues - THIS IS WHERE THE "WHY" IS HIDDEN
       try {
         const errorBody = JSON.parse(responseText);
-        console.error("[MailerSend] Parsed error body:", JSON.stringify(errorBody, null, 2));
+        console.error("[MailerSend] FULL error.body:", JSON.stringify(errorBody, null, 2));
         if (errorBody.message) {
           console.error("[MailerSend] Error message:", errorBody.message);
         }
@@ -929,6 +933,10 @@ Video to be delivered within 3 business days.
       return { success: false, error: `Status ${response.status}: ${responseText}` };
     }
 
+    // CRITICAL: Only log success AFTER API returns 202 (accepted)
+    if (response.status === 202) {
+      console.log("[MailerSend] Handoff to MailerSend successful - Status 202");
+    }
     console.log("[MailerSend] Admin email sent SUCCESSFULLY to:", ADMIN_EMAIL, "and", ADMIN_EMAIL_2);
     return { success: true };
   } catch (error) {
