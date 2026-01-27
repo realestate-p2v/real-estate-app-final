@@ -23,8 +23,13 @@ function calculateBasePrice(photoCount: number): number {
 }
 
 export async function POST(request: Request) {
+  console.log("[v0] POST /api/orders - Starting order creation");
   try {
     const input = await request.json();
+    console.log("[v0] Received order input:", JSON.stringify({ 
+      customer: input.customer, 
+      photoCount: input.uploadedPhotos?.length 
+    }));
 
     // Validate required fields (phone is optional)
     if (!input.customer?.name || !input.customer?.email) {
@@ -89,15 +94,24 @@ export async function POST(request: Request) {
     };
 
     // Save to Supabase using admin client (bypasses RLS)
+    console.log("[v0] Creating Supabase admin client...");
+    console.log("[v0] SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "NOT SET");
+    console.log("[v0] SERVICE_ROLE_KEY:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "SET (length: " + process.env.SUPABASE_SERVICE_ROLE_KEY.length + ")" : "NOT SET");
+    
     const supabase = createAdminClient();
+    console.log("[v0] Inserting order into Supabase...");
+    console.log("[v0] Order data:", JSON.stringify(orderData, null, 2));
+    
     const { data, error } = await supabase
       .from("orders")
       .insert(orderData)
       .select()
       .single();
 
+    console.log("[v0] Supabase response - data:", data ? "received" : "null", "error:", error ? error.message : "none");
+
     if (error) {
-      console.error("Supabase insert error:", error.message);
+      console.error("[v0] Supabase insert error:", error.message, error.code, error.details, error.hint);
       // Don't fail the order - return data anyway so payment can proceed
       return NextResponse.json({
         success: true,
