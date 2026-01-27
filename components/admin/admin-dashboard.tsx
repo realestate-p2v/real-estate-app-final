@@ -5,31 +5,16 @@ import { createClient } from "@/lib/supabase/client"
 import { 
   LayoutDashboard, 
   Package, 
-  Clock, 
-  CheckCircle2, 
   RefreshCw,
   Search,
-  Filter
+  Images,
+  Mail,
+  Phone,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { OrderDetailModal } from "./order-detail-modal"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -70,13 +55,13 @@ export interface AdminOrder {
   status: string
 }
 
-type StatusFilter = "all" | "New" | "Processing" | "Delivered"
+type TabFilter = "new" | "delivered"
 
 export function AdminDashboard() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [filteredOrders, setFilteredOrders] = useState<AdminOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [activeTab, setActiveTab] = useState<TabFilter>("new")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -104,9 +89,11 @@ export function AdminDashboard() {
   useEffect(() => {
     let filtered = orders
 
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((order) => order.status === statusFilter)
+    // Filter by tab - "new" shows New and Processing, "delivered" shows Delivered
+    if (activeTab === "new") {
+      filtered = filtered.filter((order) => order.status === "New" || order.status === "Processing" || !order.status)
+    } else {
+      filtered = filtered.filter((order) => order.status === "Delivered")
     }
 
     // Filter by search query
@@ -121,7 +108,7 @@ export function AdminDashboard() {
     }
 
     setFilteredOrders(filtered)
-  }, [orders, statusFilter, searchQuery])
+  }, [orders, activeTab, searchQuery])
 
   const handleOrderClick = (order: AdminOrder) => {
     setSelectedOrder(order)
@@ -137,7 +124,6 @@ export function AdminDashboard() {
     if (error) {
       console.error("Error updating status:", error)
     } else {
-      // Update local state
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -149,26 +135,11 @@ export function AdminDashboard() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "New":
-        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20">New</Badge>
-      case "Processing":
-        return <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">Processing</Badge>
-      case "Delivered":
-        return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20">Delivered</Badge>
-      default:
-        return <Badge variant="secondary">{status || "New"}</Badge>
-    }
-  }
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     })
   }
 
@@ -179,163 +150,195 @@ export function AdminDashboard() {
     }).format(price / 100)
   }
 
-  const stats = {
-    total: orders.length,
-    new: orders.filter((o) => o.status === "New" || !o.status).length,
-    processing: orders.filter((o) => o.status === "Processing").length,
-    delivered: orders.filter((o) => o.status === "Delivered").length,
-  }
+  const newCount = orders.filter((o) => o.status === "New" || o.status === "Processing" || !o.status).length
+  const deliveredCount = orders.filter((o) => o.status === "Delivered").length
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-zinc-50">
       {/* Header */}
-      <header className="border-b bg-card">
-        <div className="flex items-center justify-between px-6 py-4">
+      <header className="border-b bg-white">
+        <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <LayoutDashboard className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900">
+              <LayoutDashboard className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">Admin Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Manage your video orders</p>
+              <h1 className="text-xl font-semibold text-zinc-900">Orders</h1>
+              <p className="text-sm text-zinc-500">Manage video orders</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchOrders} disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={fetchOrders} disabled={isLoading} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
       </header>
 
-      <main className="p-6">
-        {/* Stats Cards */}
-        <div className="mb-6 grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">New</CardTitle>
-              <div className="h-2 w-2 rounded-full bg-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.new}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Processing</CardTitle>
-              <Clock className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{stats.processing}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Delivered</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">{stats.delivered}</div>
-            </CardContent>
-          </Card>
+      <main className="mx-auto max-w-4xl p-6">
+        {/* Tab Toggle */}
+        <div className="mb-6 flex gap-2 rounded-xl bg-white p-1.5 shadow-sm">
+          <button
+            onClick={() => setActiveTab("new")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
+              activeTab === "new"
+                ? "bg-red-500 text-white shadow-sm"
+                : "text-zinc-600 hover:bg-zinc-100"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${activeTab === "new" ? "bg-white" : "bg-red-500"}`} />
+            New Orders
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+              activeTab === "new" ? "bg-white/20 text-white" : "bg-red-100 text-red-600"
+            }`}>
+              {newCount}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("delivered")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
+              activeTab === "delivered"
+                ? "bg-emerald-500 text-white shadow-sm"
+                : "text-zinc-600 hover:bg-zinc-100"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${activeTab === "delivered" ? "bg-white" : "bg-emerald-500"}`} />
+            Delivered
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+              activeTab === "delivered" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-600"
+            }`}>
+              {deliveredCount}
+            </span>
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Orders</SelectItem>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="Processing">Processing</SelectItem>
-                <SelectItem value="Delivered">Delivered</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search orders..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:w-[300px]"
-            />
-          </div>
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Input
+            placeholder="Search by name, email, or order ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-12 rounded-xl border-zinc-200 bg-white pl-11 text-base shadow-sm placeholder:text-zinc-400"
+          />
         </div>
 
-        {/* Orders Table */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Spinner size="lg" />
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Package className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                <p className="text-lg font-medium text-muted-foreground">No orders found</p>
-                <p className="text-sm text-muted-foreground/70">
-                  {statusFilter !== "all" || searchQuery
-                    ? "Try adjusting your filters"
-                    : "Orders will appear here when customers place them"}
+        {/* Order Cards */}
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Package className="mb-4 h-12 w-12 text-zinc-300" />
+                <p className="text-lg font-medium text-zinc-600">No orders found</p>
+                <p className="text-sm text-zinc-400">
+                  {searchQuery
+                    ? "Try a different search term"
+                    : activeTab === "new"
+                    ? "New orders will appear here"
+                    : "Delivered orders will appear here"}
                 </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Photos</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow
-                      key={order.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleOrderClick(order)}
-                    >
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(order.created_at)}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {order.order_id.slice(0, 8)}...
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{order.customer_name || "N/A"}</p>
-                          <p className="text-sm text-muted-foreground">{order.customer_email}</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredOrders.map((order) => {
+              const isNew = order.status === "New" || !order.status
+              const isDelivered = order.status === "Delivered"
+              const photoCount = order.photo_count || (Array.isArray(order.photos) ? order.photos.length : 0)
+
+              return (
+                <Card
+                  key={order.id}
+                  className="group relative cursor-pointer overflow-hidden border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
+                  onClick={() => handleOrderClick(order)}
+                >
+                  {/* Status Tab */}
+                  <div
+                    className={`absolute left-0 top-0 h-full w-1.5 ${
+                      isDelivered ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  
+                  <CardContent className="p-5 pl-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-3">
+                        {/* Customer Name & Date */}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-zinc-900">
+                              {order.customer_name || "No Name"}
+                            </h3>
+                            <p className="text-sm text-zinc-500">{formatDate(order.created_at)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-semibold text-zinc-900">
+                              {formatPrice(order.total_price)}
+                            </p>
+                            <span
+                              className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
+                                isDelivered
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : isNew
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {order.status || "New"}
+                            </span>
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>{order.photo_count || (Array.isArray(order.photos) ? order.photos.length : 0)}</TableCell>
-                      <TableCell className="font-medium">{formatPrice(order.total_price)}</TableCell>
-                      <TableCell>{getStatusBadge(order.status || "New")}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+
+                        {/* Order Details */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-600">
+                          <div className="flex items-center gap-1.5">
+                            <Images className="h-4 w-4 text-zinc-400" />
+                            <span>{photoCount} photos</span>
+                          </div>
+                          {order.customer_email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-4 w-4 text-zinc-400" />
+                              <span className="max-w-[200px] truncate">{order.customer_email}</span>
+                            </div>
+                          )}
+                          {order.customer_phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-4 w-4 text-zinc-400" />
+                              <span>{order.customer_phone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Features */}
+                        <div className="flex flex-wrap gap-2">
+                          {order.voiceover && (
+                            <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">
+                              Voiceover
+                            </span>
+                          )}
+                          {order.branding?.type && order.branding.type !== "unbranded" && (
+                            <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">
+                              {order.branding.type === "basic" ? "Basic Branding" : "Custom Branding"}
+                            </span>
+                          )}
+                          {order.include_edited_photos && (
+                            <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">
+                              Edited Photos
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Arrow */}
+                      <ChevronRight className="ml-4 h-5 w-5 text-zinc-400 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </div>
       </main>
 
       {/* Order Detail Modal */}
