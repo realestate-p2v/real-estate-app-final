@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     if (orderId && orderId !== "direct") {
       try {
-        const supabase = await createClient();
+        const supabase = createAdminClient();
         const { data: orderData, error } = await supabase
           .from("orders")
           .select("*")

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
@@ -13,8 +13,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get order from Supabase
-    const supabase = await createClient();
+    // Get order from Supabase using admin client
+    const supabase = createAdminClient();
     const { data: order, error } = await supabase
       .from("orders")
       .select("*")
