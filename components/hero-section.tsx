@@ -52,7 +52,7 @@ export function HeroSection() {
                 asChild
                 variant="outline"
                 size="lg"
-                className="text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-foreground bg-transparent"
+                className="text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-foreground bg-white/10"
               >
                 <a href="#demo">
                   <Play className="mr-2 h-5 w-5" />
