@@ -110,7 +110,7 @@ export function OrderDetailModal({
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <Label htmlFor="status-switch" className="text-sm font-medium text-muted-foreground">
+                <Label htmlFor="status-switch" className="text-sm font-medium text-red-600">
                   New
                 </Label>
                 <Switch
@@ -119,9 +119,9 @@ export function OrderDetailModal({
                   onCheckedChange={(checked) => 
                     onStatusUpdate(order.id, checked ? "Delivered" : "New")
                   }
-                  className="data-[state=checked]:bg-emerald-500"
+                  className="data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
                 />
-                <Label htmlFor="status-switch" className="text-sm font-medium text-muted-foreground">
+                <Label htmlFor="status-switch" className="text-sm font-medium text-emerald-600">
                   Delivered
                 </Label>
               </div>
