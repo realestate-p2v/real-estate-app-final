@@ -68,15 +68,18 @@ interface EmailResult {
 // ============================================================================
 
 function getSenderEmail(): string {
-  // Use env var if set (verified domain), otherwise use preferred
+  // CRITICAL: MailerSend REQUIRES a verified sender domain
+  // The MAILERSEND_SENDER_EMAIL must be from a domain verified in MailerSend dashboard
   const envSender = process.env.MAILERSEND_SENDER_EMAIL;
   
   if (envSender) {
-    console.log("[MAILERSEND] Using sender from env:", envSender);
+    console.log("[MAILERSEND] Using verified sender from env:", envSender);
     return envSender;
   }
   
-  console.log("[MAILERSEND] Using preferred sender:", PREFERRED_SENDER);
+  // Fallback to preferred sender - this may fail if domain not verified
+  console.warn("[MAILERSEND] WARNING: MAILERSEND_SENDER_EMAIL not set, using fallback:", PREFERRED_SENDER);
+  console.warn("[MAILERSEND] If emails fail, verify the sender domain in MailerSend dashboard");
   return PREFERRED_SENDER;
 }
 
@@ -171,11 +174,14 @@ export async function sendCustomerEmail(data: PersonalizationData): Promise<Emai
     ]
   };
 
-  console.log("[MAILERSEND] Sending customer email");
+  console.log("[MAILERSEND] === SENDING CUSTOMER EMAIL ===");
   console.log("[MAILERSEND] To:", data.customer_email);
   console.log("[MAILERSEND] Template ID:", TEMPLATE_ID);
   console.log("[MAILERSEND] From:", fromEmail);
+  console.log("[MAILERSEND] From Name:", fromName);
   console.log("[MAILERSEND] BCC:", BCC_RECIPIENTS.map(r => r.email).join(", "));
+  console.log("[MAILERSEND] API Key present:", !!apiKey);
+  console.log("[MAILERSEND] API Key starts with:", apiKey?.substring(0, 10) + "...");
 
   let response: Response;
   let responseText: string;
