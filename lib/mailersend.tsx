@@ -11,6 +11,7 @@
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const ADMIN_EMAIL = "realestatephoto2video@gmail.com";
+const BCC_EMAIL = process.env.MAILERSEND_BCC_EMAIL || "info@realestatephoto2video.com"; // BCC on customer receipts
 const FROM_EMAIL = process.env.MAILERSEND_SENDER_EMAIL;
 const FROM_NAME = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
 const CUSTOMER_TEMPLATE_ID = process.env.CUSTOMER_RECEIPT_TEMPLATE_ID || "";
@@ -397,7 +398,7 @@ Real Estate Photo2Video Team
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
-        cc: [{ email: ADMIN_EMAIL, name: "Admin Copy" }], // CC admin on all customer receipts
+        bcc: [{ email: BCC_EMAIL, name: "Admin BCC" }], // BCC admin on all customer receipts (customer won't see)
         subject: subject, // EXPLICIT SUBJECT - prevents MS42209
         template_id: CUSTOMER_TEMPLATE_ID,
         personalization: [
@@ -452,7 +453,7 @@ Real Estate Photo2Video Team
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
-        cc: [{ email: ADMIN_EMAIL, name: "Admin Copy" }], // CC admin on all customer receipts
+        bcc: [{ email: BCC_EMAIL, name: "Admin BCC" }], // BCC admin on all customer receipts (customer won't see)
         subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
         text: text,
@@ -465,7 +466,7 @@ Real Estate Photo2Video Team
     console.log("[v0] ========================================");
     console.log("[v0] FROM_EMAIL:", FROM_EMAIL);
     console.log("[v0] TO:", data.customer_email);
-    console.log("[v0] BCC: realestatephoto2video@gmail.com");
+    console.log("[v0] BCC:", BCC_EMAIL);
     console.log("[v0] TEMPLATE_ID:", CUSTOMER_TEMPLATE_ID || "NONE - using HTML fallback");
     console.log("[v0] Full request body:", JSON.stringify(requestBody, null, 2));
     console.log("[v0] ========================================");

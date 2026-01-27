@@ -356,9 +356,15 @@ export async function POST(request: Request) {
         
         // Check environment variables for email
         console.log("[v0] MAILERSEND_API_KEY set?:", !!process.env.MAILERSEND_API_KEY);
+        console.log("[v0] MAILERSEND_API_KEY length:", process.env.MAILERSEND_API_KEY?.length || 0);
         console.log("[v0] MAILERSEND_SENDER_EMAIL:", process.env.MAILERSEND_SENDER_EMAIL);
+        console.log("[v0] MAILERSEND_BCC_EMAIL:", process.env.MAILERSEND_BCC_EMAIL || "info@realestatephoto2video.com (default)");
         console.log("[v0] CUSTOMER_RECEIPT_TEMPLATE_ID:", process.env.CUSTOMER_RECEIPT_TEMPLATE_ID);
         console.log("[v0] MAILERSEND_ORDER_TEMPLATE_ID:", process.env.MAILERSEND_ORDER_TEMPLATE_ID);
+        
+        // Log Supabase env vars status
+        console.log("[v0] NEXT_PUBLIC_SUPABASE_URL set?:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+        console.log("[v0] SUPABASE_SERVICE_ROLE_KEY set?:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
         
         if (personalizationData.customer_email) {
           // TRY/CATCH BLOCK: Customer email
