@@ -265,14 +265,14 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 pb-4 md:grid-cols-2">
             {filteredOrders.map((order) => {
               const isDelivered = order.status === "Delivered"
               const photoCount = order.photo_count || (Array.isArray(order.photos) ? order.photos.length : 0)
               const isUpdating = updatingStatusId === order.id
 
               return (
-                <div key={order.id} className="relative">
+                <div key={order.id} className="relative pb-3">
                   <Card
                     className="group relative cursor-pointer overflow-hidden border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
                     onClick={() => handleOrderClick(order)}
@@ -344,12 +344,12 @@ export function AdminDashboard() {
                     </CardContent>
                   </Card>
                   
-                  {/* Status Switch - Outside Card */}
+                  {/* Status Switch - Below Card */}
                   <div 
-                    className="absolute -bottom-2 right-3 z-10 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2 py-1 shadow-sm"
+                    className="absolute -bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 shadow-sm"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <span className={`text-[10px] font-medium ${isDelivered ? "text-zinc-400" : "text-red-600"}`}>
+                    <span className={`text-xs font-medium ${isDelivered ? "text-zinc-400" : "text-red-600"}`}>
                       New
                     </span>
                     <Switch
@@ -358,9 +358,9 @@ export function AdminDashboard() {
                         handleStatusUpdate(order.id, checked ? "Delivered" : "New")
                       }}
                       disabled={isUpdating}
-                      className="h-4 w-7 data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
+                      className="h-5 w-9 data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
                     />
-                    <span className={`text-[10px] font-medium ${isDelivered ? "text-emerald-600" : "text-zinc-400"}`}>
+                    <span className={`text-xs font-medium ${isDelivered ? "text-emerald-600" : "text-zinc-400"}`}>
                       Done
                     </span>
                   </div>
