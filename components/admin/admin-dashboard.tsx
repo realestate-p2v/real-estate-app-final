@@ -118,8 +118,10 @@ export function AdminDashboard() {
   }
 
   const handleStatusUpdate = async (orderId: string, newStatus: string): Promise<void> => {
+    console.log("[v0] handleStatusUpdate called with:", { orderId, newStatus })
     setUpdatingStatusId(orderId)
     try {
+      console.log("[v0] Sending PATCH request to /api/admin/orders")
       const response = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: {
@@ -128,13 +130,17 @@ export function AdminDashboard() {
         body: JSON.stringify({ orderId, status: newStatus }),
       })
 
+      console.log("[v0] Response status:", response.status)
+      const responseData = await response.json()
+      console.log("[v0] Response data:", responseData)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error("Error updating status:", errorData)
-        throw new Error(errorData.error || "Failed to update status")
+        console.error("[v0] Error updating status:", responseData)
+        throw new Error(responseData.error || "Failed to update status")
       }
 
       // Update local state on success
+      console.log("[v0] Update successful, updating local state")
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -144,7 +150,7 @@ export function AdminDashboard() {
         setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null))
       }
     } catch (error) {
-      console.error("Error updating status:", error)
+      console.error("[v0] Error updating status:", error)
       throw error
     } finally {
       setUpdatingStatusId(null)
