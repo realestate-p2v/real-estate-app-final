@@ -343,28 +343,54 @@ export async function POST(request: Request) {
         console.log("[Webhook] ----------------------------------------");
 
         // SEND EMAILS
+        console.log("[v0] ========================================");
+        console.log("[v0] EMAIL SENDING DEBUG");
+        console.log("[v0] ========================================");
+        console.log("[v0] customer_email value:", personalizationData.customer_email);
+        console.log("[v0] customer_email type:", typeof personalizationData.customer_email);
+        console.log("[v0] customer_email truthy?:", !!personalizationData.customer_email);
+        console.log("[v0] session.customer_details:", JSON.stringify(session.customer_details, null, 2));
+        console.log("[v0] session.metadata:", JSON.stringify(session.metadata, null, 2));
+        console.log("[v0] order?.customer?.email:", order?.customer?.email);
+        
+        // Check environment variables for email
+        console.log("[v0] MAILERSEND_API_KEY set?:", !!process.env.MAILERSEND_API_KEY);
+        console.log("[v0] MAILERSEND_SENDER_EMAIL:", process.env.MAILERSEND_SENDER_EMAIL);
+        console.log("[v0] CUSTOMER_RECEIPT_TEMPLATE_ID:", process.env.CUSTOMER_RECEIPT_TEMPLATE_ID);
+        console.log("[v0] MAILERSEND_ORDER_TEMPLATE_ID:", process.env.MAILERSEND_ORDER_TEMPLATE_ID);
+        
         if (personalizationData.customer_email) {
           // TRY/CATCH BLOCK: Customer email
           try {
-            console.log("[Webhook] Sending customer confirmation email...");
-            console.log("[Webhook] Customer email address:", personalizationData.customer_email);
-            console.log("[Webhook] Personalization data:", JSON.stringify(personalizationData, null, 2));
+            console.log("[v0] Attempting to send customer confirmation email...");
+            console.log("[v0] Customer email address:", personalizationData.customer_email);
             const customerEmailResult = await sendCustomerEmail(personalizationData);
-            console.log("[Webhook] Customer email result:", customerEmailResult.success ? "SUCCESS" : customerEmailResult.error);
+            console.log("[v0] Customer email result success:", customerEmailResult.success);
+            if (!customerEmailResult.success) {
+              console.error("[v0] Customer email FAILED with error:", customerEmailResult.error);
+            } else {
+              console.log("[v0] Customer email sent SUCCESSFULLY");
+            }
           } catch (emailError) {
-            console.error("[Webhook] Customer email exception:", getErrorMessage(emailError));
+            console.error("[v0] Customer email EXCEPTION:", getErrorMessage(emailError));
           }
 
           // TRY/CATCH BLOCK: Admin email
           try {
-            console.log("[Webhook] Sending admin notification email...");
+            console.log("[v0] Attempting to send admin notification email...");
             const adminEmailResult = await sendAdminNotificationEmail(personalizationData);
-            console.log("[Webhook] Admin email result:", adminEmailResult.success ? "SUCCESS" : adminEmailResult.error);
+            console.log("[v0] Admin email result success:", adminEmailResult.success);
+            if (!adminEmailResult.success) {
+              console.error("[v0] Admin email FAILED with error:", adminEmailResult.error);
+            } else {
+              console.log("[v0] Admin email sent SUCCESSFULLY");
+            }
           } catch (emailError) {
-            console.error("[Webhook] Admin email exception:", getErrorMessage(emailError));
+            console.error("[v0] Admin email EXCEPTION:", getErrorMessage(emailError));
           }
         } else {
-          console.warn("[Webhook] No customer email available, skipping emails");
+          console.error("[v0] NO CUSTOMER EMAIL - Skipping all emails!");
+          console.error("[v0] This means neither Stripe session nor database had an email");
         }
 
         console.log("[Webhook] ========================================");
