@@ -17,6 +17,20 @@ export async function startCheckoutSession(params: CheckoutParams) {
     throw new Error("Invalid amount");
   }
 
+  // Determine product name based on photo count
+  let productName = "Real Estate Video";
+  if (photoCount === 1) {
+    productName = "Test Product";
+  } else if (photoCount <= 12) {
+    productName = "Standard Video";
+  } else if (photoCount <= 25) {
+    productName = "Premium Video";
+  } else if (photoCount <= 35) {
+    productName = "Professional Video";
+  } else {
+    productName = "Agency Pack";
+  }
+
   // Create Checkout Session with embedded UI
   const session = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
@@ -26,7 +40,7 @@ export async function startCheckoutSession(params: CheckoutParams) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: "Real Estate Walkthrough Video",
+            name: productName,
             description: `Professional HD walkthrough video with ${photoCount} photos`,
           },
           unit_amount: Math.round(amount * 100), // Convert to cents
@@ -38,6 +52,7 @@ export async function startCheckoutSession(params: CheckoutParams) {
     customer_email: customerEmail,
     metadata: {
       orderId: orderId || "direct",
+      productName,
       customerName,
       photoCount: String(photoCount),
     },

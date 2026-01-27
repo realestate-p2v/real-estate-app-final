@@ -226,6 +226,37 @@ export async function POST(request: Request) {
         const metaVoiceoverIncluded = session.metadata?.voiceoverIncluded || "No";
         const metaIncludeEditedPhotos = session.metadata?.includeEditedPhotos || "No";
         const metaPhotoCount = session.metadata?.photoCount || "0";
+        const metaProductName = session.metadata?.productName || "";
+
+        // Get product name from Stripe line items
+        let productName = metaProductName;
+        if (!productName) {
+          try {
+            const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+            if (lineItems.data.length > 0 && lineItems.data[0].description) {
+              productName = lineItems.data[0].description;
+            } else if (lineItems.data.length > 0 && lineItems.data[0].price?.product) {
+              // Try to get the product name from the price object
+              const priceData = lineItems.data[0].price;
+              if (typeof priceData.product === 'object' && priceData.product !== null && 'name' in priceData.product) {
+                productName = (priceData.product as { name?: string }).name || "";
+              }
+            }
+          } catch (lineItemError) {
+            console.warn("[Webhook] Could not retrieve line items:", getErrorMessage(lineItemError));
+          }
+        }
+        // Fallback: construct product name from photo count
+        if (!productName) {
+          const photoCount = parseInt(metaPhotoCount) || 0;
+          if (photoCount <= 12) {
+            productName = "Standard Video";
+          } else if (photoCount <= 25) {
+            productName = "Premium Video";
+          } else {
+            productName = "Professional Video";
+          }
+        }
 
         // Reconstruct photo URLs from chunked metadata
         let metaPhotoUrls = "";
@@ -275,6 +306,7 @@ export async function POST(request: Request) {
         // DATA MAPPING: Build personalization data
         const personalizationData = {
           order_id: orderId,
+          product_name: productName,
           customer_name: order?.customer?.name || customerName,
           customer_email: order?.customer?.email || customerEmail,
           customer_phone: order?.customer?.phone || customerPhone,
