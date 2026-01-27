@@ -15,6 +15,7 @@ import { BrandingSelector, type BrandingData } from "@/components/branding-selec
 import { VoiceoverSelector } from "@/components/voiceover-selector";
 import { OrderSummary } from "@/components/order-summary";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { ArrowRight, User, Mail, Phone, Loader2 } from "lucide-react";
 
 type OrderStep = "upload" | "details" | "payment";
@@ -393,23 +394,20 @@ voiceover: voiceoverSelection === "voiceover",
                         </p>
                         <label
                           htmlFor="include-edited-photos"
-                          className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-colors border-2 ${
+                          className={`flex items-center justify-between gap-4 p-4 rounded-xl cursor-pointer transition-colors border-2 ${
                             includeEditedPhotos 
                               ? "bg-primary/10 border-primary" 
                               : "bg-muted/30 border-transparent hover:border-border"
                           }`}
                         >
-                          <Checkbox
+                          <span className="font-medium text-foreground">
+                            Yes, include edited photos with my order
+                          </span>
+                          <Switch
                             id="include-edited-photos"
                             checked={includeEditedPhotos}
-                            onCheckedChange={(checked) => setIncludeEditedPhotos(checked === true)}
-                            className="h-5 w-5"
+                            onCheckedChange={setIncludeEditedPhotos}
                           />
-                          <div className="flex-1">
-                            <span className="font-medium text-foreground">
-                              Yes, include edited photos with my order
-                            </span>
-                          </div>
                         </label>
                       </div>
                     </div>
