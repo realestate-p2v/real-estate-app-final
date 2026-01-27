@@ -145,7 +145,7 @@ export function AdminDashboard() {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(price / 100)
+    }).format(price)
   }
 
   const newCount = orders.filter((o) => o.status === "New" || o.status === "Processing" || !o.status).length
