@@ -213,8 +213,9 @@ export async function POST(request: Request) {
         console.log("[Webhook] ----------------------------------------");
 
         // STRIPE SESSION DATA (always available)
+        // IMPORTANT: Check metadata first as customer_details may not be populated
         const customerName = session.customer_details?.name || session.metadata?.customerName || "Customer";
-        const customerEmail = session.customer_details?.email || "";
+        const customerEmail = session.customer_details?.email || session.metadata?.customerEmail || "";
         const customerPhone = session.customer_details?.phone || session.metadata?.customerPhone || "Not provided";
         const amountTotal = session.amount_total || 0;
         const price = `$${(amountTotal / 100).toFixed(2)}`;
