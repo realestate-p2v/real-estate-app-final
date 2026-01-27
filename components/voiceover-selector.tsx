@@ -1,6 +1,8 @@
 "use client";
 
 import { Check, Mic } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const voiceoverOptions = [
   {
@@ -20,9 +22,16 @@ const voiceoverOptions = [
 interface VoiceoverSelectorProps {
   selected: string;
   onSelect: (id: string) => void;
+  script?: string;
+  onScriptChange?: (script: string) => void;
 }
 
-export function VoiceoverSelector({ selected, onSelect }: VoiceoverSelectorProps) {
+export function VoiceoverSelector({ 
+  selected, 
+  onSelect, 
+  script,
+  onScriptChange 
+}: VoiceoverSelectorProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-4">
@@ -60,6 +69,26 @@ export function VoiceoverSelector({ selected, onSelect }: VoiceoverSelectorProps
           </button>
         ))}
       </div>
+
+      {/* Voiceover Script Input */}
+      {selected === "voiceover" && (
+        <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="voiceoverScript">Voiceover Script (optional)</Label>
+            <p className="text-sm text-muted-foreground">
+              Provide a custom script or leave blank and we will create one for you based on the property photos.
+            </p>
+            <Textarea
+              id="voiceoverScript"
+              placeholder="Welcome to this stunning 4-bedroom home in the heart of..."
+              rows={4}
+              value={script || ""}
+              onChange={(e) => onScriptChange?.(e.target.value)}
+              className="resize-none"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
