@@ -51,7 +51,7 @@ export function CountdownTimer() {
   }
 
   return (
-    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-secondary/30 to-secondary/20 backdrop-blur-sm rounded-xl px-5 py-3 border-2 border-secondary shadow-lg shadow-secondary/25">
+    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-secondary/30 to-secondary/20 backdrop-blur-sm rounded-xl px-5 py-3 border-2 border-red-500 shadow-lg shadow-red-500/40">
       <div className="flex items-center gap-1 font-mono">
         <div className="flex flex-col items-center">
           <span className="text-2xl md:text-3xl font-bold text-secondary drop-shadow-glow">
