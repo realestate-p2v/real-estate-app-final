@@ -67,11 +67,11 @@ export function OrderDetailModal({
     })
   }
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (priceInCents: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(price)
+    }).format(priceInCents / 100)
   }
 
   const getStatusColor = (status: string) => {
