@@ -101,11 +101,11 @@ export function OrderDetailModal({
     })
   }
 
-  const formatPrice = (priceInCents: number) => {
+  const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(priceInCents / 100)
+    }).format(price)
   }
 
   const getStatusColor = (status: string) => {

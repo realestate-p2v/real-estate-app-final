@@ -160,11 +160,11 @@ export function AdminDashboard() {
     })
   }
 
-  const formatPrice = (priceInCents: number) => {
+  const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(priceInCents / 100)
+    }).format(price)
   }
 
   const newCount = orders.filter((o) => o.status !== "Delivered").length
