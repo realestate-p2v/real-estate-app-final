@@ -37,7 +37,7 @@ interface OrderDetailModalProps {
   order: AdminOrder | null
   isOpen: boolean
   onClose: () => void
-  onStatusUpdate: (orderId: string, status: string) => void
+  onStatusUpdate: (orderId: string, status: string) => Promise<void>
 }
 
 export function OrderDetailModal({
@@ -48,8 +48,27 @@ export function OrderDetailModal({
 }: OrderDetailModalProps) {
   const [copiedUrls, setCopiedUrls] = useState(false)
   const [copiedScript, setCopiedScript] = useState(false)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [localStatus, setLocalStatus] = useState(order?.status || "New")
+
+  // Sync local status when order changes
+  if (order && order.status !== localStatus && !isUpdatingStatus) {
+    setLocalStatus(order.status || "New")
+  }
 
   if (!order) return null
+
+  const handleStatusChange = async (checked: boolean) => {
+    const newStatus = checked ? "Delivered" : "New"
+    setLocalStatus(newStatus)
+    setIsUpdatingStatus(true)
+    
+    try {
+      await onStatusUpdate(order.id, newStatus)
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -115,18 +134,17 @@ export function OrderDetailModal({
                 </Label>
                 <Switch
                   id="status-switch"
-                  checked={order.status === "Delivered"}
-                  onCheckedChange={(checked) => 
-                    onStatusUpdate(order.id, checked ? "Delivered" : "New")
-                  }
+                  checked={localStatus === "Delivered"}
+                  onCheckedChange={handleStatusChange}
+                  disabled={isUpdatingStatus}
                   className="data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
                 />
                 <Label htmlFor="status-switch" className="text-sm font-medium text-emerald-600">
                   Delivered
                 </Label>
               </div>
-              <Badge className={getStatusColor(order.status || "New")}>
-                {order.status || "New"}
+              <Badge className={getStatusColor(localStatus)}>
+                {localStatus}
               </Badge>
             </div>
           </div>
