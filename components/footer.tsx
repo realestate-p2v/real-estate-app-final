@@ -41,10 +41,18 @@ export function Footer() {
                 Contact
               </a>
             </div>
-            <p className="text-background/50 text-sm">
-              {new Date().getFullYear()} Real Estate Photo 2 Video. All rights
-              reserved.
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-background/50 text-sm">
+                {new Date().getFullYear()} Real Estate Photo 2 Video. All rights
+                reserved.
+              </p>
+              <Link
+                href="/admin/dashboard"
+                className="text-background/30 hover:text-background/60 text-xs transition-colors"
+              >
+                Admin
+              </Link>
+            </div>
           </div>
         </div>
       </div>
