@@ -22,18 +22,8 @@ function calculateBasePrice(photoCount: number): number {
 }
 
 export async function POST(request: Request) {
-  console.log("[v0] Orders API - POST request received");
-  
   try {
     const input = await request.json();
-    console.log("[v0] Order input received:", JSON.stringify({
-      customer: input.customer,
-      photoCount: input.uploadedPhotos?.length,
-      musicSelection: input.musicSelection,
-      branding: input.branding,
-      voiceover: input.voiceover,
-      specialInstructions: input.specialInstructions,
-    }));
 
     // Validate required fields (phone is optional)
     if (!input.customer?.name || !input.customer?.email) {
@@ -94,10 +84,8 @@ export async function POST(request: Request) {
       edited_photos_fee: editedPhotosFee,
       total_price: totalPrice,
       payment_status: "pending",
+      status: "New", // Set status to "New" for admin dashboard
     };
-
-    console.log("[v0] Saving order to Supabase:", orderId);
-    console.log("[v0] Order data:", JSON.stringify(orderData, null, 2));
 
     // Save to Supabase using admin client (bypasses RLS)
     const supabase = createAdminClient();
@@ -108,7 +96,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error("[v0] Supabase insert error:", error.message, error.code, error.details);
+      console.error("Supabase insert error:", error.message);
       // Don't fail the order - return data anyway so payment can proceed
       return NextResponse.json({
         success: true,
@@ -122,8 +110,6 @@ export async function POST(request: Request) {
         },
       });
     }
-
-    console.log("[v0] Order saved successfully to Supabase:", data?.id);
 
     // Build the Order object for response
     const order: Order = {
