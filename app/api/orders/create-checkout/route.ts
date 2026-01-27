@@ -3,8 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
+  console.log("[v0] POST /api/orders/create-checkout - Starting");
   try {
     const { orderId } = await request.json();
+    console.log("[v0] Creating checkout for orderId:", orderId);
 
     if (!orderId) {
       return NextResponse.json(
@@ -14,6 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Get order from Supabase using admin client
+    console.log("[v0] Fetching order from Supabase...");
     const supabase = createAdminClient();
     const { data: order, error } = await supabase
       .from("orders")
@@ -21,7 +24,10 @@ export async function POST(request: Request) {
       .eq("order_id", orderId)
       .single();
 
+    console.log("[v0] Order fetch result - found:", !!order, "error:", error?.message || "none");
+
     if (error || !order) {
+      console.error("[v0] Order not found in database for checkout");
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
