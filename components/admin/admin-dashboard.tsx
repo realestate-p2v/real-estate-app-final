@@ -89,9 +89,9 @@ export function AdminDashboard() {
   useEffect(() => {
     let filtered = orders
 
-    // Filter by tab - "new" shows New and Processing, "delivered" shows Delivered
+    // Filter by tab - "new" shows New orders, "delivered" shows archived Delivered orders
     if (activeTab === "new") {
-      filtered = filtered.filter((order) => order.status === "New" || order.status === "Processing" || !order.status)
+      filtered = filtered.filter((order) => order.status !== "Delivered")
     } else {
       filtered = filtered.filter((order) => order.status === "Delivered")
     }
@@ -160,7 +160,7 @@ export function AdminDashboard() {
     }).format(priceInCents / 100)
   }
 
-  const newCount = orders.filter((o) => o.status === "New" || o.status === "Processing" || !o.status).length
+  const newCount = orders.filter((o) => o.status !== "Delivered").length
   const deliveredCount = orders.filter((o) => o.status === "Delivered").length
 
   return (
@@ -219,7 +219,7 @@ export function AdminDashboard() {
             }`}
           >
             <span className={`h-2 w-2 rounded-full ${activeTab === "delivered" ? "bg-white" : "bg-emerald-500"}`} />
-            Delivered
+            Delivered (Archived)
             <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
               activeTab === "delivered" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-600"
             }`}>
@@ -261,8 +261,8 @@ export function AdminDashboard() {
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {filteredOrders.map((order) => {
-              const isNew = order.status === "New" || !order.status
               const isDelivered = order.status === "Delivered"
+              const isNew = !isDelivered
               const photoCount = order.photo_count || (Array.isArray(order.photos) ? order.photos.length : 0)
 
               return (
@@ -295,12 +295,10 @@ export function AdminDashboard() {
                           className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
                             isDelivered
                               ? "bg-emerald-100 text-emerald-700"
-                              : isNew
-                              ? "bg-red-100 text-red-700"
-                              : "bg-amber-100 text-amber-700"
+                              : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {order.status || "New"}
+                          {isDelivered ? "Delivered" : "New"}
                         </span>
                       </div>
                     </div>
