@@ -133,6 +133,7 @@ export async function sendCustomerEmail(
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
+        bcc: [{ email: ADMIN_EMAIL, name: "Admin" }], // BCC admin on all customer receipts
         subject: subject, // EXPLICIT SUBJECT - prevents MS42209
         template_id: CUSTOMER_TEMPLATE_ID,
         personalization: [
@@ -205,6 +206,7 @@ export async function sendCustomerEmail(
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
         to: [{ email: data.customer_email, name: data.customer_name }],
+        bcc: [{ email: ADMIN_EMAIL, name: "Admin" }], // BCC admin on all customer receipts
         subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
         text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Product: ${data.product_name}. Total: ${data.price}. Photos: ${data.photo_count}. Music: ${data.music_choice}. Your video will be delivered within 3 business days.`,
