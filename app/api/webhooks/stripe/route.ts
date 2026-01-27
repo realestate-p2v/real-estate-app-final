@@ -311,11 +311,13 @@ export async function POST(request: Request) {
         console.log("[Webhook] ----------------------------------------");
 
         // SEND EMAILS
-        if (customerEmail) {
+        if (personalizationData.customer_email) {
           // TRY/CATCH BLOCK: Customer email
           try {
             console.log("[Webhook] Sending customer confirmation email...");
-            const customerEmailResult = await sendCustomerEmail(customerEmail, personalizationData);
+            console.log("[Webhook] Customer email address:", personalizationData.customer_email);
+            console.log("[Webhook] Personalization data:", JSON.stringify(personalizationData, null, 2));
+            const customerEmailResult = await sendCustomerEmail(personalizationData);
             console.log("[Webhook] Customer email result:", customerEmailResult.success ? "SUCCESS" : customerEmailResult.error);
           } catch (emailError) {
             console.error("[Webhook] Customer email exception:", getErrorMessage(emailError));

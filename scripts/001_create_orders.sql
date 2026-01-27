@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS orders (
   
   -- Music selection
   music_selection TEXT,
-  custom_audio_filename TEXT,
-  custom_audio_url TEXT,
+  custom_audio JSONB DEFAULT NULL,
   
   -- Branding info (stored as JSONB)
   branding JSONB DEFAULT '{"type": "unbranded"}'::jsonb,

@@ -28,7 +28,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create Stripe checkout session
+    // Build photo URLs for metadata (chunked due to Stripe's 500 char limit per value)
+    const photos = order.photos || [];
+    const photoUrlsChunks: Record<string, string> = {};
+    let currentChunk = "";
+    let chunkIndex = 0;
+    
+    for (let i = 0; i < photos.length; i++) {
+      const photoEntry = `${i + 1}:${photos[i].secure_url}|`;
+      if ((currentChunk + photoEntry).length > 450) {
+        photoUrlsChunks[`photoUrls_${chunkIndex}`] = currentChunk;
+        currentChunk = photoEntry;
+        chunkIndex++;
+      } else {
+        currentChunk += photoEntry;
+      }
+    }
+    if (currentChunk) {
+      photoUrlsChunks[`photoUrls_${chunkIndex}`] = currentChunk;
+    }
+
+    // Create Stripe checkout session with full metadata fallback
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -50,6 +70,16 @@ export async function POST(request: Request) {
       customer_email: order.customer_email,
       metadata: {
         orderId: order.order_id,
+        customerName: order.customer_name || "",
+        customerEmail: order.customer_email || "",
+        customerPhone: order.customer_phone || "",
+        photoCount: String(order.photo_count || 0),
+        musicSelection: order.music_selection || "",
+        brandingType: order.branding?.type || "unbranded",
+        voiceoverIncluded: order.voiceover ? "Yes" : "No",
+        includeEditedPhotos: order.include_edited_photos ? "Yes" : "No",
+        specialInstructions: (order.special_instructions || "").substring(0, 450),
+        ...photoUrlsChunks,
       },
     });
 

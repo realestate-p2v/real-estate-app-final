@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
-import { BrandingSelector } from "@/components/branding-selector";
+import { BrandingSelector, type BrandingData } from "@/components/branding-selector";
 import { VoiceoverSelector } from "@/components/voiceover-selector";
 import { OrderSummary } from "@/components/order-summary";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,7 +25,9 @@ export function OrderForm() {
   const [musicSelection, setMusicSelection] = useState("");
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
+  const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
   const [voiceoverSelection, setVoiceoverSelection] = useState("none");
+  const [voiceoverScript, setVoiceoverScript] = useState("");
   const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -189,7 +191,17 @@ export function OrderForm() {
         }
       }
 
-      // Create order in MongoDB with already-uploaded photos
+      // Upload branding logo if present
+      let brandingLogoUrl: string | undefined;
+      if (brandingData.logoFile) {
+        console.log("[v0] Uploading branding logo...");
+        const logoResult = await uploadToCloudinary(brandingData.logoFile, "logos");
+        if (logoResult) {
+          brandingLogoUrl = logoResult.secure_url;
+        }
+      }
+
+      // Create order in database with already-uploaded photos
       console.log("[v0] Creating order in database...");
       const orderResponse = await fetch("/api/orders", {
         method: "POST",
@@ -206,10 +218,17 @@ export function OrderForm() {
           customAudioFilename,
           branding: {
             type: brandingSelection,
+            logoUrl: brandingLogoUrl,
+            agentName: brandingData.agentName,
+            companyName: brandingData.companyName,
+            phone: brandingData.phone,
+            email: brandingData.email,
+            website: brandingData.website,
           },
-          voiceover: voiceoverSelection === "voiceover",
-          includeEditedPhotos,
-          specialInstructions: formData.notes,
+voiceover: voiceoverSelection === "voiceover",
+  voiceoverScript: voiceoverSelection === "voiceover" ? voiceoverScript : undefined,
+  includeEditedPhotos,
+  specialInstructions: formData.notes,
         }),
       });
 
@@ -339,17 +358,21 @@ export function OrderForm() {
                 {musicSelection && (
                   <>
                     <div className="border-t border-border pt-6">
-                      <BrandingSelector
-                        selected={brandingSelection}
-                        onSelect={setBrandingSelection}
-                      />
+<BrandingSelector
+  selected={brandingSelection}
+  onSelect={setBrandingSelection}
+  brandingData={brandingData}
+  onBrandingDataChange={setBrandingData}
+  />
                     </div>
 
                     <div className="border-t border-border pt-6">
-                      <VoiceoverSelector
-                        selected={voiceoverSelection}
-                        onSelect={setVoiceoverSelection}
-                      />
+<VoiceoverSelector
+  selected={voiceoverSelection}
+  onSelect={setVoiceoverSelection}
+  script={voiceoverScript}
+  onScriptChange={setVoiceoverScript}
+  />
                     </div>
 
                     {/* Include Edited Photos Option */}
