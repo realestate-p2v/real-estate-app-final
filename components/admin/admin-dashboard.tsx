@@ -118,10 +118,8 @@ export function AdminDashboard() {
   }
 
   const handleStatusUpdate = async (orderId: string, newStatus: string): Promise<void> => {
-    console.log("[v0] handleStatusUpdate called with:", { orderId, newStatus })
     setUpdatingStatusId(orderId)
     try {
-      console.log("[v0] Sending PATCH request to /api/admin/orders")
       const response = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: {
@@ -130,18 +128,14 @@ export function AdminDashboard() {
         body: JSON.stringify({ orderId, status: newStatus }),
       })
 
-      console.log("[v0] Response status:", response.status)
       const responseData = await response.json()
-      console.log("[v0] Response data:", responseData)
 
       if (!response.ok) {
-        console.error("[v0] Error updating status:", responseData)
         alert(`Failed to update status: ${responseData.error || 'Unknown error'}`)
         return
       }
 
-      // Update local state on success
-      console.log("[v0] Update successful, updating local state")
+      // Update local state on success - only updates the specific order with matching id
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -151,7 +145,6 @@ export function AdminDashboard() {
         setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null))
       }
     } catch (error) {
-      console.error("[v0] Error updating status:", error)
       alert(`Error updating status: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setUpdatingStatusId(null)
