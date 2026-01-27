@@ -118,8 +118,10 @@ export function AdminDashboard() {
   }
 
   const handleStatusUpdate = async (orderId: string, newStatus: string): Promise<void> => {
+    console.log("[v0] handleStatusUpdate called with:", { orderId, newStatus })
     setUpdatingStatusId(orderId)
     try {
+      console.log("[v0] Sending PATCH request to /api/admin/orders")
       const response = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: {
@@ -128,13 +130,17 @@ export function AdminDashboard() {
         body: JSON.stringify({ orderId, status: newStatus }),
       })
 
+      console.log("[v0] Response status:", response.status)
+      const responseData = await response.json()
+      console.log("[v0] Response data:", responseData)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error("Error updating status:", errorData)
-        throw new Error(errorData.error || "Failed to update status")
+        console.error("[v0] Error updating status:", responseData)
+        throw new Error(responseData.error || "Failed to update status")
       }
 
       // Update local state on success
+      console.log("[v0] Update successful, updating local state")
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -144,7 +150,7 @@ export function AdminDashboard() {
         setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null))
       }
     } catch (error) {
-      console.error("Error updating status:", error)
+      console.error("[v0] Error updating status:", error)
       throw error
     } finally {
       setUpdatingStatusId(null)
@@ -265,14 +271,14 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 pb-4 md:grid-cols-2">
             {filteredOrders.map((order) => {
               const isDelivered = order.status === "Delivered"
               const photoCount = order.photo_count || (Array.isArray(order.photos) ? order.photos.length : 0)
               const isUpdating = updatingStatusId === order.id
 
               return (
-                <div key={order.id} className="relative">
+                <div key={order.id} className="relative pb-3">
                   <Card
                     className="group relative cursor-pointer overflow-hidden border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
                     onClick={() => handleOrderClick(order)}
@@ -344,12 +350,12 @@ export function AdminDashboard() {
                     </CardContent>
                   </Card>
                   
-                  {/* Status Switch - Outside Card */}
+                  {/* Status Switch - Below Card */}
                   <div 
-                    className="absolute -bottom-2 right-3 z-10 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2 py-1 shadow-sm"
+                    className="absolute -bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 shadow-sm"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <span className={`text-[10px] font-medium ${isDelivered ? "text-zinc-400" : "text-red-600"}`}>
+                    <span className={`text-xs font-medium ${isDelivered ? "text-zinc-400" : "text-red-600"}`}>
                       New
                     </span>
                     <Switch
@@ -358,9 +364,9 @@ export function AdminDashboard() {
                         handleStatusUpdate(order.id, checked ? "Delivered" : "New")
                       }}
                       disabled={isUpdating}
-                      className="h-4 w-7 data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
+                      className="h-5 w-9 data-[state=unchecked]:bg-red-500 data-[state=checked]:bg-emerald-500"
                     />
-                    <span className={`text-[10px] font-medium ${isDelivered ? "text-emerald-600" : "text-zinc-400"}`}>
+                    <span className={`text-xs font-medium ${isDelivered ? "text-emerald-600" : "text-zinc-400"}`}>
                       Done
                     </span>
                   </div>
