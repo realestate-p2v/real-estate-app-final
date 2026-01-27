@@ -136,7 +136,8 @@ export function AdminDashboard() {
 
       if (!response.ok) {
         console.error("[v0] Error updating status:", responseData)
-        throw new Error(responseData.error || "Failed to update status")
+        alert(`Failed to update status: ${responseData.error || 'Unknown error'}`)
+        return
       }
 
       // Update local state on success
@@ -151,7 +152,7 @@ export function AdminDashboard() {
       }
     } catch (error) {
       console.error("[v0] Error updating status:", error)
-      throw error
+      alert(`Error updating status: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setUpdatingStatusId(null)
     }
