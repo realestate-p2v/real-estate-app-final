@@ -114,14 +114,20 @@ export function AdminDashboard() {
   }
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
-    const { error } = await supabase
+    console.log("[v0] Updating order status:", { orderId, newStatus })
+    
+    const { data, error } = await supabase
       .from("orders")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", orderId)
+      .select()
+
+    console.log("[v0] Status update result:", { data, error })
 
     if (error) {
-      console.error("Error updating status:", error)
+      console.error("[v0] Error updating status:", error)
     } else {
+      console.log("[v0] Status updated successfully, updating local state")
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order

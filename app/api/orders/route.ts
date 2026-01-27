@@ -9,9 +9,15 @@ function generateOrderId(): string {
 }
 
 function calculateBasePrice(photoCount: number): number {
+  // Test product: 1 photo = $1
+  if (photoCount === 1) return 1;
+  // Standard: 2-12 photos = $99
   if (photoCount <= 12) return 99;
+  // Premium: 13-25 photos = $149
   if (photoCount <= 25) return 149;
+  // Professional: 26-35 photos = $199
   if (photoCount <= 35) return 199;
+  // Agency: 36+ photos
   return 199 + Math.ceil((photoCount - 35) / 10) * 50;
 }
 
