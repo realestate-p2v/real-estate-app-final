@@ -88,6 +88,7 @@ async function getOrderFromDatabase(orderId: string): Promise<{ order: Order | n
         branding: data.branding,
         voiceover: data.voiceover,
         voiceoverScript: data.voiceover_script,
+        voiceoverVoice: data.voiceover_voice,
         specialInstructions: data.special_instructions,
         includeEditedPhotos: data.include_edited_photos,
         basePrice: parseFloat(data.base_price) || 0,
@@ -223,37 +224,61 @@ export async function POST(request: Request) {
         console.log("[v0] Database error:", dbError);
       }
 
-      // Build personalization data
+      // Build personalization data using the new PersonalizationData interface
       const personalizationData = {
+        // Order identification
         order_id: orderId,
-        product_name: productName || "Video Package",
+        order_date: new Date().toLocaleDateString("en-US", { 
+          year: "numeric", 
+          month: "long", 
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }),
+        
+        // Customer information
         customer_name: order?.customer?.name || customerName,
         customer_email: order?.customer?.email || customerEmail,
         customer_phone: order?.customer?.phone || customerPhone,
-        price: price,
+        
+        // Product/Package info
+        product_name: productName || "Video Package",
+        photo_count: order?.photoCount?.toString() || order?.photos?.length?.toString() || "0",
+        
+        // Pricing breakdown
         base_price: order?.basePrice ? `$${order.basePrice.toFixed(2)}` : price,
         branding_fee: order?.brandingFee ? `$${order.brandingFee.toFixed(2)}` : "$0.00",
         voiceover_fee: order?.voiceoverFee ? `$${order.voiceoverFee.toFixed(2)}` : "$0.00",
         edited_photos_fee: order?.editedPhotosFee ? `$${order.editedPhotosFee.toFixed(2)}` : "$0.00",
-        photo_count: order?.photoCount?.toString() || order?.photos?.length?.toString() || "0",
-        image_urls: order?.photos ? buildImageUrls(order.photos) : "No images available",
+        total_price: order?.totalPrice ? `$${order.totalPrice.toFixed(2)}` : price,
+        
+        // Music selection
         music_choice: order?.musicSelection || "Not specified",
-        custom_audio_filename: order?.customAudio?.filename || "None",
-        custom_audio_url: order?.customAudio?.secure_url || "None",
+        custom_audio_url: order?.customAudio?.secure_url || "",
+        custom_audio_filename: order?.customAudio?.filename || "",
+        
+        // Branding details
         branding_type: order?.branding?.type || "unbranded",
-        branding_logo_url: order?.branding?.logoUrl || "None",
-        agent_name: order?.branding?.agentName || "N/A",
-        company_name: order?.branding?.companyName || "N/A",
-        agent_phone: order?.branding?.phone || "N/A",
-        agent_email: order?.branding?.email || "N/A",
-        agent_website: order?.branding?.website || "N/A",
-        branding_info: order?.branding ? buildBrandingInfo(order.branding) : "Unbranded",
-        voiceover_included: order?.voiceover ? "Yes" : "No",
-        voiceover_script: order?.voiceoverScript || "None",
+        branding_logo_url: order?.branding?.logoUrl || "",
+        branding_agent_name: order?.branding?.agentName || "",
+        branding_company_name: order?.branding?.companyName || "",
+        branding_phone: order?.branding?.phone || "",
+        branding_email: order?.branding?.email || "",
+        branding_website: order?.branding?.website || "",
+        
+        // Voiceover details
+        voiceover_enabled: order?.voiceover ? "Yes" : "No",
+        voiceover_voice: order?.voiceoverVoice || "",
+        voiceover_script: order?.voiceoverScript || "",
+        
+        // Edited photos
         include_edited_photos: order?.includeEditedPhotos ? "Yes" : "No",
-        special_requests: order?.specialInstructions || "None",
-        video_titles: order?.branding ? buildBrandingInfo(order.branding) : "Unbranded",
-        db_status: dbError ? `Error: ${dbError}` : "Connected",
+        
+        // Special requests
+        special_requests: order?.specialInstructions || "",
+        
+        // Image URLs (newline separated)
+        image_urls: order?.photos ? buildImageUrls(order.photos) : "No images available",
       };
 
       console.log("[v0] ========================================");

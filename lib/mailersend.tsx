@@ -14,37 +14,58 @@ const ADMIN_EMAIL_2 = "info@realestatephoto2video.com";
 
 /**
  * PERSONALIZATION DATA INTERFACE
+ * 
+ * All fields from the order form for the MailerSend template.
+ * Template variables should match these field names.
  */
 export interface PersonalizationData {
+  // Order identification
   order_id: string;
-  product_name: string;
+  order_date: string;
+  
+  // Customer information
   customer_name: string;
   customer_email: string;
   customer_phone: string;
-  price: string;
+  
+  // Product/Package info
+  product_name: string;
+  photo_count: string;
+  
+  // Pricing breakdown
   base_price: string;
   branding_fee: string;
   voiceover_fee: string;
   edited_photos_fee: string;
-  photo_count: string;
-  image_urls: string;
+  total_price: string;
+  
+  // Music selection
   music_choice: string;
-  custom_audio_filename: string;
   custom_audio_url: string;
+  custom_audio_filename: string;
+  
+  // Branding details
   branding_type: string;
   branding_logo_url: string;
-  agent_name: string;
-  company_name: string;
-  agent_phone: string;
-  agent_email: string;
-  agent_website: string;
-  branding_info: string;
-  voiceover_included: string;
+  branding_agent_name: string;
+  branding_company_name: string;
+  branding_phone: string;
+  branding_email: string;
+  branding_website: string;
+  
+  // Voiceover details
+  voiceover_enabled: string;
+  voiceover_voice: string;
   voiceover_script: string;
+  
+  // Edited photos
   include_edited_photos: string;
+  
+  // Special requests
   special_requests: string;
-  video_titles: string;
-  db_status: string;
+  
+  // Image URLs (newline separated)
+  image_urls: string;
 }
 
 /**
@@ -102,34 +123,53 @@ export async function sendCustomerEmail(
         {
           email: data.customer_email,
           data: {
+            // Order identification
             order_id: data.order_id,
-            product_name: data.product_name,
+            order_date: data.order_date,
+            
+            // Customer information
             customer_name: data.customer_name,
             customer_email: data.customer_email,
             customer_phone: data.customer_phone,
-            price: data.price,
+            
+            // Product/Package info
+            product_name: data.product_name,
+            photo_count: data.photo_count,
+            
+            // Pricing breakdown
             base_price: data.base_price,
             branding_fee: data.branding_fee,
             voiceover_fee: data.voiceover_fee,
             edited_photos_fee: data.edited_photos_fee,
-            photo_count: data.photo_count,
-            image_urls: data.image_urls,
+            total_price: data.total_price,
+            
+            // Music selection
             music_choice: data.music_choice,
-            custom_audio_filename: data.custom_audio_filename,
             custom_audio_url: data.custom_audio_url,
+            custom_audio_filename: data.custom_audio_filename,
+            
+            // Branding details
             branding_type: data.branding_type,
             branding_logo_url: data.branding_logo_url,
-            branding_info: data.branding_info,
-            agent_name: data.agent_name,
-            company_name: data.company_name,
-            agent_phone: data.agent_phone,
-            agent_email: data.agent_email,
-            agent_website: data.agent_website,
-            voiceover_included: data.voiceover_included,
+            branding_agent_name: data.branding_agent_name,
+            branding_company_name: data.branding_company_name,
+            branding_phone: data.branding_phone,
+            branding_email: data.branding_email,
+            branding_website: data.branding_website,
+            
+            // Voiceover details
+            voiceover_enabled: data.voiceover_enabled,
+            voiceover_voice: data.voiceover_voice,
             voiceover_script: data.voiceover_script,
+            
+            // Edited photos
             include_edited_photos: data.include_edited_photos,
+            
+            // Special requests
             special_requests: data.special_requests,
-            video_titles: data.video_titles,
+            
+            // Image URLs
+            image_urls: data.image_urls,
           },
         },
       ],
@@ -222,26 +262,27 @@ export async function sendAdminNotificationEmail(
         <tr><td style="padding: 12px; font-weight: bold;">Branding Fee:</td><td style="padding: 12px;">${data.branding_fee}</td></tr>
         <tr><td style="padding: 12px; font-weight: bold;">Voiceover Fee:</td><td style="padding: 12px;">${data.voiceover_fee}</td></tr>
         <tr><td style="padding: 12px; font-weight: bold;">Edited Photos Fee:</td><td style="padding: 12px;">${data.edited_photos_fee}</td></tr>
-        <tr style="background: #c6f6d5;"><td style="padding: 12px; font-weight: bold; font-size: 18px;">TOTAL:</td><td style="padding: 12px; font-size: 18px; color: #2f855a; font-weight: bold;">${data.price}</td></tr>
+        <tr style="background: #c6f6d5;"><td style="padding: 12px; font-weight: bold; font-size: 18px;">TOTAL:</td><td style="padding: 12px; font-size: 18px; color: #2f855a; font-weight: bold;">${data.total_price}</td></tr>
       </table>
 
       ${data.branding_type !== "unbranded" ? `
       <h2 style="color: #2d3748; margin-top: 30px;">Branding</h2>
       <table style="width: 100%; border-collapse: collapse; background: #e6fffa; border-radius: 8px;">
         <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Type:</td><td style="padding: 12px;">${data.branding_type}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Agent Name:</td><td style="padding: 12px;">${data.agent_name}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Company:</td><td style="padding: 12px;">${data.company_name}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">${data.agent_phone}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Email:</td><td style="padding: 12px;">${data.agent_email}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Website:</td><td style="padding: 12px;">${data.agent_website}</td></tr>
+        <tr><td style="padding: 12px; font-weight: bold;">Agent Name:</td><td style="padding: 12px;">${data.branding_agent_name}</td></tr>
+        <tr><td style="padding: 12px; font-weight: bold;">Company:</td><td style="padding: 12px;">${data.branding_company_name}</td></tr>
+        <tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">${data.branding_phone}</td></tr>
+        <tr><td style="padding: 12px; font-weight: bold;">Email:</td><td style="padding: 12px;">${data.branding_email}</td></tr>
+        <tr><td style="padding: 12px; font-weight: bold;">Website:</td><td style="padding: 12px;">${data.branding_website}</td></tr>
         <tr><td style="padding: 12px; font-weight: bold;">Logo URL:</td><td style="padding: 12px; word-break: break-all;">${data.branding_logo_url}</td></tr>
       </table>
       ` : ""}
 
-      ${data.voiceover_included === "Yes" ? `
+      ${data.voiceover_enabled === "Yes" ? `
       <h2 style="color: #2d3748; margin-top: 30px;">Voiceover</h2>
       <table style="width: 100%; border-collapse: collapse; background: #faf5ff; border-radius: 8px;">
         <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Included:</td><td style="padding: 12px;">Yes</td></tr>
+        <tr><td style="padding: 12px; font-weight: bold;">Voice:</td><td style="padding: 12px;">${data.voiceover_voice}</td></tr>
         <tr><td style="padding: 12px; font-weight: bold; vertical-align: top;">Script:</td><td style="padding: 12px; white-space: pre-wrap;">${data.voiceover_script}</td></tr>
       </table>
       ` : ""}
@@ -274,7 +315,7 @@ ${data.image_urls}
       ],
       subject: `NEW ORDER: ${data.customer_name} - #${data.order_id}`,
       html: html,
-      text: `NEW ORDER - #${data.order_id}\n\nCustomer: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone}\nProduct: ${data.product_name}\nTotal: ${data.price}\n\nImage URLs:\n${data.image_urls}`,
+      text: `NEW ORDER - #${data.order_id}\n\nCustomer: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone}\nProduct: ${data.product_name}\nTotal: ${data.total_price}\n\nImage URLs:\n${data.image_urls}`,
     };
 
     console.log("[v0] Sending admin email to MailerSend...");
