@@ -24,8 +24,8 @@ export interface PersonalizationData {
   // ORDER ID: Must be passed to template (not blank)
   order_id: string;
   
-  // Product name
-  product_name: string;
+  // Product info
+  product: string;
   
   // Core customer info
   customer_name: string;
@@ -128,58 +128,64 @@ export async function sendCustomerEmail(
   try {
     let requestBody: Record<string, unknown>;
 
+    // Both customer and admin receive identical receipt emails
+    const recipients = [
+      { email: data.customer_email, name: data.customer_name },
+      { email: ADMIN_EMAIL, name: "Admin" },
+    ];
+
     if (CUSTOMER_TEMPLATE_ID) {
       // Use template with personalization - pass ALL fields for template flexibility
+      const personalizationData = {
+        // ORDER ID: Ensure this is not blank
+        order_id: data.order_id,
+        // Product
+        product: data.product,
+        // Customer info
+        customer_name: data.customer_name,
+        customer_email: data.customer_email,
+        customer_phone: data.customer_phone,
+        // Pricing
+        price: data.price,
+        base_price: data.base_price,
+        branding_fee: data.branding_fee,
+        voiceover_fee: data.voiceover_fee,
+        edited_photos_fee: data.edited_photos_fee,
+        // Photos - mapped from order.photos
+        photo_count: data.photo_count,
+        image_urls: data.image_urls,
+        // Music - mapped from order.musicSelection
+        music_choice: data.music_choice,
+        custom_audio_filename: data.custom_audio_filename,
+        custom_audio_url: data.custom_audio_url,
+        // Branding - mapped from order.branding
+        branding_type: data.branding_type,
+        branding_logo_url: data.branding_logo_url,
+        branding_info: data.branding_info,
+        agent_name: data.agent_name,
+        company_name: data.company_name,
+        agent_phone: data.agent_phone,
+        agent_email: data.agent_email,
+        agent_website: data.agent_website,
+        // Voiceover
+        voiceover_included: data.voiceover_included,
+        voiceover_script: data.voiceover_script,
+        // Extras
+        include_edited_photos: data.include_edited_photos,
+        special_requests: data.special_requests,
+        // Legacy
+        video_titles: data.video_titles,
+      };
+
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
-        to: [{ email: data.customer_email, name: data.customer_name }],
+        to: recipients,
         subject: subject, // EXPLICIT SUBJECT - prevents MS42209
         template_id: CUSTOMER_TEMPLATE_ID,
-        personalization: [
-          {
-            email: data.customer_email,
-            data: {
-              // ORDER ID: Ensure this is not blank
-              order_id: data.order_id,
-              // Product name
-              product_name: data.product_name,
-              // Customer info
-              customer_name: data.customer_name,
-              customer_email: data.customer_email,
-              customer_phone: data.customer_phone,
-              // Pricing
-              price: data.price,
-              base_price: data.base_price,
-              branding_fee: data.branding_fee,
-              voiceover_fee: data.voiceover_fee,
-              edited_photos_fee: data.edited_photos_fee,
-              // Photos - mapped from order.photos
-              photo_count: data.photo_count,
-              image_urls: data.image_urls,
-              // Music - mapped from order.musicSelection
-              music_choice: data.music_choice,
-              custom_audio_filename: data.custom_audio_filename,
-              custom_audio_url: data.custom_audio_url,
-              // Branding - mapped from order.branding
-              branding_type: data.branding_type,
-              branding_logo_url: data.branding_logo_url,
-              branding_info: data.branding_info,
-              agent_name: data.agent_name,
-              company_name: data.company_name,
-              agent_phone: data.agent_phone,
-              agent_email: data.agent_email,
-              agent_website: data.agent_website,
-              // Voiceover
-              voiceover_included: data.voiceover_included,
-              voiceover_script: data.voiceover_script,
-              // Extras
-              include_edited_photos: data.include_edited_photos,
-              special_requests: data.special_requests,
-              // Legacy
-              video_titles: data.video_titles,
-            },
-          },
-        ],
+        personalization: recipients.map((recipient) => ({
+          email: recipient.email,
+          data: personalizationData,
+        })),
       };
       console.log("[MailerSend] Using template ID:", CUSTOMER_TEMPLATE_ID);
     } else {
@@ -191,7 +197,7 @@ export async function sendCustomerEmail(
           <p>Thank you for your order! Your real estate video will be delivered within 3 business days.</p>
           <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Order ID:</strong> ${data.order_id}</p>
-            <p><strong>Product:</strong> ${data.product_name}</p>
+            <p><strong>Product:</strong> ${data.product}</p>
             <p><strong>Total:</strong> ${data.price}</p>
             <p><strong>Photos:</strong> ${data.photo_count} photos</p>
             <p><strong>Music Selection:</strong> ${data.music_choice}</p>
@@ -204,13 +210,15 @@ export async function sendCustomerEmail(
 
       requestBody = {
         from: { email: FROM_EMAIL, name: FROM_NAME },
-        to: [{ email: data.customer_email, name: data.customer_name }],
+        to: recipients,
         subject: subject, // EXPLICIT SUBJECT with ORDER_ID
         html: html,
-        text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Product: ${data.product_name}. Total: ${data.price}. Photos: ${data.photo_count}. Music: ${data.music_choice}. Your video will be delivered within 3 business days.`,
+        text: `Hi ${data.customer_name}, Thank you for your order #${data.order_id}! Product: ${data.product}. Total: ${data.price}. Photos: ${data.photo_count}. Music: ${data.music_choice}. Your video will be delivered within 3 business days.`,
       };
       console.log("[MailerSend] Using HTML fallback (no template)");
     }
+
+    console.log("[MailerSend] Sending to customer AND admin:", recipients.map(r => r.email).join(", "));
 
     console.log("[MailerSend] Sending request to MailerSend API...");
 
@@ -292,8 +300,8 @@ export async function sendAdminNotificationEmail(
             data: {
               // ORDER ID: Must not be blank
               order_id: data.order_id,
-              // Product name
-              product_name: data.product_name,
+              // Product
+              product: data.product,
               // Customer info
               customer_name: data.customer_name,
               customer_email: data.customer_email,
@@ -468,7 +476,7 @@ export async function sendAdminNotificationEmail(
             </tr>
             <tr>
               <td style="padding: 12px; font-weight: bold;">Product:</td>
-              <td style="padding: 12px;">${data.product_name}</td>
+              <td style="padding: 12px;">${data.product}</td>
             </tr>
             <tr>
               <td style="padding: 12px; font-weight: bold;">Photo Count:</td>
@@ -550,7 +558,7 @@ Phone: ${data.customer_phone}
 ORDER DETAILS
 -------------
 Order ID: ${data.order_id}
-Product: ${data.product_name}
+Product: ${data.product}
 Photo Count: ${data.photo_count}
 Music Choice: ${data.music_choice}
 Include Edited Photos: ${data.include_edited_photos}

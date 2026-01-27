@@ -48,21 +48,6 @@ export async function POST(request: Request) {
       photoUrlsChunks[`photoUrls_${chunkIndex}`] = currentChunk;
     }
 
-    // Determine product name based on photo count
-    const photoCount = order.photo_count || 0;
-    let productName = "Real Estate Video";
-    if (photoCount === 1) {
-      productName = "Test Product";
-    } else if (photoCount <= 12) {
-      productName = "Standard Video";
-    } else if (photoCount <= 25) {
-      productName = "Premium Video";
-    } else if (photoCount <= 35) {
-      productName = "Professional Video";
-    } else {
-      productName = "Agency Pack";
-    }
-
     // Create Stripe checkout session with full metadata fallback
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -71,7 +56,7 @@ export async function POST(request: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: productName,
+              name: `Real Estate Video - ${order.photo_count} Photos`,
               description: `Professional walkthrough video with ${order.photo_count} photos${order.voiceover ? ", voiceover" : ""}${order.branding?.type === "custom" ? ", custom branding" : ""}`,
             },
             unit_amount: Math.round(parseFloat(order.total_price) * 100),
@@ -85,7 +70,6 @@ export async function POST(request: Request) {
       customer_email: order.customer_email,
       metadata: {
         orderId: order.order_id,
-        productName: productName,
         customerName: order.customer_name || "",
         customerEmail: order.customer_email || "",
         customerPhone: order.customer_phone || "",
