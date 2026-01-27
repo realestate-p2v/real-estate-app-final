@@ -24,31 +24,31 @@ const voiceoverOptions = [
 const voiceOptions = [
   {
     id: "male-1",
-    name: "James",
+    name: "Matt",
     gender: "male",
-    description: "Deep, warm and professional",
-    audioUrl: "https://cdn.themetavoice.xyz/speakers/bria.mp3",
+    description: "Clear, friendly and engaging",
+    audioUrl: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/p2v-voice-MATT-SAMPLE-KbkYDFp2vLHpUGEgaUVQFb1LPhIu87.mp3",
   },
   {
     id: "male-2",
-    name: "Michael",
+    name: "Blake",
     gender: "male",
-    description: "Clear, friendly and engaging",
-    audioUrl: "https://cdn.themetavoice.xyz/speakers/alex.mp3",
+    description: "Deep, warm and professional",
+    audioUrl: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/p2v-voice-BLAKE-SAMPLE-DXiT2GRdqKeHsxuftMdaOaqDQ7OWcL.mp3",
   },
   {
     id: "female-1",
-    name: "Sarah",
+    name: "Maya",
     gender: "female",
     description: "Warm, inviting and articulate",
-    audioUrl: "https://cdn.themetavoice.xyz/speakers/zoe.mp3",
+    audioUrl: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/p2v-voice-MAYA-SAMPLE-iWnCQ0vRYo0LMIB1o90BiBCvBRnlIG.mp3",
   },
   {
     id: "female-2",
-    name: "Emily",
+    name: "Amara",
     gender: "female",
     description: "Bright, energetic and confident",
-    audioUrl: "https://cdn.themetavoice.xyz/speakers/jessica.mp3",
+    audioUrl: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/p2v-voice-AMARA-SAMPLE-sA0rBroa1lcewnWE1BG6JBw8JoeSXi.mp3",
   },
 ];
 
