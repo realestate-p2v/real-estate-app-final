@@ -22,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner"
 export interface AdminOrder {
   id: string
   order_id: string
+  order_number: number
   customer_name: string | null
   customer_email: string | null
   customer_phone: string | null
@@ -288,10 +289,15 @@ export function AdminDashboard() {
                       {/* Header Row */}
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <h3 className="truncate text-sm font-semibold text-zinc-900">
-                            {order.customer_name || "No Name"}
-                          </h3>
-                          <p className="text-xs text-zinc-500">{formatDate(order.created_at)}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center rounded bg-zinc-900 px-2 py-0.5 text-xs font-bold text-white">
+                              #{String(order.order_number || 0).padStart(6, '0')}
+                            </span>
+                            <h3 className="truncate text-sm font-semibold text-zinc-900">
+                              {order.customer_name || "No Name"}
+                            </h3>
+                          </div>
+                          <p className="mt-0.5 text-xs text-zinc-500">{formatDate(order.created_at)}</p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <p className="text-sm font-semibold text-zinc-900">
