@@ -1,50 +1,40 @@
 /**
- * MAILERSEND EMAIL LIBRARY - SIMPLIFIED
+ * MAILERSEND EMAIL SERVICE
  * 
- * Sends order receipt email via MailerSend template.
- * Template ID: zr6ke4n6kzelon12
+ * Production-grade implementation with:
+ * - Strict error handling
+ * - Detailed logging for debugging
+ * - Template ID: zr6ke4n6kzelon12
  */
 
-// Template ID hardcoded per requirements
+// Hardcoded template ID per requirements
 const CUSTOMER_TEMPLATE_ID = "zr6ke4n6kzelon12";
 
-// Admin recipients
-const ADMIN_EMAIL = "realestatephoto2video@gmail.com";
-const ADMIN_EMAIL_2 = "info@realestatephoto2video.com";
+// Admin recipients for BCC
+const ADMIN_EMAILS = [
+  { email: "realestatephoto2video@gmail.com", name: "Admin" },
+  { email: "info@realestatephoto2video.com", name: "Admin 2" }
+];
 
 /**
- * PERSONALIZATION DATA INTERFACE
- * 
- * All fields from the order form for the MailerSend template.
- * Template variables should match these field names.
+ * Personalization data interface - all fields passed to template
  */
 export interface PersonalizationData {
-  // Order identification
   order_id: string;
   order_date: string;
-  
-  // Customer information
   customer_name: string;
   customer_email: string;
   customer_phone: string;
-  
-  // Product/Package info
   product_name: string;
   photo_count: string;
-  
-  // Pricing breakdown
   base_price: string;
   branding_fee: string;
   voiceover_fee: string;
   edited_photos_fee: string;
   total_price: string;
-  
-  // Music selection
   music_choice: string;
   custom_audio_url: string;
   custom_audio_filename: string;
-  
-  // Branding details
   branding_type: string;
   branding_logo_url: string;
   branding_agent_name: string;
@@ -52,300 +42,319 @@ export interface PersonalizationData {
   branding_phone: string;
   branding_email: string;
   branding_website: string;
-  
-  // Voiceover details
   voiceover_enabled: string;
   voiceover_voice: string;
   voiceover_script: string;
-  
-  // Edited photos
   include_edited_photos: string;
-  
-  // Special requests
   special_requests: string;
-  
-  // Image URLs (newline separated)
-  image_urls: string;
+  image_urls: string; // MUST be a string, newline separated
 }
 
 /**
- * CUSTOMER EMAIL - Using MailerSend Template
+ * Send customer email using MailerSend template
+ * Returns a promise that resolves only after the API call completes
  */
 export async function sendCustomerEmail(
   data: PersonalizationData
-): Promise<{ success: boolean; error?: string }> {
-  console.log("[v0] ========================================");
-  console.log("[v0] MAILERSEND: Sending Customer Email");
-  console.log("[v0] ========================================");
-
+): Promise<{ success: boolean; error?: string; statusCode?: number }> {
   const apiKey = process.env.MAILERSEND_API_KEY;
   const fromEmail = process.env.MAILERSEND_SENDER_EMAIL;
   const fromName = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
 
-  // Validate environment
+  // Validate required environment variables
   if (!apiKey) {
-    console.error("[v0] MAILERSEND_API_KEY is not set");
-    return { success: false, error: "MAILERSEND_API_KEY is not set" };
+    console.error("MAILERSEND_CRITICAL_FAILURE", "MAILERSEND_API_KEY is not configured");
+    return { success: false, error: "MAILERSEND_API_KEY is not configured" };
   }
-  
+
   if (!fromEmail) {
-    console.error("[v0] MAILERSEND_SENDER_EMAIL is not set");
-    return { success: false, error: "MAILERSEND_SENDER_EMAIL is not set" };
+    console.error("MAILERSEND_CRITICAL_FAILURE", "MAILERSEND_SENDER_EMAIL is not configured");
+    return { success: false, error: "MAILERSEND_SENDER_EMAIL is not configured" };
   }
 
   if (!data.customer_email) {
-    console.error("[v0] No customer email provided");
+    console.error("MAILERSEND_CRITICAL_FAILURE", "No customer email provided in data");
     return { success: false, error: "No customer email provided" };
   }
 
-  console.log("[v0] API Key present: YES (length:", apiKey.length, ")");
-  console.log("[v0] From Email:", fromEmail);
-  console.log("[v0] To Email:", data.customer_email);
-  console.log("[v0] Template ID:", CUSTOMER_TEMPLATE_ID);
+  // Ensure image_urls is a string (critical for template)
+  const imageUrlsString = typeof data.image_urls === "string" 
+    ? data.image_urls 
+    : String(data.image_urls || "No images");
+
+  // Build request body with EXACT format MailerSend expects
+  const requestBody = {
+    from: {
+      email: fromEmail,
+      name: fromName
+    },
+    to: [
+      {
+        email: data.customer_email,
+        name: data.customer_name || "Customer"
+      }
+    ],
+    // BCC MUST be array of objects with email and name
+    bcc: ADMIN_EMAILS,
+    subject: `Order Confirmation - #${data.order_id}`,
+    template_id: CUSTOMER_TEMPLATE_ID,
+    personalization: [
+      {
+        email: data.customer_email,
+        data: {
+          order_id: data.order_id || "",
+          order_date: data.order_date || "",
+          customer_name: data.customer_name || "",
+          customer_email: data.customer_email || "",
+          customer_phone: data.customer_phone || "",
+          product_name: data.product_name || "",
+          photo_count: data.photo_count || "0",
+          base_price: data.base_price || "$0.00",
+          branding_fee: data.branding_fee || "$0.00",
+          voiceover_fee: data.voiceover_fee || "$0.00",
+          edited_photos_fee: data.edited_photos_fee || "$0.00",
+          total_price: data.total_price || "$0.00",
+          music_choice: data.music_choice || "Not specified",
+          custom_audio_url: data.custom_audio_url || "",
+          custom_audio_filename: data.custom_audio_filename || "",
+          branding_type: data.branding_type || "unbranded",
+          branding_logo_url: data.branding_logo_url || "",
+          branding_agent_name: data.branding_agent_name || "",
+          branding_company_name: data.branding_company_name || "",
+          branding_phone: data.branding_phone || "",
+          branding_email: data.branding_email || "",
+          branding_website: data.branding_website || "",
+          voiceover_enabled: data.voiceover_enabled || "No",
+          voiceover_voice: data.voiceover_voice || "",
+          voiceover_script: data.voiceover_script || "",
+          include_edited_photos: data.include_edited_photos || "No",
+          special_requests: data.special_requests || "",
+          image_urls: imageUrlsString
+        }
+      }
+    ]
+  };
+
+  console.log("[MAILERSEND] Sending customer email to:", data.customer_email);
+  console.log("[MAILERSEND] Template ID:", CUSTOMER_TEMPLATE_ID);
+  console.log("[MAILERSEND] BCC recipients:", ADMIN_EMAILS.map(e => e.email).join(", "));
+
+  let response: Response;
+  let responseText: string;
 
   try {
-    const requestBody = {
-      from: { 
-        email: fromEmail, 
-        name: fromName 
-      },
-      to: [{ 
-        email: data.customer_email, 
-        name: data.customer_name 
-      }],
-      bcc: [
-        { email: ADMIN_EMAIL, name: "Admin" },
-        { email: ADMIN_EMAIL_2, name: "Admin 2" }
-      ],
-      subject: `Order Confirmation - #${data.order_id}`,
-      template_id: CUSTOMER_TEMPLATE_ID,
-      personalization: [
-        {
-          email: data.customer_email,
-          data: {
-            // Order identification
-            order_id: data.order_id,
-            order_date: data.order_date,
-            
-            // Customer information
-            customer_name: data.customer_name,
-            customer_email: data.customer_email,
-            customer_phone: data.customer_phone,
-            
-            // Product/Package info
-            product_name: data.product_name,
-            photo_count: data.photo_count,
-            
-            // Pricing breakdown
-            base_price: data.base_price,
-            branding_fee: data.branding_fee,
-            voiceover_fee: data.voiceover_fee,
-            edited_photos_fee: data.edited_photos_fee,
-            total_price: data.total_price,
-            
-            // Music selection
-            music_choice: data.music_choice,
-            custom_audio_url: data.custom_audio_url,
-            custom_audio_filename: data.custom_audio_filename,
-            
-            // Branding details
-            branding_type: data.branding_type,
-            branding_logo_url: data.branding_logo_url,
-            branding_agent_name: data.branding_agent_name,
-            branding_company_name: data.branding_company_name,
-            branding_phone: data.branding_phone,
-            branding_email: data.branding_email,
-            branding_website: data.branding_website,
-            
-            // Voiceover details
-            voiceover_enabled: data.voiceover_enabled,
-            voiceover_voice: data.voiceover_voice,
-            voiceover_script: data.voiceover_script,
-            
-            // Edited photos
-            include_edited_photos: data.include_edited_photos,
-            
-            // Special requests
-            special_requests: data.special_requests,
-            
-            // Image URLs
-            image_urls: data.image_urls,
-          },
-        },
-      ],
-    };
-
-    console.log("[v0] Sending request to MailerSend API...");
-    console.log("[v0] Request body:", JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch("https://api.mailersend.com/v1/email", {
+    response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${apiKey}`,
+        "X-Requested-With": "XMLHttpRequest"
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(requestBody)
     });
 
-    const responseText = await response.text();
-    console.log("[v0] MailerSend Response Status:", response.status);
-    console.log("[v0] MailerSend Response Body:", responseText);
+    responseText = await response.text();
+  } catch (networkError) {
+    const errorMessage = networkError instanceof Error ? networkError.message : String(networkError);
+    console.error("MAILERSEND_CRITICAL_FAILURE", {
+      type: "NETWORK_ERROR",
+      message: errorMessage,
+      order_id: data.order_id
+    });
+    return { success: false, error: `Network error: ${errorMessage}` };
+  }
 
-    if (!response.ok) {
-      console.error("[v0] MailerSend FAILED - Status:", response.status);
-      try {
-        const errorBody = JSON.parse(responseText);
-        console.error("[v0] Error details:", JSON.stringify(errorBody, null, 2));
-      } catch {
-        console.error("[v0] Raw error:", responseText);
-      }
-      return { success: false, error: `Status ${response.status}: ${responseText}` };
+  // Log response details
+  console.log("[MAILERSEND] Response status:", response.status);
+
+  if (!response.ok) {
+    // Parse error body for detailed logging
+    let errorBody: unknown;
+    try {
+      errorBody = JSON.parse(responseText);
+    } catch {
+      errorBody = responseText;
     }
 
-    console.log("[v0] MailerSend SUCCESS - Email accepted for delivery");
-    return { success: true };
-  } catch (error) {
-    console.error("[v0] MailerSend Exception:", error);
-    return { success: false, error: String(error) };
+    console.error("MAILERSEND_CRITICAL_FAILURE", {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorBody,
+      order_id: data.order_id,
+      customer_email: data.customer_email
+    });
+
+    return { 
+      success: false, 
+      error: `MailerSend API error: ${response.status} - ${JSON.stringify(errorBody)}`,
+      statusCode: response.status
+    };
   }
+
+  console.log("[MAILERSEND] Customer email sent successfully");
+  console.log("[MAILERSEND] Response:", responseText || "(empty - 202 accepted)");
+
+  return { success: true, statusCode: response.status };
 }
 
 /**
- * ADMIN NOTIFICATION EMAIL - HTML fallback (no template needed)
+ * Send admin notification email with full order details (HTML)
  */
 export async function sendAdminNotificationEmail(
   data: PersonalizationData
-): Promise<{ success: boolean; error?: string }> {
-  console.log("[v0] ========================================");
-  console.log("[v0] MAILERSEND: Sending Admin Notification");
-  console.log("[v0] ========================================");
-
+): Promise<{ success: boolean; error?: string; statusCode?: number }> {
   const apiKey = process.env.MAILERSEND_API_KEY;
   const fromEmail = process.env.MAILERSEND_SENDER_EMAIL;
   const fromName = process.env.MAILERSEND_SENDER_NAME || "Real Estate Photo2Video";
 
   if (!apiKey || !fromEmail) {
-    const error = !apiKey ? "MAILERSEND_API_KEY not set" : "MAILERSEND_SENDER_EMAIL not set";
-    console.error("[v0]", error);
-    return { success: false, error };
+    console.error("MAILERSEND_CRITICAL_FAILURE", "Missing API key or sender email for admin notification");
+    return { success: false, error: "Missing MailerSend configuration" };
   }
 
-  console.log("[v0] Admin recipients:", ADMIN_EMAIL, ADMIN_EMAIL_2);
+  const html = buildAdminEmailHtml(data);
 
-  // Build HTML email with all order data
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-      <h1 style="color: #1a365d; border-bottom: 3px solid #ecc94b; padding-bottom: 15px;">
-        NEW ORDER - #${data.order_id}
-      </h1>
-      
-      <h2 style="color: #2d3748; margin-top: 30px;">Customer Information</h2>
-      <table style="width: 100%; border-collapse: collapse; background: #f7fafc; border-radius: 8px;">
-        <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Name:</td><td style="padding: 12px;">${data.customer_name}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Email:</td><td style="padding: 12px;"><a href="mailto:${data.customer_email}">${data.customer_email}</a></td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">${data.customer_phone}</td></tr>
-      </table>
+  const requestBody = {
+    from: { email: fromEmail, name: fromName },
+    to: ADMIN_EMAILS,
+    subject: `NEW ORDER: ${data.customer_name} - #${data.order_id}`,
+    html: html,
+    text: `NEW ORDER #${data.order_id}\n\nCustomer: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone}\nProduct: ${data.product_name}\nTotal: ${data.total_price}\n\nImages:\n${data.image_urls}`
+  };
 
-      <h2 style="color: #2d3748; margin-top: 30px;">Order Details</h2>
-      <table style="width: 100%; border-collapse: collapse; background: #f7fafc; border-radius: 8px;">
-        <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Order ID:</td><td style="padding: 12px;">${data.order_id}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Product:</td><td style="padding: 12px;">${data.product_name}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Photo Count:</td><td style="padding: 12px;">${data.photo_count} photos</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Music Choice:</td><td style="padding: 12px;">${data.music_choice}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Include Edited Photos:</td><td style="padding: 12px;">${data.include_edited_photos}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Special Requests:</td><td style="padding: 12px;">${data.special_requests || "None"}</td></tr>
-      </table>
+  console.log("[MAILERSEND] Sending admin notification for order:", data.order_id);
 
-      <h2 style="color: #2d3748; margin-top: 30px;">Pricing</h2>
-      <table style="width: 100%; border-collapse: collapse; background: #f0fff4; border-radius: 8px;">
-        <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Base Price:</td><td style="padding: 12px;">${data.base_price}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Branding Fee:</td><td style="padding: 12px;">${data.branding_fee}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Voiceover Fee:</td><td style="padding: 12px;">${data.voiceover_fee}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Edited Photos Fee:</td><td style="padding: 12px;">${data.edited_photos_fee}</td></tr>
-        <tr style="background: #c6f6d5;"><td style="padding: 12px; font-weight: bold; font-size: 18px;">TOTAL:</td><td style="padding: 12px; font-size: 18px; color: #2f855a; font-weight: bold;">${data.total_price}</td></tr>
-      </table>
-
-      ${data.branding_type !== "unbranded" ? `
-      <h2 style="color: #2d3748; margin-top: 30px;">Branding</h2>
-      <table style="width: 100%; border-collapse: collapse; background: #e6fffa; border-radius: 8px;">
-        <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Type:</td><td style="padding: 12px;">${data.branding_type}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Agent Name:</td><td style="padding: 12px;">${data.branding_agent_name}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Company:</td><td style="padding: 12px;">${data.branding_company_name}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Phone:</td><td style="padding: 12px;">${data.branding_phone}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Email:</td><td style="padding: 12px;">${data.branding_email}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Website:</td><td style="padding: 12px;">${data.branding_website}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Logo URL:</td><td style="padding: 12px; word-break: break-all;">${data.branding_logo_url}</td></tr>
-      </table>
-      ` : ""}
-
-      ${data.voiceover_enabled === "Yes" ? `
-      <h2 style="color: #2d3748; margin-top: 30px;">Voiceover</h2>
-      <table style="width: 100%; border-collapse: collapse; background: #faf5ff; border-radius: 8px;">
-        <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Included:</td><td style="padding: 12px;">Yes</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">Voice:</td><td style="padding: 12px;">${data.voiceover_voice}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold; vertical-align: top;">Script:</td><td style="padding: 12px; white-space: pre-wrap;">${data.voiceover_script}</td></tr>
-      </table>
-      ` : ""}
-
-      ${data.custom_audio_filename && data.custom_audio_filename !== "None" ? `
-      <h2 style="color: #2d3748; margin-top: 30px;">Custom Audio</h2>
-      <table style="width: 100%; border-collapse: collapse; background: #fff5f5; border-radius: 8px;">
-        <tr><td style="padding: 12px; font-weight: bold; width: 150px;">Filename:</td><td style="padding: 12px;">${data.custom_audio_filename}</td></tr>
-        <tr><td style="padding: 12px; font-weight: bold;">URL:</td><td style="padding: 12px; word-break: break-all;"><a href="${data.custom_audio_url}">${data.custom_audio_url}</a></td></tr>
-      </table>
-      ` : ""}
-
-      <h2 style="color: #2d3748; margin-top: 30px;">Cloudinary Image URLs</h2>
-      <div style="background: #edf2f7; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 12px;">
-${data.image_urls}
-      </div>
-
-      <p style="margin-top: 30px; padding: 15px; background: #fef3c7; border-radius: 8px; color: #744210;">
-        Video to be delivered within 3 business days.
-      </p>
-    </div>
-  `;
+  let response: Response;
+  let responseText: string;
 
   try {
-    const requestBody = {
-      from: { email: fromEmail, name: fromName },
-      to: [
-        { email: ADMIN_EMAIL, name: "Admin" },
-        { email: ADMIN_EMAIL_2, name: "Admin 2" }
-      ],
-      subject: `NEW ORDER: ${data.customer_name} - #${data.order_id}`,
-      html: html,
-      text: `NEW ORDER - #${data.order_id}\n\nCustomer: ${data.customer_name}\nEmail: ${data.customer_email}\nPhone: ${data.customer_phone}\nProduct: ${data.product_name}\nTotal: ${data.total_price}\n\nImage URLs:\n${data.image_urls}`,
-    };
-
-    console.log("[v0] Sending admin email to MailerSend...");
-
-    const response = await fetch("https://api.mailersend.com/v1/email", {
+    response = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(requestBody)
     });
 
-    const responseText = await response.text();
-    console.log("[v0] Admin Email Response Status:", response.status);
-    console.log("[v0] Admin Email Response Body:", responseText);
+    responseText = await response.text();
+  } catch (networkError) {
+    const errorMessage = networkError instanceof Error ? networkError.message : String(networkError);
+    console.error("MAILERSEND_CRITICAL_FAILURE", {
+      type: "NETWORK_ERROR_ADMIN",
+      message: errorMessage,
+      order_id: data.order_id
+    });
+    return { success: false, error: `Network error: ${errorMessage}` };
+  }
 
-    if (!response.ok) {
-      console.error("[v0] Admin email FAILED - Status:", response.status);
-      return { success: false, error: `Status ${response.status}: ${responseText}` };
+  if (!response.ok) {
+    let errorBody: unknown;
+    try {
+      errorBody = JSON.parse(responseText);
+    } catch {
+      errorBody = responseText;
     }
 
-    console.log("[v0] Admin email SUCCESS");
-    return { success: true };
-  } catch (error) {
-    console.error("[v0] Admin email Exception:", error);
-    return { success: false, error: String(error) };
+    console.error("MAILERSEND_CRITICAL_FAILURE", {
+      type: "ADMIN_EMAIL_FAILED",
+      status: response.status,
+      body: errorBody,
+      order_id: data.order_id
+    });
+
+    return { 
+      success: false, 
+      error: `Admin email failed: ${response.status}`,
+      statusCode: response.status
+    };
   }
+
+  console.log("[MAILERSEND] Admin notification sent successfully");
+  return { success: true, statusCode: response.status };
 }
 
-// Legacy exports
+/**
+ * Build HTML for admin email
+ */
+function buildAdminEmailHtml(data: PersonalizationData): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+  <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h1 style="color: #1a365d; border-bottom: 3px solid #ecc94b; padding-bottom: 15px; margin-top: 0;">
+      NEW ORDER - #${data.order_id}
+    </h1>
+    
+    <h2 style="color: #2d3748; margin-top: 25px;">Customer</h2>
+    <table style="width: 100%; border-collapse: collapse; background: #f7fafc; border-radius: 8px;">
+      <tr><td style="padding: 10px; font-weight: bold; width: 140px;">Name:</td><td style="padding: 10px;">${data.customer_name}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Email:</td><td style="padding: 10px;"><a href="mailto:${data.customer_email}">${data.customer_email}</a></td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Phone:</td><td style="padding: 10px;">${data.customer_phone}</td></tr>
+    </table>
+
+    <h2 style="color: #2d3748; margin-top: 25px;">Order Details</h2>
+    <table style="width: 100%; border-collapse: collapse; background: #f7fafc; border-radius: 8px;">
+      <tr><td style="padding: 10px; font-weight: bold; width: 140px;">Product:</td><td style="padding: 10px;">${data.product_name}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Photos:</td><td style="padding: 10px;">${data.photo_count}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Music:</td><td style="padding: 10px;">${data.music_choice}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Edited Photos:</td><td style="padding: 10px;">${data.include_edited_photos}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Special Requests:</td><td style="padding: 10px;">${data.special_requests || "None"}</td></tr>
+    </table>
+
+    <h2 style="color: #2d3748; margin-top: 25px;">Pricing</h2>
+    <table style="width: 100%; border-collapse: collapse; background: #f0fff4; border-radius: 8px;">
+      <tr><td style="padding: 10px; font-weight: bold; width: 140px;">Base:</td><td style="padding: 10px;">${data.base_price}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Branding:</td><td style="padding: 10px;">${data.branding_fee}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Voiceover:</td><td style="padding: 10px;">${data.voiceover_fee}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Edited Photos:</td><td style="padding: 10px;">${data.edited_photos_fee}</td></tr>
+      <tr style="background: #c6f6d5;"><td style="padding: 10px; font-weight: bold; font-size: 16px;">TOTAL:</td><td style="padding: 10px; font-size: 16px; color: #2f855a; font-weight: bold;">${data.total_price}</td></tr>
+    </table>
+
+    ${data.branding_type !== "unbranded" ? `
+    <h2 style="color: #2d3748; margin-top: 25px;">Branding</h2>
+    <table style="width: 100%; border-collapse: collapse; background: #e6fffa; border-radius: 8px;">
+      <tr><td style="padding: 10px; font-weight: bold; width: 140px;">Type:</td><td style="padding: 10px;">${data.branding_type}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Agent:</td><td style="padding: 10px;">${data.branding_agent_name}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Company:</td><td style="padding: 10px;">${data.branding_company_name}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Phone:</td><td style="padding: 10px;">${data.branding_phone}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Email:</td><td style="padding: 10px;">${data.branding_email}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Website:</td><td style="padding: 10px;">${data.branding_website}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">Logo:</td><td style="padding: 10px; word-break: break-all;">${data.branding_logo_url || "None"}</td></tr>
+    </table>
+    ` : ""}
+
+    ${data.voiceover_enabled === "Yes" ? `
+    <h2 style="color: #2d3748; margin-top: 25px;">Voiceover</h2>
+    <table style="width: 100%; border-collapse: collapse; background: #faf5ff; border-radius: 8px;">
+      <tr><td style="padding: 10px; font-weight: bold; width: 140px;">Voice:</td><td style="padding: 10px;">${data.voiceover_voice}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold; vertical-align: top;">Script:</td><td style="padding: 10px; white-space: pre-wrap;">${data.voiceover_script}</td></tr>
+    </table>
+    ` : ""}
+
+    ${data.custom_audio_filename ? `
+    <h2 style="color: #2d3748; margin-top: 25px;">Custom Audio</h2>
+    <table style="width: 100%; border-collapse: collapse; background: #fff5f5; border-radius: 8px;">
+      <tr><td style="padding: 10px; font-weight: bold; width: 140px;">File:</td><td style="padding: 10px;">${data.custom_audio_filename}</td></tr>
+      <tr><td style="padding: 10px; font-weight: bold;">URL:</td><td style="padding: 10px; word-break: break-all;"><a href="${data.custom_audio_url}">${data.custom_audio_url}</a></td></tr>
+    </table>
+    ` : ""}
+
+    <h2 style="color: #2d3748; margin-top: 25px;">Image URLs</h2>
+    <div style="background: #edf2f7; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 11px;">
+${data.image_urls}
+    </div>
+
+    <p style="margin-top: 25px; padding: 15px; background: #fef3c7; border-radius: 8px; color: #744210; text-align: center;">
+      Deliver video within 3 business days
+    </p>
+  </div>
+</body>
+</html>`;
+}
+
+// Legacy exports for backward compatibility
 export const sendAdminEmail = sendAdminNotificationEmail;
 export const sendCustomerReceiptEmail = sendCustomerEmail;
