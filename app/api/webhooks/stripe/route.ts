@@ -10,21 +10,21 @@ import { createClient } from "@supabase/supabase-js";
  * STRIPE WEBHOOK HANDLER - Production Grade
  * 
  * REQUIREMENTS IMPLEMENTED:
- * 1. Extract orderId from success_url query param AND metadata
- * 2. Extract customer_email from session.customer_details.email
- * 3. ONLY proceed if session.payment_status === 'paid'
- * 4. BLOCKING execution - await MailerSend before returning 200
- * 5. image_urls as array of strings from Supabase photos column
- * 6. BCC hardcoded to realestatephoto2video@gmail.com
- * 7. Domain safety for sender email
+ * 1. Deep Data Extraction: orderId from event.data.object.metadata.orderId, fallback to client_reference_id
+ * 2. Race Condition Fix: 5 retry attempts with 2000ms delay for Supabase
+ * 3. Forced Blocking: Response ONLY after MailerSend await completes
+ * 4. BCC hardcoded to realestatephoto2video@gmail.com
+ * 5. MailerSend Template ID: zr6ke4n6kzelon12
+ * 6. image_urls passed as array from Supabase photos field
+ * 7. Error logging with error.body for MailerSend validation failures
  */
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const SUPABASE_RETRY_ATTEMPTS = 4;
-const SUPABASE_RETRY_DELAY_MS = 2500;
+const SUPABASE_RETRY_ATTEMPTS = 5;
+const SUPABASE_RETRY_DELAY_MS = 2000;
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -47,42 +47,29 @@ function getSupabaseAdmin() {
 }
 
 /**
- * Extract orderId from session - checks BOTH metadata AND success_url query param
+ * DEEP DATA EXTRACTION
+ * Priority order:
+ * 1. event.data.object.metadata.orderId (primary)
+ * 2. event.data.object.client_reference_id (fallback)
  */
 function extractOrderId(session: Stripe.Checkout.Session): string | null {
-  // 1. First try metadata.orderId
+  console.log("[WEBHOOK] === DEEP DATA EXTRACTION ===");
+  console.log("[WEBHOOK] Checking metadata:", JSON.stringify(session.metadata));
+  console.log("[WEBHOOK] Checking client_reference_id:", session.client_reference_id);
+  
+  // 1. PRIMARY: metadata.orderId
   if (session.metadata?.orderId) {
-    console.log("[WEBHOOK] Found orderId in metadata:", session.metadata.orderId);
+    console.log("[WEBHOOK] SUCCESS: Found orderId in metadata.orderId:", session.metadata.orderId);
     return session.metadata.orderId;
   }
   
-  // 2. Try client_reference_id
+  // 2. FALLBACK: client_reference_id
   if (session.client_reference_id) {
-    console.log("[WEBHOOK] Found orderId in client_reference_id:", session.client_reference_id);
+    console.log("[WEBHOOK] SUCCESS: Found orderId in client_reference_id:", session.client_reference_id);
     return session.client_reference_id;
   }
   
-  // 3. Extract from success_url query parameter
-  if (session.success_url) {
-    try {
-      const url = new URL(session.success_url);
-      const orderIdParam = url.searchParams.get("orderId") || url.searchParams.get("order_id");
-      if (orderIdParam) {
-        console.log("[WEBHOOK] Found orderId in success_url:", orderIdParam);
-        return orderIdParam;
-      }
-      
-      // Also check path for patterns like /order/success/P2V-XXXX
-      const pathMatch = url.pathname.match(/P2V-[A-Z0-9]+-[A-Z0-9]+/i);
-      if (pathMatch) {
-        console.log("[WEBHOOK] Found orderId in success_url path:", pathMatch[0]);
-        return pathMatch[0];
-      }
-    } catch (e) {
-      console.error("[WEBHOOK] Failed to parse success_url:", e);
-    }
-  }
-  
+  console.error("[WEBHOOK] FAILED: No orderId found in metadata or client_reference_id");
   return null;
 }
 
@@ -117,18 +104,26 @@ function buildImageUrlsString(photos: Order["photos"]): string {
 // SUPABASE ORDER FETCH WITH RETRY (Supabase Race Fix)
 // ============================================================================
 
+/**
+ * RACE CONDITION FIX
+ * Stripe often hits the webhook before Supabase finishes saving the order.
+ * Retry loop: 5 attempts with 2000ms delay between each.
+ */
 async function fetchOrderWithRetry(orderId: string): Promise<Order> {
-  console.log(`[WEBHOOK] Starting Supabase fetch for order: ${orderId}`);
-  console.log(`[WEBHOOK] Will attempt ${SUPABASE_RETRY_ATTEMPTS} times with ${SUPABASE_RETRY_DELAY_MS}ms delay`);
+  console.log("[WEBHOOK] === RACE CONDITION FIX: SUPABASE RETRY LOOP ===");
+  console.log(`[WEBHOOK] Order ID: ${orderId}`);
+  console.log(`[WEBHOOK] Max attempts: ${SUPABASE_RETRY_ATTEMPTS}`);
+  console.log(`[WEBHOOK] Delay between attempts: ${SUPABASE_RETRY_DELAY_MS}ms`);
 
   const supabase = getSupabaseAdmin();
   
   if (!supabase) {
+    console.error("[WEBHOOK] FATAL: Supabase not configured");
     throw new Error("SUPABASE_NOT_CONFIGURED");
   }
 
   for (let attempt = 1; attempt <= SUPABASE_RETRY_ATTEMPTS; attempt++) {
-    console.log(`[WEBHOOK] Supabase attempt ${attempt}/${SUPABASE_RETRY_ATTEMPTS}`);
+    console.log(`[WEBHOOK] Attempt ${attempt} of ${SUPABASE_RETRY_ATTEMPTS}...`);
     
     const { data, error } = await supabase
       .from("orders")
@@ -137,17 +132,22 @@ async function fetchOrderWithRetry(orderId: string): Promise<Order> {
       .single();
 
     if (error && error.code !== "PGRST116") { // PGRST116 = no rows returned
-      console.log(`[WEBHOOK] Attempt ${attempt} database error: ${error.message}`);
+      console.error(`[WEBHOOK] Attempt ${attempt} - Database error: ${error.message} (code: ${error.code})`);
     }
 
     if (data) {
-      console.log(`[WEBHOOK] Order found on attempt ${attempt}`);
+      console.log(`[WEBHOOK] SUCCESS: Order found on attempt ${attempt}`);
+      console.log(`[WEBHOOK] Photos in order: ${data.photos?.length || 0}`);
 
       // Update payment status to paid
-      await supabase
+      const { error: updateError } = await supabase
         .from("orders")
         .update({ payment_status: "paid", updated_at: new Date().toISOString() })
         .eq("order_id", orderId);
+      
+      if (updateError) {
+        console.error("[WEBHOOK] Warning: Failed to update payment_status:", updateError.message);
+      }
 
       // Map to Order type
       const order: Order = {
@@ -181,15 +181,21 @@ async function fetchOrderWithRetry(orderId: string): Promise<Order> {
       return order;
     }
 
-    // Order not found yet - wait before retry
+    // Order not found yet - wait before retry (except on last attempt)
     if (attempt < SUPABASE_RETRY_ATTEMPTS) {
-      console.log(`[WEBHOOK] Order not found, waiting ${SUPABASE_RETRY_DELAY_MS}ms...`);
+      console.log(`[WEBHOOK] Order not found. Waiting ${SUPABASE_RETRY_DELAY_MS}ms before attempt ${attempt + 1}...`);
       await sleep(SUPABASE_RETRY_DELAY_MS);
     }
   }
 
-  // CRITICAL: Throw error - do NOT try to send email without order data
-  throw new Error(`ORDER_NOT_FOUND: Order ${orderId} not in database after ${SUPABASE_RETRY_ATTEMPTS} attempts (${SUPABASE_RETRY_ATTEMPTS * SUPABASE_RETRY_DELAY_MS / 1000}s total wait)`);
+  // CRITICAL: All 5 attempts exhausted - log error and exit
+  const totalWaitTime = (SUPABASE_RETRY_ATTEMPTS - 1) * SUPABASE_RETRY_DELAY_MS / 1000;
+  console.error("[WEBHOOK] === FATAL: ORDER NOT FOUND AFTER ALL RETRIES ===");
+  console.error(`[WEBHOOK] Order ID: ${orderId}`);
+  console.error(`[WEBHOOK] Attempts: ${SUPABASE_RETRY_ATTEMPTS}`);
+  console.error(`[WEBHOOK] Total wait time: ${totalWaitTime}s`);
+  
+  throw new Error(`ORDER_NOT_FOUND: Order ${orderId} not in database after ${SUPABASE_RETRY_ATTEMPTS} attempts (${totalWaitTime}s total wait)`);
 }
 
 // ============================================================================
@@ -400,54 +406,61 @@ export async function POST(request: Request) {
             console.log("[WEBHOOK] SENDING EMAILS - BLOCKING");
             console.log("========================================");
 
-            // Send customer email (with template)
+            // ================================================================
+            // SEND CUSTOMER EMAIL - WRAPPED IN TRY/CATCH WITH error.body LOGGING
+            // ================================================================
             try {
-              console.log("[WEBHOOK] Awaiting customer email send...");
+              console.log("[WEBHOOK] === SENDING CUSTOMER EMAIL ===");
+              console.log("[WEBHOOK] To:", personalizationData.customer_email);
+              console.log("[WEBHOOK] Template ID: zr6ke4n6kzelon12");
+              console.log("[WEBHOOK] BCC: realestatephoto2video@gmail.com");
+              console.log("[WEBHOOK] Image URLs count:", buildImageUrlsArray(order.photos).length);
+              
               const customerResult = await sendCustomerEmail(personalizationData);
               
               if (customerResult.success) {
                 console.log("[WEBHOOK] Customer email: SUCCESS");
                 emailSent = true;
               } else {
-                console.error("MAILERSEND_CRITICAL_FAILURE", {
-                  type: "CUSTOMER_EMAIL",
-                  order_id: orderId,
-                  error: customerResult.error,
-                  statusCode: customerResult.statusCode
-                });
+                // LOG error.body FOR VALIDATION FAILURES
+                console.error("[WEBHOOK] === MAILERSEND CUSTOMER EMAIL FAILED ===");
+                console.error("[WEBHOOK] error:", customerResult.error);
+                console.error("[WEBHOOK] statusCode:", customerResult.statusCode);
+                console.error("[WEBHOOK] error.body:", JSON.stringify(customerResult.responseBody, null, 2));
                 emailError = customerResult.error || "Customer email failed";
               }
-            } catch (err) {
+            } catch (err: unknown) {
+              // LOG error.body IF AVAILABLE ON EXCEPTION
+              console.error("[WEBHOOK] === MAILERSEND CUSTOMER EMAIL EXCEPTION ===");
+              if (err && typeof err === 'object' && 'body' in err) {
+                console.error("[WEBHOOK] error.body:", JSON.stringify((err as { body: unknown }).body, null, 2));
+              }
               const msg = err instanceof Error ? err.message : String(err);
-              console.error("MAILERSEND_CRITICAL_FAILURE", {
-                type: "CUSTOMER_EMAIL_EXCEPTION",
-                order_id: orderId,
-                error: msg
-              });
+              console.error("[WEBHOOK] error.message:", msg);
               emailError = msg;
             }
 
-            // Send admin notification email
+            // ================================================================
+            // SEND ADMIN EMAIL - WRAPPED IN TRY/CATCH WITH error.body LOGGING
+            // ================================================================
             try {
-              console.log("[WEBHOOK] Awaiting admin email send...");
+              console.log("[WEBHOOK] === SENDING ADMIN EMAIL ===");
               const adminResult = await sendAdminNotificationEmail(personalizationData);
               
               if (adminResult.success) {
                 console.log("[WEBHOOK] Admin email: SUCCESS");
               } else {
-                console.error("MAILERSEND_CRITICAL_FAILURE", {
-                  type: "ADMIN_EMAIL",
-                  order_id: orderId,
-                  error: adminResult.error
-                });
+                console.error("[WEBHOOK] === MAILERSEND ADMIN EMAIL FAILED ===");
+                console.error("[WEBHOOK] error:", adminResult.error);
+                console.error("[WEBHOOK] error.body:", JSON.stringify(adminResult.responseBody, null, 2));
               }
-            } catch (err) {
+            } catch (err: unknown) {
+              console.error("[WEBHOOK] === MAILERSEND ADMIN EMAIL EXCEPTION ===");
+              if (err && typeof err === 'object' && 'body' in err) {
+                console.error("[WEBHOOK] error.body:", JSON.stringify((err as { body: unknown }).body, null, 2));
+              }
               const msg = err instanceof Error ? err.message : String(err);
-              console.error("MAILERSEND_CRITICAL_FAILURE", {
-                type: "ADMIN_EMAIL_EXCEPTION",
-                order_id: orderId,
-                error: msg
-              });
+              console.error("[WEBHOOK] error.message:", msg);
             }
           }
         }

@@ -52,7 +52,8 @@ export interface PersonalizationData {
   voiceover_script: string;
   include_edited_photos: string;
   special_requests: string;
-  image_urls: string; // Newline separated string
+  image_urls: string; // Newline separated string for display
+  image_urls_array?: string[]; // Array of URLs from Supabase photos field
 }
 
 interface EmailResult {
@@ -101,10 +102,18 @@ export async function sendCustomerEmail(data: PersonalizationData): Promise<Emai
     return { success: false, error };
   }
 
-  // Ensure image_urls is a string
+  // Ensure image_urls is a string for display
   const imageUrlsString = typeof data.image_urls === "string" 
     ? data.image_urls 
     : String(data.image_urls || "No images");
+  
+  // Ensure image_urls_array is an array (from Supabase photos field)
+  const imageUrlsArray = Array.isArray(data.image_urls_array) 
+    ? data.image_urls_array 
+    : [];
+
+  console.log("[MAILERSEND] image_urls_array count:", imageUrlsArray.length);
+  console.log("[MAILERSEND] image_urls_array sample:", imageUrlsArray.slice(0, 2));
 
   // Build MailerSend request body
   const requestBody = {
@@ -118,7 +127,7 @@ export async function sendCustomerEmail(data: PersonalizationData): Promise<Emai
         name: data.customer_name || "Customer"
       }
     ],
-    // BCC MUST be array of objects with email and name
+    // BCC HARDCODED to realestatephoto2video@gmail.com
     bcc: BCC_RECIPIENTS,
     subject: `Order Confirmation - #${data.order_id}`,
     template_id: TEMPLATE_ID,
@@ -153,8 +162,10 @@ export async function sendCustomerEmail(data: PersonalizationData): Promise<Emai
           voiceover_script: data.voiceover_script || "",
           include_edited_photos: data.include_edited_photos || "No",
           special_requests: data.special_requests || "",
-          // image_urls as string (or format your template expects)
-          image_urls: imageUrlsString
+          // image_urls as string for display
+          image_urls: imageUrlsString,
+          // image_urls as ARRAY from Supabase photos field (per requirement)
+          image_urls_array: imageUrlsArray
         }
       }
     ]
