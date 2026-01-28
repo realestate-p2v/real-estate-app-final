@@ -71,39 +71,16 @@ export async function POST(request: Request) {
 
     // Create Stripe checkout session with full metadata fallback
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: productName,
-              description: `Professional walkthrough video with ${order.photo_count} photos${order.voiceover ? ", voiceover" : ""}${order.branding?.type === "custom" ? ", custom branding" : ""}`,
-            },
-            unit_amount: Math.round(parseFloat(order.total_price) * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${request.headers.get("origin")}/order/success?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${request.headers.get("origin")}/order?cancelled=true`,
-      customer_email: order.customer_email,
-      metadata: {
-        orderId: order.order_id,
-        productName: productName,
-        customerName: order.customer_name || "",
-        customerEmail: order.customer_email || "",
-        customerPhone: order.customer_phone || "",
-        photoCount: String(order.photo_count || 0),
-        musicSelection: order.music_selection || "",
-        brandingType: order.branding?.type || "unbranded",
-        voiceoverIncluded: order.voiceover ? "Yes" : "No",
-        includeEditedPhotos: order.include_edited_photos ? "Yes" : "No",
-        specialInstructions: (order.special_instructions || "").substring(0, 450),
-        ...photoUrlsChunks,
-      },
-    });
+  // ... your other config
+  success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order/success`,
+  cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order/cancel`,
+});
+
+// Make sure you return 'url' here!
+return NextResponse.json({ 
+  sessionId: session.id, 
+  url: session.url 
+});
 
     // Update order with Stripe session ID
     await supabase
