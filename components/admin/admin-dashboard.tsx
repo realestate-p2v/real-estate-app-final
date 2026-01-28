@@ -6,7 +6,7 @@ import {
   Search, Mail, Music, User, Phone,
   ImageIcon, ExternalLink, ChevronDown, 
   ChevronUp, LayoutGrid, CheckCircle2,
-  Copy, Link2, AlertCircle, Globe, Mic, Brush, Info
+  Copy, Link2, AlertCircle, Globe, Mic, Brush, Hash, Info
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { jsPDF } from "jspdf"
-import "jspdf-autotable"
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([])
@@ -34,7 +32,8 @@ export default function AdminDashboard() {
       if (error) throw error
       setOrders(data || [])
     } catch (err: any) {
-      toast.error("Fetch failed")
+      console.error("Fetch error:", err)
+      toast.error("Database connection failed")
     } finally {
       setLoading(false)
     }
@@ -45,15 +44,18 @@ export default function AdminDashboard() {
   }, [])
 
   const copyToClipboard = (text: string) => {
+    if (!text) return;
     navigator.clipboard.writeText(text)
-    toast.success("Copied link")
+    toast.success("Copied to clipboard")
   }
 
   const copyAllUrls = (photos: any[]) => {
-    if (!photos || photos.length === 0) return
-    const urlString = photos.map(p => p.secure_url).join(", ")
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      toast.error("No URLs to copy")
+      return
+    }
+    const urlString = photos.map(p => p.secure_url).filter(Boolean).join(", ")
     copyToClipboard(urlString)
-    toast.success("All URLs copied")
   }
 
   const handleStatusUpdate = async (id: string, status: string) => {
@@ -68,11 +70,16 @@ export default function AdminDashboard() {
   const filteredOrders = orders.filter((o) => {
     const search = searchQuery.toLowerCase()
     return (
-      o.customer_name?.toLowerCase().includes(search) || 
-      o.customer_email?.toLowerCase().includes(search) || 
-      o.order_id?.toLowerCase().includes(search)
+      (o.customer_name?.toLowerCase().includes(search) || "") || 
+      (o.customer_email?.toLowerCase().includes(search) || "") || 
+      (o.order_id?.toLowerCase().includes(search) || "")
     )
   })
+
+  // Prevent hydration mismatch by only rendering after mount
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return null
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black p-4 lg:p-6 font-['Poppins']">
@@ -84,7 +91,7 @@ export default function AdminDashboard() {
             <div className="h-10 w-10 bg-black rounded-xl flex items-center justify-center text-white shadow-lg">
               <LayoutGrid className="h-6 w-6" />
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tighter">Command v4.0</h1>
+            <h1 className="text-xl font-black uppercase tracking-tighter">Command v4.1</h1>
           </div>
           
           <div className="relative w-full md:w-80">
@@ -119,12 +126,14 @@ export default function AdminDashboard() {
         <div className={`flex items-center gap-2 ${color} font-bold uppercase text-xs tracking-widest`}>
           {icon} {label}
         </div>
-        <Badge variant="outline" className="text-[10px] h-5">{count} Orders</Badge>
+        <Badge variant="outline" className="text-[10px] h-5">{count || 0} Orders</Badge>
       </div>
     )
   }
 
   function renderOrderList(list: any[], theme: "red" | "green") {
+    if (loading) return <div className="p-10 text-center animate-pulse text-zinc-400 font-bold uppercase text-xs tracking-[0.3em]">Accessing Mainframe...</div>
+
     return list.map((order) => (
       <Collapsible key={order.id} open={expandedOrder === order.id} onOpenChange={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
         <Card className={`overflow-hidden border-0 border-l-4 shadow-sm transition-all ${
@@ -132,56 +141,66 @@ export default function AdminDashboard() {
         }`}>
           <CollapsibleTrigger asChild>
             <CardContent className="p-3 cursor-pointer flex items-center gap-4 hover:bg-white transition-colors">
-              <img src={order.photos?.[0]?.secure_url} className="h-10 w-10 rounded-lg object-cover shadow-sm grayscale-[0.5]" />
+              <div className="h-10 w-10 bg-zinc-200 rounded-lg overflow-hidden flex-shrink-0">
+                {order.photos?.[0]?.secure_url ? (
+                  <img src={order.photos[0].secure_url} className="h-full w-full object-cover" alt="Preview" />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-zinc-400"><ImageIcon className="h-4 w-4"/></div>
+                )}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-zinc-900 truncate uppercase leading-tight">{order.customer_name}</p>
-                <p className="text-[10px] text-zinc-500 font-medium truncate">{order.customer_email}</p>
+                <p className="font-bold text-sm text-zinc-900 truncate uppercase leading-tight">{order.customer_name || "Unknown Client"}</p>
+                <p className="text-[10px] text-zinc-500 font-medium truncate">{order.customer_email || "No Email"}</p>
               </div>
               <div className="text-right flex items-center gap-4">
-                <p className="text-lg font-black text-zinc-900 leading-none">${order.total_price}</p>
+                <p className="text-lg font-black text-zinc-900 leading-none">${order.total_price || 0}</p>
                 {expandedOrder === order.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
             </CardContent>
           </CollapsibleTrigger>
 
           <CollapsibleContent className="p-5 border-t border-zinc-100 bg-white space-y-5">
-            {/* COMPACT CLOUDINARY HUB */}
+            {/* CLOUDINARY HUB */}
             <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200">
               <div className="flex items-center justify-between mb-2 px-1">
                 <p className="text-[9px] font-black uppercase text-zinc-400 tracking-widest flex items-center gap-2">
-                  <Globe className="h-3 w-3" /> Asset URLs ({order.photo_count})
+                  <Globe className="h-3 w-3" /> Asset URLs ({order.photo_count || 0})
                 </p>
                 <Button variant="ghost" size="sm" className="h-6 text-[9px] font-bold uppercase bg-zinc-900 text-white hover:bg-zinc-800" onClick={() => copyAllUrls(order.photos || [])}>
                   <Copy className="h-3 w-3 mr-1" /> Copy All
                 </Button>
               </div>
               <div className="max-h-24 overflow-y-auto space-y-1 bg-white p-2 rounded-lg border border-zinc-100">
-                {order.photos?.map((photo: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between gap-2 group">
-                    <span className="text-[9px] font-mono text-zinc-400 truncate flex-1">{photo.secure_url}</span>
-                    <button onClick={() => copyToClipboard(photo.secure_url)} className="text-[9px] font-bold text-blue-600 hover:underline">Copy</button>
-                  </div>
-                ))}
+                {order.photos && Array.isArray(order.photos) && order.photos.length > 0 ? (
+                    order.photos.map((photo: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 group">
+                        <span className="text-[9px] font-mono text-zinc-400 truncate flex-1">{photo?.secure_url || "Link Missing"}</span>
+                        <button onClick={() => copyToClipboard(photo?.secure_url)} className="text-[9px] font-bold text-blue-600 hover:underline">Copy</button>
+                    </div>
+                    ))
+                ) : (
+                    <p className="text-[9px] text-zinc-400 italic p-1">No Cloudinary assets linked yet.</p>
+                )}
               </div>
             </div>
 
-            {/* THE FOUR-COLUMN SPEC GRID */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <SpecBox label="Voiceover" icon={<Mic className="h-3 w-3"/>} value={order.voiceover || "Not Selected"} color="text-purple-600" />
-              <SpecBox label="Branding" icon={<Brush className="h-3 w-3"/>} value={order.branding_info || "None"} color="text-pink-600" />
-              <SpecBox label="Music" icon={<Music className="h-3 w-3"/>} value={order.music_selection || "Standard"} color="text-blue-600" />
+            {/* SPEC GRID */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <SpecBox label="Voiceover" icon={<Mic className="h-3 w-3"/>} value={order.voiceover} color="text-purple-600" />
+              <SpecBox label="Branding" icon={<Brush className="h-3 w-3"/>} value={order.branding} color="text-pink-600" />
+              <SpecBox label="Music" icon={<Music className="h-3 w-3"/>} value={order.music_selection} color="text-blue-600" />
               <SpecBox label="Order ID" icon={<Hash className="h-3 w-3"/>} value={order.order_id?.slice(-8)} color="text-zinc-600" />
-              <SpecBox label="Phone" icon={<Phone className="h-3 w-3"/>} value={order.customer_phone || "N/A"} color="text-zinc-600" />
+              <SpecBox label="Phone" icon={<Phone className="h-3 w-3"/>} value={order.customer_phone} color="text-zinc-600" />
               <SpecBox label="Payment" icon={<Info className="h-3 w-3"/>} value={order.payment_status} color={order.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'} />
             </div>
 
             {/* ACTION ROW */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2 border-t border-zinc-50">
               <Button size="sm" className="flex-1 h-9 bg-zinc-100 text-zinc-900 font-bold rounded-lg text-xs" asChild>
-                <a href={order.photos_url} target="_blank"><ExternalLink className="h-3 w-3 mr-2" /> Folder</a>
+                <a href={order.photos_url || "#"} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-2" /> Folder</a>
               </Button>
               {theme === "red" ? (
-                <Button onClick={() => handleStatusUpdate(order.id, "Delivered")} size="sm" className="flex-1 h-9 bg-green-600 text-white font-black rounded-lg text-xs">COMPLETE & SHIP</Button>
+                <Button onClick={() => handleStatusUpdate(order.id, "Delivered")} size="sm" className="flex-1 h-9 bg-green-600 text-white font-black rounded-lg text-xs shadow-md">COMPLETE & SHIP</Button>
               ) : (
                 <Button onClick={() => handleStatusUpdate(order.id, "New")} variant="outline" size="sm" className="flex-1 h-9 rounded-lg font-bold text-zinc-400 text-xs border-dashed">RE-OPEN</Button>
               )}
@@ -195,10 +214,10 @@ export default function AdminDashboard() {
   function SpecBox({ label, value, icon, color }: any) {
     return (
       <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 min-w-0">
-        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1 mb-1">
+        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1 mb-0.5">
           {icon} {label}
         </p>
-        <p className={`text-[10px] font-bold truncate ${color}`}>{value}</p>
+        <p className={`text-[10px] font-bold truncate ${color}`}>{value || "---"}</p>
       </div>
     )
   }
