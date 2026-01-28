@@ -57,7 +57,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#eceef0] text-slate-700 pb-20 font-sans">
-      {/* SOFT GREY NAV */}
       <nav className="sticky top-0 z-50 bg-[#f4f5f6]/80 backdrop-blur-md border-b border-slate-300 h-20 flex items-center px-8 justify-between">
         <div className="flex items-center gap-6">
           <Link href="/">
@@ -67,14 +66,14 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-slate-400 font-bold">9.1</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.2</span></h1>
           </div>
         </div>
         <div className="relative w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
             placeholder="Search orders..." 
-            className="pl-10 bg-white/50 border-slate-300 rounded-xl focus:bg-white transition-all" 
+            className="pl-10 bg-white/50 border-slate-300 rounded-xl focus:bg-white transition-all shadow-inner" 
             onChange={(e) => setSearch(e.target.value)} 
           />
         </div>
@@ -84,14 +83,16 @@ export default function AdminDashboard() {
         <section>
           <div className="flex justify-between items-end mb-6 px-2">
             <div>
-              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Production</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600/70">Production</h2>
               <p className="text-3xl font-black text-slate-800 tracking-tight">Active Queue</p>
             </div>
-            <Badge className="bg-slate-800 text-white px-4 py-1 font-black rounded-lg uppercase text-[10px] tracking-widest">{active.length} Orders</Badge>
+            <Badge className="bg-emerald-500 text-white px-5 py-1.5 font-black rounded-full uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-500/20">
+              {active.length} Orders Live
+            </Badge>
           </div>
 
           <div className="space-y-4">
-            {loading ? <div className="flex justify-center py-20"><Loader2 className="animate-spin text-slate-400 w-10 h-10" /></div> : 
+            {loading ? <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-500 w-10 h-10" /></div> : 
               active.map(o => <OrderRow key={o.id} order={o} isLive={true} />)}
           </div>
         </section>
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
         {archived.length > 0 && (
           <section className="pt-10 border-t border-slate-300">
             <h2 className="text-[10px] font-black uppercase mb-6 text-slate-400 tracking-[0.3em] px-2 text-center">Completed Records</h2>
-            <div className="space-y-4 opacity-60 grayscale">
+            <div className="space-y-4 opacity-60 grayscale hover:grayscale-0 transition-all">
               {archived.map(o => <OrderRow key={o.id} order={o} isLive={false} />)}
             </div>
           </section>
@@ -127,7 +128,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
   const save = async () => {
     await supabase.from("orders").update({ delivery_url: url }).eq("id", order.id)
-    toast.success("Delivery URL Updated")
+    toast.success("Delivery Link Saved")
   }
 
   const toggle = async (e: any) => {
@@ -139,12 +140,12 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className={`border-none transition-all duration-300 overflow-hidden shadow-sm
-        ${open ? 'bg-white' : 'bg-[#fdfdfe] hover:bg-white'} 
-        ${isLive ? 'ring-1 ring-slate-300 shadow-lg shadow-slate-200/50' : 'ring-1 ring-slate-200'}`}>
+      <Card className={`border-none transition-all duration-300 overflow-hidden
+        ${open ? 'bg-white shadow-2xl' : 'bg-[#fdfdfe] hover:bg-white shadow-sm'} 
+        ${isLive ? 'ring-2 ring-emerald-400/50 border-l-[6px] border-l-emerald-500 shadow-emerald-500/10' : 'ring-1 ring-slate-200 border-l-[6px] border-l-slate-300'}`}>
         
         <CollapsibleTrigger className="w-full p-6 flex items-center gap-6 text-left">
-          <div className="w-14 h-14 bg-slate-200 rounded-xl overflow-hidden flex-shrink-0 border border-slate-300">
+          <div className={`w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border ${isLive ? 'border-emerald-200' : 'border-slate-200'}`}>
             {order.photos?.[0] && <img src={order.photos[0].secure_url} className="object-cover w-full h-full" />}
           </div>
           <div className="flex-1 grid grid-cols-2 md:grid-cols-4 items-center gap-4">
@@ -154,23 +155,23 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
             </div>
             <div>
               <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Fee Paid</p>
-              <p className="text-base font-black text-slate-700">${order.total_price}</p>
+              <p className={`text-base font-black ${isLive ? 'text-emerald-600' : 'text-slate-500'}`}>${order.total_price}</p>
             </div>
             <div className="hidden md:block">
               <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Branding</p>
               <p className="text-[10px] font-black text-slate-500 uppercase">{b.tier}</p>
             </div>
             <div className="flex justify-end pr-2">
-              <ChevronDown className={`w-5 h-5 text-slate-300 transition-transform ${open ? 'rotate-180 text-slate-600' : ''}`} />
+              <ChevronDown className={`w-5 h-5 text-slate-300 transition-transform ${open ? 'rotate-180 text-emerald-500' : ''}`} />
             </div>
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent className="p-8 bg-[#f8f9fa] border-t border-slate-200 grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Section 1: Client Info */}
+          {/* Identity Section */}
           <div className="space-y-6">
             <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
-              <User className="w-3.5 h-3.5"/> Client Details
+              <User className="w-3.5 h-3.5"/> Identity
             </h4>
             <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-inner">
               <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
@@ -181,28 +182,22 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Company</span>
                 <span className="text-slate-700 font-black">{b.co}</span>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-slate-400 font-bold uppercase text-[8px]">Web</span>
-                <span className="text-slate-700 font-black truncate max-w-[120px]">{b.web}</span>
-              </div>
-              {b.logo && <Button asChild variant="outline" className="w-full bg-white border-slate-300 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-slate-50"><a href={b.logo} target="_blank">Download Logo</a></Button>}
+              {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:border-emerald-400 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
             </div>
-            <div className="space-y-2">
-               <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Special Requirements</span>
-               <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed min-h-[60px]">
-                 {order.branding_instructions || "Standard production rules apply."}
-               </div>
+            <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed">
+               <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Instructions</span>
+               {order.branding_instructions || "Standard production."}
             </div>
           </div>
 
-          {/* Section 2: Production Assets */}
+          {/* Production Section */}
           <div className="space-y-6">
              <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
-               <ImageIcon className="w-3.5 h-3.5"/> File Center
+               <ImageIcon className="w-3.5 h-3.5"/> Asset Bundle
              </h4>
              <Button 
                 onClick={copyAllImages} 
-                className="w-full h-12 bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center gap-2 transition-all rounded-xl shadow-md"
+                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-all rounded-xl shadow-lg shadow-emerald-600/20"
              >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span className="text-[10px] font-black uppercase tracking-widest">Copy URL List</span>
@@ -214,44 +209,43 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                   <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.voiceover || "—"}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music selection</span>
+                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music</span>
                   <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
                 </div>
              </div>
              
-             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-500 leading-relaxed max-h-32 overflow-y-auto font-medium">
-                <span className="text-[8px] font-black text-slate-300 uppercase block mb-1">Copywriting Script</span>
+             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-500 max-h-32 overflow-y-auto font-medium shadow-inner">
                 {order.voiceover_script || "Script pending."}
              </div>
 
              <div className="flex gap-2">
-                {order.music_file && <a href={order.music_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600"><Music className="w-3 h-3"/> Music</a>}
-                {order.script_file && <a href={order.script_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600"><FileText className="w-3 h-3"/> Script</a>}
+                {order.music_file && <a href={order.music_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
+                {order.script_file && <a href={order.script_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
              </div>
           </div>
 
-          {/* Section 3: Fulfillment */}
-          <div className="space-y-6 bg-slate-100 p-6 rounded-3xl border border-slate-300 shadow-inner">
-             <div className="text-[9px] text-slate-400 font-black border-b border-slate-200 pb-4 space-y-2">
-               <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-slate-300"/> {order.customer_email}</p>
-               <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-slate-300"/> {order.customer_phone || "No Phone"}</p>
+          {/* Fulfillment Section */}
+          <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
+             <div className="text-[9px] text-slate-400 font-black border-b border-emerald-100 pb-4 space-y-2">
+               <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
+               <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_phone || "No Phone"}</p>
              </div>
              <div className="space-y-3">
                <Input 
                   value={url} 
                   onChange={(e) => setUrl(e.target.value)} 
-                  placeholder="Paste final video link..." 
-                  className="h-11 bg-white border-slate-300 text-slate-800 text-xs font-bold rounded-xl focus:ring-slate-400"
+                  placeholder="Paste final deliverable..." 
+                  className="h-11 bg-white border-emerald-200 text-slate-800 text-xs font-bold rounded-xl focus:ring-emerald-400 focus:border-emerald-400"
                />
-               <Button onClick={save} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all">
+               <Button onClick={save} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all shadow-md">
                  SAVE DELIVERY
                </Button>
              </div>
              <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button asChild variant="outline" className="h-12 text-[9px] font-black border-slate-300 bg-white text-slate-500 hover:bg-slate-50 rounded-xl uppercase tracking-widest">
+                <Button asChild variant="outline" className="h-12 text-[9px] font-black border-slate-300 bg-white text-slate-500 hover:bg-slate-50 rounded-xl uppercase tracking-widest shadow-sm">
                   <a href={order.photos_url} target="_blank">Assets</a>
                 </Button>
-                <Button onClick={toggle} className={`h-12 text-[9px] font-black rounded-xl tracking-widest transition-all ${isLive ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' : 'bg-slate-300 text-slate-500'}`}>
+                <Button onClick={toggle} className={`h-12 text-[9px] font-black rounded-xl tracking-widest transition-all shadow-md ${isLive ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
                   {isLive ? 'COMPLETE' : 'RE-OPEN'}
                 </Button>
              </div>
