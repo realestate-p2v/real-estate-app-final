@@ -278,7 +278,7 @@ export default function AdminDashboard() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
-          
+          }}}
         </div>
       </div>
     </div>
