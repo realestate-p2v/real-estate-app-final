@@ -1,15 +1,7 @@
-//
-import { stripePromise } from "@/lib/stripe";
-
 const handlePayment = async () => {
   setIsLoading(true);
   try {
-    const stripe = await stripePromise; // Wait for Stripe to load
-    
-    if (!stripe) {
-      throw new Error("Stripe failed to initialize.");
-    }
-
+    // 1. Call your backend to create the session
     const response = await fetch("/api/orders/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -18,15 +10,20 @@ const handlePayment = async () => {
 
     const data = await response.json();
 
-    // Redirect to Stripe using the session ID from your API
-    const { error } = await stripe.redirectToCheckout({
-      sessionId: data.sessionId,
-    });
+    if (!data.url) {
+      throw new Error("No checkout URL received from server.");
+    }
 
-    if (error) throw error;
+    // 2. THE NEW WAY: Direct browser redirect
+    // Instead of stripe.redirectToCheckout({ sessionId: data.sessionId })
+    window.location.assign(data.url);
+
   } catch (err) {
     console.error("Payment error:", err);
+    toast.error("Could not open checkout. Please try again.");
   } finally {
     setIsLoading(false);
+  }
+};
   }
 };
