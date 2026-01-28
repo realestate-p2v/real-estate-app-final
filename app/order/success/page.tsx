@@ -1,4 +1,4 @@
-import { getCheckoutSession } from "@/app/actions/stripe";
+import { createCheckoutSession } from "@/app/actions/stripe";
 import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, Upload, ArrowRight } from "lucide-react";
