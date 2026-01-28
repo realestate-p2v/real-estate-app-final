@@ -1,29 +1,33 @@
+// components/stripe-payment.tsx
+
 const handlePayment = async () => {
   setIsLoading(true);
   try {
-    // 1. Call your backend to create the session
     const response = await fetch("/api/orders/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
+      body: JSON.stringify({
+        amount,
+        customerName,
+        customerEmail,
+        photoCount,
+        orderId
+      }),
     });
 
     const data = await response.json();
 
-    if (!data.url) {
-      throw new Error("No checkout URL received from server.");
+    if (!data.success || !data.url) {
+      throw new Error(data.error || "Failed to create checkout session");
     }
 
-    // 2. THE NEW WAY: Direct browser redirect
-    // Instead of stripe.redirectToCheckout({ sessionId: data.sessionId })
+    // THE FIX: Use direct URL redirect instead of stripe.redirectToCheckout
     window.location.assign(data.url);
 
   } catch (err) {
     console.error("Payment error:", err);
-    toast.error("Could not open checkout. Please try again.");
+    toast.error("Payment initialization failed. Please try again.");
   } finally {
     setIsLoading(false);
-  }
-};
   }
 };
