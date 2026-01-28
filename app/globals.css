@@ -123,3 +123,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
+
+:root {
+  --font-poppins: 'Poppins', sans-serif;
+}
+
+body {
+  font-family: var(--font-poppins);
+}
