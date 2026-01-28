@@ -152,4 +152,4 @@ export default function AdminDashboard() {
 
                         <div className="flex-1">
                           <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{order.customer_name}</h3>
-                          <p className="text-sm text-zinc-500 font-medium flex items>
+                          <p className="text-sm text-zinc-500 font-medium flex items
