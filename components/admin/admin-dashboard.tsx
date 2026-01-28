@@ -70,6 +70,22 @@ export function AdminDashboard() {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const supabase = createClient()
 
+// Inside AdminDashboard component
+const [showArchived, setShowArchived] = useState(false);
+
+// Filter logic
+const filteredOrders = orders.filter(order => 
+  showArchived ? order.status === "Delivered" : order.status !== "Delivered"
+);
+
+// Add this button to your Dashboard UI
+<Button 
+  variant="outline" 
+  onClick={() => setShowArchived(!showArchived)}
+>
+  {showArchived ? "View Active Orders" : "View Delivered Archive"}
+</Button>
+
   const fetchOrders = useCallback(async () => {
     setIsLoading(true)
     const { data, error } = await supabase
