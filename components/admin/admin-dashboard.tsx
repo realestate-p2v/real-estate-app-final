@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { 
   LayoutGrid, ExternalLink, Loader2, Copy, Music, Mic, Brush, 
-  Image as ImageIcon, ArrowLeft, Download, CheckCircle2, 
+  ImageIcon, ArrowLeft, Download, CheckCircle2, 
   Phone, Mail, Clock, Calendar, User, FileText, Globe
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -47,59 +47,37 @@ export default function AdminDashboard() {
   const activeOrders = filtered.filter(o => o.status !== 'Delivered')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-zinc-100 font-sans selection:bg-blue-500/30">
-      {/* GLOBAL HUD */}
-      <header className="sticky top-0 z-50 bg-[#0a0a0b]/80 backdrop-blur-md border-b border-zinc-800 p-4">
-        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-6">
+    <div className="min-h-screen bg-[#0a0a0b] text-zinc-100 font-sans p-4 md:p-8">
+      <div className="max-w-[1600px] mx-auto space-y-8">
+        <header className="flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-900/50 p-6 rounded-3xl border border-zinc-800">
+          <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="outline" size="sm" className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white rounded-lg h-9">
+              <Button variant="outline" size="sm" className="border-zinc-700 bg-transparent text-zinc-400">
                 <ArrowLeft className="h-4 w-4 mr-2" /> EXIT
               </Button>
             </Link>
-            <div className="h-10 w-[1px] bg-zinc-800 hidden md:block" />
-            <div>
-              <h1 className="text-lg font-black tracking-tighter uppercase flex items-center gap-2">
-                <span className="text-blue-500"><LayoutGrid className="w-5 h-5" /></span>
-                COMMAND <span className="text-zinc-500 font-light">v7.0</span>
-              </h1>
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none">Production Interface</p>
-            </div>
+            <h1 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
+              <LayoutGrid className="w-5 h-5 text-blue-500" /> COMMAND v7.1
+            </h1>
           </div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-80">
-              <Input 
-                placeholder="Search Active Queue..." 
-                className="h-10 bg-zinc-900 border-zinc-800 rounded-xl pl-4 text-sm focus:ring-blue-500"
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Badge className="bg-blue-600 text-white h-10 px-4 rounded-xl font-black text-sm uppercase">
-              {activeOrders.length} LIVE
-            </Badge>
+          <div className="flex gap-4 w-full md:w-auto">
+            <Input 
+              placeholder="Filter Production Queue..." 
+              className="bg-zinc-800 border-zinc-700 text-white rounded-xl h-11"
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <Badge className="bg-blue-600 text-white px-4 rounded-xl">{activeOrders.length} ACTIVE</Badge>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="p-4 md:p-8 max-w-[1800px] mx-auto">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-40 gap-4">
-            <Loader2 className="animate-spin h-10 w-10 text-blue-500" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Syncing Production Data...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-12">
-            {activeOrders.map(o => <ProductionSlate key={o.id} order={o} />)}
-            
-            {activeOrders.length === 0 && (
-              <div className="text-center py-40 border-2 border-dashed border-zinc-900 rounded-3xl">
-                <p className="text-zinc-600 font-black uppercase tracking-widest">No Active Production Orders</p>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+        <div className="grid grid-cols-1 gap-8">
+          {loading ? (
+            <div className="flex justify-center p-20"><Loader2 className="animate-spin h-8 w-8 text-blue-500" /></div>
+          ) : (
+            activeOrders.map(o => <ProductionSlate key={o.id} order={o} />)
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -112,172 +90,104 @@ function ProductionSlate({ order }: { order: any }) {
   const saveLink = async () => {
     setIsSaving(true)
     await supabase.from("orders").update({ delivery_url: link }).eq("id", order.id)
-    toast.success("Link Updated")
+    toast.success("Link Saved")
     setIsSaving(false)
   }
 
   const markDelivered = async () => {
-    const { error } = await supabase.from("orders").update({ status: 'Delivered' }).eq("id", order.id)
-    if (!error) {
-      toast.success("Order Shipped to Client")
-      window.location.reload()
-    }
+    await supabase.from("orders").update({ status: 'Delivered' }).eq("id", order.id)
+    window.location.reload()
   }
 
   return (
-    <Card className="bg-zinc-900/50 border-zinc-800 overflow-hidden rounded-3xl shadow-2xl">
-      {/* SLATE HEADER */}
-      <div className="bg-zinc-900 border-b border-zinc-800 p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-5">
-          <div className="h-16 w-16 bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-inner flex items-center justify-center group">
-            {order.photos?.[0]?.secure_url ? (
-              <img src={order.photos[0].secure_url} className="object-cover h-full w-full group-hover:scale-110 transition-transform" alt="" />
-            ) : (
-              <ImageIcon className="h-6 w-6 text-zinc-700"/>
-            )}
+    <Card className="bg-zinc-900 border-zinc-800 overflow-hidden rounded-3xl">
+      <div className="p-6 border-b border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-black/20">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 bg-black rounded-xl overflow-hidden border border-zinc-800">
+            {order.photos?.[0]?.secure_url && <img src={order.photos[0].secure_url} className="object-cover h-full w-full" />}
           </div>
           <div>
-            <div className="flex items-center gap-3 mb-1">
-               <h2 className="text-2xl font-black uppercase tracking-tighter text-white">{renderSafe(order.customer_name)}</h2>
-               <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 font-mono text-[10px]">ID: {order.order_id}</Badge>
-            </div>
-            <div className="flex gap-4 items-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
-               <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3"/> {new Date(order.created_at).toLocaleDateString()}</span>
-               <span className="flex items-center gap-1.5"><Globe className="w-3 h-3"/> IP: {order.ip_address || "SECURE"}</span>
-            </div>
+            <h2 className="text-lg font-black uppercase text-white">{renderSafe(order.customer_name)}</h2>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{order.order_id}</p>
           </div>
         </div>
-
-        <div className="flex gap-3 w-full lg:w-auto">
-          <Button asChild variant="outline" className="flex-1 lg:flex-none h-12 bg-white text-black border-none hover:bg-zinc-200 font-black uppercase text-xs rounded-xl px-8">
-            <a href={order.photos_url} target="_blank">
-              <ImageIcon className="w-4 h-4 mr-2" /> SOURCE ASSETS ({order.photo_count})
-            </a>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button asChild variant="outline" className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-white flex-1 md:flex-none">
+            <a href={order.photos_url} target="_blank"><ExternalLink className="w-4 h-4 mr-2" /> ASSETS</a>
           </Button>
-          <Button onClick={markDelivered} className="flex-1 lg:flex-none h-12 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs rounded-xl px-8 shadow-lg shadow-blue-900/20">
-             <CheckCircle2 className="w-4 h-4 mr-2" /> SHIP TO CLIENT
-          </Button>
+          <Button onClick={markDelivered} className="bg-blue-600 hover:bg-blue-500 text-white flex-1 md:flex-none">COMPLETE</Button>
         </div>
       </div>
 
-      {/* SLATE BODY: ALL DATA VISIBLE */}
-      <div className="p-8 grid grid-cols-1 xl:grid-cols-3 gap-10">
-        
-        {/* BRANDING HUB */}
-        <div className="space-y-6">
-          <SectionHeader icon={<Brush className="w-4 h-4 text-purple-500"/>} title="Identity & Branding" />
-          <div className="bg-black/40 p-6 rounded-2xl border border-zinc-800/50 space-y-5">
-            <DataPoint label="Production Level" value={order.branding} highlight />
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                <FileText className="w-3 h-3" /> Special Instructions
-              </p>
-              <div className="text-sm font-medium leading-relaxed text-zinc-300 bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 whitespace-pre-wrap">
-                {order.branding_instructions || "No custom instructions provided."}
-              </div>
+      <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2"><Brush className="w-3 h-3"/> Branding</h3>
+          <div className="bg-black/30 p-5 rounded-2xl border border-zinc-800 space-y-4">
+            <DataPoint label="Level" val={order.branding} />
+            <div className="space-y-1">
+              <p className="text-[8px] font-black text-zinc-500 uppercase">Instructions</p>
+              <p className="text-xs text-zinc-300 leading-relaxed bg-zinc-800/50 p-3 rounded-lg border border-zinc-700/50">{order.branding_instructions || "No instructions"}</p>
             </div>
-            <FileLink label="Company Logo / Graphics" url={order.branding_file} color="purple" />
+            <FileRow label="Logo Asset" url={order.branding_file} />
           </div>
         </div>
 
-        {/* AUDIO HUD */}
-        <div className="space-y-6">
-          <SectionHeader icon={<Mic className="w-4 h-4 text-blue-500"/>} title="Audio Production" />
-          <div className="bg-black/40 p-6 rounded-2xl border border-zinc-800/50 space-y-5">
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2"><Mic className="w-3 h-3"/> Production</h3>
+          <div className="bg-black/30 p-5 rounded-2xl border border-zinc-800 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-               <DataPoint label="Voice Profile" value={order.voiceover} />
-               <DataPoint label="Music Track" value={order.music_selection} />
+              <DataPoint label="Voice" val={order.voiceover} />
+              <DataPoint label="Music" val={order.music_selection} />
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                <FileText className="w-3 h-3" /> Voiceover Script
-              </p>
-              <div className="text-sm font-medium leading-relaxed text-zinc-300 bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 whitespace-pre-wrap min-h-[100px]">
-                {order.voiceover_script || "Refer to property photos for automated AI script generation."}
-              </div>
+            <div className="space-y-1">
+              <p className="text-[8px] font-black text-zinc-500 uppercase">Script</p>
+              <p className="text-xs text-zinc-300 leading-relaxed bg-zinc-800/50 p-3 rounded-lg border border-zinc-700/50">{order.voiceover_script || "AI Generation"}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <FileLink label="Music Upload" url={order.music_file} color="blue" />
-              <FileLink label="Script Upload" url={order.script_file} color="blue" />
+            <div className="grid grid-cols-2 gap-2">
+              <FileRow label="Music" url={order.music_file} />
+              <FileRow label="Script" url={order.script_file} />
             </div>
           </div>
         </div>
 
-        {/* DELIVERY HUB */}
-        <div className="space-y-6">
-          <SectionHeader icon={<Globe className="w-4 h-4 text-green-500"/>} title="Client & Delivery" />
-          <div className="bg-black/40 p-6 rounded-2xl border border-zinc-800/50 space-y-6">
-            <div className="space-y-3">
-               <div className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-xl border border-zinc-800">
-                  <span className="text-[10px] font-black text-zinc-500 uppercase">Email</span>
-                  <span className="text-xs font-bold text-white">{order.customer_email}</span>
-               </div>
-               <div className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-xl border border-zinc-100/5">
-                  <span className="text-[10px] font-black text-zinc-500 uppercase">Phone</span>
-                  <span className="text-xs font-bold text-white">{order.customer_phone || "Not Provided"}</span>
-               </div>
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2"><Globe className="w-3 h-3"/> Delivery</h3>
+          <div className="bg-black/30 p-5 rounded-2xl border border-zinc-800 space-y-6">
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-white flex items-center gap-2"><Mail className="w-3 h-3 text-zinc-500"/> {order.customer_email}</p>
+              <p className="text-[10px] font-bold text-white flex items-center gap-2"><Phone className="w-3 h-3 text-zinc-500"/> {order.customer_phone}</p>
             </div>
-
-            <div className="pt-6 border-t border-zinc-800">
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Final Video Destination URL</p>
+            <div className="pt-4 border-t border-zinc-800">
+              <p className="text-[8px] font-black text-zinc-500 uppercase mb-2">Delivery URL</p>
               <div className="flex gap-2">
-                <Input 
-                  value={link} 
-                  onChange={(e) => setLink(e.target.value)} 
-                  placeholder="Paste Vimeo/Drive/YouTube Link..." 
-                  className="h-12 bg-zinc-900 border-zinc-700 text-white rounded-xl"
-                />
-                <Button onClick={saveLink} className="h-12 bg-white text-black hover:bg-zinc-200 font-black px-6 rounded-xl">
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "SAVE"}
+                <Input value={link} onChange={(e) => setLink(e.target.value)} className="bg-zinc-800 border-zinc-700 h-9 text-xs" />
+                <Button onClick={saveLink} size="sm" className="bg-white text-black font-bold px-4 h-9">
+                  {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "SAVE"}
                 </Button>
               </div>
-              <p className="text-[9px] text-zinc-600 mt-3 font-bold uppercase italic">Updating this will send an email update if configured.</p>
             </div>
           </div>
         </div>
-
       </div>
     </Card>
   )
 }
 
-function SectionHeader({ icon, title }: { icon: any, title: string }) {
-  return (
-    <div className="flex items-center gap-3 px-2">
-      {icon}
-      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">{title}</h3>
-    </div>
-  )
-}
-
-function DataPoint({ label, value, highlight }: { label: string, value: string, highlight?: boolean }) {
+function DataPoint({ label, val }: { label: string, val: string }) {
   return (
     <div>
-      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">{label}</p>
-      <p className={`text-sm font-black uppercase ${highlight ? 'text-blue-400' : 'text-white'}`}>{renderSafe(value)}</p>
+      <p className="text-[8px] font-black text-zinc-500 uppercase mb-0.5">{label}</p>
+      <p className="text-sm font-black text-white">{renderSafe(val)}</p>
     </div>
   )
 }
 
-function FileLink({ label, url, color }: { label: string, url: string, color: string }) {
-  if (!url || url === "none") return null;
-  const colorMap: any = {
-    purple: "border-purple-500/20 hover:border-purple-500 bg-purple-500/5 text-purple-400",
-    blue: "border-blue-500/20 hover:border-blue-500 bg-blue-500/5 text-blue-400",
-    green: "border-green-500/20 hover:border-green-500 bg-green-500/5 text-green-400"
-  };
-  
+function FileRow({ label, url }: { label: string, url: string }) {
+  if (!url || url === "none") return null
   return (
-    <a href={url} target="_blank" rel="noreferrer" className={`flex items-center justify-between p-4 rounded-xl border transition-all group ${colorMap[color]}`}>
-       <div className="flex flex-col">
-          <span className="text-[8px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Asset</span>
-          <span className="text-[11px] font-black uppercase leading-none">{label}</span>
-       </div>
-       <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
-    </a>
-  )
-}
-       <Download className="w-3 h-3 text-zinc-300 group-hover:text-black" />
+    <a href={url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-blue-500 transition-all group">
+      <span className="text-[9px] font-black text-zinc-400 uppercase">{label}</span>
+      <Download className="w-3.5 h-3.5 text-zinc-500 group-hover:text-blue-500" />
     </a>
   )
 }
