@@ -1,9 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-poppins: 'Poppins', sans-serif;
+
   --background: oklch(0.98 0.002 240);
   --foreground: oklch(0.15 0.02 240);
   --card: oklch(1 0 0);
@@ -114,17 +117,6 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
-@import 'tailwindcss';
-@import 'tw-animate-css';
-
-@custom-variant dark (&:is(.dark *));
-
-:root {
-  --font-poppins: 'Poppins', sans-serif;
-  /* ... rest of variables */
-}
-
 
 @layer base {
   * {
