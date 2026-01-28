@@ -114,6 +114,17 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-poppins: 'Poppins', sans-serif;
+  /* ... rest of variables */
+}
+
 
 @layer base {
   * {
@@ -124,12 +135,4 @@
   }
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
 
-:root {
-  --font-poppins: 'Poppins', sans-serif;
-}
-
-body {
-  font-family: var(--font-poppins);
-}
