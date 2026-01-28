@@ -1,4 +1,4 @@
-import "server-only";
-import Stripe from "stripe";
+import { loadStripe } from '@stripe/stripe-js';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Make sure the variable name matches exactly what is in your .env file
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
