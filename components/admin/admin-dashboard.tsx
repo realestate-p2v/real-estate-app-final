@@ -66,7 +66,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.2</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.3</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -168,10 +168,10 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
         </CollapsibleTrigger>
 
         <CollapsibleContent className="p-8 bg-[#f8f9fa] border-t border-slate-200 grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Identity Section */}
+          {/* Section 1: Branding Section */}
           <div className="space-y-6">
             <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
-              <User className="w-3.5 h-3.5"/> Identity
+              <Brush className="w-3.5 h-3.5"/> Branding Section
             </h4>
             <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-inner">
               <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
@@ -185,15 +185,15 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
               {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:border-emerald-400 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
             </div>
             <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed">
-               <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Instructions</span>
-               {order.branding_instructions || "Standard production."}
+               <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
+               {order.branding_instructions || "Standard production parameters."}
             </div>
           </div>
 
-          {/* Production Section */}
+          {/* Section 2: Asset Management */}
           <div className="space-y-6">
              <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
-               <ImageIcon className="w-3.5 h-3.5"/> Asset Bundle
+               <ImageIcon className="w-3.5 h-3.5"/> Asset Control
              </h4>
              <Button 
                 onClick={copyAllImages} 
@@ -209,13 +209,14 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                   <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.voiceover || "—"}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music</span>
+                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music selection</span>
                   <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
                 </div>
              </div>
              
-             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-500 max-h-32 overflow-y-auto font-medium shadow-inner">
-                {order.voiceover_script || "Script pending."}
+             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-50 max-h-32 overflow-y-auto font-medium shadow-inner">
+                <span className="text-[8px] font-black text-slate-300 uppercase block mb-1">Narrative Script</span>
+                <p className="text-slate-600">{order.voiceover_script || "Refer to raw files."}</p>
              </div>
 
              <div className="flex gap-2">
@@ -224,8 +225,8 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
           </div>
 
-          {/* Fulfillment Section */}
-          <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
+          {/* Section 3: Fulfillment Section */}
+          <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
              <div className="text-[9px] text-slate-400 font-black border-b border-emerald-100 pb-4 space-y-2">
                <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
                <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_phone || "No Phone"}</p>
@@ -234,19 +235,16 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                <Input 
                   value={url} 
                   onChange={(e) => setUrl(e.target.value)} 
-                  placeholder="Paste final deliverable..." 
+                  placeholder="Paste deliverable link..." 
                   className="h-11 bg-white border-emerald-200 text-slate-800 text-xs font-bold rounded-xl focus:ring-emerald-400 focus:border-emerald-400"
                />
                <Button onClick={save} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all shadow-md">
-                 SAVE DELIVERY
+                 SYNC DELIVERY
                </Button>
              </div>
-             <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button asChild variant="outline" className="h-12 text-[9px] font-black border-slate-300 bg-white text-slate-500 hover:bg-slate-50 rounded-xl uppercase tracking-widest shadow-sm">
-                  <a href={order.photos_url} target="_blank">Assets</a>
-                </Button>
-                <Button onClick={toggle} className={`h-12 text-[9px] font-black rounded-xl tracking-widest transition-all shadow-md ${isLive ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
-                  {isLive ? 'COMPLETE' : 'RE-OPEN'}
+             <div className="flex gap-3 pt-2">
+                <Button onClick={toggle} className={`w-full h-12 text-[9px] font-black rounded-xl tracking-widest transition-all shadow-md ${isLive ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
+                  {isLive ? 'MARK AS DELIVERED' : 'RE-OPEN PRODUCTION'}
                 </Button>
              </div>
           </div>
