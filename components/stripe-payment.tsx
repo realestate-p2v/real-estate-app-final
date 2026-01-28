@@ -3,6 +3,7 @@
 const handlePayment = async () => {
   setIsLoading(true);
   try {
+    // 1. We still fetch the session from your API
     const response = await fetch("/api/orders/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -11,22 +12,24 @@ const handlePayment = async () => {
         customerName,
         customerEmail,
         photoCount,
-        orderId
+        orderId: orderId // Ensure this matches your prop name
       }),
     });
 
     const data = await response.json();
 
-    if (!data.success || !data.url) {
-      throw new Error(data.error || "Failed to create checkout session");
+    // 2. We check if the server gave us a URL
+    if (!data.url) {
+      throw new Error("No checkout URL found in server response.");
     }
 
-    // THE FIX: Use direct URL redirect instead of stripe.redirectToCheckout
+    // 3. THE FIX: Redirect the browser directly to Stripe's hosted page
+    // This bypasses the deprecated stripe.redirectToCheckout function entirely
     window.location.assign(data.url);
 
-  } catch (err) {
+  } catch (err: any) {
     console.error("Payment error:", err);
-    toast.error("Payment initialization failed. Please try again.");
+    toast.error(err.message || "Payment failed to initialize.");
   } finally {
     setIsLoading(false);
   }
