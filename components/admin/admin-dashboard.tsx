@@ -16,11 +16,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "sonner" 
 
 export default function AdminDashboard() {
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("new")
   const [searchQuery, setSearchQuery] = useState("")
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [expandedOrder, setExpandedOrder] = useState(null)
   const supabase = createClient()
 
   const fetchOrders = async () => {
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
         .order("created_at", { ascending: false })
       if (error) throw error
       setOrders(data || [])
-    } catch (err: any) {
+    } catch (err) {
       toast.error("Fetch failed")
     } finally {
       setLoading(false)
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     fetchOrders()
   }, [])
 
-  const handleStatusUpdate = async (id: string, status: string) => {
+  const handleStatusUpdate = async (id, status) => {
     const { error } = await supabase.from("orders").update({ status }).eq("id", id)
     if (error) toast.error("Update failed")
     else {
