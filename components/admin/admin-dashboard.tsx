@@ -66,7 +66,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.3</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.4</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -150,16 +150,16 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
           </div>
           <div className="flex-1 grid grid-cols-2 md:grid-cols-4 items-center gap-4">
             <div>
-              <h3 className="font-black text-base text-slate-800 uppercase tracking-tight">{order.customer_name || "Client"}</h3>
-              <p className="text-[9px] text-slate-400 font-black mt-1 uppercase tracking-widest">ORDER: {order.order_id?.slice(0,8)}</p>
+              <h3 className="font-black text-lg text-slate-800 uppercase tracking-tight leading-tight">{order.customer_name || "Client"}</h3>
+              <p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-widest">ID: {order.order_id?.slice(0,8)}</p>
             </div>
             <div>
-              <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Fee Paid</p>
-              <p className={`text-base font-black ${isLive ? 'text-emerald-600' : 'text-slate-500'}`}>${order.total_price}</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Fee Paid</p>
+              <p className={`text-xl font-black ${isLive ? 'text-emerald-600' : 'text-slate-500'}`}>${order.total_price}</p>
             </div>
             <div className="hidden md:block">
-              <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Branding</p>
-              <p className="text-[10px] font-black text-slate-500 uppercase">{b.tier}</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Branding</p>
+              <p className="text-sm font-black text-slate-700 uppercase">{b.tier}</p>
             </div>
             <div className="flex justify-end pr-2">
               <ChevronDown className={`w-5 h-5 text-slate-300 transition-transform ${open ? 'rotate-180 text-emerald-500' : ''}`} />
@@ -186,7 +186,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
             </div>
             <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed">
                <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
-               {order.branding_instructions || "Standard production parameters."}
+               {order.branding_instructions || "Standard production."}
             </div>
           </div>
 
@@ -200,7 +200,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-all rounded-xl shadow-lg shadow-emerald-600/20"
              >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span className="text-[10px] font-black uppercase tracking-widest">Copy URL List</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">copy image url list</span>
              </Button>
 
              <div className="grid grid-cols-2 gap-3">
@@ -214,9 +214,9 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 </div>
              </div>
              
-             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-50 max-h-32 overflow-y-auto font-medium shadow-inner">
+             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-500 max-h-32 overflow-y-auto font-medium shadow-inner">
                 <span className="text-[8px] font-black text-slate-300 uppercase block mb-1">Narrative Script</span>
-                <p className="text-slate-600">{order.voiceover_script || "Refer to raw files."}</p>
+                {order.voiceover_script || "No script content found."}
              </div>
 
              <div className="flex gap-2">
@@ -235,7 +235,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                <Input 
                   value={url} 
                   onChange={(e) => setUrl(e.target.value)} 
-                  placeholder="Paste deliverable link..." 
+                  placeholder="Paste final deliverable link..." 
                   className="h-11 bg-white border-emerald-200 text-slate-800 text-xs font-bold rounded-xl focus:ring-emerald-400 focus:border-emerald-400"
                />
                <Button onClick={save} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all shadow-md">
