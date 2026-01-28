@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { getStripe } from "@/lib/stripe-client";
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
@@ -14,9 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
-
 type OrderStep = "upload" | "details" | "payment";
-
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
@@ -37,10 +34,8 @@ export function OrderForm() {
     phone: "",
     notes: "",
   });
-
   const photoCount = photos.length;
   const canProceed = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
-
   const getBasePrice = () => {
     if (photoCount === 1) return 1; // Test price
     if (photoCount <= 12) return 99;
@@ -48,16 +43,13 @@ export function OrderForm() {
     if (photoCount <= 35) return 199;
     return 0;
   };
-
   const getBrandingPrice = () => brandingSelection === "custom" ? 25 : 0;
   const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
   const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
   const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice();
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
   const uploadToCloudinary = async (file: Blob, folder: string) => {
     try {
       const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -65,10 +57,9 @@ export function OrderForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder: `photo2video/${folder}` }),
       });
-      
+     
       const sigData = await sigResponse.json();
       if (!sigData.success) throw new Error("Signature failed");
-
       const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
       const uploadData = new FormData();
       uploadData.append("file", file);
@@ -76,27 +67,22 @@ export function OrderForm() {
       uploadData.append("timestamp", timestamp.toString());
       uploadData.append("signature", signature);
       uploadData.append("folder", folderPath);
-
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { // Changed to /upload for audio support
         method: "POST",
         body: uploadData
       });
-
       return await response.json();
     } catch (error) {
       console.error("Cloudinary Error:", error);
       return null;
     }
   };
-
   const handleSubmitOrder = async () => {
     if (!formData.name || !formData.email) {
       alert("Please fill in your name and email.");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       // 1. Upload Photos
       const uploadedPhotos = [];
@@ -112,15 +98,19 @@ export function OrderForm() {
           });
         }
       }
-
       // 2. Upload Logo if needed
       let brandingLogoUrl = "";
       if (brandingData.logoFile) {
         const logoResult = await uploadToCloudinary(brandingData.logoFile, "logos");
         brandingLogoUrl = logoResult?.secure_url || "";
       }
-
-      // 3. SAVE TO DATABASE (CRITICAL STEP)
+      // 3. Upload Custom Audio if needed
+      let musicFileUrl = "";
+      if (customAudioFile) {
+        const musicResult = await uploadToCloudinary(customAudioFile, "audio");
+        musicFileUrl = musicResult?.secure_url || "";
+      }
+      // 4. SAVE TO DATABASE (CRITICAL STEP)
       const dbResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,6 +118,7 @@ export function OrderForm() {
           customer: { name: formData.name, email: formData.email, phone: formData.phone },
           uploadedPhotos,
           musicSelection,
+          musicFile: musicFileUrl,
           branding: { type: brandingSelection, logoUrl: brandingLogoUrl },
           voiceover: voiceoverSelection === "voiceover",
           voiceoverScript,
@@ -137,13 +128,10 @@ export function OrderForm() {
           specialInstructions: formData.notes
         }),
       });
-
       const dbResult = await dbResponse.json();
       if (!dbResult.success) throw new Error(dbResult.error || "Failed to save to database");
-
       const createdOrderId = dbResult.data.orderId;
-
-      // 4. INITIATE STRIPE CHECKOUT
+      // 5. INITIATE STRIPE CHECKOUT
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,18 +141,15 @@ export function OrderForm() {
           orderData: { orderId: createdOrderId }
         }),
       });
-
       const session = await checkoutResponse.json();
       const stripe = await getStripe();
       await stripe?.redirectToCheckout({ sessionId: session.id });
-
     } catch (error: any) {
       alert("Error processing order: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
       <div className="lg:col-span-2 space-y-6">
@@ -177,14 +162,13 @@ export function OrderForm() {
               </div>
               <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
             </div>
-
             {photos.length > 0 && (
               <div className={`rounded-2xl border-2 p-6 transition-colors ${sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-amber-50/50 border-amber-400"}`}>
                 <div className="flex items-center gap-4">
-                  <Checkbox 
-                    id="confirm" 
-                    checked={sequenceConfirmed} 
-                    onCheckedChange={(checked) => setSequenceConfirmed(checked === true)} 
+                  <Checkbox
+                    id="confirm"
+                    checked={sequenceConfirmed}
+                    onCheckedChange={(checked) => setSequenceConfirmed(checked === true)}
                     className="h-6 w-6"
                   />
                   <label htmlFor="confirm" className="font-medium cursor-pointer">
@@ -193,7 +177,6 @@ export function OrderForm() {
                 </div>
               </div>
             )}
-
             {photos.length > 0 && (
               <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
                 <MusicSelector selected={musicSelection} onSelect={setMusicSelection} customAudioFile={customAudioFile} onCustomAudioChange={setCustomAudioFile} />
@@ -217,7 +200,6 @@ export function OrderForm() {
             )}
           </div>
         )}
-
         {step === "details" && (
           <div className="bg-card rounded-2xl border border-border p-8 space-y-6">
              <Button variant="ghost" onClick={() => setStep("upload")} className="mb-4">
@@ -242,9 +224,9 @@ export function OrderForm() {
                 <Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Add any specific requests here..." />
               </div>
             </div>
-            <Button 
-                onClick={handleSubmitOrder} 
-                disabled={isSubmitting || !formData.name || !formData.email} 
+            <Button
+                onClick={handleSubmitOrder}
+                disabled={isSubmitting || !formData.name || !formData.email}
                 className="w-full py-6 text-lg bg-accent"
             >
               {isSubmitting ? <><Loader2 className="mr-2 animate-spin" /> Processing Order...</> : <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>}
@@ -252,7 +234,6 @@ export function OrderForm() {
           </div>
         )}
       </div>
-
       <div className="lg:col-span-1">
         <OrderSummary photoCount={photoCount} brandingOption={brandingSelection} voiceoverOption={voiceoverSelection} includeEditedPhotos={includeEditedPhotos} />
       </div>
