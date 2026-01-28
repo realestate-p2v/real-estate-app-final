@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { 
-  Search, Mail, Music, User, Phone,
-  ImageIcon, ExternalLink, ChevronDown, 
-  ChevronUp, LayoutGrid, CheckCircle2,
-  Copy, Link2, AlertCircle, Globe, Mic, Brush, Hash, Info
+  Search, LayoutGrid, CheckCircle2, AlertCircle, 
+  ChevronDown, ChevronUp, ImageIcon, Globe, Copy,
+  Mic, Brush, Music, Hash, Phone, Info, ExternalLink,
+  Layers, CreditCard, Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,11 +16,16 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
 export default function AdminDashboard() {
+  const [mounted, setMounted] = useState(false)
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const supabase = createClient()
+
+  useEffect(() => {
+    setMounted(true)
+    fetchOrders()
+  }, [])
 
   const fetchOrders = async () => {
     try {
@@ -31,194 +36,236 @@ export default function AdminDashboard() {
         .order("created_at", { ascending: false })
       if (error) throw error
       setOrders(data || [])
-    } catch (err: any) {
-      console.error("Fetch error:", err)
-      toast.error("Database connection failed")
+    } catch (err) {
+      console.error("Database Error:", err)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchOrders()
-  }, [])
+  if (!mounted) return null
 
-  const copyToClipboard = (text: string) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text)
-    toast.success("Copied to clipboard")
-  }
-
-  const copyAllUrls = (photos: any[]) => {
-    if (!photos || !Array.isArray(photos) || photos.length === 0) {
-      toast.error("No URLs to copy")
-      return
-    }
-    const urlString = photos.map(p => p.secure_url).filter(Boolean).join(", ")
-    copyToClipboard(urlString)
-  }
-
-  const handleStatusUpdate = async (id: string, status: string) => {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id)
-    if (error) toast.error("Update failed")
-    else {
-      toast.success(`Moved to ${status}`)
-      fetchOrders()
-    }
-  }
-
-  const filteredOrders = orders.filter((o) => {
+  const filtered = orders.filter(o => {
     const search = searchQuery.toLowerCase()
     return (
-      (o.customer_name?.toLowerCase().includes(search) || "") || 
-      (o.customer_email?.toLowerCase().includes(search) || "") || 
-      (o.order_id?.toLowerCase().includes(search) || "")
+      (o.customer_name?.toLowerCase() || "").includes(search) ||
+      (o.order_id?.toLowerCase() || "").includes(search) ||
+      (o.customer_email?.toLowerCase() || "").includes(search)
     )
   })
 
-  // Prevent hydration mismatch by only rendering after mount
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return null
+  const active = filtered.filter(o => o.status !== "Delivered")
+  const archived = filtered.filter(o => o.status === "Delivered")
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black p-4 lg:p-6 font-['Poppins']">
-      <div className="max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-black p-3 md:p-6 lg:p-10 font-['Poppins']">
+      <div className="max-w-[1600px] mx-auto">
         
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-black rounded-xl flex items-center justify-center text-white shadow-lg">
-              <LayoutGrid className="h-6 w-6" />
+        {/* HEADER AREA */}
+        <header className="flex flex-col gap-6 mb-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-2xl rotate-3">
+                <LayoutGrid className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight leading-none">Universal Command</h1>
+                <p className="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Cross-Platform Response v4.5</p>
+              </div>
             </div>
-            <h1 className="text-xl font-black uppercase tracking-tighter">Command v4.1</h1>
+            
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
+              <Input 
+                placeholder="Global filter..." 
+                className="pl-12 h-14 bg-white dark:bg-zinc-900 border-none shadow-xl rounded-2xl text-base" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-          
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-            <Input 
-              placeholder="Search..." 
-              className="pl-10 h-10 bg-white border-zinc-200 text-sm rounded-xl"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
+        </header>
 
-        {/* TWO COLUMN GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <SectionHeader label="Live Queue" color="text-red-600" border="border-red-500" icon={<AlertCircle className="h-4 w-4"/>} count={filteredOrders.filter(o => o.status !== "Delivered").length} />
-            {renderOrderList(filteredOrders.filter(o => o.status !== "Delivered"), "red")}
+        {/* RESPONSIVE DUAL COLUMN GRID */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 lg:gap-12">
+          
+          {/* QUEUE 1: ACTIVE */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b-4 border-red-500 pb-4">
+              <h2 className="text-red-600 font-black uppercase text-sm tracking-widest flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" /> Live Production
+              </h2>
+              <Badge className="bg-red-500 text-white font-bold h-7 px-4 rounded-full shadow-lg shadow-red-500/30">{active.length}</Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {active.map(order => <OrderCard key={order.id} order={order} theme="red" refresh={fetchOrders} />)}
+            </div>
           </div>
-          <div className="space-y-4">
-            <SectionHeader label="Archive" color="text-green-600" border="border-green-500" icon={<CheckCircle2 className="h-4 w-4"/>} count={filteredOrders.filter(o => o.status === "Delivered").length} />
-            {renderOrderList(filteredOrders.filter(o => o.status === "Delivered"), "green")}
+
+          {/* QUEUE 2: ARCHIVE */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b-4 border-green-500 pb-4">
+              <h2 className="text-green-600 font-black uppercase text-sm tracking-widest flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" /> Delivered Archive
+              </h2>
+              <Badge className="bg-green-500 text-white font-bold h-7 px-4 rounded-full shadow-lg shadow-green-500/30">{archived.length}</Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {archived.map(order => <OrderCard key={order.id} order={order} theme="green" refresh={fetchOrders} />)}
+            </div>
           </div>
+
         </div>
       </div>
     </div>
   )
+}
 
-  function SectionHeader({ label, color, border, icon, count }: any) {
-    return (
-      <div className={`flex items-center justify-between border-b-2 ${border} pb-2 mb-2`}>
-        <div className={`flex items-center gap-2 ${color} font-bold uppercase text-xs tracking-widest`}>
-          {icon} {label}
-        </div>
-        <Badge variant="outline" className="text-[10px] h-5">{count || 0} Orders</Badge>
-      </div>
-    )
+function OrderCard({ order, theme, refresh }: any) {
+  const [isOpen, setIsOpen] = useState(false)
+  const supabase = createClient()
+
+  const updateStatus = async (newStatus: string) => {
+    const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", order.id)
+    if (!error) {
+      refresh()
+      toast.success(`Project moved to ${newStatus}`)
+    }
   }
 
-  function renderOrderList(list: any[], theme: "red" | "green") {
-    if (loading) return <div className="p-10 text-center animate-pulse text-zinc-400 font-bold uppercase text-xs tracking-[0.3em]">Accessing Mainframe...</div>
-
-    return list.map((order) => (
-      <Collapsible key={order.id} open={expandedOrder === order.id} onOpenChange={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
-        <Card className={`overflow-hidden border-0 border-l-4 shadow-sm transition-all ${
-          theme === "red" ? "border-l-red-500 bg-red-50/10" : "border-l-green-500 bg-green-50/10"
-        }`}>
-          <CollapsibleTrigger asChild>
-            <CardContent className="p-3 cursor-pointer flex items-center gap-4 hover:bg-white transition-colors">
-              <div className="h-10 w-10 bg-zinc-200 rounded-lg overflow-hidden flex-shrink-0">
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className={`group border-0 border-l-[6px] shadow-sm transition-all duration-300 hover:shadow-xl ${
+        theme === 'red' ? 'border-l-red-500 bg-red-50/10' : 'border-l-green-500 bg-green-50/10'
+      }`}>
+        <CollapsibleTrigger asChild>
+          <CardContent className="p-4 md:p-6 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 relative overflow-hidden">
+            
+            {/* THUMBNAIL & STATUS (MOBILE COMPACT) */}
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="h-16 w-16 md:h-20 md:w-20 bg-zinc-200 rounded-2xl overflow-hidden shadow-inner flex-shrink-0">
                 {order.photos?.[0]?.secure_url ? (
-                  <img src={order.photos[0].secure_url} className="h-full w-full object-cover" alt="Preview" />
+                  <img src={order.photos[0].secure_url} className="object-cover h-full w-full group-hover:scale-110 transition-transform duration-500" alt="" />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center text-zinc-400"><ImageIcon className="h-4 w-4"/></div>
+                  <div className="h-full w-full flex items-center justify-center text-zinc-400"><ImageIcon className="h-6 w-6" /></div>
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-zinc-900 truncate uppercase leading-tight">{order.customer_name || "Unknown Client"}</p>
-                <p className="text-[10px] text-zinc-500 font-medium truncate">{order.customer_email || "No Email"}</p>
+              <div className="sm:hidden flex-1">
+                 <p className="font-black text-lg truncate uppercase">{order.customer_name || "Guest"}</p>
+                 <p className="text-xl font-black text-zinc-900">${order.total_price}</p>
               </div>
-              <div className="text-right flex items-center gap-4">
-                <p className="text-lg font-black text-zinc-900 leading-none">${order.total_price || 0}</p>
-                {expandedOrder === order.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </div>
-            </CardContent>
-          </CollapsibleTrigger>
+            </div>
 
-          <CollapsibleContent className="p-5 border-t border-zinc-100 bg-white space-y-5">
-            {/* CLOUDINARY HUB */}
-            <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200">
-              <div className="flex items-center justify-between mb-2 px-1">
-                <p className="text-[9px] font-black uppercase text-zinc-400 tracking-widest flex items-center gap-2">
-                  <Globe className="h-3 w-3" /> Asset URLs ({order.photo_count || 0})
+            {/* FRONT OF CARD DATA - PRIMARY */}
+            <div className="flex-1 min-w-0 space-y-2 w-full">
+              <div className="hidden sm:block">
+                <p className="font-black text-xl md:text-2xl text-zinc-900 truncate uppercase leading-none mb-1">
+                  {order.customer_name || "Guest Lead"}
                 </p>
-                <Button variant="ghost" size="sm" className="h-6 text-[9px] font-bold uppercase bg-zinc-900 text-white hover:bg-zinc-800" onClick={() => copyAllUrls(order.photos || [])}>
-                  <Copy className="h-3 w-3 mr-1" /> Copy All
+                <p className="text-xs font-medium text-zinc-500 truncate mb-3">{order.customer_email}</p>
+              </div>
+
+              {/* TACTICAL CHIPS (VISIBLE ON FRONT) */}
+              <div className="flex flex-wrap gap-2">
+                <Chip icon={<Layers className="h-3 w-3"/>} label={`${order.photo_count || 0} Ph.`} />
+                <Chip icon={<Music className="h-3 w-3"/>} label={order.music_selection} color="text-blue-600 bg-blue-50" />
+                <Chip icon={<Mic className="h-3 w-3"/>} label={order.voiceover} color="text-purple-600 bg-purple-50" />
+                <Chip icon={<Brush className="h-3 w-3"/>} label={order.branding} color="text-pink-600 bg-pink-50" />
+              </div>
+            </div>
+
+            {/* PRICE & TOGGLE */}
+            <div className="hidden sm:flex items-center gap-6">
+              <div className="text-right">
+                <p className="font-black text-2xl md:text-3xl text-zinc-900 tracking-tighter">${order.total_price || 0}</p>
+                <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest h-5">{order.payment_status}</Badge>
+              </div>
+              {isOpen ? <ChevronUp className="h-6 w-6 text-zinc-300" /> : <ChevronDown className="h-6 w-6 text-zinc-300 group-hover:text-zinc-900" />}
+            </div>
+          </CardContent>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="p-4 md:p-8 bg-white border-t border-zinc-100 space-y-8 animate-in slide-in-from-top-2 duration-300">
+          
+          {/* EXPANDED GRID: 4 COLUMNS ON DESKTOP, 2 ON MOBILE */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <Detail label="Phone" value={order.customer_phone} icon={<Phone className="h-3 w-3"/>} />
+            <Detail label="Created" value={order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'} icon={<Calendar className="h-3 w-3"/>} />
+            <Detail label="Payment ID" value={order.order_id?.slice(-12)} icon={<CreditCard className="h-3 w-3"/>} />
+            <Detail label="Status" value={order.status} icon={<Info className="h-3 w-3"/>} />
+            
+            {/* FULL DATA DUMP FIELD */}
+            <div className="col-span-2 md:col-span-4 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
+               <p className="text-[10px] font-black uppercase text-zinc-400 mb-2 flex items-center gap-2 tracking-widest"><Hash className="h-3 w-3"/> Branding & Special Instructions</p>
+               <p className="text-sm font-medium text-zinc-700 leading-relaxed italic">
+                 {order.branding || "No special branding instructions provided for this order."}
+               </p>
+            </div>
+          </div>
+
+          {/* ASSET CONTROL CENTER */}
+          <div className="bg-zinc-900 rounded-[2rem] p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2 flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-blue-500" /> Cloudinary Data Pipeline
+                  </p>
+                  <h3 className="text-xl font-bold">{order.photo_count || 0} Assets Ready for Processing</h3>
+                </div>
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const urls = order.photos?.map((p: any) => p?.secure_url).filter(Boolean).join(", ");
+                    navigator.clipboard.writeText(urls);
+                    toast.success("Clipboard Optimized");
+                  }}
+                  className="bg-white text-black hover:bg-zinc-200 font-black px-8 h-14 rounded-2xl shadow-lg shadow-white/10"
+                >
+                  <Copy className="h-5 w-5 mr-3" /> COPY ALL LINKS
                 </Button>
               </div>
-              <div className="max-h-24 overflow-y-auto space-y-1 bg-white p-2 rounded-lg border border-zinc-100">
-                {order.photos && Array.isArray(order.photos) && order.photos.length > 0 ? (
-                    order.photos.map((photo: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 group">
-                        <span className="text-[9px] font-mono text-zinc-400 truncate flex-1">{photo?.secure_url || "Link Missing"}</span>
-                        <button onClick={() => copyToClipboard(photo?.secure_url)} className="text-[9px] font-bold text-blue-600 hover:underline">Copy</button>
-                    </div>
-                    ))
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button variant="outline" className="h-16 bg-white/5 border-white/10 text-white font-bold rounded-2xl hover:bg-white hover:text-black transition-all text-base" asChild>
+                  <a href={order.photos_url || "#"} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-5 w-5 mr-3" /> SOURCE FOLDER
+                  </a>
+                </Button>
+                {theme === 'red' ? (
+                  <Button onClick={() => updateStatus("Delivered")} className="h-16 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/40 text-base">
+                    <CheckCircle2 className="h-5 w-5 mr-3" /> SHIP TO CLIENT
+                  </Button>
                 ) : (
-                    <p className="text-[9px] text-zinc-400 italic p-1">No Cloudinary assets linked yet.</p>
+                  <Button onClick={() => updateStatus("New")} className="h-16 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold rounded-2xl border border-white/5">
+                    RETURN TO QUEUE
+                  </Button>
                 )}
               </div>
             </div>
+          </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  )
+}
 
-            {/* SPEC GRID */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <SpecBox label="Voiceover" icon={<Mic className="h-3 w-3"/>} value={order.voiceover} color="text-purple-600" />
-              <SpecBox label="Branding" icon={<Brush className="h-3 w-3"/>} value={order.branding} color="text-pink-600" />
-              <SpecBox label="Music" icon={<Music className="h-3 w-3"/>} value={order.music_selection} color="text-blue-600" />
-              <SpecBox label="Order ID" icon={<Hash className="h-3 w-3"/>} value={order.order_id?.slice(-8)} color="text-zinc-600" />
-              <SpecBox label="Phone" icon={<Phone className="h-3 w-3"/>} value={order.customer_phone} color="text-zinc-600" />
-              <SpecBox label="Payment" icon={<Info className="h-3 w-3"/>} value={order.payment_status} color={order.payment_status === 'paid' ? 'text-green-600' : 'text-amber-600'} />
-            </div>
+function Chip({ icon, label, color = "bg-zinc-100 text-zinc-600" }: any) {
+  if (!label || label === "None" || label === "N/A") return null;
+  return (
+    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] md:text-[11px] font-black uppercase tracking-tight ${color} border border-transparent transition-all`}>
+      {icon} {label}
+    </div>
+  )
+}
 
-            {/* ACTION ROW */}
-            <div className="flex gap-2 pt-2 border-t border-zinc-50">
-              <Button size="sm" className="flex-1 h-9 bg-zinc-100 text-zinc-900 font-bold rounded-lg text-xs" asChild>
-                <a href={order.photos_url || "#"} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-2" /> Folder</a>
-              </Button>
-              {theme === "red" ? (
-                <Button onClick={() => handleStatusUpdate(order.id, "Delivered")} size="sm" className="flex-1 h-9 bg-green-600 text-white font-black rounded-lg text-xs shadow-md">COMPLETE & SHIP</Button>
-              ) : (
-                <Button onClick={() => handleStatusUpdate(order.id, "New")} variant="outline" size="sm" className="flex-1 h-9 rounded-lg font-bold text-zinc-400 text-xs border-dashed">RE-OPEN</Button>
-              )}
-            </div>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-    ))
-  }
-
-  function SpecBox({ label, value, icon, color }: any) {
-    return (
-      <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 min-w-0">
-        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1 mb-0.5">
-          {icon} {label}
-        </p>
-        <p className={`text-[10px] font-bold truncate ${color}`}>{value || "---"}</p>
-      </div>
-    )
-  }
+function Detail({ label, value, icon }: any) {
+  return (
+    <div className="bg-zinc-50/50 p-4 rounded-2xl border border-zinc-100">
+      <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+        {icon} {label}
+      </p>
+      <p className="text-xs md:text-sm font-bold text-zinc-900 truncate">{value || "---"}</p>
+    </div>
+  )
 }
