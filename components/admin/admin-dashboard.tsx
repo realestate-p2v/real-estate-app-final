@@ -16,11 +16,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "sonner" 
 
 export default function AdminDashboard() {
-  const [orders, setOrders] = useState([])
+  const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("new")
   const [searchQuery, setSearchQuery] = useState("")
-  const [expandedOrder, setExpandedOrder] = useState(null)
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const supabase = createClient()
 
   const fetchOrders = async () => {
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
         .order("created_at", { ascending: false })
       if (error) throw error
       setOrders(data || [])
-    } catch (err) {
+    } catch (err: any) {
       toast.error("Fetch failed")
     } finally {
       setLoading(false)
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     fetchOrders()
   }, [])
 
-  const handleStatusUpdate = async (id, status) => {
+  const handleStatusUpdate = async (id: string, status: string) => {
     const { error } = await supabase.from("orders").update({ status }).eq("id", id)
     if (error) toast.error("Update failed")
     else {
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
                       </div>
 
                       {order.status === "Delivered" && (
-                        <div className="hidden sm:flex items-center gap-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-500 px-2 py-1 rounded-lg border border-yellow-200 dark:border-yellow-900/50 shadow-sm">
+                        <div className="flex items-center gap-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-500 px-2 py-1 rounded-lg border border-yellow-200 dark:border-yellow-900/50 shadow-sm">
                           <Trophy className="h-3 w-3" />
                           <span className="text-[10px] font-black uppercase tracking-tighter">Delivered</span>
                         </div>
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
-          }}}
+          ))}
         </div>
       </div>
     </div>
