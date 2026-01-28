@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { toast } from "sonner"
+import { toast } from "sonner" 
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([])
