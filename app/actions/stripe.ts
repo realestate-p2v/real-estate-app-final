@@ -28,3 +28,10 @@ export async function createCheckoutSession(productId: string) {
 
   return { sessionId: session.id };
 }
+
+export async function getCheckoutSession(sessionId: string) {
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['line_items', 'payment_intent'],
+  });
+  return session;
+}
