@@ -19,7 +19,6 @@ import {
   AlertCircle,
   CalendarDays,
   Package,
-  CheckCircle,
   LayoutGrid
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,6 +30,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
+// This is a DEFAULT export to match your Page.tsx import
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,7 +95,7 @@ export default function AdminDashboard() {
             </div>
             <span className="text-xs font-black tracking-[0.2em] uppercase text-zinc-400">System v2.0</span>
           </div>
-          <h1 className="text-5xl font-black tracking-tighter text-zinc-900 dark:text-white">COMMAND</h1>
+          <h1 className="text-5xl font-black tracking-tighter text-zinc-900 dark:text-white uppercase">Command</h1>
           <p className="text-zinc-500 font-medium">Video Production Logistics & Control</p>
         </div>
         
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button onClick={fetchOrders} variant="outline" className="h-12 px-6 font-bold rounded-xl bg-white">
+          <Button onClick={fetchOrders} variant="outline" className="h-12 px-6 font-bold rounded-xl bg-white shadow-sm hover:bg-zinc-50 transition-all">
             Refresh
           </Button>
         </div>
@@ -118,10 +118,10 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
           <TabsList className="bg-zinc-200/50 dark:bg-zinc-900 p-1 h-14 rounded-2xl">
-            <TabsTrigger value="new" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 font-bold px-10 h-full rounded-xl">
+            <TabsTrigger value="new" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 font-bold px-10 h-full rounded-xl shadow-sm transition-all">
               Active Queue
             </TabsTrigger>
-            <TabsTrigger value="delivered" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 font-bold px-10 h-full rounded-xl">
+            <TabsTrigger value="delivered" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 font-bold px-10 h-full rounded-xl shadow-sm transition-all">
               Delivered Archive
             </TabsTrigger>
           </TabsList>
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
 
         {loading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-2xl bg-zinc-200 animate-pulse" />)}
+            {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-2xl bg-zinc-200/50 animate-pulse" />)}
           </div>
         ) : (
           <div className="space-y-4">
@@ -139,23 +139,23 @@ export default function AdminDashboard() {
                 open={expandedOrder === order.id}
                 onOpenChange={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
               >
-                <Card className={`overflow-hidden border-0 border-l-[6px] transition-all shadow-sm ${
+                <Card className={`overflow-hidden border-0 border-l-[6px] transition-all shadow-sm ring-1 ring-zinc-200/50 ${
                   order.payment_status === 'paid' ? 'border-l-green-500' : 'border-l-amber-400 bg-amber-50/20'
                 }`}>
                   <CollapsibleTrigger asChild>
                     <CardContent className="p-0 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
                       <div className="flex flex-col md:flex-row items-center p-5 gap-6">
-                        {/* Financial Indicator */}
+                        {/* Status Label */}
                         <div className="flex flex-col gap-1 min-w-[100px]">
                           {order.payment_status === "paid" ? (
-                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-black uppercase px-2 py-1.5 rounded-lg text-center">PAID</span>
+                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-black uppercase px-2 py-1.5 rounded-lg text-center tracking-tight">PAID</span>
                           ) : (
-                            <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-black uppercase px-2 py-1.5 rounded-lg text-center">PENDING</span>
+                            <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-black uppercase px-2 py-1.5 rounded-lg text-center tracking-tight">PENDING</span>
                           )}
                           <span className="text-[10px] text-zinc-400 font-mono text-center tracking-tighter">ID: {order.order_id?.slice(-8)}</span>
                         </div>
 
-                        {/* Customer Core */}
+                        {/* Customer Info */}
                         <div className="flex-1">
                           <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{order.customer_name}</h3>
                           <p className="text-sm text-zinc-500 font-medium flex items-center gap-2 mt-0.5">
@@ -163,7 +163,7 @@ export default function AdminDashboard() {
                           </p>
                         </div>
 
-                        {/* Quick Scanner Specs */}
+                        {/* Scanner Specs */}
                         <div className="flex items-center gap-6 px-8 border-x border-zinc-100 dark:border-zinc-800">
                           <div className="flex flex-col items-center">
                             <ImageIcon className="h-5 w-5 text-zinc-400 mb-1" />
@@ -183,8 +183,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
 
+                        {/* Contract Value */}
                         <div className="text-right min-w-[100px]">
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Contract</p>
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Total Value</p>
                           <p className="text-2xl font-black text-zinc-900 dark:text-white leading-none">${order.total_price}</p>
                         </div>
 
@@ -193,32 +194,32 @@ export default function AdminDashboard() {
                     </CardContent>
                   </CollapsibleTrigger>
 
-                  <CollapsibleContent className="border-t border-zinc-100 dark:border-zinc-800 bg-[#fdfdfd] dark:bg-zinc-950/50">
+                  <CollapsibleContent className="border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950/50">
                     <div className="p-8">
-                      {/* TOP WORKFLOW BAR */}
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                      {/* STATUS FLOW BAR */}
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 bg-zinc-50 dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
                         <div className="flex items-center gap-4">
-                          <div className="h-14 w-14 rounded-2xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900">
+                          <div className="h-14 w-14 rounded-2xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-xl">
                             <Package className="h-7 w-7" />
                           </div>
                           <div>
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Order System Tracking</h4>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-0.5">Tracking Number</h4>
                             <p className="text-xl font-mono font-bold tracking-tight">{order.order_id}</p>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-xl">
+                        <div className="flex items-center gap-2 bg-zinc-200/50 dark:bg-zinc-800 p-1.5 rounded-xl">
                           <span className={`px-6 py-2.5 rounded-lg text-xs font-black transition-all ${order.status !== 'Delivered' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-400'}`}>
-                            PRODUCTION PHASE
+                            IN PRODUCTION
                           </span>
                           <span className={`px-6 py-2.5 rounded-lg text-xs font-black transition-all ${order.status === 'Delivered' ? 'bg-green-500 text-white shadow-sm' : 'text-zinc-400'}`}>
-                            COMPLETED
+                            SHIPPED / DONE
                           </span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                        {/* Column 1: Client Profile */}
+                        {/* Profile Section */}
                         <div className="lg:col-span-4 space-y-6">
                           <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
                             <h5 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-6 flex items-center gap-2">
@@ -235,7 +236,7 @@ export default function AdminDashboard() {
                                 <p className="text-sm font-bold mt-1 text-zinc-600">{order.customer_phone || "No phone provided"}</p>
                               </div>
                               <div className="pt-2">
-                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-wider">Timestamp</label>
+                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-wider">Order Timestamp</label>
                                 <p className="text-sm font-bold flex items-center gap-2 mt-1">
                                   <CalendarDays className="h-4 w-4 text-zinc-300" />
                                   {order.created_at ? format(new Date(order.created_at), 'PPP p') : 'Unknown'}
@@ -245,22 +246,22 @@ export default function AdminDashboard() {
                           </div>
                         </div>
 
-                        {/* Column 2: Creative Specifications */}
+                        {/* Specs Section */}
                         <div className="lg:col-span-4 space-y-6">
                           <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
                             <h5 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-6 flex items-center gap-2">
-                              <Clock className="h-3 w-3" /> Creative Directives
+                              <Clock className="h-3 w-3" /> Project Specs
                             </h5>
                             
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl">
+                              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                                 <Music className="h-4 w-4 mb-2 text-blue-500" />
-                                <label className="text-[9px] font-black text-zinc-400 uppercase">Audio</label>
+                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-tighter">Audio Track</label>
                                 <p className="text-sm font-bold truncate">{order.music_selection || "Default"}</p>
                               </div>
-                              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl">
+                              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                                 <Type className="h-4 w-4 mb-2 text-purple-500" />
-                                <label className="text-[9px] font-black text-zinc-400 uppercase">Branding</label>
+                                <label className="text-[9px] font-black text-zinc-400 uppercase tracking-tighter">Branding</label>
                                 <p className="text-sm font-bold capitalize">{order.branding?.type || "Standard"}</p>
                               </div>
                             </div>
@@ -269,36 +270,25 @@ export default function AdminDashboard() {
                               <div className="p-5 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-900/30">
                                 <div className="flex items-center gap-2 mb-2 text-orange-600">
                                   <Mic2 className="h-4 w-4" />
-                                  <span className="text-[10px] font-black uppercase tracking-widest">Voiceover Script</span>
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Script</span>
                                 </div>
-                                <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400 font-medium italic">
+                                <p className="text-xs leading-relaxed text-zinc-700 dark:text-zinc-400 font-medium italic">
                                   "{order.voiceover_script}"
                                 </p>
-                              </div>
-                            )}
-
-                            {order.special_instructions && (
-                              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                                <div className="flex items-center gap-2 mb-1 text-blue-600">
-                                  <AlertCircle className="h-4 w-4" />
-                                  <span className="text-[10px] font-black uppercase tracking-widest">Field Notes</span>
-                                </div>
-                                <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium">{order.special_instructions}</p>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Column 3: Assets & Actions */}
+                        {/* Assets Section */}
                         <div className="lg:col-span-4 space-y-6">
                           <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm h-full flex flex-col">
                             <h5 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-6 flex items-center justify-between border-b pb-4">
-                              <span><ImageIcon className="h-3 w-3 inline mr-1" /> Source Assets</span>
-                              <Badge className="bg-zinc-900 font-black">{order.photo_count} Files</Badge>
+                              <span><ImageIcon className="h-3 w-3 inline mr-1" /> Assets</span>
+                              <Badge className="bg-zinc-900 font-black px-2 py-0.5">{order.photo_count} Files</Badge>
                             </h5>
 
                             <div className="flex-1">
-                              {/* ASSET THUMBNAIL GRID */}
                               <div className="grid grid-cols-4 gap-2 mb-6">
                                 {order.photos?.slice(0, 8).map((photo: any, i: number) => (
                                   <div key={i} className="aspect-square bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
@@ -307,24 +297,24 @@ export default function AdminDashboard() {
                                 ))}
                               </div>
 
-                              <Button className="w-full h-14 mb-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700 font-black text-xs tracking-widest rounded-xl" variant="secondary">
+                              <Button className="w-full h-14 mb-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 font-black text-[10px] tracking-widest rounded-xl shadow-sm" variant="secondary">
                                 <ExternalLink className="h-4 w-4 mr-2" />
-                                DOWNLOAD ALL ASSETS
+                                VIEW SOURCE GALLERY
                               </Button>
                             </div>
 
                             <div className="pt-8">
                                {order.status !== "Delivered" ? (
                                  <Button 
-                                   className="w-full h-20 bg-green-500 hover:bg-green-600 text-white font-black text-xl shadow-xl shadow-green-500/20 rounded-2xl tracking-tighter"
+                                   className="w-full h-20 bg-green-500 hover:bg-green-600 text-white font-black text-xl shadow-xl shadow-green-500/30 rounded-2xl tracking-tighter"
                                    onClick={() => handleStatusUpdate(order.id, "Delivered")}
                                  >
-                                   <CheckCircle2 className="mr-2 h-6 w-6" /> COMPLETE & SHIP
+                                   COMPLETE & SHIP
                                  </Button>
                                ) : (
                                  <Button 
                                    variant="outline" 
-                                   className="w-full h-16 border-zinc-200 rounded-2xl font-black text-zinc-400 hover:text-zinc-900"
+                                   className="w-full h-16 border-zinc-200 rounded-2xl font-black text-zinc-400 hover:text-zinc-900 hover:border-zinc-900"
                                    onClick={() => handleStatusUpdate(order.id, "Ready to Process")}
                                  >
                                    RESTORE TO QUEUE
