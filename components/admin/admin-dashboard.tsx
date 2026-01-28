@@ -3,27 +3,13 @@
 import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { 
-  LayoutGrid, 
-  ChevronDown, 
-  ChevronUp, 
-  ExternalLink, 
-  Loader2, 
-  Copy, 
-  Music, 
-  Mic, 
-  Brush, 
-  ImageIcon, 
-  ArrowLeft, 
-  Download, 
-  CheckCircle2, 
-  Phone, 
-  Mail, 
-  Clock 
+  LayoutGrid, ExternalLink, Loader2, Copy, Music, Mic, Brush, 
+  Image as ImageIcon, ArrowLeft, Download, CheckCircle2, 
+  Phone, Mail, Clock, Calendar, User, FileText, Globe
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -59,60 +45,66 @@ export default function AdminDashboard() {
   )
 
   const activeOrders = filtered.filter(o => o.status !== 'Delivered')
-  const archivedOrders = filtered.filter(o => o.status === 'Delivered')
 
   return (
-    <div className="min-h-screen bg-[#f4f4f5] p-4 md:p-8 font-sans text-zinc-900">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-[#0a0a0b] text-zinc-100 font-sans selection:bg-blue-500/30">
+      {/* GLOBAL HUD */}
+      <header className="sticky top-0 z-50 bg-[#0a0a0b]/80 backdrop-blur-md border-b border-zinc-800 p-4">
+        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-6">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-black bg-white shadow-sm rounded-lg">
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Site
+              <Button variant="outline" size="sm" className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white rounded-lg h-9">
+                <ArrowLeft className="h-4 w-4 mr-2" /> EXIT
               </Button>
             </Link>
-            <h1 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
-              <span className="bg-black text-white p-1 rounded-md"><LayoutGrid className="h-5 w-5" /></span>
-              Command v6.1
-            </h1>
+            <div className="h-10 w-[1px] bg-zinc-800 hidden md:block" />
+            <div>
+              <h1 className="text-lg font-black tracking-tighter uppercase flex items-center gap-2">
+                <span className="text-blue-500"><LayoutGrid className="w-5 h-5" /></span>
+                COMMAND <span className="text-zinc-500 font-light">v7.0</span>
+              </h1>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none">Production Interface</p>
+            </div>
           </div>
-          <div className="relative w-full md:w-72">
-            <Input 
-              placeholder="Search orders..." 
-              className="h-10 bg-white rounded-xl border-zinc-200 shadow-sm pl-4"
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Input 
+                placeholder="Search Active Queue..." 
+                className="h-10 bg-zinc-900 border-zinc-800 rounded-xl pl-4 text-sm focus:ring-blue-500"
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Badge className="bg-blue-600 text-white h-10 px-4 rounded-xl font-black text-sm uppercase">
+              {activeOrders.length} LIVE
+            </Badge>
           </div>
-        </header>
+        </div>
+      </header>
 
+      <main className="p-4 md:p-8 max-w-[1800px] mx-auto">
         {loading ? (
-          <div className="flex justify-center p-20"><Loader2 className="animate-spin h-8 w-8 text-zinc-300" /></div>
+          <div className="flex flex-col items-center justify-center p-40 gap-4">
+            <Loader2 className="animate-spin h-10 w-10 text-blue-500" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Syncing Production Data...</p>
+          </div>
         ) : (
-          <div className="space-y-10">
-            <section>
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4 px-2 flex justify-between">
-                Live Queue <span>{activeOrders.length}</span>
-              </h2>
-              <div className="space-y-2">
-                {activeOrders.map(o => <OrderCard key={o.id} order={o} />)}
+          <div className="grid grid-cols-1 gap-12">
+            {activeOrders.map(o => <ProductionSlate key={o.id} order={o} />)}
+            
+            {activeOrders.length === 0 && (
+              <div className="text-center py-40 border-2 border-dashed border-zinc-900 rounded-3xl">
+                <p className="text-zinc-600 font-black uppercase tracking-widest">No Active Production Orders</p>
               </div>
-            </section>
-
-            <section className="opacity-50 hover:opacity-100 transition-opacity">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4 px-2">Archive</h2>
-              <div className="space-y-2">
-                {archivedOrders.map(o => <OrderCard key={o.id} order={o} />)}
-              </div>
-            </section>
+            )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }
 
-function OrderCard({ order }: { order: any }) {
-  const [isOpen, setIsOpen] = useState(false)
+function ProductionSlate({ order }: { order: any }) {
   const [link, setLink] = useState(order.delivery_url || "")
   const [isSaving, setIsSaving] = useState(false)
   const supabase = createClient()
@@ -120,130 +112,171 @@ function OrderCard({ order }: { order: any }) {
   const saveLink = async () => {
     setIsSaving(true)
     await supabase.from("orders").update({ delivery_url: link }).eq("id", order.id)
-    toast.success("Saved")
+    toast.success("Link Updated")
     setIsSaving(false)
   }
 
-  const toggleStatus = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const newStatus = order.status === 'Delivered' ? 'New' : 'Delivered'
-    await supabase.from("orders").update({ status: newStatus }).eq("id", order.id)
-    window.location.reload()
+  const markDelivered = async () => {
+    const { error } = await supabase.from("orders").update({ status: 'Delivered' }).eq("id", order.id)
+    if (!error) {
+      toast.success("Order Shipped to Client")
+      window.location.reload()
+    }
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="border-none rounded-xl overflow-hidden bg-white shadow-sm border border-zinc-200/50">
-        <CollapsibleTrigger className="w-full p-4 flex items-center gap-4 text-left">
-          <div className="h-10 w-10 bg-zinc-50 rounded-lg flex-shrink-0 border border-zinc-100 overflow-hidden flex items-center justify-center">
+    <Card className="bg-zinc-900/50 border-zinc-800 overflow-hidden rounded-3xl shadow-2xl">
+      {/* SLATE HEADER */}
+      <div className="bg-zinc-900 border-b border-zinc-800 p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex items-center gap-5">
+          <div className="h-16 w-16 bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-inner flex items-center justify-center group">
             {order.photos?.[0]?.secure_url ? (
-              <img src={order.photos[0].secure_url} className="object-cover h-full w-full" alt="" />
+              <img src={order.photos[0].secure_url} className="object-cover h-full w-full group-hover:scale-110 transition-transform" alt="" />
             ) : (
-              <ImageIcon className="h-4 w-4 text-zinc-300"/>
+              <ImageIcon className="h-6 w-6 text-zinc-700"/>
             )}
           </div>
-          
-          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
-            <p className="font-bold text-sm uppercase truncate">{renderSafe(order.customer_name)}</p>
-            <p className="hidden md:block text-[11px] font-bold text-zinc-500 uppercase">{order.branding === 'Custom Branding' ? '🎨 Custom' : 'Standard'}</p>
-            <p className="hidden md:block text-[11px] font-bold text-zinc-500 uppercase">{order.photo_count || 0} Assets</p>
-            <div className="flex justify-end pr-2">
-               <Button onClick={toggleStatus} size="sm" variant="outline" className="h-7 text-[9px] font-black rounded-full">
-                 {order.status === 'Delivered' ? 'RE-OPEN' : 'COMPLETE'}
-               </Button>
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+               <h2 className="text-2xl font-black uppercase tracking-tighter text-white">{renderSafe(order.customer_name)}</h2>
+               <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 font-mono text-[10px]">ID: {order.order_id}</Badge>
+            </div>
+            <div className="flex gap-4 items-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
+               <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3"/> {new Date(order.created_at).toLocaleDateString()}</span>
+               <span className="flex items-center gap-1.5"><Globe className="w-3 h-3"/> IP: {order.ip_address || "SECURE"}</span>
             </div>
           </div>
-          {isOpen ? <ChevronDown className="h-4 w-4 rotate-180 transition-transform" /> : <ChevronDown className="h-4 w-4 transition-transform" />}
-        </CollapsibleTrigger>
+        </div>
+
+        <div className="flex gap-3 w-full lg:w-auto">
+          <Button asChild variant="outline" className="flex-1 lg:flex-none h-12 bg-white text-black border-none hover:bg-zinc-200 font-black uppercase text-xs rounded-xl px-8">
+            <a href={order.photos_url} target="_blank">
+              <ImageIcon className="w-4 h-4 mr-2" /> SOURCE ASSETS ({order.photo_count})
+            </a>
+          </Button>
+          <Button onClick={markDelivered} className="flex-1 lg:flex-none h-12 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs rounded-xl px-8 shadow-lg shadow-blue-900/20">
+             <CheckCircle2 className="w-4 h-4 mr-2" /> SHIP TO CLIENT
+          </Button>
+        </div>
+      </div>
+
+      {/* SLATE BODY: ALL DATA VISIBLE */}
+      <div className="p-8 grid grid-cols-1 xl:grid-cols-3 gap-10">
         
-        <CollapsibleContent className="bg-[#fafafa] border-t border-zinc-100 p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* BRANDING */}
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                <Brush className="w-3 h-3" /> Branding
-              </h3>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-zinc-200/60 space-y-3">
-                <DataField label="Package" val={order.branding} />
-                <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-100">
-                  <p className="text-[8px] font-black text-zinc-400 uppercase mb-1">Instructions</p>
-                  <p className="text-xs font-medium text-zinc-700 leading-relaxed whitespace-pre-wrap">
-                    {order.branding_instructions || "No custom branding instructions."}
-                  </p>
-                </div>
-                <FileRow label="Logo Asset" url={order.branding_file} />
+        {/* BRANDING HUB */}
+        <div className="space-y-6">
+          <SectionHeader icon={<Brush className="w-4 h-4 text-purple-500"/>} title="Identity & Branding" />
+          <div className="bg-black/40 p-6 rounded-2xl border border-zinc-800/50 space-y-5">
+            <DataPoint label="Production Level" value={order.branding} highlight />
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                <FileText className="w-3 h-3" /> Special Instructions
+              </p>
+              <div className="text-sm font-medium leading-relaxed text-zinc-300 bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 whitespace-pre-wrap">
+                {order.branding_instructions || "No custom instructions provided."}
               </div>
             </div>
+            <FileLink label="Company Logo / Graphics" url={order.branding_file} color="purple" />
+          </div>
+        </div>
 
-            {/* AUDIO */}
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                <Mic className="w-3 h-3" /> Audio
-              </h3>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-zinc-200/60 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                   <DataField label="Voiceover" val={order.voiceover} />
-                   <DataField label="Music" val={order.music_selection} />
-                </div>
-                <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-100">
-                  <p className="text-[8px] font-black text-zinc-400 uppercase mb-1">Script Content</p>
-                  <p className="text-xs font-medium text-zinc-700 leading-relaxed whitespace-pre-wrap">
-                    {order.voiceover_script || "AI Generated Script."}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <FileRow label="Music File" url={order.music_file} />
-                   <FileRow label="Script File" url={order.script_file} />
-                </div>
+        {/* AUDIO HUD */}
+        <div className="space-y-6">
+          <SectionHeader icon={<Mic className="w-4 h-4 text-blue-500"/>} title="Audio Production" />
+          <div className="bg-black/40 p-6 rounded-2xl border border-zinc-800/50 space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+               <DataPoint label="Voice Profile" value={order.voiceover} />
+               <DataPoint label="Music Track" value={order.music_selection} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                <FileText className="w-3 h-3" /> Voiceover Script
+              </p>
+              <div className="text-sm font-medium leading-relaxed text-zinc-300 bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 whitespace-pre-wrap min-h-[100px]">
+                {order.voiceover_script || "Refer to property photos for automated AI script generation."}
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FileLink label="Music Upload" url={order.music_file} color="blue" />
+              <FileLink label="Script Upload" url={order.script_file} color="blue" />
+            </div>
+          </div>
+        </div>
 
-            {/* DELIVERY */}
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                <CheckCircle2 className="w-3 h-3" /> Delivery
-              </h3>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-zinc-200/60 space-y-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold flex items-center gap-2"><Mail className="w-3 h-3"/> {order.customer_email}</p>
-                  <p className="text-[10px] font-bold flex items-center gap-2"><Phone className="w-3 h-3"/> {order.customer_phone}</p>
-                </div>
-                <div className="pt-2">
-                  <p className="text-[8px] font-black text-zinc-400 uppercase mb-2">Final URL</p>
-                  <div className="flex gap-2">
-                    <Input value={link} onChange={(e) => setLink(e.target.value)} className="h-8 text-xs" />
-                    <Button onClick={saveLink} size="sm" className="h-8 bg-black text-white px-4 font-bold">
-                      {isSaving ? <Loader2 className="animate-spin w-3 h-3" /> : "SAVE"}
-                    </Button>
-                  </div>
-                </div>
-                <Button asChild className="w-full bg-blue-600 text-white font-black text-[10px] h-9">
-                   <a href={order.photos_url} target="_blank"><ExternalLink className="w-3 h-3 mr-2" /> CLOUDINARY</a>
+        {/* DELIVERY HUB */}
+        <div className="space-y-6">
+          <SectionHeader icon={<Globe className="w-4 h-4 text-green-500"/>} title="Client & Delivery" />
+          <div className="bg-black/40 p-6 rounded-2xl border border-zinc-800/50 space-y-6">
+            <div className="space-y-3">
+               <div className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] font-black text-zinc-500 uppercase">Email</span>
+                  <span className="text-xs font-bold text-white">{order.customer_email}</span>
+               </div>
+               <div className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-xl border border-zinc-100/5">
+                  <span className="text-[10px] font-black text-zinc-500 uppercase">Phone</span>
+                  <span className="text-xs font-bold text-white">{order.customer_phone || "Not Provided"}</span>
+               </div>
+            </div>
+
+            <div className="pt-6 border-t border-zinc-800">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Final Video Destination URL</p>
+              <div className="flex gap-2">
+                <Input 
+                  value={link} 
+                  onChange={(e) => setLink(e.target.value)} 
+                  placeholder="Paste Vimeo/Drive/YouTube Link..." 
+                  className="h-12 bg-zinc-900 border-zinc-700 text-white rounded-xl"
+                />
+                <Button onClick={saveLink} className="h-12 bg-white text-black hover:bg-zinc-200 font-black px-6 rounded-xl">
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "SAVE"}
                 </Button>
               </div>
+              <p className="text-[9px] text-zinc-600 mt-3 font-bold uppercase italic">Updating this will send an email update if configured.</p>
             </div>
           </div>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+        </div>
+
+      </div>
+    </Card>
   )
 }
 
-function DataField({ label, val }: { label: string, val: string }) {
+function SectionHeader({ icon, title }: { icon: any, title: string }) {
   return (
-    <div>
-      <p className="text-[8px] font-black text-zinc-400 uppercase mb-0.5">{label}</p>
-      <p className="text-xs font-black text-zinc-900 leading-tight">{renderSafe(val)}</p>
+    <div className="flex items-center gap-3 px-2">
+      {icon}
+      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">{title}</h3>
     </div>
   )
 }
 
-function FileRow({ label, url }: { label: string, url: string }) {
-  if (!url || url === "none") return null;
+function DataPoint({ label, value, highlight }: { label: string, value: string, highlight?: boolean }) {
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-2 bg-zinc-50 border border-zinc-100 rounded-lg group hover:border-black transition-all">
-       <span className="text-[9px] font-black text-zinc-500 uppercase">{label}</span>
+    <div>
+      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">{label}</p>
+      <p className={`text-sm font-black uppercase ${highlight ? 'text-blue-400' : 'text-white'}`}>{renderSafe(value)}</p>
+    </div>
+  )
+}
+
+function FileLink({ label, url, color }: { label: string, url: string, color: string }) {
+  if (!url || url === "none") return null;
+  const colorMap: any = {
+    purple: "border-purple-500/20 hover:border-purple-500 bg-purple-500/5 text-purple-400",
+    blue: "border-blue-500/20 hover:border-blue-500 bg-blue-500/5 text-blue-400",
+    green: "border-green-500/20 hover:border-green-500 bg-green-500/5 text-green-400"
+  };
+  
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className={`flex items-center justify-between p-4 rounded-xl border transition-all group ${colorMap[color]}`}>
+       <div className="flex flex-col">
+          <span className="text-[8px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Asset</span>
+          <span className="text-[11px] font-black uppercase leading-none">{label}</span>
+       </div>
+       <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
+    </a>
+  )
+}
        <Download className="w-3 h-3 text-zinc-300 group-hover:text-black" />
     </a>
   )
