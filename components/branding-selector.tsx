@@ -108,7 +108,7 @@ export function BrandingSelector({
           <ImageIcon className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold text-foreground">Branding Options</h3>
+          <h3 className="font-semibold text-foreground">Brand Options</h3>
           <p className="text-sm text-muted-foreground">Add your logo to the video</p>
         </div>
       </div>
