@@ -1,4 +1,10 @@
-import { loadStripe } from '@stripe/stripe-js';
+import Stripe from "stripe";
 
-// Make sure the variable name matches exactly what is in your .env file
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error("STRIPE_SECRET_KEY is missing from environment variables");
+}
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2024-06-20", // or your preferred version
+  typescript: true,
+});
