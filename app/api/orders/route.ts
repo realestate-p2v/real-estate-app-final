@@ -110,21 +110,16 @@ export async function POST(request: Request) {
 
     console.log("[v0] Supabase response - data:", data ? "received" : "null", "error:", error ? error.message : "none");
 
-    if (error) {
-      console.error("[v0] Supabase insert error:", error.message, error.code, error.details, error.hint);
-      // Don't fail the order - return data anyway so payment can proceed
+if (error) {
+      console.error("[v0] Supabase insert error:", error.message);
+      // STOP HERE and tell the user why it failed
       return NextResponse.json({
-        success: true,
-        data: {
-          orderId: orderId,
-          totalPrice,
-          photoCount: uploadedPhotos.length,
-          photos: uploadedPhotos,
-          customer: input.customer,
-          dbError: error.message,
-        },
-      });
+        success: false, 
+        error: `Database Error: ${error.message}. Check if your Supabase table has all columns.`
+      }, { status: 500 });
     }
+
+    
 
     // Build the Order object for response
     const order: Order = {
