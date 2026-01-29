@@ -1,4 +1,4 @@
- "use client"
+"use client"
 
 import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.8</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.9</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -247,7 +247,6 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                <ImageIcon className="w-3.5 h-3.5"/> Asset Control ({sortedPhotos.length})
              </h4>
 
-             {/* IMAGE THUMBNAIL GALLERY */}
              <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-inner">
                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                  {sortedPhotos.map((img: any, i: number) => (
@@ -305,7 +304,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                <Input 
                   value={url} 
                   onChange={(e) => setUrl(e.target.value)} 
-                  placeholder="Paste final deliverable link..." 
+                  placeholder="Paste Google Drive link..." 
                   className="h-11 bg-white border-emerald-200 text-slate-800 text-xs font-bold rounded-xl focus:ring-emerald-400"
                />
                <Button onClick={save} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all shadow-md">
