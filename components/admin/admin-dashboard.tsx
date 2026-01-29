@@ -1,4 +1,4 @@
-"use client"
+    "use client"
 
 import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import Link from "next/link"
 
-// Hook for the 72h countdown
 function useCountdown(createdAt: string) {
   const [timeLeft, setTimeLeft] = useState("")
   const [isUrgent, setIsUrgent] = useState(false)
@@ -97,7 +96,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.5</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.6</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -147,8 +146,6 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
   const [copied, setCopied] = useState(false)
   const supabase = createClient()
   const b = getBranding(order.branding)
-  
-  // Countdown Logic
   const { timeLeft, isUrgent } = useCountdown(order.created_at)
 
   const copyAllImages = () => {
@@ -174,11 +171,18 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className={`border-none transition-all duration-300 overflow-hidden
+      <Card className={`border-none transition-all duration-300 overflow-hidden relative
         ${open ? 'bg-white shadow-2xl' : 'bg-[#fdfdfe] hover:bg-white shadow-sm'} 
         ${isLive ? 'ring-2 ring-emerald-400/50 border-l-[6px] border-l-emerald-500' : 'ring-1 ring-slate-200 border-l-[6px] border-l-slate-300'}`}>
         
-        <CollapsibleTrigger className="w-full p-6 flex items-center gap-6 text-left">
+        {/* CLICK TO OPEN INDICATOR */}
+        {!open && (
+           <div className="absolute bottom-1.5 right-3 pointer-events-none">
+             <span className="text-[7px] font-black uppercase tracking-[0.2em] text-slate-300">click to open</span>
+           </div>
+        )}
+
+        <CollapsibleTrigger className="w-full p-6 pb-7 flex items-center gap-6 text-left">
           <div className={`w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border ${isLive ? 'border-emerald-200' : 'border-slate-200'}`}>
             {order.photos?.[0] && <img src={order.photos[0].secure_url} className="object-cover w-full h-full" />}
           </div>
@@ -187,20 +191,14 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
               <h3 className="font-black text-lg text-slate-800 uppercase tracking-tight leading-tight">{order.customer_name || "Client"}</h3>
               <p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-widest">ID: {order.order_id?.slice(0,8)}</p>
             </div>
-            
-            {/* FEE PAID */}
             <div>
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Fee Paid</p>
               <p className={`text-xl font-black ${isLive ? 'text-emerald-600' : 'text-slate-500'}`}>${order.total_price}</p>
             </div>
-
-            {/* BRANDING */}
             <div className="hidden md:block">
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Branding</p>
               <p className="text-sm font-black text-slate-700 uppercase">{b.tier}</p>
             </div>
-
-            {/* COUNTDOWN TIMER */}
             <div className="hidden md:block">
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Due In</p>
               <div className={`flex items-center gap-1.5 ${isUrgent && isLive ? 'text-red-600 font-black text-base scale-105 transition-all' : 'text-slate-500 font-bold text-sm'}`}>
@@ -208,7 +206,6 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span>{isLive ? timeLeft : "DELIVERED"}</span>
               </div>
             </div>
-
             <div className="flex justify-end pr-2">
               <ChevronDown className={`w-5 h-5 text-slate-300 transition-transform ${open ? 'rotate-180 text-emerald-500' : ''}`} />
             </div>
@@ -216,7 +213,6 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
         </CollapsibleTrigger>
 
         <CollapsibleContent className="p-8 bg-[#f8f9fa] border-t border-slate-200 grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Section 1: Branding Section */}
           <div className="space-y-6">
             <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
               <Brush className="w-3.5 h-3.5"/> Branding Section
@@ -230,7 +226,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Company</span>
                 <span className="text-slate-700 font-black">{b.co}</span>
               </div>
-              {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:border-emerald-400 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
+              {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
             </div>
             <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed">
                <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
@@ -238,7 +234,6 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
             </div>
           </div>
 
-          {/* Section 2: Asset Management */}
           <div className="space-y-6">
              <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
                <ImageIcon className="w-3.5 h-3.5"/> Asset Control
@@ -257,7 +252,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                   <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.voiceover || "—"}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music selection</span>
+                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music</span>
                   <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
                 </div>
              </div>
@@ -268,12 +263,11 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
 
              <div className="flex gap-2">
-                {order.music_file && <a href={order.music_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
-                {order.script_file && <a href={order.script_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
+                {order.music_file && <a href={order.music_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
+                {order.script_file && <a href={order.script_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
              </div>
           </div>
 
-          {/* Section 3: Fulfillment Section */}
           <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
              <div className="text-[9px] text-slate-400 font-black border-b border-emerald-100 pb-4 space-y-2">
                <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
