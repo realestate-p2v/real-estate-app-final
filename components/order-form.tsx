@@ -93,7 +93,8 @@ export function OrderForm() {
           uploadedPhotos.push({
             public_id: result.public_id,
             secure_url: result.secure_url,
-            order: i
+            order: i,
+            description: photo.description || "",
           });
         }
       }

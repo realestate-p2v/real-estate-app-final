@@ -289,15 +289,29 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                      key={i} 
                      href={img.secure_url} 
                      target="_blank" 
+                     rel="noreferrer"
+                     title={img.description ? `#${i + 1}: ${img.description}` : `Photo ${i + 1}`}
                      className="relative group w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 hover:border-emerald-500 transition-all shadow-sm"
                    >
-                     <img src={img.secure_url} className="w-full h-full object-cover grayscale-[40%] group-hover:grayscale-0" />
+                     <img src={img.secure_url} className="w-full h-full object-cover grayscale-[40%] group-hover:grayscale-0" alt={img.description || `Photo ${i + 1}`} />
                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="text-[8px] text-white font-black">{i + 1}</span>
                      </div>
                    </a>
                  ))}
                </div>
+             </div>
+
+             <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-inner">
+               <span className="text-[8px] font-black text-slate-400 uppercase block mb-2">Photo descriptions</span>
+               <ul className="text-[11px] text-slate-600 space-y-1.5 max-h-32 overflow-y-auto">
+                 {sortedPhotos.map((img: any, i: number) => (
+                   <li key={i} className="flex gap-2">
+                     <span className="font-black text-slate-400 w-5 flex-shrink-0">{i + 1}.</span>
+                     <span className="font-medium">{img.description || "—"}</span>
+                   </li>
+                 ))}
+               </ul>
              </div>
 
              <Button 
