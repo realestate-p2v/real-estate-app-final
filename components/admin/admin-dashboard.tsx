@@ -64,6 +64,17 @@ const getBranding = (val: any) => {
   }
 }
 
+const VOICE_NAMES: Record<string, string> = {
+  "male-1": "Matt (Male)",
+  "male-2": "Blake (Male)",
+  "female-1": "Maya (Female)",
+  "female-2": "Amara (Female)",
+}
+function getVoiceDisplayName(voiceId: string | null | undefined): string {
+  if (!voiceId) return "—"
+  return VOICE_NAMES[voiceId] || voiceId
+}
+
 export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false)
   const [orders, setOrders] = useState<any[]>([])
@@ -297,10 +308,14 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span className="text-[10px] font-black uppercase tracking-widest">copy image url list</span>
              </Button>
 
-             <div className="grid grid-cols-2 gap-3">
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
                   <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Voiceover</span>
-                  <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.voiceover || "—"}</p>
+                  <p className="text-[10px] font-black text-slate-600 uppercase">{order.voiceover ? "Yes" : "No"}</p>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200">
+                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Voice</span>
+                  <p className="text-[10px] font-black text-slate-600 truncate uppercase">{getVoiceDisplayName(order.voiceover_voice)}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
                   <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music</span>
