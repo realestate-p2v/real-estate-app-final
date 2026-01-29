@@ -6,7 +6,7 @@ import {
   LayoutGrid, ChevronDown, ExternalLink, Loader2, 
   Music, Mic, Brush, ImageIcon, ArrowLeft, 
   Download, Hash, User, Building2, Laptop, Search, 
-  Mail, Phone, Globe, FileText, CheckCircle2, Copy, Check
+  Mail, Phone, Globe, FileText, CheckCircle2, Copy, Check, Clock
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,37 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import Link from "next/link"
+
+// Hook for the 72h countdown
+function useCountdown(createdAt: string) {
+  const [timeLeft, setTimeLeft] = useState("")
+  const [isUrgent, setIsUrgent] = useState(false)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const start = new Date(createdAt).getTime()
+      const deadline = start + (72 * 60 * 60 * 1000)
+      const now = new Date().getTime()
+      const distance = deadline - now
+
+      if (distance < 0) {
+        setTimeLeft("OVERDUE")
+        setIsUrgent(true)
+        return
+      }
+
+      const hours = Math.floor(distance / (1000 * 60 * 60))
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+      
+      if (hours < 24) setIsUrgent(true)
+      setTimeLeft(`${hours}h ${minutes}m`)
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [createdAt])
+
+  return { timeLeft, isUrgent }
+}
 
 const getBranding = (val: any) => {
   if (!val) return { tier: "Standard", agent: "—", co: "—", web: "—", logo: null };
@@ -66,7 +97,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.4</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.5</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -116,6 +147,9 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
   const [copied, setCopied] = useState(false)
   const supabase = createClient()
   const b = getBranding(order.branding)
+  
+  // Countdown Logic
+  const { timeLeft, isUrgent } = useCountdown(order.created_at)
 
   const copyAllImages = () => {
     if (!order.photos || order.photos.length === 0) return toast.error("Empty");
@@ -142,25 +176,39 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card className={`border-none transition-all duration-300 overflow-hidden
         ${open ? 'bg-white shadow-2xl' : 'bg-[#fdfdfe] hover:bg-white shadow-sm'} 
-        ${isLive ? 'ring-2 ring-emerald-400/50 border-l-[6px] border-l-emerald-500 shadow-emerald-500/10' : 'ring-1 ring-slate-200 border-l-[6px] border-l-slate-300'}`}>
+        ${isLive ? 'ring-2 ring-emerald-400/50 border-l-[6px] border-l-emerald-500' : 'ring-1 ring-slate-200 border-l-[6px] border-l-slate-300'}`}>
         
         <CollapsibleTrigger className="w-full p-6 flex items-center gap-6 text-left">
           <div className={`w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border ${isLive ? 'border-emerald-200' : 'border-slate-200'}`}>
             {order.photos?.[0] && <img src={order.photos[0].secure_url} className="object-cover w-full h-full" />}
           </div>
-          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 items-center gap-4">
+          <div className="flex-1 grid grid-cols-2 md:grid-cols-5 items-center gap-4">
             <div>
               <h3 className="font-black text-lg text-slate-800 uppercase tracking-tight leading-tight">{order.customer_name || "Client"}</h3>
               <p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-widest">ID: {order.order_id?.slice(0,8)}</p>
             </div>
+            
+            {/* FEE PAID */}
             <div>
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Fee Paid</p>
               <p className={`text-xl font-black ${isLive ? 'text-emerald-600' : 'text-slate-500'}`}>${order.total_price}</p>
             </div>
+
+            {/* BRANDING */}
             <div className="hidden md:block">
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Branding</p>
               <p className="text-sm font-black text-slate-700 uppercase">{b.tier}</p>
             </div>
+
+            {/* COUNTDOWN TIMER */}
+            <div className="hidden md:block">
+              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Due In</p>
+              <div className={`flex items-center gap-1.5 ${isUrgent && isLive ? 'text-red-600 font-black text-base scale-105 transition-all' : 'text-slate-500 font-bold text-sm'}`}>
+                <Clock className={`w-3.5 h-3.5 ${isUrgent && isLive ? 'animate-pulse' : ''}`} />
+                <span>{isLive ? timeLeft : "DELIVERED"}</span>
+              </div>
+            </div>
+
             <div className="flex justify-end pr-2">
               <ChevronDown className={`w-5 h-5 text-slate-300 transition-transform ${open ? 'rotate-180 text-emerald-500' : ''}`} />
             </div>
