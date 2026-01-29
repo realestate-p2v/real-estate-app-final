@@ -6,7 +6,7 @@ import {
   LayoutGrid, ChevronDown, ExternalLink, Loader2, 
   Music, Mic, Brush, ImageIcon, ArrowLeft, 
   Download, Hash, User, Building2, Laptop, Search, 
-  Mail, Phone, Globe, FileText, CheckCircle2, Copy, Check, Clock
+  Mail, Phone, Globe, FileText, CheckCircle2, Copy, Check, Clock, Flag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.9</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">10.0</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -295,8 +295,12 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
           </div>
 
+          {/* Section 3: Finish Section */}
           <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
-             <div className="text-[9px] text-slate-400 font-black border-b border-emerald-100 pb-4 space-y-2">
+             <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
+               <Flag className="w-3.5 h-3.5"/> Finish
+             </h4>
+             <div className="text-[9px] text-slate-400 font-black space-y-2">
                <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
                <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_phone || "No Phone"}</p>
              </div>
