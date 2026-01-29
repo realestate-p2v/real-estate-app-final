@@ -1,4 +1,4 @@
-    "use client"
+"use client"
 
 import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
              <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
-             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.6</span></h1>
+             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">Command <span className="text-emerald-500 font-black">9.7</span></h1>
           </div>
         </div>
         <div className="relative w-80">
@@ -148,12 +148,22 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
   const b = getBranding(order.branding)
   const { timeLeft, isUrgent } = useCountdown(order.created_at)
 
+  // Ensure photos stay in numerical order by original filename or position
+  const sortedPhotos = React.useMemo(() => {
+    if (!order.photos) return [];
+    return [...order.photos].sort((a: any, b: any) => {
+      const nameA = a.original_filename || "";
+      const nameB = b.original_filename || "";
+      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [order.photos]);
+
   const copyAllImages = () => {
-    if (!order.photos || order.photos.length === 0) return toast.error("Empty");
-    const urlList = order.photos.map((p: any) => p.secure_url).join('\n');
+    if (sortedPhotos.length === 0) return toast.error("Empty");
+    const urlList = sortedPhotos.map((p: any) => p.secure_url).join('\n');
     navigator.clipboard.writeText(urlList);
     setCopied(true);
-    toast.success("Links Copied");
+    toast.success("Numerical List Copied");
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -175,7 +185,6 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
         ${open ? 'bg-white shadow-2xl' : 'bg-[#fdfdfe] hover:bg-white shadow-sm'} 
         ${isLive ? 'ring-2 ring-emerald-400/50 border-l-[6px] border-l-emerald-500' : 'ring-1 ring-slate-200 border-l-[6px] border-l-slate-300'}`}>
         
-        {/* CLICK TO OPEN INDICATOR */}
         {!open && (
            <div className="absolute bottom-1.5 right-3 pointer-events-none">
              <span className="text-[7px] font-black uppercase tracking-[0.2em] text-slate-300">click to open</span>
@@ -184,7 +193,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
         <CollapsibleTrigger className="w-full p-6 pb-7 flex items-center gap-6 text-left">
           <div className={`w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border ${isLive ? 'border-emerald-200' : 'border-slate-200'}`}>
-            {order.photos?.[0] && <img src={order.photos[0].secure_url} className="object-cover w-full h-full" />}
+            {sortedPhotos[0] && <img src={sortedPhotos[0].secure_url} className="object-cover w-full h-full" />}
           </div>
           <div className="flex-1 grid grid-cols-2 md:grid-cols-5 items-center gap-4">
             <div>
