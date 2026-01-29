@@ -1,4 +1,4 @@
-import { createCheckoutSession } from "@/app/actions/stripe";
+import { getCheckoutSession } from "@/app/actions/stripe";
 import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, Upload, ArrowRight } from "lucide-react";
@@ -54,11 +54,11 @@ export default async function SuccessPage({
           </p>
         )}
 
-        {sessionData?.customerEmail && (
+        {(sessionData?.customer_details?.email ?? (sessionData as any)?.customer_email) && (
           <p className="mb-8 text-muted-foreground">
             A confirmation email will be sent to{" "}
             <span className="font-medium text-foreground">
-              {sessionData.customerEmail}
+              {sessionData?.customer_details?.email ?? (sessionData as any)?.customer_email}
             </span>
           </p>
         )}

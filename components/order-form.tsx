@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import { getStripe } from "@/lib/stripe-client";
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
 import { BrandingSelector, type BrandingData } from "@/components/branding-selector";
@@ -119,7 +118,15 @@ export function OrderForm() {
           uploadedPhotos,
           musicSelection,
           musicFile: musicFileUrl,
-          branding: { type: brandingSelection, logoUrl: brandingLogoUrl },
+          branding: {
+            type: brandingSelection,
+            logoUrl: brandingLogoUrl,
+            agentName: brandingData.agentName,
+            companyName: brandingData.companyName,
+            phone: brandingData.phone,
+            email: brandingData.email,
+            website: brandingData.website,
+          },
           voiceover: voiceoverSelection === "voiceover",
           voiceoverScript,
           voiceoverVoice: selectedVoice,
@@ -138,12 +145,14 @@ export function OrderForm() {
         body: JSON.stringify({
           items: [{ name: `${photoCount} Photo Video Package`, amount: getTotalPrice() * 100 }],
           customerDetails: formData,
-          orderData: { orderId: createdOrderId }
+          orderData: { orderId: createdOrderId, photoCount },
         }),
       });
       const session = await checkoutResponse.json();
-      const stripe = await getStripe();
-      await stripe?.redirectToCheckout({ sessionId: session.id });
+      if (!checkoutResponse.ok || !session.url) {
+        throw new Error(session.error || "Checkout failed");
+      }
+      window.location.href = session.url;
     } catch (error: any) {
       alert("Error processing order: " + error.message);
     } finally {

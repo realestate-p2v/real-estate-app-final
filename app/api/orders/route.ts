@@ -49,13 +49,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle custom audio
+    // Handle custom audio (from customAudioUrl/customAudioFilename or musicFile from form)
     let customAudio = undefined;
     if (input.customAudioUrl && input.customAudioFilename) {
       customAudio = {
         public_id: "",
         secure_url: input.customAudioUrl,
         filename: input.customAudioFilename,
+      };
+    } else if (input.musicFile) {
+      customAudio = {
+        public_id: "",
+        secure_url: input.musicFile,
+        filename: input.customAudioFilename || "custom-audio",
       };
     }
 

@@ -4,9 +4,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
-    const { amount, customerName, customerEmail, photoCount, orderId } = await request.json();
+    const body = await request.json();
+    // Support both form payload (items, customerDetails, orderData) and legacy (amount, customerName, ...)
+    const orderId = body.orderData?.orderId ?? body.orderId;
+    const amountCents = body.items?.[0]?.amount ?? (body.amount != null ? Math.round(Number(body.amount) * 100) : null);
+    const customerName = body.customerDetails?.name ?? body.customerName;
+    const customerEmail = body.customerDetails?.email ?? body.customerEmail;
+    const photoCount = body.orderData?.photoCount ?? body.photoCount ?? 0;
 
-    if (!amount || !customerEmail) {
+    if (!amountCents || !customerEmail) {
       return NextResponse.json(
         { success: false, error: "Amount and email are required" },
         { status: 400 }
@@ -81,7 +87,7 @@ export async function POST(request: Request) {
               name: `Real Estate Walkthrough Video`,
               description: `Professional HD walkthrough video with ${photoCount} photos`,
             },
-            unit_amount: Math.round(amount * 100),
+            unit_amount: amountCents,
           },
           quantity: 1,
         },
@@ -107,6 +113,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      id: session.id,
       sessionId: session.id,
       url: session.url,
     });

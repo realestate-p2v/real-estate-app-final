@@ -47,18 +47,20 @@ function useCountdown(createdAt: string) {
 }
 
 const getBranding = (val: any) => {
-  if (!val) return { tier: "Standard", agent: "—", co: "—", web: "—", logo: null };
+  if (!val) return { tier: "Standard", agent: "—", co: "—", web: "—", logo: null, phone: "—", email: "—" };
   try {
     const d = typeof val === 'string' ? JSON.parse(val) : val;
     return {
       tier: d.type === 'custom' ? "Custom" : "Standard",
       agent: d.agentName || "—",
-      co: d.company || "—",
+      co: d.companyName || d.company || "—",
       web: d.website || "—",
-      logo: d.logoUrl || null
+      logo: d.logoUrl || null,
+      phone: d.phone || "—",
+      email: d.email || "—",
     };
   } catch {
-    return { tier: "Standard", agent: "—", co: "—", web: "—", logo: null };
+    return { tier: "Standard", agent: "—", co: "—", web: "—", logo: null, phone: "—", email: "—" };
   }
 }
 
@@ -67,17 +69,27 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const supabase = createClient()
 
   useEffect(() => {
     setMounted(true)
     const load = async () => {
-      const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false })
-      setOrders(data || [])
+      try {
+        const res = await fetch("/api/admin/orders")
+        const json = await res.json()
+        if (res.ok && json.orders) setOrders(json.orders)
+        else {
+          const { data } = await createClient().from("orders").select("*").order("created_at", { ascending: false })
+          setOrders(data || [])
+        }
+      } catch {
+        const supabase = createClient()
+        const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false })
+        setOrders(data || [])
+      }
       setLoading(false)
     }
     load()
-  }, [supabase])
+  }, [])
 
   if (!mounted) return null
 
@@ -234,11 +246,23 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Company</span>
                 <span className="text-slate-700 font-black">{b.co}</span>
               </div>
+              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase text-[8px]">Phone</span>
+                <span className="text-slate-700 font-black">{b.phone}</span>
+              </div>
+              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase text-[8px]">Email</span>
+                <span className="text-slate-700 font-black">{b.email}</span>
+              </div>
+              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase text-[8px]">Website</span>
+                <span className="text-slate-700 font-black">{b.web}</span>
+              </div>
               {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
             </div>
             <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed">
                <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
-               {order.branding_instructions || "Standard production."}
+               {order.special_instructions || "Standard production."}
             </div>
           </div>
 
@@ -290,8 +314,8 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
 
              <div className="flex gap-2">
-                {order.music_file && <a href={order.music_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
-                {order.script_file && <a href={order.script_file} target="_blank" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
+                {(order.custom_audio?.secure_url || order.music_file) && <a href={order.custom_audio?.secure_url || order.music_file} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
+                {order.voiceover_script && <a href={`data:text/plain;charset=utf-8,${encodeURIComponent(order.voiceover_script)}`} download={`order-${order.order_id?.slice(0, 8)}-script.txt`} className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
              </div>
           </div>
 
