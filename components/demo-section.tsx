@@ -101,7 +101,7 @@ export function DemoSection() {
                 <iframe
                   width="100%"
                   height="100%"
-                  src="https://youtu.be/3jdoPBu7hVo"
+                  src="https://www.youtube.com/watch?v=3jdoPBu7hVo&feature=youtu.be"
                   title="Real Estate Photo 2 Video Sample"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   referrerPolicy="strict-origin-when-cross-origin"
