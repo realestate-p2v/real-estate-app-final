@@ -98,16 +98,7 @@ export function DemoSection() {
                 <span className="font-semibold text-foreground">Your HD Walkthrough Video</span>
               </div>
               <div className="aspect-video rounded-lg overflow-hidden bg-foreground/5">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src="https://www.youtube.com/watch?v=3jdoPBu7hVo"
-                  title="Real Estate Photo 2 Video Sample"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
+                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/3jdoPBu7hVo?si=ZQxY9Ow2nF_n6k2q" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
               </div>
               <p className="mt-4 text-sm text-muted-foreground text-center">
                 Professional HD video delivered in 72 hours
