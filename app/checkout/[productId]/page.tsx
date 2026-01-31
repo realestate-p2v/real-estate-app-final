@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Shield, Clock, CheckCircle } from "lucide-react";
+import Script from "next/script";
 
 export function generateStaticParams() {
   return PRODUCTS.map((product) => ({
@@ -25,6 +26,20 @@ export default async function CheckoutPage({
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Google Analytics Script */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-4VFMMPJDBN');
+        `}
+      </Script>
+
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-7xl px-4 py-4">
           <Link href="/" className="flex items-center gap-2">
@@ -117,13 +132,3 @@ export default async function CheckoutPage({
     </div>
   );
 }
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-4VFMMPJDBN');
-</script>
