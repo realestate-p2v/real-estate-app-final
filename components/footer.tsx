@@ -1,9 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
 
 export function Footer() {
   return (
     <footer className="bg-foreground text-background py-12">
+      {/* Google Analytics Script */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
+        strategy="afterInteractive"
+      />
+      <Script id="footer-google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-4VFMMPJDBN');
+        `}
+      </Script>
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex flex-col items-center md:items-start">
@@ -59,13 +74,3 @@ export function Footer() {
     </footer>
   );
 }
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-4VFMMPJDBN');
-</script>
