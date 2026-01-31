@@ -11,7 +11,7 @@ const plans = [
     salePrice: 99,
     savings: 50,
     features: [
-      "Up to 12 Photos"
+      "Up to 12 Photos",
       "HD 1080p video output",
       "Manual Photoshop enhancement",
       "AI video enhancement (perspective/shadows)",
@@ -29,7 +29,7 @@ const plans = [
     salePrice: 149,
     savings: 50,
     features: [
-      "Up to 25 Photos"
+      "Up to 25 Photos",
       "HD 1080p video output",
       "Manual Photoshop enhancement",
       "AI video enhancement (perspective/shadows)",
@@ -47,7 +47,7 @@ const plans = [
     salePrice: 199,
     savings: 50,
     features: [
-      "Up to 35 Photos"
+      "Up to 35 Photos",
       "HD 1080p video output",
       "Manual Photoshop enhancement",
       "AI video enhancement (perspective/shadows)",
