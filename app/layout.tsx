@@ -4,13 +4,41 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geist = Geist({ subsets: ["latin"] });
+const geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'Real Estate Photo 2 Video | Transform Listing Photos Into Walkthrough Videos',
-  description: 'Turn your real estate listing photos into stunning walkthrough videos. Perfect for social media, YouTube, and client presentations. Fast 72-hour delivery.',
+  description: 'A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos with fast 72-hour delivery.',
   generator: 'v0.app',
+  
+  // Open Graph / Facebook / WhatsApp / Instagram
+  openGraph: {
+    title: 'Real Estate Photo 2 Video | Professional Video Agency',
+    description: 'Turn listing photos into professional walkthrough videos. Hand-edited by real editors for maximum impact.',
+    url: 'https://realestate-p2v.com', // Update this to your live URL when ready
+    siteName: 'Real Estate Photo 2 Video',
+    images: [
+      {
+        url: '/og-image.jpg', // Ensure this file is in your /public folder
+        width: 1200,
+        height: 630,
+        alt: 'Professional Real Estate Video Preview',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+
+  // Twitter / X
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Real Estate Photo 2 Video',
+    description: 'Hand-edited professional real estate videos from your listing photos.',
+    images: ['/og-image.jpg'],
+  },
+
+  // Favicons & Icons
   icons: {
     icon: [
       {
@@ -37,7 +65,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body className={`${geist.className} font-sans antialiased`}>
         {children}
         <Analytics />
       </body>
