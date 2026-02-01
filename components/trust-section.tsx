@@ -27,7 +27,7 @@ export function TrustSection() {
               ))}
             </div>
             <p className="text-lg font-semibold text-gray-800 leading-snug italic mb-3">
-              "Photo 2 Video has completely changed how I market my listings. The quality is exceptional, and the delivery is so fast—my clients are always impressed!"
+              "Photo 2 Video has completely changed how I market my listings. The quality is exceptional, the delivery is fast—my clients are always impressed!"
             </p>
             <div className="text-sm">
               <span className="font-bold text-gray-900">Timothy Wolfe</span>
