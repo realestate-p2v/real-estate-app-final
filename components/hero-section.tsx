@@ -47,7 +47,7 @@ export function HeroSection() {
                 className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6"
               >
                 <Link href="/order">
-                  Order Now - Starting at <span className="line-through opacity-70 mx-1">$149</span> $99
+                  Order Now - Starting at <span className="line-through opacity-70 mx-1">$149</span> $79
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
