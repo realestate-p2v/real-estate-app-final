@@ -23,13 +23,13 @@ export function OrderSummary({
       return { price: 1, originalPrice: 1, tier: "Test Product (1 photo)" };
     }
     if (photoCount <= 12) {
-      return { price: 99, originalPrice: 149, tier: "Standard (up to 12 photos)" };
+      return { price: 79, originalPrice: 149, tier: "Standard (up to 12 photos)" };
     }
     if (photoCount <= 25) {
-      return { price: 149, originalPrice: 199, tier: "Premium (13-25 photos)" };
+      return { price: 129, originalPrice: 199, tier: "Premium (13-25 photos)" };
     }
     if (photoCount <= 35) {
-      return { price: 199, originalPrice: 249, tier: "Professional (26-35 photos)" };
+      return { price: 179, originalPrice: 249, tier: "Professional (26-35 photos)" };
     }
     return { price: 0, originalPrice: 0, tier: "Contact us" };
   };
