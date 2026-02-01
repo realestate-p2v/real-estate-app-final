@@ -61,12 +61,7 @@ export function Footer() {
                 {new Date().getFullYear()} Real Estate Photo 2 Video. All rights
                 reserved.
               </p>
-              /*<Link
-                href="/admin/dashboard"
-                className="text-background/30 hover:text-background/60 text-xs transition-colors"
-              >
-                Admin
-              </Link>*/
+          
             </div>
           </div>
         </div>
