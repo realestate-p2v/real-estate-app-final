@@ -120,11 +120,8 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
       {/* Photo Quality Note */}
       <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
         <div className="flex items-start gap-3">
-          <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              Results may vary based on original photo quality
-            </p>
+            
             <button
               type="button"
               onClick={() => setShowPhotoTips(!showPhotoTips)}
