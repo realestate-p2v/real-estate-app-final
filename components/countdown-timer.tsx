@@ -1,89 +1,76 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
-import { CountdownTimer } from "@/components/countdown-timer";
+import { useEffect, useState, useMemo } from "react";
 
-export function Navigation() {
-  const [isOpen, setIsOpen] = useState(false);
+interface TimeLeft {
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+}
+
+export function CountdownTimer() {
+  const targetDate = useMemo(() => new Date("2026-03-01T00:00:00").getTime(), []);
+
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
+    days: "00", hours: "00", minutes: "00", seconds: "00",
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        setTimeLeft({ days: "00", hours: "00", minutes: "00", seconds: "00" });
+        return;
+      }
+
+      const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((distance % (1000 * 60)) / 1000);
+
+      setTimeLeft({
+        days: d.toString().padStart(2, "0"),
+        hours: h.toString().padStart(2, "0"),
+        minutes: m.toString().padStart(2, "0"),
+        seconds: s.toString().padStart(2, "0"),
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
 
   return (
-    <nav className="bg-primary border-b border-primary/80 sticky top-0 z-40">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
-          
-          {/* Logo & Agency Phrase */}
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex-shrink-0">
-              <Image
-                src="/logo.png"
-                alt="Real Estate Photo 2 Video"
-                width={160}
-                height={64}
-                className="h-10 md:h-12 w-auto"
-              />
-            </Link>
-            <div className="hidden md:block h-10 w-[1px] bg-white/30" />
-            <span className="hidden md:block text-lg lg:text-xl text-primary-foreground/90 italic font-semibold tracking-tight whitespace-nowrap">
-              A professional video agency, not an app
-            </span>
+    <div className="flex flex-col md:flex-row items-center gap-3">
+      <span className="text-white font-bold text-sm whitespace-nowrap">
+        February sale ends in:
+      </span>
+      <div className="px-4 py-1.5 rounded-lg border border-red-600/40 bg-black/20 shadow-[0_0_12px_rgba(220,38,38,0.3)] flex items-center gap-3">
+        <div className="flex items-center gap-2 font-mono text-xl font-black text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.4)]">
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.days}</span>
+            <span className="text-[8px] font-sans font-bold text-white/60">DAYS</span>
           </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden xl:flex items-center gap-8">
-            <CountdownTimer />
-
-            <a
-              href="#demo"
-              className="text-primary-foreground hover:text-secondary font-bold text-sm transition-colors"
-            >
-              Samples
-            </a>
-            
-            <Button
-              asChild
-              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg shadow-xl"
-            >
-              <Link href="/order">Order Now</Link>
-            </Button>
+          <span className="text-white/20">:</span>
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.hours}</span>
+            <span className="text-[8px] font-sans font-bold text-white/60">HRS</span>
           </div>
-
-          {/* Mobile menu button */}
-          <div className="xl:hidden flex items-center">
-            <button
-              type="button"
-              className="p-2 text-primary-foreground"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label="Toggle menu"
-            >
-              {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
-            </button>
+          <span className="text-white/20">:</span>
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.minutes}</span>
+            <span className="text-[8px] font-sans font-bold text-white/60">MIN</span>
+          </div>
+          <span className="text-white/20">:</span>
+          <div className="flex flex-col items-center">
+            <span className="animate-pulse">{timeLeft.seconds}</span>
+            <span className="text-[8px] font-sans font-bold text-white/60">SEC</span>
           </div>
         </div>
-
-        {/* Mobile Navigation Menu */}
-        {isOpen && (
-          <div className="xl:hidden py-8 border-t border-primary-foreground/20 bg-primary shadow-2xl">
-            <div className="flex flex-col gap-6 text-center px-4">
-               <p className="text-primary-foreground italic text-lg font-semibold border-b border-white/10 pb-4">
-                A Professional video agency, not an app
-              </p>
-              <div className="flex justify-center py-3 bg-white/5 rounded-xl">
-                <CountdownTimer />
-              </div>
-              <a href="#demo" className="text-primary-foreground text-xl font-bold py-2" onClick={() => setIsOpen(false)}>
-                View Samples
-              </a>
-              <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black shadow-lg">
-                <Link href="/order">Order Now</Link>
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
-    </nav>
+    </div>
   );
 }
