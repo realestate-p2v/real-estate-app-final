@@ -27,7 +27,7 @@ export function Navigation() {
 
           <div className="hidden xl:flex items-center gap-8">
             <CountdownTimer />
-            <a href="#demo" className="text-primary-foreground hover:text-secondary font-bold text-sm">Samples</a>
+            
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
               <Link href="/order">Order Now</Link>
             </Button>
