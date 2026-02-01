@@ -8,19 +8,19 @@ const geist = Geist({ subsets: ["latin"] });
 const geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Real Estate Photo 2 Video | Transform Listing Photos Into Walkthrough Videos',
-  description: 'A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos with fast 72-hour delivery.',
+  title: 'Real Estate Photo 2 Video | Professional Video Agency',
+  description: 'A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos.',
   generator: 'v0.app',
   
-  // Open Graph / Facebook / WhatsApp / Instagram
   openGraph: {
     title: 'Real Estate Photo 2 Video | Professional Video Agency',
     description: 'Turn listing photos into professional walkthrough videos. Hand-edited by real editors for maximum impact.',
-    url: 'https://realestate-p2v.com', // Update this to your live URL when ready
+    url: 'https://realestatephoto2video.com', 
     siteName: 'Real Estate Photo 2 Video',
     images: [
       {
-        url: '/og-image.jpg', // Ensure this file is in your /public folder
+        // The "?v=2" at the end is the cache-buster that forces an update
+        url: 'https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2', 
         width: 1200,
         height: 630,
         alt: 'Professional Real Estate Video Preview',
@@ -30,30 +30,15 @@ export const metadata: Metadata = {
     type: 'website',
   },
 
-  // Twitter / X
   twitter: {
     card: 'summary_large_image',
     title: 'Real Estate Photo 2 Video',
     description: 'Hand-edited professional real estate videos from your listing photos.',
-    images: ['/og-image.jpg'],
+    images: ['https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2'],
   },
 
-  // Favicons & Icons
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: '/icon.svg',
     apple: '/apple-icon.png',
   },
 }
