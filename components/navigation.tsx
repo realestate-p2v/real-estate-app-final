@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Trophy } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 
@@ -16,84 +16,70 @@ export function Navigation() {
         <div className="flex h-20 items-center justify-between">
           
           {/* Logo & Agency Phrase Side-by-Side */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex-shrink-0">
               <Image
                 src="/logo.png"
                 alt="Real Estate Photo 2 Video"
-                width={150}
-                height={60}
-                className="h-8 md:h-10 w-auto"
+                width={160}
+                height={64}
+                className="h-10 md:h-12 w-auto"
               />
             </Link>
-            <div className="hidden sm:block h-8 w-[1px] bg-white/20" /> {/* Vertical Divider */}
-            <span className="hidden sm:block text-xs md:text-sm text-primary-foreground/80 italic font-medium leading-tight max-w-[140px]">
-              We&apos;re a video agency, not an app...
+            <div className="hidden md:block h-10 w-[1px] bg-white/30" /> {/* Vertical Divider */}
+            <span className="hidden md:block text-lg lg:text-xl text-primary-foreground/90 italic font-semibold tracking-tight whitespace-nowrap">
+              A Professional video agency, not an app
             </span>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-6">
-            
-            {/* Gold Award Badge */}
-            <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.3)] border border-yellow-300/50">
-              <Trophy className="h-4 w-4 text-yellow-900" />
-              <span className="text-yellow-950 text-[11px] font-black uppercase tracking-tight">
-                Award Winning Support
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-primary-foreground text-sm border-l border-white/10 pl-6">
-              <span className="opacity-70">Sale ends:</span>
+          <div className="hidden xl:flex items-center gap-8">
+            <div className="flex items-center gap-2 text-primary-foreground text-sm border-l border-white/10 pl-8">
+              <span className="opacity-70 font-medium uppercase tracking-tighter">Sale ends:</span>
               <CountdownTimer />
             </div>
 
             <a
               href="#demo"
-              className="text-primary-foreground hover:text-secondary font-medium text-sm"
+              className="text-primary-foreground hover:text-secondary font-bold text-sm transition-colors"
             >
               Samples
             </a>
             
             <Button
               asChild
-              className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold px-6"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg shadow-xl"
             >
               <Link href="/order">Order Now</Link>
             </Button>
           </div>
 
           {/* Mobile menu button */}
-          <div className="flex items-center gap-3 lg:hidden">
-             <div className="flex items-center gap-1.5 bg-yellow-500 px-2 py-1 rounded-full border border-yellow-300">
-                <Trophy className="h-3 w-3 text-yellow-900" />
-                <span className="text-yellow-950 text-[9px] font-black uppercase">Support</span>
-              </div>
-            <button
-              type="button"
-              className="p-2 text-primary-foreground"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label="Toggle menu"
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
+          <button
+            type="button"
+            className="xl:hidden p-2 text-primary-foreground"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
+          </button>
         </div>
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="lg:hidden py-6 border-t border-primary-foreground/20 bg-primary">
-            <div className="flex flex-col gap-5 text-center">
-               <p className="text-primary-foreground/70 italic text-sm">
-                We&apos;re a video agency, not an app...
+          <div className="xl:hidden py-8 border-t border-primary-foreground/20 bg-primary shadow-2xl">
+            <div className="flex flex-col gap-6 text-center px-4">
+               <p className="text-primary-foreground italic text-lg font-semibold border-b border-white/10 pb-4">
+                A Professional video agency, not an app
               </p>
-              <div className="flex items-center justify-center gap-2 text-primary-foreground text-sm py-2 bg-white/5 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-primary-foreground text-md py-3 bg-white/5 rounded-xl">
+                <span className="opacity-70">Sale ends:</span>
                 <CountdownTimer />
               </div>
-              <a href="#demo" className="text-primary-foreground text-lg py-2" onClick={() => setIsOpen(false)}>
-                Samples
+              <a href="#demo" className="text-primary-foreground text-xl font-bold py-2" onClick={() => setIsOpen(false)}>
+                View Samples
               </a>
-              <Button asChild className="bg-accent text-accent-foreground py-6 text-lg font-bold">
+              <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black shadow-lg">
                 <Link href="/order">Order Now</Link>
               </Button>
             </div>
