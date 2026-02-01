@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ShieldCheck, Clock, Lock } from "lucide-react"; // Common icon library
+import { ShieldCheck, Clock, Lock } from "lucide-react";
 
 export function HeroSection() {
   return (
@@ -21,7 +21,7 @@ export function HeroSection() {
 
       {/* 2. Content Layer */}
       <div className="max-w-5xl mx-auto relative z-10 text-center">
-        {/* Mosaic Headline */}
+        {/* Mosaic/Attention-Grabbing Headline */}
         <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mb-4 text-white leading-tight">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-300 to-cyan-400">
             Turn your Listing Photos into
@@ -51,17 +51,20 @@ export function HeroSection() {
           <Link href="/order" passHref>
             <Button 
               size="lg" 
-              className="group text-xl px-10 py-9 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center"
+              className="group text-xl px-10 py-9 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
             >
-           
-                <span>Get Started Now</span>
-             
-          
+              <span className="text-xs uppercase tracking-widest opacity-90 mb-1 font-black">Limited Time Offer</span>
+              <div className="flex items-center gap-3">
+                <span>Get Started Now —</span>
+                <span className="flex items-center">
+                  <span className="line-through text-white/50 text-base mr-2 font-medium">$149</span>
+                  <span className="text-2xl">$79</span>
+                </span>
               </div>
             </Button>
           </Link>
 
-          {/* New Trust Badges Row */}
+          {/* Trust Badges Row */}
           <div className="flex flex-wrap justify-center items-center gap-6 text-white/70">
             <div className="flex items-center gap-2 text-sm font-medium">
               <ShieldCheck className="w-5 h-5 text-green-400" />
