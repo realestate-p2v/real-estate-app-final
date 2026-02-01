@@ -73,11 +73,7 @@ export function Navigation() {
                 A Professional video agency, not an app
               </p>
               <div className="flex flex-col items-center gap-2 py-3 bg-white/5 rounded-xl">
-                <span className="text-secondary text-xs font-black uppercase">
-                  Introductory offer, February Sale!
-                </span>
-                <div className="flex items-center gap-2 text-primary-foreground text-md">
-                   <span className="opacity-70">Ends in:</span>
+          
                    <CountdownTimer />
                 </div>
               </div>
