@@ -27,11 +27,11 @@ export function TrustSection() {
               ))}
             </div>
             <p className="text-lg font-semibold text-gray-800 leading-snug italic mb-3">
-              "P2V has completely changed how I market my listings. The quality is exceptional and the delivery is so fast—my clients are always impressed!"
+              "Photo 2 Video has completely changed how I market my listings. The quality is exceptional, and the delivery is so fast—my clients are always impressed!"
             </p>
             <div className="text-sm">
               <span className="font-bold text-gray-900">Timothy Wolfe</span>
-              <span className="text-gray-500 ml-2">— Realtor & Professional</span>
+              <span className="text-gray-500 ml-2">— Howard Hanna Rand Realty</span>
             </div>
           </div>
         </div>
