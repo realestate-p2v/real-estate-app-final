@@ -25,7 +25,7 @@ export function CTASection() {
             className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-10 py-7"
           >
             <Link href="/order">
-              Order Now - Starting at <span className="line-through opacity-70 mx-1">$149</span> $99
+              Order Now - Starting at <span className="line-through opacity-70 mx-1">$149</span> $79
               <ArrowRight className="ml-2 h-6 w-6" />
             </Link>
           </Button>
