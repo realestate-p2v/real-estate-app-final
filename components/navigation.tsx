@@ -28,7 +28,7 @@ export function Navigation() {
             </Link>
             <div className="hidden md:block h-10 w-[1px] bg-white/30" /> {/* Vertical Divider */}
             <span className="hidden md:block text-lg lg:text-xl text-primary-foreground/90 italic font-semibold tracking-tight whitespace-nowrap">
-              A Professional video agency, not an app
+              A professional video agency, not an app.
             </span>
           </div>
 
