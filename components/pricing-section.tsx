@@ -8,8 +8,8 @@ const plans = [
     name: "Standard",
     photos: "Up to 12 photos",
     originalPrice: 149,
-    salePrice: 99,
-    savings: 50,
+    salePrice: 79,
+    savings: 70,
     features: [
       "Up to 12 Photos",
       "HD 1080p video output",
@@ -26,8 +26,8 @@ const plans = [
     name: "Premium",
     photos: "13-25 photos",
     originalPrice: 199,
-    salePrice: 149,
-    savings: 50,
+    salePrice: 129,
+    savings: 70,
     features: [
       "Up to 25 Photos",
       "HD 1080p video output",
@@ -44,8 +44,8 @@ const plans = [
     name: "Professional",
     photos: "26-35 photos",
     originalPrice: 249,
-    salePrice: 199,
-    savings: 50,
+    salePrice: 179,
+    savings: 70,
     features: [
       "Up to 35 Photos",
       "HD 1080p video output",
