@@ -15,7 +15,7 @@ export function TrustSection() {
             <div>
               <h4 className="font-bold text-slate-900 leading-tight">100% Approval Guarantee</h4>
               <p className="text-sm text-slate-600 mt-1">
-                Receive your watermarked preview first. Request revisions until it&apos;s perfect. You only pay for the final, polished video.
+                Receive your watermarked preview first. Request a revision if it&apos;s not perfect. You only pay for the final, polished video.
               </p>
             </div>
           </div>
