@@ -1,78 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+
+interface TimeLeft {
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+}
 
 export function CountdownTimer() {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 44,
-    minutes: 0,
-    seconds: 0,
+  // Target date: March 1st, 2026
+  const targetDate = useMemo(() => new Date("2026-03-01T00:00:00").getTime(), []);
+
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
+    days: "00",
+    hours: "00",
+    minutes: "00",
+    seconds: "00",
   });
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    
-    // Random time between 40-48 hours (in milliseconds)
-    const minHours = 40;
-    const maxHours = 48;
-    const randomHours = Math.random() * (maxHours - minHours) + minHours;
-    const randomMs = randomHours * 60 * 60 * 1000;
-    
-    const endTime = new Date(Date.now() + randomMs);
-
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const distance = endTime.getTime() - now;
+      const distance = targetDate - now;
 
       if (distance < 0) {
         clearInterval(timer);
+        setTimeLeft({ days: "00", hours: "00", minutes: "00", seconds: "00" });
         return;
       }
 
-      const hours = Math.floor(distance / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((distance % (1000 * 60)) / 1000);
 
-      setTimeLeft({ hours, minutes, seconds });
+      setTimeLeft({
+        days: d.toString().padStart(2, "0"),
+        hours: h.toString().padStart(2, "0"),
+        minutes: m.toString().padStart(2, "0"),
+        seconds: s.toString().padStart(2, "0"),
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="inline-flex items-center gap-1 bg-secondary/20 backdrop-blur-sm rounded-lg px-4 py-2 border-2 border-secondary animate-pulse">
-        <div className="flex items-center gap-1 font-mono">
-          <span className="text-2xl md:text-3xl font-bold text-secondary">--:--:--</span>
-        </div>
-      </div>
-    );
-  }
+  }, [targetDate]);
 
   return (
-    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-secondary/30 to-secondary/20 backdrop-blur-sm rounded-xl px-5 py-3 border-2 border-red-500 shadow-lg shadow-red-500/40">
-      <div className="flex items-center gap-1 font-mono">
-        <div className="flex flex-col items-center">
-          <span className="text-2xl md:text-3xl font-bold text-secondary drop-shadow-glow">
-            {String(timeLeft.hours).padStart(2, "0")}
-          </span>
-          <span className="text-[10px] uppercase text-secondary/70 font-medium">hrs</span>
-        </div>
-        <span className="text-2xl md:text-3xl font-bold text-secondary animate-pulse mx-1">:</span>
-        <div className="flex flex-col items-center">
-          <span className="text-2xl md:text-3xl font-bold text-secondary drop-shadow-glow">
-            {String(timeLeft.minutes).padStart(2, "0")}
-          </span>
-          <span className="text-[10px] uppercase text-secondary/70 font-medium">min</span>
-        </div>
-        <span className="text-2xl md:text-3xl font-bold text-secondary animate-pulse mx-1">:</span>
-        <div className="flex flex-col items-center">
-          <span className="text-2xl md:text-3xl font-bold text-secondary drop-shadow-glow">
-            {String(timeLeft.seconds).padStart(2, "0")}
-          </span>
-          <span className="text-[10px] uppercase text-secondary/70 font-medium">sec</span>
-        </div>
+    <div className="flex items-center gap-1 font-mono font-bold text-secondary">
+      <div className="flex flex-col items-center">
+        <span>{timeLeft.days}</span>
+        <span className="text-[8px] uppercase opacity-60 -mt-1 font-sans">d</span>
+      </div>
+      <span className="opacity-50 mb-1">:</span>
+      <div className="flex flex-col items-center">
+        <span>{timeLeft.hours}</span>
+        <span className="text-[8px] uppercase opacity-60 -mt-1 font-sans">h</span>
+      </div>
+      <span className="opacity-50 mb-1">:</span>
+      <div className="flex flex-col items-center">
+        <span>{timeLeft.minutes}</span>
+        <span className="text-[8px] uppercase opacity-60 -mt-1 font-sans">m</span>
+      </div>
+      <span className="opacity-50 mb-1">:</span>
+      <div className="flex flex-col items-center animate-pulse">
+        <span>{timeLeft.seconds}</span>
+        <span className="text-[8px] uppercase opacity-60 -mt-1 font-sans">s</span>
       </div>
     </div>
   );
