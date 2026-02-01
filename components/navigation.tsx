@@ -34,12 +34,7 @@ export function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden xl:flex items-center gap-8">
-            <div className="flex flex-col items-end border-l border-white/10 pl-8">
-              <span className="text-secondary text-[10px] font-black uppercase tracking-widest mb-1">
-                Introductory offer, February Sale!
-              </span>
-              <div className="flex items-center gap-2 text-primary-foreground text-sm">
-                <span className="opacity-70 font-medium">Ends in:</span>
+            
                 <CountdownTimer />
               </div>
             </div>
