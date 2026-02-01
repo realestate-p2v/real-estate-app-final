@@ -26,7 +26,7 @@ export function Navigation() {
                 className="h-10 md:h-12 w-auto"
               />
             </Link>
-            <div className="hidden md:block h-10 w-[1px] bg-white/30" /> {/* Vertical Divider */}
+            <div className="hidden md:block h-10 w-[1px] bg-white/30" />
             <span className="hidden md:block text-lg lg:text-xl text-primary-foreground/90 italic font-semibold tracking-tight whitespace-nowrap">
               A professional video agency, not an app
             </span>
@@ -34,9 +34,14 @@ export function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden xl:flex items-center gap-8">
-            <div className="flex items-center gap-2 text-primary-foreground text-sm border-l border-white/10 pl-8">
-              <span className="opacity-70 font-medium uppercase tracking-tighter">Sale ends:</span>
-              <CountdownTimer />
+            <div className="flex flex-col items-end border-l border-white/10 pl-8">
+              <span className="text-secondary text-[10px] font-black uppercase tracking-widest mb-1">
+                Introductory offer, February Sale!
+              </span>
+              <div className="flex items-center gap-2 text-primary-foreground text-sm">
+                <span className="opacity-70 font-medium">Ends in:</span>
+                <CountdownTimer />
+              </div>
             </div>
 
             <a
@@ -72,9 +77,14 @@ export function Navigation() {
                <p className="text-primary-foreground italic text-lg font-semibold border-b border-white/10 pb-4">
                 A Professional video agency, not an app
               </p>
-              <div className="flex items-center justify-center gap-2 text-primary-foreground text-md py-3 bg-white/5 rounded-xl">
-                <span className="opacity-70">Sale ends:</span>
-                <CountdownTimer />
+              <div className="flex flex-col items-center gap-2 py-3 bg-white/5 rounded-xl">
+                <span className="text-secondary text-xs font-black uppercase">
+                  Introductory offer, February Sale!
+                </span>
+                <div className="flex items-center gap-2 text-primary-foreground text-md">
+                   <span className="opacity-70">Ends in:</span>
+                   <CountdownTimer />
+                </div>
               </div>
               <a href="#demo" className="text-primary-foreground text-xl font-bold py-2" onClick={() => setIsOpen(false)}>
                 View Samples
