@@ -10,7 +10,6 @@ interface TimeLeft {
 }
 
 export function CountdownTimer() {
-  // Target date: March 1st, 2026
   const targetDate = useMemo(() => new Date("2026-03-01T00:00:00").getTime(), []);
 
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({
@@ -48,32 +47,32 @@ export function CountdownTimer() {
   }, [targetDate]);
 
   return (
-    <div className="flex items-center gap-3">
-      {/* Red Glow Label */}
-      <span className="text-red-500 font-black uppercase tracking-tighter animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] text-base md:text-lg">
-        February Offer:
+    <div className="flex items-center gap-4">
+      {/* Muted Glowing Label */}
+      <span className="text-red-900/80 font-bold uppercase tracking-widest text-sm drop-shadow-[0_0_10px_rgba(220,38,38,0.4)]">
+        February Offer
       </span>
 
-      {/* Large Timer Display */}
-      <div className="flex items-center gap-2 font-mono text-xl md:text-2xl font-black text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+      {/* Elegant Deep Red Timer */}
+      <div className="flex items-center gap-2 font-mono text-xl md:text-2xl font-bold text-red-800/90 drop-shadow-[0_0_12px_rgba(220,38,38,0.3)]">
         <div className="flex flex-col items-center">
           <span>{timeLeft.days}</span>
-          <span className="text-[10px] font-sans font-bold -mt-1 opacity-80">DAYS</span>
+          <span className="text-[9px] font-sans font-medium opacity-60">DAYS</span>
         </div>
-        <span className="animate-pulse">:</span>
+        <span className="opacity-40">:</span>
         <div className="flex flex-col items-center">
           <span>{timeLeft.hours}</span>
-          <span className="text-[10px] font-sans font-bold -mt-1 opacity-80">HRS</span>
+          <span className="text-[9px] font-sans font-medium opacity-60">HRS</span>
         </div>
-        <span className="animate-pulse">:</span>
+        <span className="opacity-40">:</span>
         <div className="flex flex-col items-center">
           <span>{timeLeft.minutes}</span>
-          <span className="text-[10px] font-sans font-bold -mt-1 opacity-80">MIN</span>
+          <span className="text-[9px] font-sans font-medium opacity-60">MIN</span>
         </div>
-        <span className="animate-pulse">:</span>
+        <span className="opacity-40">:</span>
         <div className="flex flex-col items-center">
           <span>{timeLeft.seconds}</span>
-          <span className="text-[10px] font-sans font-bold -mt-1 opacity-80">SEC</span>
+          <span className="text-[9px] font-sans font-medium opacity-60">SEC</span>
         </div>
       </div>
     </div>
