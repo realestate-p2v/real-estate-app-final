@@ -56,9 +56,7 @@ export function HeroSection() {
               <span className="text-xs uppercase tracking-widest opacity-90 mb-1 font-black">Limited Time Offer</span>
               <div className="flex items-center gap-3">
                 <span>Get Started Now —</span>
-                <span className="flex items-center">
-                  <span className="line-through text-white/50 text-base mr-2 font-medium">$149</span>
-                  <span className="text-2xl">$79</span>
+             
                 </span>
               </div>
             </Button>
