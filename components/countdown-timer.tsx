@@ -47,32 +47,34 @@ export function CountdownTimer() {
   }, [targetDate]);
 
   return (
-    <div className="flex items-center gap-4">
-      {/* Muted Glowing Label */}
-      <span className="text-red-900/90 font-bold uppercase tracking-widest text-sm drop-shadow-[0_0_10px_rgba(220,38,38,0.4)]">
-        February Offer
+    <div className="flex flex-col md:flex-row items-center gap-3">
+      {/* Required Text */}
+      <span className="text-white font-bold text-sm md:text-base whitespace-nowrap">
+        February sale ends in:
       </span>
 
-      {/* Elegant Deep Red Timer */}
-      <div className="flex items-center gap-2 font-mono text-xl md:text-2xl font-bold text-red-800/90 drop-shadow-[0_0_12px_rgba(220,38,38,0.3)]">
-        <div className="flex flex-col items-center">
-          <span>{timeLeft.days}</span>
-          <span className="text-[9px] font-sans font-medium opacity-60">DAYS</span>
-        </div>
-        <span className="opacity-40">:</span>
-        <div className="flex flex-col items-center">
-          <span>{timeLeft.hours}</span>
-          <span className="text-[9px] font-sans font-medium opacity-60">HRS</span>
-        </div>
-        <span className="opacity-40">:</span>
-        <div className="flex flex-col items-center">
-          <span>{timeLeft.minutes}</span>
-          <span className="text-[9px] font-sans font-medium opacity-60">MIN</span>
-        </div>
-        <span className="opacity-40">:</span>
-        <div className="flex flex-col items-center">
-          <span>{timeLeft.seconds}</span>
-          <span className="text-[9px] font-sans font-medium opacity-60">SEC</span>
+      {/* Glowing Red Box around Green Timer */}
+      <div className="px-4 py-2 rounded-xl border-2 border-red-600/50 bg-black/20 shadow-[0_0_15px_rgba(220,38,38,0.5)] flex items-center gap-3">
+        <div className="flex items-center gap-2 font-mono text-xl md:text-2xl font-black text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]">
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.days}</span>
+            <span className="text-[9px] font-sans font-bold text-white/60">DAYS</span>
+          </div>
+          <span className="text-white/40 animate-pulse">:</span>
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.hours}</span>
+            <span className="text-[9px] font-sans font-bold text-white/60">HRS</span>
+          </div>
+          <span className="text-white/40 animate-pulse">:</span>
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.minutes}</span>
+            <span className="text-[9px] font-sans font-bold text-white/60">MIN</span>
+          </div>
+          <span className="text-white/40 animate-pulse">:</span>
+          <div className="flex flex-col items-center">
+            <span>{timeLeft.seconds}</span>
+            <span className="text-[9px] font-sans font-bold text-white/60">SEC</span>
+          </div>
         </div>
       </div>
     </div>
