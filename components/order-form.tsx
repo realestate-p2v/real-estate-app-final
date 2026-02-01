@@ -37,9 +37,9 @@ export function OrderForm() {
   const canProceed = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
   const getBasePrice = () => {
     if (photoCount === 1) return 1; // Test price
-    if (photoCount <= 12) return 99;
-    if (photoCount <= 25) return 149;
-    if (photoCount <= 35) return 199;
+    if (photoCount <= 12) return 79;
+    if (photoCount <= 25) return 129;
+    if (photoCount <= 35) return 179;
     return 0;
   };
   const getBrandingPrice = () => brandingSelection === "custom" ? 25 : 0;
