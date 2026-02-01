@@ -13,9 +13,9 @@ export function Navigation() {
   return (
     <nav className="bg-primary border-b border-primary/80 sticky top-0 z-40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-24 items-center justify-between">
           
-          {/* Logo & Agency Phrase Side-by-Side */}
+          {/* Logo & Agency Phrase */}
           <div className="flex items-center gap-6">
             <Link href="/" className="flex-shrink-0">
               <Image
@@ -34,10 +34,7 @@ export function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden xl:flex items-center gap-8">
-            
-                <CountdownTimer />
-              </div>
-            </div>
+            <CountdownTimer />
 
             <a
               href="#demo"
@@ -55,29 +52,33 @@ export function Navigation() {
           </div>
 
           {/* Mobile menu button */}
-          <button
-            type="button"
-            className="xl:hidden p-2 text-primary-foreground"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
-          </button>
+          <div className="xl:hidden flex items-center">
+            <button
+              type="button"
+              className="p-2 text-primary-foreground"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation Menu */}
         {isOpen && (
           <div className="xl:hidden py-8 border-t border-primary-foreground/20 bg-primary shadow-2xl">
             <div className="flex flex-col gap-6 text-center px-4">
-               <p className="text-primary-foreground italic text-lg font-semibold border-b border-white/10 pb-4">
+              <p className="text-primary-foreground italic text-lg font-semibold border-b border-white/10 pb-4">
                 A Professional video agency, not an app
               </p>
-              <div className="flex flex-col items-center gap-2 py-3 bg-white/5 rounded-xl">
-          
-                   <CountdownTimer />
-                </div>
+              <div className="flex justify-center py-3 bg-white/5 rounded-xl">
+                <CountdownTimer />
               </div>
-              <a href="#demo" className="text-primary-foreground text-xl font-bold py-2" onClick={() => setIsOpen(false)}>
+              <a 
+                href="#demo" 
+                className="text-primary-foreground text-xl font-bold py-2" 
+                onClick={() => setIsOpen(false)}
+              >
                 View Samples
               </a>
               <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black shadow-lg">
