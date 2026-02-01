@@ -49,7 +49,7 @@ export function CountdownTimer() {
   return (
     <div className="flex items-center gap-4">
       {/* Muted Glowing Label */}
-      <span className="text-red-900/80 font-bold uppercase tracking-widest text-sm drop-shadow-[0_0_10px_rgba(220,38,38,0.4)]">
+      <span className="text-red-900/90 font-bold uppercase tracking-widest text-sm drop-shadow-[0_0_10px_rgba(220,38,38,0.4)]">
         February Offer
       </span>
 
