@@ -37,7 +37,7 @@ function BeforeAfterSlider() {
       {/* AFTER IMAGE (Bottom Layer) */}
       <div className="absolute inset-0">
         <Image 
-          src="/images/kitchen-enhanced.jpg" // RENAME YOUR FILE TO THIS
+          src="/images/library-3.jpg" // RENAME YOUR FILE TO THIS
           alt="After Enhancement" 
           fill 
           className="object-cover" 
@@ -53,7 +53,7 @@ function BeforeAfterSlider() {
         style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
       >
         <Image 
-          src="/images/kitchen-warped.jpg" // RENAME YOUR WARPED FILE TO THIS
+          src="/images/library-3-warped.jpg" // RENAME YOUR WARPED FILE TO THIS
           alt="Before Original" 
           fill 
           className="object-cover" 
