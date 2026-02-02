@@ -13,6 +13,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
 type OrderStep = "upload" | "details" | "payment";
+
+ {/* Google Analytics Script */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
+        strategy="afterInteractive"
+      />
+
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
