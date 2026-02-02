@@ -79,7 +79,7 @@ export function DemoSection() {
               <div className="aspect-video rounded-lg overflow-hidden bg-foreground/5">
                 <iframe 
                   width="100%" height="100%" 
-                  src="https://www.youtube.com/embed/3jdoPBu7hVo?si=ZQxY9Ow2nF_n6k2q" 
+                  src="https://www.youtube.com/embed/OuzDikc2M7I?si=9nF9DEq5GxUUkEvO" 
                   title="YouTube video player" frameBorder="0" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                   referrerPolicy="strict-origin-when-cross-origin" allowFullScreen
