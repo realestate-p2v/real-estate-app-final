@@ -14,10 +14,10 @@ export default function HomePage() {
     <main className="min-h-screen">
       <Navigation />
       <HeroSection />
-      <TrustSection /> {/* Placed right under Hero */}
       <DemoSection />
       <ProcessSection />
       <PricingSection />
+        <TrustSection /> {/* Placed right under Hero */}
       <CTASection />
       <ContactSection />
       <Footer />
