@@ -27,8 +27,8 @@ export function Footer() {
             <Image
               src="/logo.png"
               alt="Real Estate Photo 2 Video"
-              width={180}
-              height={70}
+              width={270}
+              height={105}
               className="h-14 md:h-16 w-auto"
             />
             <p className="text-background/60 text-sm max-w-xs text-center md:text-left leading-relaxed">
