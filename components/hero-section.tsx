@@ -84,7 +84,7 @@ export function HeroSection() {
 
       {/* 3. Discreet Scroll Indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 opacity-50 animate-bounce">
-        <span className="text-[10px] text-white uppercase tracking-[0.2em] font-bold">Scroll</span>
+
         <ChevronDown className="w-6 h-6 text-white" />
       </div>
 
