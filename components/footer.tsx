@@ -4,7 +4,7 @@ import Script from "next/script";
 
 export function Footer() {
   return (
-    <footer className="bg-foreground text-background py-12">
+    <footer className="bg-foreground text-background py-16">
       {/* Google Analytics Script */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
@@ -20,61 +20,64 @@ export function Footer() {
       </Script>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
           
-          {/* Left Column: Logo & Main Blurb */}
+          {/* Column 1: Brand & Logo */}
           <div className="flex flex-col items-center md:items-start space-y-4">
             <Image
               src="/logo.png"
               alt="Real Estate Photo 2 Video"
-              width={200}
-              height={80}
-              className="h-16 md:h-20 w-auto"
+              width={180}
+              height={70}
+              className="h-14 md:h-16 w-auto"
             />
-            <p className="text-background/70 text-sm max-w-xs text-center md:text-left">
-              Transforming real estate photos into stunning walkthrough videos
-              for agents and brokers nationwide.
+            <p className="text-background/60 text-sm max-w-xs text-center md:text-left leading-relaxed">
+              Helping agents stand out with cinematic property tours and professional photo enhancements.
             </p>
+          </div>
+
+          {/* Column 2: The "Friendly Human" Middle (Trust Column) */}
+          <div className="flex flex-col items-center text-center space-y-6">
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-primary/90 uppercase tracking-widest">A Note From Our Team</h4>
+              <p className="text-sm text-background/70 max-w-[280px] leading-relaxed">
+                We’re a friendly team of editors, not just a bunch of algorithms. We use AI to speed things up, but a real human hand-finishes every video to make sure it’s perfect for you.
+              </p>
+            </div>
             
             {/* Made in USA Badge */}
-            <div className="flex items-center gap-2 pt-2 grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-              <span className="text-xl">🇺🇸</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-background/80">
-                Made in the USA
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
+              <span className="text-lg">🇺🇸</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-background/90">
+                Crafted in the USA
               </span>
             </div>
           </div>
 
-          {/* Middle/Right Column: Human Team Blurb & Links */}
-          <div className="flex flex-col items-center md:items-end w-full md:w-auto gap-8">
+          {/* Column 3: Navigation & Copyright */}
+          <div className="flex flex-col items-center md:items-end space-y-6">
+            <nav className="flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-4">
+              <Link href="/" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
+                Home
+              </Link>
+              <a href="#pricing" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
+                Pricing
+              </a>
+              <a href="#contact" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
+                Contact
+              </a>
+            </nav>
             
-            {/* Human Team Blurb */}
-            <div className="bg-background/5 border border-background/10 p-5 rounded-2xl max-w-sm">
-              <p className="text-xs leading-relaxed text-background/80 text-center md:text-right italic">
-                <span className="text-primary font-bold not-italic block mb-1">Human-Powered Quality</span>
-                We are a dedicated video agency team, not an automated AI app. We combine professional photo and video editing with advanced AI tools to create truly custom, high-end products for your listings.
+            <div className="text-center md:text-right">
+              <p className="text-background/40 text-[11px] uppercase tracking-[0.15em] font-bold">
+                © {new Date().getFullYear()} Real Estate Photo 2 Video
+              </p>
+              <p className="text-background/30 text-[10px] mt-1 italic">
+                All rights reserved.
               </p>
             </div>
-
-            {/* Navigation & Copyright */}
-            <div className="flex flex-col items-center md:items-end gap-4">
-              <div className="flex gap-6">
-                <Link href="/" className="text-background/70 hover:text-background text-sm font-medium">
-                  Home
-                </Link>
-                <a href="#pricing" className="text-background/70 hover:text-background text-sm font-medium">
-                  Pricing
-                </a>
-                <a href="#contact" className="text-background/70 hover:text-background text-sm font-medium">
-                  Contact
-                </a>
-              </div>
-              <p className="text-background/40 text-[11px] uppercase tracking-widest font-bold">
-                © {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.
-              </p>
-            </div>
-
           </div>
+
         </div>
       </div>
     </footer>
