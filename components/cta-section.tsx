@@ -12,7 +12,7 @@ export function CTASection() {
         <div className="flex justify-center mb-8">
           {/* Muted Icon Container */}
           <div className="bg-[#FFF0F0]/10 rounded-full p-4 animate-bounce-slow">
-            <Zap className="h-12 w-12 text-[#FFDADA]" />
+            <Zap className="h-12 w-12 text-[#b94b4b]" />
           </div>
         </div>
         
