@@ -3,7 +3,6 @@
 import { useState, useRef, MouseEvent, TouchEvent } from "react";
 import Image from "next/image";
 import { Upload, Paintbrush, Film, CheckCircle, MoveHorizontal } from "lucide-react";
-import { cn } from "@/lib/utils"; // Assuming you have a standard shadcn utils file, if not remove 'cn' and use template literals
 
 // --- 1. INTERNAL SLIDER COMPONENT ---
 function BeforeAfterSlider() {
@@ -34,10 +33,10 @@ function BeforeAfterSlider() {
       onTouchStart={() => setIsDragging(true)}
       onTouchEnd={() => setIsDragging(false)}
     >
-      {/* AFTER IMAGE (Bottom Layer) */}
+      {/* AFTER IMAGE (Bottom Layer - The Good Photo) */}
       <div className="absolute inset-0">
         <Image 
-          src="/images/library-3.jpg" // RENAME YOUR FILE TO THIS
+          src="/images/library-3.jpg" 
           alt="After Enhancement" 
           fill 
           className="object-cover" 
@@ -47,13 +46,14 @@ function BeforeAfterSlider() {
         </div>
       </div>
 
-      {/* BEFORE IMAGE (Top Layer - Clipped) */}
+      {/* BEFORE IMAGE (Top Layer - The Warped Photo) */}
+      {/* We clip this layer so it reveals the bottom layer as you slide */}
       <div 
         className="absolute inset-0" 
         style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
       >
         <Image 
-          src="/images/library-3-warped.jpg" // RENAME YOUR WARPED FILE TO THIS
+          src="/images/library-3-warped.jpg" 
           alt="Before Original" 
           fill 
           className="object-cover" 
