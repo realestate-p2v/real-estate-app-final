@@ -173,13 +173,13 @@ export function OrderForm() {
               <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
             </div>
             {photos.length > 0 && (
-              <div className={`rounded-2xl border-2 p-6 transition-colors ${sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-amber-50/50 border-amber-400"}`}>
+              <div className={`rounded-2xl border-2 p-6 transition-colors ${sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"}`}>
                 <div className="flex items-center gap-4">
                   <Checkbox
                     id="confirm"
                     checked={sequenceConfirmed}
                     onCheckedChange={(checked) => setSequenceConfirmed(checked === true)}
-                    className="h-6 w-6"
+                    className="h-6 w-6 bg-white"
                   />
                   <label htmlFor="confirm" className="font-medium cursor-pointer">
                     I confirm these photos are in the correct sequence for my video.
