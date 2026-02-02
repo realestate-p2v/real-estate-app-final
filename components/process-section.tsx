@@ -4,7 +4,33 @@ import { useState, useRef, MouseEvent, TouchEvent } from "react";
 import Image from "next/image";
 import { Upload, Paintbrush, Film, CheckCircle, MoveHorizontal } from "lucide-react";
 
-// --- 1. INTERNAL SLIDER COMPONENT ---
+// --- 1. MEDIA PLAYER COMPONENT ---
+// Handles both local mp4 files and YouTube iframes
+function VideoPlayer({ src, label, isYouTube }: { src: string; label: string; isYouTube?: boolean }) {
+  return (
+    <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-black">
+      {isYouTube ? (
+        <iframe
+          src={src}
+          title={label}
+          className="w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      ) : (
+        <video autoPlay loop muted playsInline className="w-full h-full object-cover">
+          <source src={src} type="video/mp4" />
+        </video>
+      )}
+      <div className="absolute top-4 left-6 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest pointer-events-none">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// --- 2. BEFORE/AFTER SLIDER COMPONENT ---
 function BeforeAfterSlider() {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
@@ -18,56 +44,27 @@ function BeforeAfterSlider() {
     setSliderPosition(percent);
   };
 
-  const onMouseMove = (e: MouseEvent) => isDragging && handleMove(e.clientX);
-  const onTouchMove = (e: TouchEvent) => isDragging && handleMove(e.touches[0].clientX);
-
   return (
     <div 
       ref={containerRef}
       className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-2xl cursor-ew-resize select-none border-4 border-white"
-      onMouseMove={onMouseMove}
+      onMouseMove={(e) => isDragging && handleMove(e.clientX)}
       onMouseDown={() => setIsDragging(true)}
       onMouseUp={() => setIsDragging(false)}
       onMouseLeave={() => setIsDragging(false)}
-      onTouchMove={onTouchMove}
+      onTouchMove={(e) => isDragging && handleMove(e.touches[0].clientX)}
       onTouchStart={() => setIsDragging(true)}
       onTouchEnd={() => setIsDragging(false)}
     >
-      {/* AFTER IMAGE (Bottom Layer - The Good Photo) */}
       <div className="absolute inset-0">
-        <Image 
-          src="/images/library-3.jpg" 
-          alt="After Enhancement" 
-          fill 
-          className="object-cover" 
-        />
-        <div className="absolute top-4 right-6 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-          Enhanced
-        </div>
+        <Image src="/images/library-3.jpg" alt="After" fill className="object-cover" />
+        <div className="absolute top-4 right-6 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Enhanced</div>
       </div>
-
-      {/* BEFORE IMAGE (Top Layer - The Warped Photo) */}
-      {/* We clip this layer so it reveals the bottom layer as you slide */}
-      <div 
-        className="absolute inset-0" 
-        style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
-      >
-        <Image 
-          src="/images/library-3-warped.jpg" 
-          alt="Before Original" 
-          fill 
-          className="object-cover" 
-        />
-        <div className="absolute top-4 left-6 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-          Original
-        </div>
+      <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
+        <Image src="/images/library-3-warped.jpg" alt="Before" fill className="object-cover" />
+        <div className="absolute top-4 left-6 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Original</div>
       </div>
-
-      {/* SLIDER HANDLE */}
-      <div 
-        className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_15px_rgba(0,0,0,0.3)] z-20" 
-        style={{ left: `${sliderPosition}%` }}
-      >
+      <div className="absolute top-0 bottom-0 w-1 bg-white z-20" style={{ left: `${sliderPosition}%` }}>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-muted">
           <MoveHorizontal className="w-5 h-5 text-muted-foreground" />
         </div>
@@ -76,7 +73,7 @@ function BeforeAfterSlider() {
   );
 }
 
-// --- 2. MAIN SECTION DATA ---
+// --- 3. MAIN SECTION DATA ---
 const steps = [
   {
     step: "1",
@@ -84,7 +81,7 @@ const steps = [
     title: "Upload & Arrange",
     description: "Upload your listing photos, select your preferred music, arrange them in order, and place your order.",
     type: "video",
-    src: "/p2v-step-1.mp4",
+    src: "/p2v-website-her-vid.mp4",
     label: "Interface Preview"
   },
   {
@@ -93,31 +90,28 @@ const steps = [
     title: "Photo Enhancement",
     description: "Our professional team cleans up and enhances your photos in Photoshop for the best visual quality.",
     type: "slider",
-    // Source handled inside component
   },
   {
     step: "3",
     icon: Film,
     title: "Video Production",
     description: "We bring your photos to life with a blend of smooth transitions, music, and professional editing.",
-    type: "placeholder",
-    iconPlaceholder: Film,
-    bg: "bg-slate-900",
-    label: "Editing Workflow"
+    type: "video",
+    src: "/images/p2v-library.mp4",
+    label: "Video Rendering"
   },
   {
     step: "4",
     icon: CheckCircle,
     title: "HD Delivery",
     description: "Receive your high-definition video file within 72 hours, ready for social media and presentations.",
-    type: "placeholder",
-    iconPlaceholder: CheckCircle,
-    bg: "bg-emerald-50",
-    label: "Ready for Download"
+    type: "youtube",
+    src: "https://www.youtube.com/embed/3jdoPBu7hVo?si=eNBJKBAcY-6hM2-d",
+    label: "Final HD File"
   },
 ];
 
-// --- 3. MAIN COMPONENT ---
+// --- 4. MAIN COMPONENT ---
 export function ProcessSection() {
   return (
     <section className="bg-background py-20 md:py-32 overflow-hidden">
@@ -130,14 +124,12 @@ export function ProcessSection() {
 
         <div className="space-y-24 md:space-y-32">
           {steps.map((item, index) => {
-            // Logic for Zigzag: Even index = Text Left. Odd index = Text Right.
             const isEven = index % 2 === 0;
 
             return (
               <div key={item.step} className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
                 
                 {/* TEXT BLOCK */}
-                {/* On Mobile: Always order-1 (Top). On Desktop: Order depends on Zigzag */}
                 <div className={`order-1 ${isEven ? 'lg:order-1' : 'lg:order-2'}`}>
                   <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
                     <div className="flex items-start gap-6">
@@ -154,35 +146,19 @@ export function ProcessSection() {
                 </div>
 
                 {/* MEDIA BLOCK */}
-                {/* On Mobile: Always order-2 (Bottom). On Desktop: Order depends on Zigzag */}
                 <div className={`relative order-2 ${isEven ? 'lg:order-2' : 'lg:order-1'}`}>
-                  
-                  {/* TYPE: VIDEO (Step 1) */}
                   {item.type === "video" && (
-                    <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-black">
-                      <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-                        <source src={item.src} type="video/mp4" />
-                      </video>
-                      <div className="absolute top-4 left-6 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">{item.label}</div>
-                    </div>
+                    <VideoPlayer src={item.src} label={item.label} />
                   )}
 
-                  {/* TYPE: SLIDER (Step 2) */}
+                  {item.type === "youtube" && (
+                    <VideoPlayer src={item.src} label={item.label} isYouTube />
+                  )}
+
                   {item.type === "slider" && (
                     <BeforeAfterSlider />
                   )}
-
-                  {/* TYPE: PLACEHOLDER (Step 3 & 4) */}
-                  {item.type === "placeholder" && (
-                    <div className={`relative aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white ${item.bg} flex items-center justify-center`}>
-                      <div className="text-center">
-                        {item.iconPlaceholder && <item.iconPlaceholder className={`h-12 w-12 mx-auto mb-4 opacity-20`} />}
-                        <p className="opacity-40 font-bold uppercase tracking-widest text-xs">{item.label}</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
-
               </div>
             );
           })}
