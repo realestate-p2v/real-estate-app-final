@@ -1,5 +1,7 @@
 "use client";
+
 import React, { useState } from "react";
+import Script from "next/script"; // FIX 1: Import added
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
 import { BrandingSelector, type BrandingData } from "@/components/branding-selector";
@@ -12,13 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
-type OrderStep = "upload" | "details" | "payment";
 
- {/* Google Analytics Script */}
-      <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
-        strategy="afterInteractive"
-      />
+type OrderStep = "upload" | "details" | "payment";
 
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
@@ -40,8 +37,10 @@ export function OrderForm() {
     phone: "",
     notes: "",
   });
+
   const photoCount = photos.length;
   const canProceed = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
+
   const getBasePrice = () => {
     if (photoCount === 1) return 1; // Test price
     if (photoCount <= 12) return 79;
@@ -49,13 +48,16 @@ export function OrderForm() {
     if (photoCount <= 35) return 179;
     return 0;
   };
+
   const getBrandingPrice = () => brandingSelection === "custom" ? 25 : 0;
   const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
   const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
   const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
   const uploadToCloudinary = async (file: Blob, folder: string) => {
     try {
       const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -63,7 +65,7 @@ export function OrderForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder: `photo2video/${folder}` }),
       });
-     
+      
       const sigData = await sigResponse.json();
       if (!sigData.success) throw new Error("Signature failed");
       const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
@@ -73,7 +75,7 @@ export function OrderForm() {
       uploadData.append("timestamp", timestamp.toString());
       uploadData.append("signature", signature);
       uploadData.append("folder", folderPath);
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { // Changed to /upload for audio support
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { 
         method: "POST",
         body: uploadData
       });
@@ -83,6 +85,7 @@ export function OrderForm() {
       return null;
     }
   };
+
   const handleSubmitOrder = async () => {
     if (!formData.name || !formData.email) {
       alert("Please fill in your name and email.");
@@ -90,7 +93,6 @@ export function OrderForm() {
     }
     setIsSubmitting(true);
     try {
-      // 1. Upload Photos
       const uploadedPhotos = [];
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
@@ -105,19 +107,16 @@ export function OrderForm() {
           });
         }
       }
-      // 2. Upload Logo if needed
       let brandingLogoUrl = "";
       if (brandingData.logoFile) {
         const logoResult = await uploadToCloudinary(brandingData.logoFile, "logos");
         brandingLogoUrl = logoResult?.secure_url || "";
       }
-      // 3. Upload Custom Audio if needed
       let musicFileUrl = "";
       if (customAudioFile) {
         const musicResult = await uploadToCloudinary(customAudioFile, "audio");
         musicFileUrl = musicResult?.secure_url || "";
       }
-      // 4. SAVE TO DATABASE (CRITICAL STEP)
       const dbResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,7 +145,6 @@ export function OrderForm() {
       const dbResult = await dbResponse.json();
       if (!dbResult.success) throw new Error(dbResult.error || "Failed to save to database");
       const createdOrderId = dbResult.data.orderId;
-      // 5. INITIATE STRIPE CHECKOUT
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,8 +165,15 @@ export function OrderForm() {
       setIsSubmitting(false);
     }
   };
+
   return (
     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+      {/* FIX 2: Moved Google Analytics inside the return block */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
+        strategy="afterInteractive"
+      />
+
       <div className="lg:col-span-2 space-y-6">
         {step === "upload" && (
           <div className="space-y-6">
