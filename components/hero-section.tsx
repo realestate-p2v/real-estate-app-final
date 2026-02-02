@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ShieldCheck, Clock, Lock } from "lucide-react";
+import { ShieldCheck, Clock, Lock, ChevronDown } from "lucide-react"; // Added ChevronDown
 
 export function HeroSection() {
   return (
@@ -80,6 +80,12 @@ export function HeroSection() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 3. Discreet Scroll Indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 opacity-50 animate-bounce">
+        <span className="text-[10px] text-white uppercase tracking-[0.2em] font-bold">Scroll</span>
+        <ChevronDown className="w-6 h-6 text-white" />
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
