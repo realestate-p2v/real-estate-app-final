@@ -106,7 +106,7 @@ const steps = [
     title: "HD Delivery",
     description: "Receive your high-definition video file within 72 hours, ready for social media and presentations.",
     type: "youtube",
-    src: "https://www.youtube.com/embed/3jdoPBu7hVo?si=eNBJKBAcY-6hM2-d",
+    src: "https://www.youtube.com/embed/OuzDikc2M7I?si=9nF9DEq5GxUUkEvO",
     label: "Final HD File"
   },
 ];
