@@ -66,6 +66,7 @@ export function PricingSection() {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground text-balance">
             Simple, Transparent Pricing
+            <span className="text-[#b95d5d]">FEBRUARY SALE!</span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
             Choose the package that fits your listing. No hidden fees.
