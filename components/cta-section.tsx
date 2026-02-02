@@ -17,7 +17,7 @@ export function CTASection() {
         </div>
         
         <h2 className="text-4xl md:text-6xl font-black text-primary-foreground text-balance tracking-tight">
-          Ready to <span className="text-[#FFDADA]">Skyrocket</span> Your Sales?
+          Ready to <span className="text-[#b94b4b]">Skyrocket</span> Your Sales?
         </h2>
         
         <p className="mt-8 text-xl md:text-2xl text-primary-foreground/90 max-w-2xl mx-auto font-medium">
