@@ -15,7 +15,7 @@ export function CTASection() {
           </div>
         </div>
         
-        <h2 className="text-4xl md:text-6xl font-black text-primary-foreground text-balance tracking-tight">
+        <h2 className="text-4xl md:text-6xl font-bold text-primary-foreground text-balance tracking-tight">
           Ready to <span className="text-accent">Skyrocket</span> Your Sales?
         </h2>
         
