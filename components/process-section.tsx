@@ -11,7 +11,7 @@ const steps = [
     title: "Upload & Arrange",
     description: "Upload your listing photos, select your preferred music, arrange them in order, and place your order.",
     type: "video",
-    src: "/p2v-website-her-vid.mp4",
+    src: "p2v-step-1.mp4",
     label: "Interface Preview"
   },
   {
