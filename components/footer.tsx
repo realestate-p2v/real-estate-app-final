@@ -23,13 +23,13 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
           
           {/* Column 1: Brand & Logo */}
-          <div className="flex flex-col items-center md:items-start space-y-4">
+          <div className="flex flex-col items-center md:items-start space-y-6">
             <Image
               src="/logo.png"
               alt="Real Estate Photo 2 Video"
-              width={270}
-              height={105}
-              className="h-14 md:h-16 w-auto"
+              width={350} // Increased base size
+              height={120}
+              className="h-20 md:h-24 w-auto object-contain" // Significantly larger visual height
             />
             <p className="text-background/60 text-sm max-w-xs text-center md:text-left leading-relaxed">
               Helping agents stand out with cinematic property tours and professional photo enhancements.
@@ -37,9 +37,11 @@ export function Footer() {
           </div>
 
           {/* Column 2: The "Friendly Human" Middle (Trust Column) */}
-          <div className="flex flex-col items-center text-center space-y-6">
-            <div className="space-y-2">
-              <h4 className="text-sm font-bold font-white uppercase tracking-widest">A Note From Our Team</h4>
+          <div className="flex flex-col items-center text-center space-y-6 md:pt-4">
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-white uppercase tracking-widest">
+                A Note From Our Team
+              </h4>
               <p className="text-sm text-background/70 max-w-[280px] leading-relaxed">
                 We’re a friendly team of editors, not just a bunch of algorithms. We use AI to speed things up, but a real human hand-finishes every video to make sure it’s perfect for you.
               </p>
@@ -55,7 +57,7 @@ export function Footer() {
           </div>
 
           {/* Column 3: Navigation & Copyright */}
-          <div className="flex flex-col items-center md:items-end space-y-6">
+          <div className="flex flex-col items-center md:items-end space-y-8 md:pt-4">
             <nav className="flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-4">
               <Link href="/" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
                 Home
