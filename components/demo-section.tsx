@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Images, ArrowRight, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const listingPhotos = [
   {
