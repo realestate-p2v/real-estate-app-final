@@ -1,50 +1,32 @@
 import Image from "next/image";
-import { Images, ArrowRight, Play } from "lucide-react";
+import Link from "next/link"; // Added to prevent ReferenceError
+import { 
+  Images, 
+  ArrowRight, 
+  Play, 
+  ShieldCheck, 
+  Clock, 
+  CheckCircle2 
+} from "lucide-react"; // Added missing icons
 import { Button } from "@/components/ui/button";
 
 const listingPhotos = [
-  {
-    src: "/images/drone-1.jpg",
-    alt: "Exterior drone view at sunset",
-  },
-  {
-    src: "/images/front-door-2.jpg",
-    alt: "Entry foyer with stairway",
-  },
-  {
-    src: "/images/library-3.jpg",
-    alt: "Library with built-in bookshelves",
-  },
-  {
-    src: "/images/tv-room-4.jpg",
-    alt: "Living room with fireplace",
-  },
-  {
-    src: "/images/dining-5.jpg",
-    alt: "Formal dining room",
-  },
-  {
-    src: "/images/kitchen-6.jpg",
-    alt: "Kitchen with island",
-  },
-  {
-    src: "/images/dining-7.jpg",
-    alt: "Breakfast nook",
-  },
-  {
-    src: "/images/stairway-8.jpg",
-    alt: "Stairway",
-  },
-  {
-    src: "/images/master-long-9.jpg",
-    alt: "Master bedroom",
-  },
+  { src: "/images/drone-1.jpg", alt: "Exterior drone view at sunset" },
+  { src: "/images/front-door-2.jpg", alt: "Entry foyer with stairway" },
+  { src: "/images/library-3.jpg", alt: "Library with built-in bookshelves" },
+  { src: "/images/tv-room-4.jpg", alt: "Living room with fireplace" },
+  { src: "/images/dining-5.jpg", alt: "Formal dining room" },
+  { src: "/images/kitchen-6.jpg", alt: "Kitchen with island" },
+  { src: "/images/dining-7.jpg", alt: "Breakfast nook" },
+  { src: "/images/stairway-8.jpg", alt: "Stairway" },
+  { src: "/images/master-long-9.jpg", alt: "Master bedroom" },
 ];
 
 export function DemoSection() {
   return (
     <section id="demo" className="bg-muted py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground text-balance">
             See the Transformation
@@ -54,6 +36,7 @@ export function DemoSection() {
           </p>
         </div>
 
+        {/* Comparison Grid */}
         <div className="flex flex-col md:grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center">
           {/* Photos Side */}
           <div className="w-full">
@@ -99,7 +82,16 @@ export function DemoSection() {
                 <span className="font-semibold text-foreground">Your HD Walkthrough Video</span>
               </div>
               <div className="aspect-video rounded-lg overflow-hidden bg-foreground/5">
-                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/3jdoPBu7hVo?si=ZQxY9Ow2nF_n6k2q" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                <iframe 
+                  width="100%" 
+                  height="100%" 
+                  src="https://www.youtube.com/embed/3jdoPBu7hVo?si=ZQxY9Ow2nF_n6k2q" 
+                  title="YouTube video player" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  referrerPolicy="strict-origin-when-cross-origin" 
+                  allowFullScreen
+                ></iframe>
               </div>
               <p className="mt-4 text-sm text-muted-foreground text-center">
                 Professional HD video delivered in 72 hours
@@ -108,10 +100,8 @@ export function DemoSection() {
           </div>
         </div>
 
-      </div>
-
-       <div className="mt-12 flex flex-col items-center gap-6">
-          {/* HIGH CONVERSION GREEN BUTTON */}
+        {/* THE MEGA GREEN BUTTON INTEGRATION */}
+        <div className="mt-20 flex flex-col items-center gap-6">
           <Button
             asChild
             size="lg"
@@ -123,26 +113,27 @@ export function DemoSection() {
             </Link>
           </Button>
 
-          {/* Muted Desaturated Icons */}
-          <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-6">
-            <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
-              <ShieldCheck className="h-5 w-5 text-[#FFDADA]" />
+          {/* Trust Badges - Adjusted for Light Background */}
+          <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm font-bold uppercase tracking-wider">
+              <ShieldCheck className="h-5 w-5 text-[#FFDADA] drop-shadow-sm" />
               100% Satisfaction
             </div>
-            <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
-              <Clock className="h-5 w-5 text-[#FFDADA]" />
+            <div className="flex items-center gap-2 text-muted-foreground text-sm font-bold uppercase tracking-wider">
+              <Clock className="h-5 w-5 text-[#FFDADA] drop-shadow-sm" />
               Fast 72h Delivery
             </div>
-            <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
-              <CheckCircle2 className="h-5 w-5 text-[#FFDADA]" />
+            <div className="flex items-center gap-2 text-muted-foreground text-sm font-bold uppercase tracking-wider">
+              <CheckCircle2 className="h-5 w-5 text-[#FFDADA] drop-shadow-sm" />
               Secure Checkout
             </div>
           </div>
-        </div>
 
-        <p className="mt-8 text-primary-foreground/50 text-sm">
-          No subscription required. One-time payment per listing.
-        </p>
+          <p className="mt-4 text-muted-foreground/60 text-xs">
+            No subscription required. One-time payment per listing.
+          </p>
+        </div>
+      </div>
     </section>
   );
 }
