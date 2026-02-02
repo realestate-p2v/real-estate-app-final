@@ -29,7 +29,7 @@ export function Navigation() {
             <CountdownTimer />
             
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
-              <Link href="/order">Order Now</Link>
+              <Link href="/order">Get Started</Link>
             </Button>
           </div>
 
