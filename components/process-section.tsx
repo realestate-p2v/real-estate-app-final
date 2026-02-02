@@ -20,7 +20,7 @@ const steps = [
     step: "3",
     title: "Video Production",
     description:
-      "We bring your photos to life with smooth transitions, music, and professional editing.",
+      "We bring your photos to life with a blend of smooth transitions, music, and professional editing.",
   },
   {
     icon: CheckCircle,
