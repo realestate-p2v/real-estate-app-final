@@ -228,11 +228,11 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
               <p className={`text-xl font-black ${isLive ? 'text-emerald-600' : 'text-slate-500'}`}>${order.total_price}</p>
             </div>
             <div className="hidden md:block">
-              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Branding</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase mb-1">Branding</p>
               <p className="text-sm font-black text-slate-700 uppercase">{b.tier}</p>
             </div>
             <div className="hidden md:block">
-              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Due In</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Due In</p>
               <div className={`flex items-center gap-1.5 ${isUrgent && isLive ? 'text-red-600 font-black text-base scale-105 transition-all' : 'text-slate-500 font-bold text-sm'}`}>
                 <Clock className={`w-3.5 h-3.5 ${isUrgent && isLive ? 'animate-pulse' : ''}`} />
                 <span>{isLive ? timeLeft : "DELIVERED"}</span>
@@ -246,33 +246,33 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
         <CollapsibleContent className="p-8 bg-[#f8f9fa] border-t border-slate-200 grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="space-y-6">
-            <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
+            <h4 className="text-[11px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-slate-200 pb-2 tracking-widest">
               <Brush className="w-3.5 h-3.5"/> Branding Section
             </h4>
             <div className="space-y-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-inner">
-              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
-                <span className="text-slate-400 font-bold uppercase text-[8px]">Agent</span>
+              <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase text-[9px]">Agent</span>
                 <span className="text-slate-700 font-black">{b.agent}</span>
               </div>
-              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+              <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Company</span>
                 <span className="text-slate-700 font-black">{b.co}</span>
               </div>
-              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+              <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Phone</span>
                 <span className="text-slate-700 font-black">{b.phone}</span>
               </div>
-              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+              <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Email</span>
                 <span className="text-slate-700 font-black">{b.email}</span>
               </div>
-              <div className="flex justify-between text-[11px] border-b border-slate-100 pb-2">
+              <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
                 <span className="text-slate-400 font-bold uppercase text-[8px]">Website</span>
                 <span className="text-slate-700 font-black">{b.web}</span>
               </div>
               {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
             </div>
-            <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-500 italic leading-relaxed">
+            <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-s text-slate-500 italic leading-relaxed">
                <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
                {order.special_instructions || "Standard production."}
             </div>
@@ -296,7 +296,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                    >
                      <img src={img.secure_url} className="w-full h-full object-cover grayscale-[40%] group-hover:grayscale-0" alt={img.description || `Photo ${i + 1}`} />
                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-[8px] text-white font-black">{i + 1}</span>
+                        <span className="text-[9px] text-white font-black">{i + 1}</span>
                      </div>
                    </a>
                  ))}
@@ -304,8 +304,8 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
 
              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-inner">
-               <span className="text-[8px] font-black text-slate-400 uppercase block mb-2">Photo descriptions</span>
-               <ul className="text-[11px] text-slate-600 space-y-1.5 max-h-32 overflow-y-auto">
+               <span className="text-[9px] font-black text-slate-400 uppercase block mb-2">Photo descriptions</span>
+               <ul className="text-[12px] text-slate-600 space-y-1.5 max-h-32 overflow-y-auto">
                  {sortedPhotos.map((img: any, i: number) => (
                    <li key={i} className="flex gap-2">
                      <span className="font-black text-slate-400 w-5 flex-shrink-0">{i + 1}.</span>
@@ -320,21 +320,21 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-all rounded-xl shadow-lg shadow-emerald-600/20"
              >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span className="text-[10px] font-black uppercase tracking-widest">copy image url list</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">copy image url list</span>
              </Button>
 
              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Voiceover</span>
-                  <p className="text-[10px] font-black text-slate-600 uppercase">{order.voiceover ? "Yes" : "No"}</p>
+                  <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Voiceover</span>
+                  <p className="text-[11px] font-black text-slate-600 uppercase">{order.voiceover ? "Yes" : "No"}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Voice</span>
-                  <p className="text-[10px] font-black text-slate-600 truncate uppercase">{getVoiceDisplayName(order.voiceover_voice)}</p>
+                  <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Voice</span>
+                  <p className="text-[11px] font-black text-slate-600 truncate uppercase">{getVoiceDisplayName(order.voiceover_voice)}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
                   <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music</span>
-                  <p className="text-[10px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
+                  <p className="text-[11px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
                 </div>
              </div>
              
@@ -351,7 +351,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
           {/* Section 3: Finish Section */}
           <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
-              <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
+              <h4 className="text-[11px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
                 <Flag className="w-3.5 h-3.5"/> Finish
               </h4>
 
@@ -363,8 +363,8 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                       <Brush className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-tighter leading-none">High-Res Editing</p>
-                      <p className="text-[8px] font-bold opacity-80 uppercase tracking-widest">Paid Add-on</p>
+                      <p className="text-[11px] font-black uppercase tracking-tighter leading-none">High-Res Editing</p>
+                      <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">Paid Add-on</p>
                     </div>
                   </div>
                   <CheckCircle2 className="w-5 h-5 opacity-50" />
