@@ -344,14 +344,14 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
 
              <div className="flex gap-2">
-                {(order.custom_audio?.secure_url || order.music_file) && <a href={order.custom_audio?.secure_url || order.music_file} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
-                {order.voiceover_script && <a href={`data:text/plain;charset=utf-8,${encodeURIComponent(order.voiceover_script)}`} download={`order-${order.order_id?.slice(0, 8)}-script.txt`} className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
+                {(order.custom_audio?.secure_url || order.music_file) && <a href={order.custom_audio?.secure_url || order.music_file} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase text-slate-600 transition-colors"><Music className="w-3 h-3 text-emerald-500"/> Music</a>}
+                {order.voiceover_script && <a href={`data:text/plain;charset=utf-8,${encodeURIComponent(order.voiceover_script)}`} download={`order-${order.order_id?.slice(0, 8)}-script.txt`} className="flex-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase text-slate-600 transition-colors"><FileText className="w-3 h-3 text-emerald-500"/> Script</a>}
              </div>
           </div>
 
           {/* Section 3: Finish Section */}
           <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
-              <h4 className="text-[11px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
+              <h4 className="text-[12px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
                 <Flag className="w-3.5 h-3.5"/> Finish
               </h4>
 
