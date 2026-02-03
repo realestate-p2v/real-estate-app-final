@@ -338,8 +338,8 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 </div>
              </div>
              
-             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-500 max-h-32 overflow-y-auto font-medium shadow-inner">
-                <span className="text-[9px] font-black text-slate-300 uppercase block mb-1">Narrative Script</span>
+             <div className="bg-white border border-slate-200 p-4 rounded-xl text-[12px] text-slate-500 max-h-32 overflow-y-auto font-medium shadow-inner">
+                <span className="text-[10px] font-black text-slate-300 uppercase block mb-1">Narrative Script</span>
                 {order.voiceover_script || "No script content found."}
              </div>
 
@@ -363,7 +363,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                       <Brush className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-tighter leading-none">High-Res Editing</p>
+                      <p className="text-[12px] font-black uppercase tracking-tighter leading-none">High-Res Editing</p>
                       <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">Paid Add-on</p>
                     </div>
                   </div>
