@@ -304,7 +304,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
              </div>
 
              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-inner">
-               <span className="text-[9px] font-black text-slate-400 uppercase block mb-2">Photo descriptions</span>
+               <span className="text-[12px] font-black text-slate-400 uppercase block mb-2">Photo descriptions</span>
                <ul className="text-[12px] text-slate-600 space-y-1.5 max-h-32 overflow-y-auto">
                  {sortedPhotos.map((img: any, i: number) => (
                    <li key={i} className="flex gap-2">
