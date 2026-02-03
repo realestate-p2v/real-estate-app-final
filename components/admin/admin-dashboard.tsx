@@ -255,25 +255,25 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span className="text-slate-700 font-black">{b.agent}</span>
               </div>
               <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
-                <span className="text-slate-400 font-bold uppercase text-[8px]">Company</span>
+                <span className="text-slate-400 font-bold uppercase text-[9px]">Company</span>
                 <span className="text-slate-700 font-black">{b.co}</span>
               </div>
               <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
-                <span className="text-slate-400 font-bold uppercase text-[8px]">Phone</span>
+                <span className="text-slate-400 font-bold uppercase text-[9px]">Phone</span>
                 <span className="text-slate-700 font-black">{b.phone}</span>
               </div>
               <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
-                <span className="text-slate-400 font-bold uppercase text-[8px]">Email</span>
+                <span className="text-slate-400 font-bold uppercase text-[9px]">Email</span>
                 <span className="text-slate-700 font-black">{b.email}</span>
               </div>
               <div className="flex justify-between text-[12px] border-b border-slate-100 pb-2">
-                <span className="text-slate-400 font-bold uppercase text-[8px]">Website</span>
+                <span className="text-slate-400 font-bold uppercase text-[9px]">Website</span>
                 <span className="text-slate-700 font-black">{b.web}</span>
               </div>
               {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
             </div>
             <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-s text-slate-500 italic leading-relaxed">
-               <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
+               <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
                {order.special_instructions || "Standard production."}
             </div>
           </div>
