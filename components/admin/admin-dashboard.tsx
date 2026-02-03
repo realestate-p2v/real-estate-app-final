@@ -70,6 +70,7 @@ const VOICE_NAMES: Record<string, string> = {
   "female-1": "Maya (Female)",
   "female-2": "Amara (Female)",
 }
+
 function getVoiceDisplayName(voiceId: string | null | undefined): string {
   if (!voiceId) return "—"
   return VOICE_NAMES[voiceId] || voiceId
@@ -350,29 +351,51 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
           {/* Section 3: Finish Section */}
           <div className={`space-y-6 p-6 rounded-3xl border shadow-inner transition-colors ${isLive ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-200 border-slate-300'}`}>
-             <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
-               <Flag className="w-3.5 h-3.5"/> Finish
-             </h4>
-             <div className="text-[9px] text-slate-400 font-black space-y-2">
-               <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
-               <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_phone || "No Phone"}</p>
-             </div>
-             <div className="space-y-3">
-               <Input 
-                  value={url} 
-                  onChange={(e) => setUrl(e.target.value)} 
-                  placeholder="Paste Google Drive link..." 
-                  className="h-11 bg-white border-emerald-200 text-slate-800 text-xs font-bold rounded-xl focus:ring-emerald-400"
-               />
-               <Button onClick={save} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all shadow-md">
-                 SYNC DELIVERY
-               </Button>
-             </div>
-             <div className="flex gap-3 pt-2">
-                <Button onClick={toggle} className={`w-full h-12 text-[9px] font-black rounded-xl tracking-widest transition-all shadow-md ${isLive ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
-                  {isLive ? 'MARK AS DELIVERED' : 'RE-OPEN PRODUCTION'}
+              <h4 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2 border-b border-emerald-100 pb-2 tracking-widest">
+                <Flag className="w-3.5 h-3.5"/> Finish
+              </h4>
+
+              {/* EDITED PHOTOS UPSELL INDICATOR */}
+              {order.include_edited_photos ? (
+                <div className="bg-emerald-500 text-white p-3 rounded-xl flex items-center justify-between shadow-lg shadow-emerald-500/20">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white/20 p-1.5 rounded-lg">
+                      <Brush className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-tighter leading-none">High-Res Editing</p>
+                      <p className="text-[8px] font-bold opacity-80 uppercase tracking-widest">Paid Add-on</p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="w-5 h-5 opacity-50" />
+                </div>
+              ) : (
+                <div className="bg-slate-100 border border-slate-200 text-slate-400 p-3 rounded-xl flex items-center gap-2 opacity-60">
+                  <ImageIcon className="w-4 h-4 opacity-40" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Standard Quality Only</span>
+                </div>
+              )}
+
+              <div className="text-[9px] text-slate-400 font-black space-y-2">
+                <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
+                <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_phone || "No Phone"}</p>
+              </div>
+              <div className="space-y-3">
+                <Input 
+                   value={url} 
+                   onChange={(e) => setUrl(e.target.value)} 
+                   placeholder="Paste Google Drive link..." 
+                   className="h-11 bg-white border-emerald-200 text-slate-800 text-xs font-bold rounded-xl focus:ring-emerald-400"
+                />
+                <Button onClick={save} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl text-xs tracking-widest transition-all shadow-md">
+                  SYNC DELIVERY
                 </Button>
-             </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                 <Button onClick={toggle} className={`w-full h-12 text-[9px] font-black rounded-xl tracking-widest transition-all shadow-md ${isLive ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
+                   {isLive ? 'MARK AS DELIVERED' : 'RE-OPEN PRODUCTION'}
+                 </Button>
+              </div>
           </div>
         </CollapsibleContent>
       </Card>
