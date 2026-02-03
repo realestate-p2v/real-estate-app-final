@@ -320,26 +320,26 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-all rounded-xl shadow-lg shadow-emerald-600/20"
              >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span className="text-[11px] font-black uppercase tracking-widest">copy image url list</span>
+                <span className="text-[12px] font-black uppercase tracking-widest">copy image url list</span>
              </Button>
 
              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Voiceover</span>
-                  <p className="text-[11px] font-black text-slate-600 uppercase">{order.voiceover ? "Yes" : "No"}</p>
+                  <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Voiceover</span>
+                  <p className="text-[12px] font-black text-slate-600 uppercase">{order.voiceover ? "Yes" : "No"}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Voice</span>
-                  <p className="text-[11px] font-black text-slate-600 truncate uppercase">{getVoiceDisplayName(order.voiceover_voice)}</p>
+                  <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Voice</span>
+                  <p className="text-[12px] font-black text-slate-600 truncate uppercase">{getVoiceDisplayName(order.voiceover_voice)}</p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200">
-                  <span className="text-[7px] font-black text-slate-400 uppercase block mb-1">Music</span>
-                  <p className="text-[11px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
+                  <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Music</span>
+                  <p className="text-[12px] font-black text-slate-600 truncate uppercase">{order.music_selection || "—"}</p>
                 </div>
              </div>
              
              <div className="bg-white border border-slate-200 p-4 rounded-xl text-[11px] text-slate-500 max-h-32 overflow-y-auto font-medium shadow-inner">
-                <span className="text-[8px] font-black text-slate-300 uppercase block mb-1">Narrative Script</span>
+                <span className="text-[9px] font-black text-slate-300 uppercase block mb-1">Narrative Script</span>
                 {order.voiceover_script || "No script content found."}
              </div>
 
