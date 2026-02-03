@@ -376,7 +376,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 </div>
               )}
 
-              <div className="text-[9px] text-slate-400 font-black space-y-2">
+              <div className="text-[10px] text-slate-400 font-black space-y-2">
                 <p className="flex items-center gap-2 uppercase tracking-tighter truncate"><Mail className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_email}</p>
                 <p className="flex items-center gap-2 uppercase tracking-tighter"><Phone className="w-3.5 h-3.5 text-emerald-400"/> {order.customer_phone || "No Phone"}</p>
               </div>
