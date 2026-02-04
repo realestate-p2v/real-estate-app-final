@@ -110,7 +110,7 @@ export function DemoSection() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground text-sm font-bold uppercase tracking-wider">
               <Clock className="h-5 w-5 text-[#FFDADA]" />
-              Fast 72h Delivery
+              Fast 24h Delivery
             </div>
             <div className="flex items-center gap-2 text-muted-foreground text-sm font-bold uppercase tracking-wider">
               <CheckCircle2 className="h-5 w-5 text-[#FFDADA]" />
