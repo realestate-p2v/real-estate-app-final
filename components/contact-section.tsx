@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react"
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,68 +50,70 @@ export function ContactSection() {
   return (
     <section id="contact" className="bg-background py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-2 gap-12">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           {/* Contact Info */}
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground text-balance">
-              Have Questions?
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              We're here to help! Reach out to us through any of these channels
-              and we'll get back to you as soon as possible.
-            </p>
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-extrabold text-foreground tracking-tight text-balance">
+                Let's get in touch
+              </h2>
+              <p className="mt-6 text-xl text-muted-foreground leading-relaxed">
+                Ready to elevate your real estate listings? Reach out directly—we'd love to hear from you.
+              </p>
+            </div>
 
-            <div className="mt-8 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Phone className="h-6 w-6 text-primary" />
+            <div className="grid gap-6">
+              {/* Phone Card */}
+              <a 
+                href="tel:+18455366954" 
+                className="group flex items-center gap-6 p-6 rounded-2xl bg-primary/5 border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-all duration-300"
+              >
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
+                  <Phone className="h-8 w-8" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Phone</p>
-                  <a
-                    href="tel:+18455366954"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    1 (845) 536-6954
-                  </a>
+                  <p className="text-sm font-bold uppercase tracking-wider text-primary">Call or Text</p>
+                  <p className="text-2xl md:text-3xl font-black text-foreground">1 (845) 536-6954</p>
                 </div>
-              </div>
+              </a>
 
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Mail className="h-6 w-6 text-primary" />
+              {/* Email Card */}
+              <a 
+                href="mailto:realestatephoto2video@gmail.com" 
+                className="group flex items-center gap-6 p-6 rounded-2xl bg-primary/5 border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-all duration-300"
+              >
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
+                  <Mail className="h-8 w-8" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-sm font-bold uppercase tracking-wider text-primary">Email Us</p>
+                  <p className="text-xl md:text-2xl font-black text-foreground truncate">realestatephoto2video@gmail.com</p>
+                </div>
+              </a>
+
+              {/* WhatsApp Card */}
+              <a 
+                href="https://wa.me/18455366954" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group flex items-center gap-6 p-6 rounded-2xl bg-[#25D366]/5 border border-transparent hover:border-[#25D366]/20 hover:bg-[#25D366]/10 transition-all duration-300"
+              >
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#25D366] text-white shadow-lg group-hover:scale-110 transition-transform">
+                  <MessageCircle className="h-8 w-8" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Email</p>
-                  <a
-                    href="mailto:realestatephoto2video@gmail.com"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    realestatephoto2video@gmail.com
-                  </a>
+                  <p className="text-sm font-bold uppercase tracking-wider text-[#25D366]">WhatsApp</p>
+                  <p className="text-2xl md:text-3xl font-black text-foreground">Message Now</p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366]/10">
-                  <MessageCircle className="h-6 w-6 text-[#25D366]" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">WhatsApp</p>
-                  <a
-                    href="https://wa.me/18455366954"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-[#25D366]"
-                  >
-                    Message us on WhatsApp
-                  </a>
-                </div>
-              </div>
+              </a>
             </div>
           </div>
 
-       
+          {/* You can place your Contact Form code here in the second column */}
+          <div className="bg-card p-8 rounded-3xl border shadow-sm">
+             {/* Form content goes here... */}
+             <p className="text-center text-muted-foreground italic">Form placeholder</p>
+          </div>
         </div>
       </div>
     </section>
