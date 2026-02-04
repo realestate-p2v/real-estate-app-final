@@ -21,7 +21,7 @@ export function CTASection() {
         </h2>
         
         <p className="mt-8 text-xl md:text-2xl text-primary-foreground/90 max-w-2xl mx-auto font-medium">
-          Get your professional walkthrough video hand-edited and delivered in under 72 hours. 
+          Get your professional walkthrough video hand-edited and delivered in under 24 hours. 
         </p>
 
         <div className="mt-12 flex flex-col items-center gap-6">
@@ -45,7 +45,7 @@ export function CTASection() {
             </div>
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
               <Clock className="h-5 w-5 text-[#FFDADA]" />
-              Fast 72h Delivery
+              Fast 24h Delivery
             </div>
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
               <CheckCircle2 className="h-5 w-5 text-[#FFDADA]" />
