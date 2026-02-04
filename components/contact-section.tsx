@@ -2,6 +2,7 @@
 
 import React from "react"
 import { useState } from "react";
+import Image from "next/image"; // Import the Image component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,7 +52,7 @@ export function ContactSection() {
     <section id="contact" className="bg-background py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-2 gap-16 items-center">
-          {/* Contact Info */}
+          {/* Contact Info (Left Side) */}
           <div className="space-y-8">
             <div>
               <h2 className="text-4xl md:text-5xl font-extrabold text-foreground tracking-tight text-balance">
@@ -109,10 +110,17 @@ export function ContactSection() {
             </div>
           </div>
 
-          {/* You can place your Contact Form code here in the second column */}
-          <div className="bg-card p-8 rounded-3xl border shadow-sm">
-             {/* Form content goes here... */}
-             <p className="text-center text-muted-foreground italic">Form placeholder</p>
+          {/* Logo Section (Right Side) */}
+          <div className="flex justify-center items-center">
+            <div className="relative w-full max-w-[400px] aspect-square">
+              <Image
+                src="/logo.png" // Replace with your actual file name in the public folder
+                alt="Company Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </div>
         </div>
       </div>
