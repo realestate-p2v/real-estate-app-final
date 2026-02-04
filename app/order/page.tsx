@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Order Your Video | Real Estate Photo 2 Video",
   description:
-    "Upload your listing photos, select music, and order your professional walkthrough video. Fast 72-hour delivery.",
+    "Upload your listing photos, select music, and order your professional walkthrough video. Fast 24-hour delivery.",
 };
 
 const trustBadges = [
