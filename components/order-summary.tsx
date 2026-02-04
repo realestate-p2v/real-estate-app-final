@@ -47,7 +47,7 @@ export function OrderSummary({
     "HD 1080p video quality",
     "Manual photo enhancement",
     "AI perspective correction",
-    "72-hour delivery",
+    "24-hour delivery",
     "Revisions included",
   ];
 
