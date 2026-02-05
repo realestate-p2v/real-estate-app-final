@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
         customerName,
         photoCount: photoCount.toString(),
       },
+      allow_promotion_codes: true,  // Add this line
     });
 
     return NextResponse.json({ clientSecret: session.client_secret });
