@@ -67,7 +67,7 @@ export default function OrderPage() {
           </h1>
           <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
             Upload your photos, arrange them in order, select your music, and
-            checkout. We'll deliver your HD video within 72 hours.
+            checkout. We'll deliver your HD video within 24 hours.
           </p>
         </div>
 
