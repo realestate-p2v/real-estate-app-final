@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const trustBadges = [
   { icon: Shield, text: "Secure Payment" },
-  { icon: Clock, text: "72-Hour Delivery" },
+  { icon: Clock, text: "24-Hour Delivery" },
   { icon: Award, text: "100% Satisfaction" },
 ];
 
