@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const photoCount = order.photo_count || 0;
     let productName = "Real Estate Video";
     if (photoCount === 1) {
-      productName = "Test Product";
+      productName = "Test Product1";
     } else if (photoCount <= 12) {
       productName = "Standard Video";
     } else if (photoCount <= 25) {
