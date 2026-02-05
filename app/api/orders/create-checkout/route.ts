@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      // THIS IS THE FIX: This line enables the Promo Code field
+      // THIS IS THE FIX: This line enables the Promo Code fie
       allow_promotion_codes: true, 
       
       payment_method_types: ['card'],
