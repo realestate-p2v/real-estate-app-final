@@ -24,8 +24,6 @@ export async function POST(request: Request) {
       .eq("order_id", orderId)
       .single();
 
-    console.log("[v0] Order fetch result - found:", !!order, "error:", error?.message || "none");
-
     if (error || !order) {
       console.error("[v0] Order not found in database for checkout");
       return NextResponse.json(
@@ -69,18 +67,33 @@ export async function POST(request: Request) {
       productName = "Agency Pack";
     }
 
-    // Create Stripe checkout session with full metadata fallback
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-  // ... your other config
-  success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order/success`,
-  cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order/cancel`,
-});
-
-// Make sure you return 'url' here!
-return NextResponse.json({ 
-  sessionId: session.id, 
-  url: session.url 
-});
+      // THIS IS THE FIX: This line enables the Promo Code field
+      allow_promotion_codes: true, 
+      
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: productName,
+            },
+            // Stripe expects the amount in cents (e.g., $94.00 becomes 9400)
+            unit_amount: Math.round(order.amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      metadata: {
+        orderId: orderId,
+        ...photoUrlsChunks,
+      },
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order/success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order/cancel`,
+    });
 
     // Update order with Stripe session ID
     await supabase
@@ -91,11 +104,13 @@ return NextResponse.json({
       })
       .eq("order_id", orderId);
 
+    // Return the URL for the frontend to redirect the customer
     return NextResponse.json({
       success: true,
       sessionId: session.id,
       url: session.url,
     });
+    
   } catch (error) {
     console.error("Create checkout error:", error);
     return NextResponse.json(
