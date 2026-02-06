@@ -32,7 +32,7 @@ export function SaleBanner() {
             <div className="bg-blue-400 text-slate-900 px-8 py-2.5 rounded-full shadow-[0_0_25px_rgba(52,211,153,0.5)] flex items-center gap-2 animate-bounce border-2 border-white/30">
               <Tag className="w-5 h-5 fill-slate-900" />
               <span className="text-sm md:text-base font-black uppercase tracking-wider">
-                Combine with coupon code for more savings!
+                Combine with coupon code<span className="text-sm md:text-base font-black uppercase tracking-wider">p2v</span> for an additional $30 off!
               </span>
             </div>
           </div>
