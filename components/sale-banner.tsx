@@ -5,6 +5,15 @@ import { Sparkles, Tag } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 export function SaleBanner() {
+  // Helper function for smooth scrolling
+  const scrollToForm = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const element = document.getElementById("order-form");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="px-2 py-4 md:px-4 md:py-6">
       <div className="w-full max-w-7xl mx-auto relative overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] border-2 border-blue-400/30 shadow-2xl bg-slate-900">
@@ -51,7 +60,11 @@ export function SaleBanner() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             
             {/* Standard Tier */}
-            <div className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 shadow-lg">
+            <a 
+              href="#order-form" 
+              onClick={scrollToForm}
+              className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
+            >
               <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Standard</span>
               <div className="flex items-center gap-3 mb-2 md:mb-4">
                 <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$149</span>
@@ -69,10 +82,14 @@ export function SaleBanner() {
                   <li>1 revision</li>
                 </ul>
               </div>
-            </div>
+            </a>
 
             {/* Premium Tier */}
-            <div className="flex flex-col items-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-blue-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-blue-500/30 shadow-2xl relative md:scale-105 z-20">
+            <a 
+              href="#order-form" 
+              onClick={scrollToForm}
+              className="flex flex-col items-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-blue-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-blue-500/30 hover:scale-[1.07] active:scale-95 cursor-pointer shadow-2xl relative md:scale-105 z-20"
+            >
               <div className="absolute -top-3 bg-emerald-400 text-slate-900 text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Most Popular</div>
               <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Premium</span>
               <div className="flex items-center gap-3 mb-2 md:mb-4">
@@ -91,10 +108,14 @@ export function SaleBanner() {
                   <li>1 revision</li>
                 </ul>
               </div>
-            </div>
+            </a>
 
             {/* Professional Tier */}
-            <div className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 shadow-lg">
+            <a 
+              href="#order-form" 
+              onClick={scrollToForm}
+              className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
+            >
               <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Professional</span>
               <div className="flex items-center gap-3 mb-2 md:mb-4">
                 <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$249</span>
@@ -112,7 +133,7 @@ export function SaleBanner() {
                   <li>2 revisions</li>
                 </ul>
               </div>
-            </div>
+            </a>
 
           </div>
         </div>
