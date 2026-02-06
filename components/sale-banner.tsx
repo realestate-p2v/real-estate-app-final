@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 export function SaleBanner() {
   return (
     <div className="px-4 py-6">
-      <div className="w-full max-w-7xl mx-auto bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 text-white py-10 px-6 relative overflow-hidden rounded-[2.5rem] border-2 border-emerald-400/30 shadow-2xl">
+      <div className="w-full max-w-7xl mx-auto bg-gradient-to-r from-slate-900 via-blue-800 to-slate-900 text-white py-10 px-6 relative overflow-hidden rounded-[2.5rem] border-2 border-blue-400/30 shadow-2xl">
         
         {/* Subtle texture overlay */}
         <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
@@ -16,7 +16,7 @@ export function SaleBanner() {
           
           {/* Coupon Badge */}
           <div className="flex justify-center -mt-4">
-            <div className="bg-emerald-400 text-slate-900 px-8 py-2.5 rounded-full shadow-[0_0_25px_rgba(52,211,153,0.5)] flex items-center gap-2 animate-bounce border-2 border-white/30">
+            <div className="bg-blue-400 text-slate-900 px-8 py-2.5 rounded-full shadow-[0_0_25px_rgba(52,211,153,0.5)] flex items-center gap-2 animate-bounce border-2 border-white/30">
               <Tag className="w-5 h-5 fill-slate-900" />
               <span className="text-sm md:text-base font-black uppercase tracking-wider">
                 Combine with coupon code for more savings!
