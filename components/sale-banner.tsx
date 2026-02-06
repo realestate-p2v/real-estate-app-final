@@ -32,7 +32,7 @@ export function SaleBanner() {
             <div className="bg-blue-400 text-slate-900 px-4 py-2 md:px-8 md:py-2.5 rounded-full shadow-[0_0_25px_rgba(52,211,153,0.5)] flex items-center gap-2 animate-bounce border-2 border-white/30">
               <Tag className="w-4 h-4 md:w-5 md:h-5 fill-slate-900" />
               <span className="text-[10px] md:text-base font-black uppercase tracking-wider leading-tight">
-                Use code <span className="underline md:no-underline">"p2v"</span> for <span className="whitespace-nowrap">$30 off!</span>
+                Use promo code <span className="underline md:underline">"p2v"</span> for <span className="whitespace-nowrap">$30 off!</span>
               </span>
             </div>
           </div>
