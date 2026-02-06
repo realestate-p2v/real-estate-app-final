@@ -21,7 +21,7 @@ export function SaleBanner() {
             <source src="/p2v-website-her-vid.mp4" type="video/mp4" />
           </video>
           {/* Tint Overlay: Blending your site colors with the video */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-700/90 via-slate-900/60 to-slate-900/90" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-800/90 via-slate-900/70 to-slate-800/90" />
         </div>
         
         {/* 2. Content Layer */}
