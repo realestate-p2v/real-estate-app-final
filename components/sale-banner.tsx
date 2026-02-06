@@ -7,20 +7,20 @@ import { Badge } from "@/components/ui/badge"
 export function SaleBanner() {
   return (
     <div className="px-4 py-4"> {/* Wrapper to show off the rounded corners */}
-      <div className="w-full max-w-7xl mx-auto bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 text-white py-8 px-6 relative overflow-hidden rounded-[2rem] border-2 border-emerald-400/30 shadow-2xl">
+      <div className="w-full max-w-7xl mx-auto bg-gradient-to-r from-slate-900 via-blue-800 to-slate-900 text-white py-8 px-6 relative overflow-hidden rounded-[2rem] border-2 border-emerald-400/30 shadow-2xl">
         
         {/* Subtle texture overlay to keep it "classy" */}
         <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
         
         {/* Decorative background glow */}
-        <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-blue500/10 rounded-full blur-3xl"></div>
 
         <div className="max-w-6xl mx-auto flex flex-col gap-8 relative z-10">
           
           {/* Stand-out Coupon Badge */}
           <div className="flex justify-center -mt-2">
-            <div className="bg-emerald-400 text-slate-900 px-6 py-2 rounded-full shadow-[0_0_20px_rgba(52,211,153,0.4)] flex items-center gap-2 animate-bounce border-2 border-white/20">
+            <div className="bg-blue-400 text-slate-900 px-6 py-2 rounded-full shadow-[0_0_20px_rgba(52,211,153,0.4)] flex items-center gap-2 animate-bounce border-2 border-white/20">
               <Tag className="w-4 h-4 fill-slate-900" />
               <span className="text-xs md:text-sm font-black uppercase tracking-wider">
                 Combine with coupon code for more savings!
