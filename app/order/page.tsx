@@ -12,11 +12,6 @@ export const metadata: Metadata = {
     "Upload your listing photos, select music, and order your professional walkthrough video. Fast 24-hour delivery."
 };
 
-const trustBadges = [
-  { icon: Shield, text: "Secure Payment" },
-  { icon: Clock, text: "24-Hour Delivery" },
-  { icon: Award, text: "100% Satisfaction" },
-];
 
 export default function OrderPage() {
   return (
