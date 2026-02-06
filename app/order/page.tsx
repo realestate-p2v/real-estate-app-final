@@ -22,7 +22,7 @@ export default function OrderPage() {
   return (
     
     <main className="min-h-screen bg-background">
-      <SaleBanner />
+     
       {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -73,7 +73,7 @@ export default function OrderPage() {
             checkout. We'll deliver your HD video within 24 hours.
           </p>
         </div>
-
+ <SaleBanner />
         <OrderForm />
       </div>
 
