@@ -74,7 +74,7 @@ export function SaleBanner() {
             </div>
 
             {/* Premium Tier */}
-            <div className="flex flex-col items-center p-6 rounded-3xl bg-yellow-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-yellow-500/30 shadow-2xl relative scale-105 z-20">
+            <div className="flex flex-col items-center p-6 rounded-3xl bg-blue-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-blue-500/30 shadow-2xl relative scale-105 z-20">
               <div className="absolute -top-3 bg-emerald-400 text-slate-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Most Popular</div>
               <span className="text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">Premium</span>
               <div className="flex items-center gap-3 mb-4">
