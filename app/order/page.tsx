@@ -20,7 +20,7 @@ const trustBadges = [
 
 export default function OrderPage() {
   return (
-    <SaleBanner />
+    
     <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border">
