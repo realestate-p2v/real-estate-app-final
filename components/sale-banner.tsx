@@ -64,8 +64,11 @@ export function SaleBanner() {
                 <span className="text-white text-2xl font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] tracking-tighter">$79</span>
               </div>
               <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Standard</span>
-              <span className="text-[11px] font-bold text-slate-300">Up to 12 clips</span>
+              <span className="text-[11px] font-bold text-slate-300">Up to 12 HD clips</span>
               <span className="text-[11px] font-bold text-slate-300">24 hour turnaround</span>
+               <span className="text-[11px] font-bold text-slate-300">Photo Enhancement</span>
+              <span className="text-[11px] font-bold text-slate-300">Choice of music</span>
+              <span className="text-[11px] font-bold text-slate-300">1 revision</span>
             </div>
 
             {/* Premium */}
@@ -75,7 +78,12 @@ export function SaleBanner() {
                 <span className="text-white text-2xl font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] tracking-tighter">$129</span>
               </div>
               <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Premium</span>
-              <span className="text-[11px] font-bold text-slate-300">Up to 25 clips</span>
+               <span className="text-[11px] font-bold text-slate-300">Up to 25 HD clips</span>
+              <span className="text-[11px] font-bold text-slate-300">24 hour turnaround</span>
+               <span className="text-[11px] font-bold text-slate-300">Photo Enhancement</span>
+              <span className="text-[11px] font-bold text-slate-300">Choice of music</span>
+               <span className="text-[11px] font-bold text-slate-300">Free Branding</span>
+              <span className="text-[11px] font-bold text-slate-300">1 revision</span>
             </div>
 
             {/* Professional */}
@@ -85,7 +93,12 @@ export function SaleBanner() {
                 <span className="text-white text-2xl font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] tracking-tighter">$179</span>
               </div>
               <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Professional</span>
-              <span className="text-[11px] font-bold text-slate-300">Up to 35 clips</span>
+                <span className="text-[11px] font-bold text-slate-300">Up to 35 HD clips</span>
+              <span className="text-[11px] font-bold text-slate-300">24 hour turnaround</span>
+               <span className="text-[11px] font-bold text-slate-300">Photo Enhancement</span>
+              <span className="text-[11px] font-bold text-slate-300">Choice of music</span>
+               <span className="text-[11px] font-bold text-slate-300">Free Branding</span>
+              <span className="text-[11px] font-bold text-slate-300">1 revision</span>
             </div>
 
           </div>
