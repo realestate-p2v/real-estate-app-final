@@ -22,11 +22,11 @@ export function OrderSummary({
     if (photoCount === 1) {
       return { price: 1, originalPrice: 1, tier: "Test Product (1 photo)" };
     }
-    if (photoCount <= 12) {
-      return { price: 79, originalPrice: 149, tier: "Standard (up to 12 photos)" };
+    if (photoCount <= 15) {
+      return { price: 79, originalPrice: 149, tier: "Standard (up to 15 photos)" };
     }
     if (photoCount <= 25) {
-      return { price: 129, originalPrice: 199, tier: "Premium (13-25 photos)" };
+      return { price: 129, originalPrice: 199, tier: "Premium (16-25 photos)" };
     }
     if (photoCount <= 35) {
       return { price: 179, originalPrice: 249, tier: "Professional (26-35 photos)" };
@@ -37,7 +37,7 @@ export function OrderSummary({
   const { price, originalPrice, tier } = getPricing();
   const showContactUs = photoCount > 35;
 
-  const brandingPrice = brandingOption === "custom" ? 25 : 0;
+  const brandingPrice = brandingOption === "custom" ? 0 : 0;
   const voiceoverPrice = voiceoverOption === "voiceover" ? 25 : 0;
   const editedPhotosPrice = includeEditedPhotos ? 15 : 0;
   const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice;
