@@ -4,6 +4,7 @@ import { OrderForm } from "@/components/order-form";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { ArrowLeft, Shield, Clock, Award } from "lucide-react";
 import type { Metadata } from "next";
+import { SaleBanner } from "@/components/sale-banner"
 
 export const metadata: Metadata = {
   title: "Order Your Video | Real Estate Photo 2 Video",
@@ -19,6 +20,7 @@ const trustBadges = [
 
 export default function OrderPage() {
   return (
+    <SaleBanner />
     <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border">
