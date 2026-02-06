@@ -49,7 +49,7 @@ export function OrderForm() {
     return 0;
   };
 
-  const getBrandingPrice = () => brandingSelection === "custom" ? 0 : 0;
+  const getBrandingPrice = () => 0;
   const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
   const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
   const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice();
