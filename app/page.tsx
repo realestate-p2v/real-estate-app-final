@@ -9,7 +9,7 @@ import { GreenButton } from "@/components/green-button";
 import { ContactSection } from "@/components/contact-section";
 import { Footer } from "@/components/footer";
 import { WhatsAppButton } from "@/components/whatsapp-button";
-import { TrustSection } from "@/components/trust-section"; // New Import
+import { TrustSection } from "@/components/trust-section";
 
 export default function HomePage() {
   return (
