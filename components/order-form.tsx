@@ -216,7 +216,7 @@ export function OrderForm() {
                   <Switch 
                     checked={includeEditedPhotos} 
                     onCheckedChange={setIncludeEditedPhotos} 
-                    className="scale-150 mr-2 data-[state=checked]:bg-primary border-2 border-slate-400"
+                    className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-300"
                   />
                 </div>
                 <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
