@@ -16,7 +16,7 @@ const brandingOptions = [
     id: "custom",
     name: "Custom Branding",
     description: "Custom intro/outro with your branding",
-    price: 25,
+    price: 0,
   },
 ];
 
