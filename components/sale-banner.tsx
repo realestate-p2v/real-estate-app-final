@@ -61,8 +61,8 @@ export function SaleBanner() {
             
             {/* Standard Tier */}
             <a 
-              href="/order#order-form" 
-              onClick={scrollToForm}
+              href="https://realestatephoto2video.com/order#order-form" 
+            
               className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
             >
               <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Standard</span>
