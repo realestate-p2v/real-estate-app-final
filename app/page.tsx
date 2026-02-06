@@ -4,6 +4,8 @@ import { DemoSection } from "@/components/demo-section";
 import { ProcessSection } from "@/components/process-section";
 import { SaleBanner } from "@/components/sale-banner";
 import { CTASection } from "@/components/cta-section";
+import { PricingSection } from "@/components/pricing-section";
+
 import { ContactSection } from "@/components/contact-section";
 import { Footer } from "@/components/footer";
 import { WhatsAppButton } from "@/components/whatsapp-button";
