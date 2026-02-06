@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-
 import { useState, useRef } from "react";
 import { Music, Check, Play, Pause, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -116,8 +115,12 @@ export function MusicSelector({
           <Music className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold text-foreground">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
             Select Background Music
+            {/* Added Mandatory Label Below */}
+            <span className="text-[10px] uppercase tracking-wider text-red-500 font-bold">
+              * Mandatory
+            </span>
           </h3>
           <p className="text-sm text-muted-foreground">
             Choose the mood for your video
