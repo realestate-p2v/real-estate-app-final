@@ -16,6 +16,7 @@ export default function HomePage() {
       <HeroSection />
       <DemoSection />
       <ProcessSection />
+      <SaleBanner />
       <PricingSection />
         <TrustSection /> {/* Placed right under Hero */}
       <CTASection />
