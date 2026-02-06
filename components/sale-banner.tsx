@@ -59,7 +59,7 @@ export function SaleBanner() {
               </div>
               
               <div className="flex flex-col gap-1 md:gap-2 text-center">
-                <p className="text-[11px] md:text-[13px] font-bold text-white uppercase tracking-wide">Up to 12 HD clips</p>
+                <p className="text-[11px] md:text-[13px] font-bold text-white uppercase tracking-wide">Up to 15 HD clips</p>
                 <div className="h-px w-8 bg-emerald-500/30 mx-auto my-1" />
                 <ul className="text-[10px] md:text-[12px] space-y-1 text-slate-200 font-bold opacity-90">
                   <li>24 hour turnaround</li>
