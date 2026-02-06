@@ -61,7 +61,7 @@ export function SaleBanner() {
             
             {/* Standard Tier */}
             <a 
-              href="https://realestatephoto2video.com/order#order-form" 
+              href="/order#order-form" 
               onClick={scrollToForm}
               className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
             >
@@ -86,7 +86,7 @@ export function SaleBanner() {
 
             {/* Premium Tier */}
             <a 
-              href="https://realestatephoto2video.com/order#order-form" 
+               href="/order#order-form" 
               onClick={scrollToForm}
               className="flex flex-col items-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-blue-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-blue-500/30 hover:scale-[1.07] active:scale-95 cursor-pointer shadow-2xl relative md:scale-105 z-20"
             >
@@ -112,7 +112,7 @@ export function SaleBanner() {
 
             {/* Professional Tier */}
             <a 
-              href="https://realestatephoto2video.com/order#order-form" 
+              href="/order#order-form" 
               onClick={scrollToForm}
               className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
             >
