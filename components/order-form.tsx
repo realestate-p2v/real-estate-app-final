@@ -215,7 +215,7 @@ export function OrderForm() {
                     <p className="font-bold">Include Edited Photos (+$15)</p>
                     <p className="text-sm text-muted-foreground">Receive high-res professionally edited versions of your photos.</p>
                   </div>
-                  <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} />
+                  <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} className="border-grey-800"/>
                 </div>
                 <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
                   Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
