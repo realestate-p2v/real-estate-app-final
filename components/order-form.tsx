@@ -43,7 +43,7 @@ export function OrderForm() {
 
   const getBasePrice = () => {
     if (photoCount === 1) return 1; // Test price
-    if (photoCount <= 12) return 79;
+    if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
     if (photoCount <= 35) return 179;
     return 0;
