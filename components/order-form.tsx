@@ -179,9 +179,9 @@ export function OrderForm() {
           <div className="space-y-6">
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">1</div>
+                <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">1</div>
                 
-                <div id="order-form"</div>
+                
                 <h2 className="text-xl font-bold">Start by uploading Your Photos</h2>
               </div>
               <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
