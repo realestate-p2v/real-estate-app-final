@@ -40,22 +40,7 @@ export default function OrderPage() {
         </div>
       </header>
 
-      {/* Trust Badges */}
-      <div className="bg-primary/5 border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex justify-center gap-6 md:gap-12">
-            {trustBadges.map((badge) => (
-              <div
-                key={badge.text}
-                className="flex items-center gap-2 text-sm"
-              >
-                <badge.icon className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">{badge.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
