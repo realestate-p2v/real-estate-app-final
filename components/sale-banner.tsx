@@ -88,6 +88,7 @@ export function SaleBanner() {
                   <li>24 hour turnaround</li>
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
+                  <li>Free Branding</li>
                   <li>1 revision</li>
                 </ul>
               </div>
@@ -108,7 +109,8 @@ export function SaleBanner() {
                   <li>24 hour turnaround</li>
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
-                  <li>1 revision</li>
+                  <li>Free Branding</li>
+                  <li>2 revisions</li>
                 </ul>
               </div>
             </div>
