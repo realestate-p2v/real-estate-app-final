@@ -65,6 +65,7 @@ export function SaleBanner() {
               </div>
               <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Standard</span>
               <span className="text-[11px] font-bold text-slate-300">Up to 12 clips</span>
+              <span className="text-[11px] font-bold text-slate-300">24 hour turnaround</span>
             </div>
 
             {/* Premium */}
