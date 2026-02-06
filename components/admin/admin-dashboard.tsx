@@ -6,7 +6,9 @@ import {
   LayoutGrid, ChevronDown, ExternalLink, Loader2, 
   Music, Mic, Brush, ImageIcon, ArrowLeft, 
   Download, Hash, User, Building2, Laptop, Search, 
-  Mail, Phone, Globe, FileText, CheckCircle2, Copy, Check, Clock, Flag
+  Mail, Phone, Globe, FileText, CheckCircle2, Copy, Check, Clock, Flag,
+  Sparkles,
+  Tag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +17,54 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import Link from "next/link"
+
+/**
+ * PROMO BANNER COMPONENT
+ * A classy, high-conversion banner for the top of the page.
+ */
+function PromoBanner() {
+  return (
+    <div className="w-full bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 text-white py-3 px-4 relative overflow-hidden border-b border-emerald-500/30">
+      {/* Decorative background element for "classy" feel */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+      
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 relative z-10">
+        <div className="flex items-center gap-2">
+          <Badge className="bg-emerald-500 hover:bg-emerald-500 text-[10px] font-black tracking-tighter rounded-md">
+            LIMITED TIME
+          </Badge>
+          <span className="text-sm font-medium tracking-tight text-emerald-50 opacity-90">
+            Exclusive Seasonal Pricing Live
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 text-xs md:text-sm font-bold uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+            <span className="opacity-50 line-through text-slate-400">$149</span>
+            <span className="text-emerald-400">$79 STANDARD</span>
+          </div>
+          <div className="w-px h-4 bg-white/20 hidden md:block" />
+          <div className="flex items-center gap-2">
+            <span className="opacity-50 line-through text-slate-400">$199</span>
+            <span className="text-emerald-400">$129 PREMIUM</span>
+          </div>
+          <div className="w-px h-4 bg-white/20 hidden md:block" />
+          <div className="flex items-center gap-2">
+            <span className="opacity-50 line-through text-slate-400">$249</span>
+            <span className="text-emerald-400">$179 PROFESSIONAL</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full border border-white/10">
+          <Sparkles className="w-3 h-3 text-emerald-400" />
+          <span className="text-[10px] font-black text-emerald-200 uppercase tracking-widest">
+            Save $70 On Every Tier
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function useCountdown(createdAt: string) {
   const [timeLeft, setTimeLeft] = useState("")
@@ -111,6 +161,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#eceef0] text-slate-700 pb-20 font-sans">
+      {/* Banner placed at the very top */}
+      <PromoBanner />
+
       <nav className="sticky top-0 z-50 bg-[#f4f5f6]/80 backdrop-blur-md border-b border-slate-300 h-20 flex items-center px-8 justify-between">
         <div className="flex items-center gap-6">
           <Link href="/">
@@ -216,7 +269,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
         <CollapsibleTrigger className="w-full p-6 pb-7 flex items-center gap-6 text-left">
           <div className={`w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border ${isLive ? 'border-emerald-200' : 'border-slate-200'}`}>
-            {sortedPhotos[0] && <img src={sortedPhotos[0].secure_url} className="object-cover w-full h-full" />}
+            {sortedPhotos[0] && <img src={sortedPhotos[0].secure_url} className="object-cover w-full h-full" alt="Thumbnail" />}
           </div>
           <div className="flex-1 grid grid-cols-2 md:grid-cols-5 items-center gap-4">
             <div>
@@ -270,7 +323,7 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
                 <span className="text-slate-400 font-bold uppercase text-[9px]">Website</span>
                 <span className="text-slate-700 font-black">{b.web}</span>
               </div>
-              {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-colors"><a href={b.logo} target="_blank">Download Logo</a></Button>}
+              {b.logo && <Button asChild variant="outline" className="w-full bg-white border-emerald-200 text-emerald-600 h-9 mt-4 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-colors"><a href={b.logo} target="_blank" rel="noreferrer">Download Logo</a></Button>}
             </div>
             <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-s text-slate-500 italic leading-relaxed">
                <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Client Instructions</span>
