@@ -168,7 +168,6 @@ export function OrderForm() {
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-      {/* FIX 2: Moved Google Analytics inside the return block */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
         strategy="afterInteractive"
@@ -180,8 +179,6 @@ export function OrderForm() {
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">1</div>
-                
-                
                 <h2 className="text-xl font-bold">Start by uploading Your Photos</h2>
               </div>
               <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
@@ -211,11 +208,16 @@ export function OrderForm() {
                   <VoiceoverSelector selected={voiceoverSelection} onSelect={setVoiceoverSelection} script={voiceoverScript} onScriptChange={setVoiceoverScript} selectedVoice={selectedVoice} onVoiceSelect={setSelectedVoice} />
                 </div>
                 <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
-                  <div>
+                  <div className="pr-4">
                     <p className="font-bold">Include Edited Photos (+$15)</p>
                     <p className="text-sm text-muted-foreground">Receive high-res professionally edited versions of your photos.</p>
                   </div>
-                  <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} className="border-grey-800"/>
+                  {/* CHANGED: Made switch bigger and more visible */}
+                  <Switch 
+                    checked={includeEditedPhotos} 
+                    onCheckedChange={setIncludeEditedPhotos} 
+                    className="scale-150 mr-2 data-[state=checked]:bg-primary border-2 border-slate-400"
+                  />
                 </div>
                 <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
                   Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
