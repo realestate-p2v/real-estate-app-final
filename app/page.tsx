@@ -19,8 +19,8 @@ export default function HomePage() {
       <DemoSection />
       <ProcessSection />
       <SaleBanner />
-      <PricingSection />
-        <TrustSection /> {/* Placed right under Hero */}
+    <TrustSection /> {/* Placed right under Hero */}
+      
       <CTASection />
       <ContactSection />
       <Footer />
