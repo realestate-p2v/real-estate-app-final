@@ -6,78 +6,87 @@ import { Badge } from "@/components/ui/badge"
 
 export function SaleBanner() {
   return (
-    <div className="w-full bg-gradient-to-r from-orange-500 via-indigo-600 to-blue-700 text-white py-6 px-4 relative overflow-hidden border-b-2 border-orange-400">
-      {/* Decorative background flare */}
-      <div className="absolute top-0 left-1/4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-      
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 relative z-10">
+    <div className="px-4 py-4"> {/* Wrapper to show off the rounded corners */}
+      <div className="w-full max-w-7xl mx-auto bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 text-white py-8 px-6 relative overflow-hidden rounded-[2rem] border-2 border-emerald-400/30 shadow-2xl">
         
-        {/* New Stand-out Badge Row */}
-        <div className="flex justify-center -mt-2">
-          <div className="bg-white text-indigo-700 px-4 py-1.5 rounded-full shadow-xl flex items-center gap-2 animate-bounce border-2 border-orange-300">
-            <Tag className="w-4 h-4 fill-indigo-700" />
-            <span className="text-xs md:text-sm font-black uppercase tracking-tight">
-              Combine with coupon code for more savings!
-            </span>
-          </div>
-        </div>
+        {/* Subtle texture overlay to keep it "classy" */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+        
+        {/* Decorative background glow */}
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
 
-        {/* Top Row: Title & Save Info */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10">
-          <div className="flex items-center gap-3">
-            <Badge className="bg-orange-400 hover:bg-orange-500 text-white text-[12px] px-3 py-1 font-black tracking-tighter rounded-md shadow-md">
-              SALE IS LIVE
-            </Badge>
-            <span className="text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-md">
-              Exclusive Seasonal Pricing
-            </span>
+        <div className="max-w-6xl mx-auto flex flex-col gap-8 relative z-10">
+          
+          {/* Stand-out Coupon Badge */}
+          <div className="flex justify-center -mt-2">
+            <div className="bg-emerald-400 text-slate-900 px-6 py-2 rounded-full shadow-[0_0_20px_rgba(52,211,153,0.4)] flex items-center gap-2 animate-bounce border-2 border-white/20">
+              <Tag className="w-4 h-4 fill-slate-900" />
+              <span className="text-xs md:text-sm font-black uppercase tracking-wider">
+                Combine with coupon code for more savings!
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full border border-white/30 backdrop-blur-sm">
-            <Sparkles className="w-4 h-4 text-orange-300" />
-            <span className="text-xs font-black text-white uppercase tracking-[0.15em]">
-              Save $70 On Every Tier
-            </span>
-          </div>
-        </div>
-
-        {/* Bottom Row: Pricing & Details */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-2">
-          <span className="text-xs font-black uppercase tracking-[0.3em] text-orange-200 md:mr-8">
-            Includes
-          </span>
-
-          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16 font-bold uppercase tracking-widest">
-            {/* Standard */}
-            <div className="flex flex-col items-center md:items-start group">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-white font-bold line-through decoration-orange-400 decoration-2 opacity-100">$149</span>
-                <span className="text-white text-xl md:text-2xl font-black drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]">$79 STANDARD</span>
-              </div>
-              <span className="text-xs font-black normal-case tracking-wider text-orange-100 mt-1">Up to 12 clips</span>
+          {/* Title Row */}
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10">
+            <div className="flex items-center gap-4">
+              <Badge className="bg-emerald-500 text-white text-[12px] px-4 py-1.5 font-black tracking-widest rounded-lg shadow-lg border border-emerald-400">
+                OFFER ACTIVE
+              </Badge>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-white uppercase italic">
+                Exclusive <span className="text-emerald-400">Seasonal</span> Pricing
+              </h2>
             </div>
 
-            <div className="w-px h-10 bg-white/30 hidden md:block self-center" />
+            <div className="flex items-center gap-2 bg-white/5 px-5 py-2 rounded-full border border-white/10 backdrop-blur-md">
+              <Sparkles className="w-5 h-5 text-emerald-400" />
+              <span className="text-[11px] font-black text-emerald-100 uppercase tracking-[0.2em]">
+                Save $70 Per Tier
+              </span>
+            </div>
+          </div>
+
+          {/* Pricing Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-6 md:gap-4">
+            
+            {/* "Includes" Label */}
+            <div className="flex justify-center md:justify-end">
+              <span className="text-xs font-black uppercase tracking-[0.4em] text-emerald-500/50">
+                Includes
+              </span>
+            </div>
+
+            {/* Standard */}
+            <div className="flex flex-col items-center p-4 rounded-2xl bg-white/5 border border-white/5 transition-all hover:bg-white/10">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm text-slate-400 font-black line-through decoration-emerald-500/50 decoration-2">$149</span>
+                <span className="text-white text-2xl font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] tracking-tighter">$79</span>
+              </div>
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Standard</span>
+              <span className="text-[11px] font-bold text-slate-300">Up to 12 clips</span>
+            </div>
 
             {/* Premium */}
-            <div className="flex flex-col items-center md:items-start group">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-white font-bold line-through decoration-orange-400 decoration-2 opacity-100">$199</span>
-                <span className="text-white text-xl md:text-2xl font-black drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]">$129 PREMIUM</span>
+            <div className="flex flex-col items-center p-4 rounded-2xl bg-white/5 border border-white/10 transition-all hover:bg-white/10 shadow-xl">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm text-slate-400 font-black line-through decoration-emerald-500/50 decoration-2">$199</span>
+                <span className="text-white text-2xl font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] tracking-tighter">$129</span>
               </div>
-              <span className="text-xs font-black normal-case tracking-wider text-orange-100 mt-1">Up to 25 clips</span>
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Premium</span>
+              <span className="text-[11px] font-bold text-slate-300">Up to 25 clips</span>
             </div>
-
-            <div className="w-px h-10 bg-white/30 hidden md:block self-center" />
 
             {/* Professional */}
-            <div className="flex flex-col items-center md:items-start group">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-white font-bold line-through decoration-orange-400 decoration-2 opacity-100">$249</span>
-                <span className="text-white text-xl md:text-2xl font-black drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]">$179 PROFESSIONAL</span>
+            <div className="flex flex-col items-center p-4 rounded-2xl bg-white/5 border border-white/5 transition-all hover:bg-white/10">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm text-slate-400 font-black line-through decoration-emerald-500/50 decoration-2">$249</span>
+                <span className="text-white text-2xl font-black drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] tracking-tighter">$179</span>
               </div>
-              <span className="text-xs font-black normal-case tracking-wider text-orange-100 mt-1">Up to 35 clips</span>
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Professional</span>
+              <span className="text-[11px] font-bold text-slate-300">Up to 35 clips</span>
             </div>
+
           </div>
         </div>
       </div>
