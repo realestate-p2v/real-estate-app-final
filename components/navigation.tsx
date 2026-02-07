@@ -18,7 +18,7 @@ export function Navigation() {
           <div className="flex items-center gap-6">
             <Link href="/" className="flex-shrink-0">
               <Image src="/logo.png" alt="Logo" width={192} height={77} className="h-12 w-auto" />
-            </Link>
+            </Link> 
            
  <div className="hidden md:block h-10 w-[1px] bg-white/30" />
             <span className="hidden md:block text-lg text-primary-foreground/90 italic font-semibold">
