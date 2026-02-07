@@ -17,7 +17,7 @@ export function Navigation() {
           
           <div className="flex items-center gap-6">
             <Link href="/" className="flex-shrink-0">
-              <Image src="/logo.png" alt="Logo" width={160} height={64} className="h-10 w-auto" />
+              <Image src="/logo.png" alt="Logo" width={160} height={64} className="h-11 w-auto" />
             </Link>
            
  <div className="hidden md:block h-10 w-[1px] bg-white/30" />
