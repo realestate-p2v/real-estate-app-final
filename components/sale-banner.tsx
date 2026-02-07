@@ -87,7 +87,7 @@ export function SaleBanner() {
             {/* Premium Tier */}
             <a 
                href="/order#order-form" 
-              onClick={scrollToForm}
+              
               className="flex flex-col items-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-blue-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-blue-500/30 hover:scale-[1.07] active:scale-95 cursor-pointer shadow-2xl relative md:scale-105 z-20"
             >
               <div className="absolute -top-3 bg-emerald-400 text-slate-900 text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Most Popular</div>
@@ -113,7 +113,7 @@ export function SaleBanner() {
             {/* Professional Tier */}
             <a 
               href="/order#order-form" 
-              onClick={scrollToForm}
+              
               className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
             >
               <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Professional</span>
