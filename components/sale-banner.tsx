@@ -48,9 +48,7 @@ export function SaleBanner() {
 
           {/* Title Row */}
           <div className="flex flex-col items-center justify-center gap-3 md:gap-6">
-            <Badge className="bg-emerald-500 text-white text-[10px] md:text-[14px] px-3 py-1 md:px-5 md:py-2 font-black tracking-widest rounded-lg shadow-lg border border-emerald-400">
-              OFFER ACTIVE
-            </Badge>
+       
             <h2 className="text-2xl md:text-4xl font-black tracking-tighter text-white uppercase italic drop-shadow-lg text-center">
               Exclusive <span className="text-emerald-400">February</span> Pricing
             </h2>
