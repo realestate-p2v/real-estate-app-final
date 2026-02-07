@@ -103,6 +103,7 @@ export function SaleBanner() {
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
                   <li>Free Branding</li>
+                  <li>Get Individual Video Files</li>
                   <li>1 revision</li>
                 </ul>
               </div>
@@ -128,6 +129,7 @@ export function SaleBanner() {
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
                   <li>Free Branding</li>
+                  <li>Get Individual Video Files</li>
                   <li>2 revisions</li>
                 </ul>
               </div>
