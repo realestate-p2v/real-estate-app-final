@@ -210,7 +210,7 @@ export function OrderForm() {
                 <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                   <div className="pr-4">
                     <p className="font-bold">Include Edited Photos (+$15)</p>
-                    <p className="text-sm text-muted-foreground">Receive high-res professionally edited versions of your photos.</p>
+                    <p className="text-sm text-muted-foreground">Receive high-res professionally edited files of your photos.</p>
                   </div>
                   <Switch 
                     checked={includeEditedPhotos} 
