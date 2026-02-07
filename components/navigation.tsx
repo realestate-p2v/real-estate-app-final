@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
-
+ 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
