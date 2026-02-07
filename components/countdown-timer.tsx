@@ -46,7 +46,7 @@ export function CountdownTimer() {
   return (
     <div className="flex flex-col md:flex-row items-center gap-3">
       <span className="text-white font-bold text-md whitespace-nowrap">
-        $49 February sale ends in:
+        February sale ends in:
       </span>
       <div className="px-4 py-1.5 rounded-lg border border-red-600/40 bg-black/20 shadow-[0_0_12px_rgba(220,38,38,0.3)] flex items-center gap-3">
         <div className="flex items-center gap-2 font-mono text-xl font-black text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.4)]">
