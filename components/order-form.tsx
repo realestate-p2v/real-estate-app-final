@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Script from "next/script"; // FIX 1: Import added
+import Script from "next/script";
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
 import { BrandingSelector, type BrandingData } from "@/components/branding-selector";
@@ -212,16 +212,23 @@ export function OrderForm() {
                     <p className="font-bold">Include Edited Photos (+$15)</p>
                     <p className="text-sm text-muted-foreground">Receive high-res professionally edited versions of your photos.</p>
                   </div>
-                  {/* CHANGED: Made switch bigger and more visible */}
                   <Switch 
                     checked={includeEditedPhotos} 
-                    onCheckedChange={setIncludeEditedPhotos} 
+                    onCheckedChange={includeEditedPhotos} 
                     className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400"
                   />
                 </div>
-                <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
-                  Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+
+                <div className="flex flex-col gap-2">
+                  {/* Music Warning Note */}
+                  {!musicSelection && (
+                    <p className="text-xs text-red-500 italic text-center">* Please select a music</p>
+                  )}
+                  
+                  <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
+                    Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>
