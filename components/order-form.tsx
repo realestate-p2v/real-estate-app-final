@@ -222,7 +222,7 @@ export function OrderForm() {
                 <div className="flex flex-col gap-2">
                   {/* Music Warning Note */}
                   {!musicSelection && (
-                    <p className="text-xs text-red-500 italic text-center">* Please select a music</p>
+                    <p className="text-s text-red-500 italic text-right">* Please select a music</p>
                   )}
                   
                   <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
