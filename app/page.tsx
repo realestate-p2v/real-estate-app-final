@@ -19,7 +19,7 @@ export default function HomePage() {
       <DemoSection />
       <ProcessSection />
       <SaleBanner />
-      <GreenButton />
+     
     <TrustSection /> {/* Placed right under Hero */}
       
       <CTASection />
