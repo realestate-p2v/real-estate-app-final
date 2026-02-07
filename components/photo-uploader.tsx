@@ -117,28 +117,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
 
   return (
     <div className="space-y-6">
-      {/* Photo Quality Note */}
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-        <button
-          type="button"
-          onClick={() => setShowPhotoTips(!showPhotoTips)}
-          className="text-sm text-amber-700 dark:text-amber-300 hover:underline mt-1 flex items-center gap-1"
-        >
-          <Camera className="h-4 w-4" />
-          {showPhotoTips ? "Hide" : "View"} smartphone photography tips
-        </button>
-        {showPhotoTips && (
-          <div className="mt-3 p-3 bg-white dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-200">
-            <p className="font-semibold mb-2 text-amber-900 dark:text-amber-100">Tips for best results:</p>
-            <ul className="space-y-1 list-decimal list-inside">
-              <li>Enable HDR mode</li>
-              <li>Use 0.5x ultra-wide lens</li>
-              <li>Shoot from corners</li>
-              <li>Keep phone level</li>
-            </ul>
-          </div>
-        )}
-      </div>
+    
 
       {/* Upload Area */}
       <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
