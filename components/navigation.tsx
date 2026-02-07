@@ -20,7 +20,10 @@ export function Navigation() {
               <Image src="/logo.png" alt="Logo" width={160} height={64} className="h-10 w-auto" />
             </Link>
            
-
+ <div className="hidden md:block h-10 w-[1px] bg-white/30" />
+            <span className="hidden md:block text-lg text-primary-foreground/90 italic font-semibold">
+            </span>
+          </div>
           <div className="hidden xl:flex items-center gap-8">
             <CountdownTimer />
             
