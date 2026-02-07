@@ -17,11 +17,11 @@ export default function HomePage() {
       <Navigation />
       <HeroSection />
       <DemoSection />
-      <ProcessSection />
+     
       <SaleBanner />
      
     <TrustSection /> {/* Placed right under Hero */}
-      
+       <ProcessSection />
       <CTASection />
       <ContactSection />
       <Footer />
