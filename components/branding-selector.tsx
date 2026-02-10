@@ -13,6 +13,12 @@ const brandingOptions = [
     price: 0,
   },
   {
+    id: "basic",
+    name: "Basic Branding",
+    description: "Your logo in the corner of the video",
+    price: 0,
+  },
+  {
     id: "custom",
     name: "Custom Branding",
     description: "Custom intro/outro with your branding",
@@ -21,7 +27,7 @@ const brandingOptions = [
 ];
 
 export interface BrandingData {
-  type: "unbranded" | "custom";
+  type: "unbranded" | "basic" | "custom";
   logoUrl?: string;
   logoFile?: File;
   agentName?: string;
@@ -113,7 +119,7 @@ export function BrandingSelector({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {brandingOptions.map((option) => (
           <button
             key={option.id}
@@ -139,8 +145,8 @@ export function BrandingSelector({
         ))}
       </div>
 
-      {/* Show branding details form when custom is selected */}
-      {selected === "custom" && (
+      {/* Show branding details form when basic or custom is selected */}
+      {(selected === "basic" || selected === "custom") && (
         <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border space-y-4">
           <h4 className="font-medium text-foreground">Branding Details</h4>
           
