@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 export default function PromoPopup() {
   const [isVisible, setIsVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -16,6 +17,12 @@ export default function PromoPopup() {
       return () => clearTimeout(timer);
     }
   }, [pathname]);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText('P2V');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset "Copied" message after 2 seconds
+  };
 
   if (!isVisible || pathname !== '/') return null;
 
@@ -51,10 +58,20 @@ export default function PromoPopup() {
           </p>
 
           <div style={styles.promoBox}>
-            {/* Clear instruction added here */}
-            <p style={styles.promoLabel}>COPY & USE PROMO CODE AT CHECKOUT:</p>
-            <div style={styles.couponRow}>
-              <span style={styles.couponCode} className="pulse-text">P2V</span>
+            {/* Standing out with 'PROMO CODE' emphasized */}
+            <p style={styles.promoLabel}>
+              CLICK TO COPY <span style={styles.highlightLabel}>PROMO CODE</span>:
+            </p>
+            
+            <div 
+              style={styles.couponRow} 
+              onClick={copyToClipboard}
+              title="Click to copy code"
+              className="coupon-clickable"
+            >
+              <span style={styles.couponCode} className="pulse-text">
+                {copied ? 'COPIED!' : 'P2V'}
+              </span>
               <span style={styles.divider}>|</span>
               <div style={styles.savingsHighlight}>
                 <span style={styles.discountText}>EXTRA $30 OFF</span>
@@ -77,12 +94,19 @@ export default function PromoPopup() {
         }
         @keyframes pulse {
           0% { transform: scale(1); }
-          50% { transform: scale(1.05); color: #D32F2F; }
+          50% { transform: scale(1.05); }
           100% { transform: scale(1); }
         }
         .pulse-text {
           display: inline-block;
           animation: pulse 2s infinite ease-in-out;
+        }
+        .coupon-clickable {
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+        .coupon-clickable:hover {
+          transform: scale(1.02);
         }
         .cta-hover {
           transition: all 0.3s ease !important;
@@ -185,23 +209,33 @@ const styles = {
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
   },
   promoLabel: {
-    fontSize: '12px', // Slightly larger for clarity
-    fontWeight: '800',
-    color: '#D32F2F', // Changed to Red to make the instruction stand out
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#495057',
     margin: '0 0 10px 0',
-    letterSpacing: '1px',
+    letterSpacing: '0.5px',
+  },
+  highlightLabel: {
+    color: '#D32F2F',
+    fontWeight: '900',
+    fontSize: '15px',
+    textDecoration: 'underline',
   },
   couponRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '15px',
+    backgroundColor: '#f1f3f5',
+    padding: '10px',
+    borderRadius: '12px',
   },
   couponCode: {
     fontSize: '32px',
     fontWeight: '900',
     color: '#0D1B2A',
     letterSpacing: '2px',
+    minWidth: '100px', // Prevents shifting when text changes to "COPIED!"
   },
   divider: {
     color: '#dee2e6',
