@@ -49,7 +49,7 @@ export default function PromoPopup() {
           </div>
 
           <h2 style={styles.headline}>
-            Grab An <span style={styles.redText}>Extra $30 Off</span>
+            Grab An <span style={styles.redText}>Extra $30 Off!</span>
           </h2>
           
           <p style={styles.subtext}>
