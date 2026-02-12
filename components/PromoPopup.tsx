@@ -81,7 +81,7 @@ const styles = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(13, 27, 42, 0.85)', // Navy backdrop
+    backgroundColor: 'rgba(13, 27, 42, 0.85)',
     zIndex: 99999,
     display: 'flex',
     alignItems: 'center',
@@ -89,7 +89,7 @@ const styles = {
     backdropFilter: 'blur(8px)',
   },
   modal: {
-    backgroundColor: '#F8F9FA', // DAY MODE: One shade darker (Smoke White)
+    backgroundColor: '#F8F9FA', 
     width: '90%',
     maxWidth: '460px',
     borderRadius: '24px',
@@ -102,7 +102,7 @@ const styles = {
   },
   accentBar: {
     height: '8px',
-    backgroundColor: '#D32F2F', // Your brand red
+    backgroundColor: '#D32F2F',
     width: '100%',
   },
   closeBtn: {
@@ -126,7 +126,7 @@ const styles = {
     display: 'block',
   },
   headline: {
-    color: '#0D1B2A', // Navy
+    color: '#0D1B2A',
     fontSize: '30px',
     fontWeight: '900',
     margin: '0 0 15px 0',
@@ -143,5 +143,55 @@ const styles = {
     marginBottom: '30px',
   },
   promoBox: {
-    backgroundColor: '#FFFFFF', // Pure white inner box for contrast
-    border: '2px dashed #0D1B
+    backgroundColor: '#FFFFFF',
+    border: '2px dashed #0D1B2A',
+    borderRadius: '16px',
+    padding: '20px',
+    marginBottom: '35px',
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+  },
+  promoLabel: {
+    fontSize: '12px',
+    fontWeight: '800',
+    color: '#718096',
+    margin: '0 0 8px 0',
+    letterSpacing: '2px',
+  },
+  couponRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+  },
+  couponCode: {
+    fontSize: '36px',
+    fontWeight: '900',
+    color: '#0D1B2A',
+    letterSpacing: '3px',
+  },
+  divider: {
+    color: '#cbd5e0',
+    fontSize: '28px',
+  },
+  discountText: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#D32F2F',
+  },
+  ctaButton: {
+    display: 'block',
+    backgroundColor: '#D32F2F',
+    color: '#ffffff',
+    padding: '20px',
+    borderRadius: '14px',
+    textDecoration: 'none',
+    fontWeight: '900',
+    fontSize: '19px',
+    boxShadow: '0 15px 30px -5px rgba(211, 47, 47, 0.4)',
+  },
+  urgencyText: {
+    fontSize: '13px',
+    color: '#a0aec0',
+    marginTop: '20px',
+  }
+};
