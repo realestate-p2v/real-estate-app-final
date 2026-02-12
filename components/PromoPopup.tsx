@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 
-const PromoPopup: React.FC = () => {
+export default function PromoPopup() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(true);
-    }, 6000); // 6 second delay
+    }, 6000); 
 
     return () => clearTimeout(timer);
   }, []);
@@ -19,20 +18,18 @@ const PromoPopup: React.FC = () => {
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        {/* Top Accent Bar */}
+        {/* Branding Red Top Bar */}
         <div style={styles.accentBar}></div>
         
         <button 
           style={styles.closeBtn} 
           onClick={() => setIsVisible(false)}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#D32F2F')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#cbd5e0')}
         >
           ×
         </button>
 
         <div style={styles.content}>
-          {/* Brand Logo */}
+          {/* Logo - Now pops against the Dark background */}
           <div style={styles.logoWrapper}>
             <img 
               src="/p2v-logo.png" 
@@ -41,14 +38,15 @@ const PromoPopup: React.FC = () => {
             />
           </div>
 
-          {/* High-Impact Copy */}
-          <h2 style={styles.headline}>Stop Scrolling! <br/><span style={styles.redText}>Get The Listing Edge.</span></h2>
+          <h2 style={styles.headline}>
+            Stop Scrolling! <br/>
+            <span style={styles.redText}>Get The Listing Edge.</span>
+          </h2>
           
           <p style={styles.subtext}>
-            Don't let your listings stay static. Transform your photos into **high-converting video tours** today and save big!
+            Transform your photos into <strong>high-converting video tours</strong> today and save big!
           </p>
 
-          {/* Scarcity/Offer Box */}
           <div style={styles.promoBox}>
             <p style={styles.promoLabel}>EXCLUSIVELY FOR YOU:</p>
             <div style={styles.couponRow}>
@@ -58,49 +56,51 @@ const PromoPopup: React.FC = () => {
             </div>
           </div>
 
-          {/* High-Conversion CTA */}
-          <a 
-            href="/order" 
-            style={styles.ctaButton}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-          >
+          <a href="/order" style={styles.ctaButton}>
             YES! CLAIM MY $30 DISCOUNT →
           </a>
 
           <p style={styles.urgencyText}>*Valid for new orders only. Act fast!</p>
         </div>
       </div>
+
+      {/* Modern Slide-Up Animation Style */}
+      <style>{`
+        @keyframes slideInUp {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
-};
+}
 
-// --- Professional Styling ---
-const styles: { [key: string]: React.CSSProperties } = {
+const styles = {
   overlay: {
     position: 'fixed',
     top: 0,
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(13, 27, 42, 0.85)', // Deep Navy overlay to match header
+    backgroundColor: 'rgba(5, 10, 20, 0.9)', // Darker, moodier backdrop
     zIndex: 99999,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backdropFilter: 'blur(8px)',
+    backdropFilter: 'blur(10px)',
   },
   modal: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#0D1B2A', // NIGHT MODE: Matches your Navy Header
     width: '90%',
     maxWidth: '460px',
-    borderRadius: '20px',
+    borderRadius: '24px',
     position: 'relative',
     textAlign: 'center',
-    boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 40px 80px -15px rgba(0, 0, 0, 0.8)',
     overflow: 'hidden',
-    animation: 'fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-    fontFamily: 'inherit',
+    fontFamily: 'sans-serif',
+    border: '1px solid rgba(255, 255, 255, 0.1)', // Subtle glow border
+    animation: 'slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)', // Elegant slide
   },
   accentBar: {
     height: '8px',
@@ -114,27 +114,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: 'none',
     border: 'none',
     fontSize: '34px',
-    color: '#cbd5e0',
+    color: '#64748b',
     cursor: 'pointer',
-    transition: 'color 0.2s',
     lineHeight: 1,
   },
   content: {
-    padding: '40px 30px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  logoWrapper: {
-    marginBottom: '20px',
+    padding: '50px 30px',
   },
   logo: {
-    height: '70px',
+    height: '85px', // Made it a bit larger to stand out
     width: 'auto',
+    margin: '0 auto 25px auto',
+    display: 'block',
   },
   headline: {
-    color: '#0D1B2A', // Navy
-    fontSize: '28px',
+    color: '#FFFFFF', // Pure white for high contrast
+    fontSize: '30px',
     fontWeight: '900',
     margin: '0 0 15px 0',
     lineHeight: '1.1',
@@ -144,67 +139,61 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#D32F2F',
   },
   subtext: {
-    color: '#4a5568',
-    fontSize: '17px',
+    color: '#cbd5e0', // Light grey for readability
+    fontSize: '18px',
     lineHeight: '1.5',
-    marginBottom: '25px',
+    marginBottom: '30px',
   },
   promoBox: {
-    backgroundColor: '#F8FAFC',
-    border: '2px dashed #0D1B2A',
-    borderRadius: '12px',
-    padding: '15px 25px',
-    marginBottom: '30px',
-    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)', // Transparent glass effect
+    border: '2px dashed #D32F2F',
+    borderRadius: '16px',
+    padding: '20px',
+    marginBottom: '35px',
   },
   promoLabel: {
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: '800',
-    color: '#718096',
-    letterSpacing: '1px',
-    margin: '0 0 5px 0',
+    color: '#94a3b8',
+    margin: '0 0 8px 0',
+    letterSpacing: '2px',
   },
   couponRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '15px',
+    gap: '20px',
   },
   couponCode: {
-    fontSize: '32px',
+    fontSize: '36px',
     fontWeight: '900',
-    color: '#0D1B2A',
-    letterSpacing: '2px',
+    color: '#FFFFFF',
+    letterSpacing: '3px',
   },
   divider: {
-    color: '#cbd5e0',
-    fontSize: '24px',
-    fontWeight: '200',
+    color: 'rgba(255,255,255,0.2)',
+    fontSize: '28px',
   },
   discountText: {
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: '800',
     color: '#D32F2F',
   },
   ctaButton: {
-    display: 'inline-block',
-    backgroundColor: '#D32F2F', // Your red
+    display: 'block',
+    backgroundColor: '#D32F2F',
     color: '#ffffff',
-    padding: '18px 30px',
-    borderRadius: '12px',
+    padding: '20px',
+    borderRadius: '14px',
     textDecoration: 'none',
     fontWeight: '900',
-    fontSize: '18px',
-    width: '100%',
-    transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-    boxShadow: '0 10px 15px -3px rgba(211, 47, 47, 0.4)',
+    fontSize: '19px',
+    boxShadow: '0 15px 30px -5px rgba(211, 47, 47, 0.5)',
+    transition: 'all 0.3s ease',
   },
   urgencyText: {
-    fontSize: '12px',
-    color: '#a0aec0',
-    marginTop: '15px',
-    fontStyle: 'italic',
+    fontSize: '13px',
+    color: '#64748b',
+    marginTop: '20px',
   }
 };
-
-export default PromoPopup;
