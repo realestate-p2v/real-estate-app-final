@@ -78,6 +78,7 @@ export async function POST(request: Request) {
 
     // Create Stripe checkout session with all order details in metadata
     const session = await stripe.checkout.sessions.create({
+      allow_promotion_codes: true,
       payment_method_types: ["card"],
       line_items: [
         {
