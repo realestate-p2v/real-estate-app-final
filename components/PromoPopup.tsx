@@ -37,7 +37,6 @@ export default function PromoPopup() {
             />
           </div>
 
-          {/* Updated Headline with "Extra" */}
           <h2 style={styles.headline}>
             Wait! Grab An <span style={styles.redText}>Extra $30 Off</span> <br/>
             Before You Go!
@@ -58,7 +57,6 @@ export default function PromoPopup() {
             </div>
           </div>
 
-          {/* High-Conversion Green Button */}
           <a href="/order" style={styles.ctaButton}>
             YES! CLAIM MY EXTRA $30 OFF →
           </a>
@@ -92,7 +90,8 @@ const styles = {
     backdropFilter: 'blur(8px)',
   },
   modal: {
-    backgroundColor: '#F8F9FA', 
+    // NEW: Subtle Gradient (Top: #E9ECEF to Bottom: #F8F9FA)
+    background: 'linear-gradient(180deg, #E9ECEF 0%, #F8F9FA 100%)',
     width: '90%',
     maxWidth: '460px',
     borderRadius: '24px',
@@ -115,7 +114,7 @@ const styles = {
     background: 'none',
     border: 'none',
     fontSize: '34px',
-    color: '#cbd5e0',
+    color: '#adb5bd',
     cursor: 'pointer',
     lineHeight: 1,
   },
@@ -140,7 +139,7 @@ const styles = {
     color: '#D32F2F',
   },
   subtext: {
-    color: '#4a5568',
+    color: '#495057',
     fontSize: '17px',
     lineHeight: '1.5',
     marginBottom: '30px',
@@ -151,12 +150,12 @@ const styles = {
     borderRadius: '16px',
     padding: '20px',
     marginBottom: '35px',
-    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
   },
   promoLabel: {
     fontSize: '11px',
     fontWeight: '800',
-    color: '#718096',
+    color: '#6c757d',
     margin: '0 0 8px 0',
     letterSpacing: '2px',
   },
@@ -173,7 +172,7 @@ const styles = {
     letterSpacing: '2px',
   },
   divider: {
-    color: '#cbd5e0',
+    color: '#dee2e6',
     fontSize: '28px',
   },
   savingsHighlight: {
@@ -183,7 +182,7 @@ const styles = {
     border: '1px solid #D32F2F',
   },
   discountText: {
-    fontSize: '20px', // Adjusted slightly to fit "EXTRA"
+    fontSize: '20px',
     fontWeight: '900',
     color: '#D32F2F',
   },
@@ -200,7 +199,7 @@ const styles = {
   },
   urgencyText: {
     fontSize: '13px',
-    color: '#a0aec0',
+    color: '#adb5bd',
     marginTop: '20px',
   }
 };
