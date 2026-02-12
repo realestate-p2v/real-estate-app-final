@@ -20,6 +20,12 @@ export async function POST(request: Request) {
       payment_status: "pending",
     };
 
+    // In your /api/checkout route
+const session = await stripe.checkout.sessions.create({
+  // ... your existing config
+  allow_promotion_codes: true,  // This adds Stripe's promo field
+});
+
     const { data, error } = await supabase
       .from("orders")
       .insert(orderData)
