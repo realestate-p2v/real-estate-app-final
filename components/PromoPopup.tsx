@@ -18,7 +18,6 @@ export default function PromoPopup() {
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        {/* Branding Red Top Bar */}
         <div style={styles.accentBar}></div>
         
         <button 
@@ -57,7 +56,8 @@ export default function PromoPopup() {
             </div>
           </div>
 
-          <a href="/order" style={styles.ctaButton}>
+          {/* Added the 'cta-hover' class to the button */}
+          <a href="/order" className="cta-hover" style={styles.ctaButton}>
             YES! CLAIM MY EXTRA $30 OFF →
           </a>
 
@@ -65,10 +65,22 @@ export default function PromoPopup() {
         </div>
       </div>
 
+      {/* Modern Slide-Up and Reactive Button Hover Effects */}
       <style>{`
         @keyframes slideInUp {
           from { transform: translateY(100px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
+        }
+        .cta-hover {
+          transition: all 0.3s ease !important;
+        }
+        .cta-hover:hover {
+          background-color: #218838 !important; /* Slightly darker green */
+          transform: translateY(-3px) scale(1.02); /* Pops forward */
+          box-shadow: 0 15px 25px -5px rgba(40, 167, 69, 0.5) !important;
+        }
+        .cta-hover:active {
+          transform: translateY(0) scale(0.98); /* Sinks in when clicked */
         }
       `}</style>
     </div>
@@ -90,7 +102,6 @@ const styles = {
     backdropFilter: 'blur(8px)',
   },
   modal: {
-    // NEW: Subtle Gradient (Top: #E9ECEF to Bottom: #F8F9FA)
     background: 'linear-gradient(180deg, #E9ECEF 0%, #F8F9FA 100%)',
     width: '90%',
     maxWidth: '460px',
