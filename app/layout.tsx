@@ -52,6 +52,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geist.className} font-sans antialiased`}>
         {children}
+        <PromoPopup />
         <Analytics />
       </body>
     </html>
