@@ -55,7 +55,7 @@ export function HeroSection() {
               size="lg" 
               className="group text-xl px-10 py-9 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
             >
-              <span className="text-xs uppercase tracking-widest opacity-90 mb-1 font-black">Limitedfefefv Time Offer</span>
+              <span className="text-xs uppercase tracking-widest opacity-90 mb-1 font-black">Limited Time Offer</span>
               <div className="flex items-center gap-3">
                 <span>Get Started Now —</span>
                 <span className="flex items-center">
