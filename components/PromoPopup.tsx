@@ -1,19 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function PromoPopup() {
   const [isVisible, setIsVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 6000); 
+    // ONLY run on the homepage
+    if (pathname === '/') {
+      // Changed timer to 10000ms (10 seconds)
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+      }, 10000); 
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname]);
 
-  if (!isVisible) return null;
+  if (!isVisible || pathname !== '/') return null;
 
   return (
     <div style={styles.overlay}>
@@ -23,11 +29,13 @@ export default function PromoPopup() {
         <button 
           style={styles.closeBtn} 
           onClick={() => setIsVisible(false)}
+          className="close-hover"
         >
           ×
         </button>
 
         <div style={styles.content}>
+          {/* Navy Blue Rounded Rectangle around the Logo */}
           <div style={styles.logoWrapper}>
             <img 
               src="/p2v-logo.png" 
@@ -56,7 +64,6 @@ export default function PromoPopup() {
             </div>
           </div>
 
-          {/* Added the 'cta-hover' class to the button */}
           <a href="/order" className="cta-hover" style={styles.ctaButton}>
             YES! CLAIM MY EXTRA $30 OFF →
           </a>
@@ -65,7 +72,6 @@ export default function PromoPopup() {
         </div>
       </div>
 
-      {/* Modern Slide-Up and Reactive Button Hover Effects */}
       <style>{`
         @keyframes slideInUp {
           from { transform: translateY(100px); opacity: 0; }
@@ -75,12 +81,12 @@ export default function PromoPopup() {
           transition: all 0.3s ease !important;
         }
         .cta-hover:hover {
-          background-color: #218838 !important; /* Slightly darker green */
-          transform: translateY(-3px) scale(1.02); /* Pops forward */
+          background-color: #218838 !important;
+          transform: translateY(-3px) scale(1.02);
           box-shadow: 0 15px 25px -5px rgba(40, 167, 69, 0.5) !important;
         }
-        .cta-hover:active {
-          transform: translateY(0) scale(0.98); /* Sinks in when clicked */
+        .close-hover:hover {
+          color: #D32F2F !important;
         }
       `}</style>
     </div>
@@ -94,12 +100,13 @@ const styles = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(13, 27, 42, 0.85)',
+    // Lighter Blue with lower opacity (Two shades lighter than previous)
+    backgroundColor: 'rgba(52, 101, 164, 0.6)', 
     zIndex: 99999,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backdropFilter: 'blur(8px)',
+    backdropFilter: 'blur(4px)',
   },
   modal: {
     background: 'linear-gradient(180deg, #E9ECEF 0%, #F8F9FA 100%)',
@@ -128,14 +135,22 @@ const styles = {
     color: '#adb5bd',
     cursor: 'pointer',
     lineHeight: 1,
+    zIndex: 10,
   },
   content: {
-    padding: '50px 30px',
+    padding: '40px 30px',
+  },
+  logoWrapper: {
+    backgroundColor: '#0D1B2A', // Navy Blue Rectangle
+    padding: '15px',
+    borderRadius: '16px',
+    display: 'inline-block',
+    marginBottom: '25px',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
   },
   logo: {
-    height: '85px',
+    height: '65px', // Adjusted size to fit comfortably in the rectangle
     width: 'auto',
-    margin: '0 auto 25px auto',
     display: 'block',
   },
   headline: {
