@@ -35,7 +35,7 @@ const PromoPopup: React.FC = () => {
           {/* Brand Logo */}
           <div style={styles.logoWrapper}>
             <img 
-              src="/p2v-logo.png" 
+              src="/logo.png" 
               alt="Real Estate Photo 2 Video" 
               style={styles.logo} 
             />
