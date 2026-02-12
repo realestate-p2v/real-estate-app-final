@@ -29,7 +29,6 @@ export default function PromoPopup() {
         </button>
 
         <div style={styles.content}>
-          {/* Logo - Stands out against the Smoke White background */}
           <div style={styles.logoWrapper}>
             <img 
               src="/p2v-logo.png" 
@@ -52,12 +51,16 @@ export default function PromoPopup() {
             <div style={styles.couponRow}>
               <span style={styles.couponCode}>P2V</span>
               <span style={styles.divider}>|</span>
-              <span style={styles.discountText}>$30 OFF</span>
+              {/* Highlighted Savings */}
+              <div style={styles.savingsHighlight}>
+                <span style={styles.discountText}>$30 OFF</span>
+              </div>
             </div>
           </div>
 
+          {/* High-Conversion Green Button */}
           <a href="/order" style={styles.ctaButton}>
-            YES! CLAIM MY $30 DISCOUNT →
+            YES! CLAIM MY $30 SAVINGS NOW →
           </a>
 
           <p style={styles.urgencyText}>*Valid for new orders only. Act fast!</p>
@@ -173,21 +176,28 @@ const styles = {
     color: '#cbd5e0',
     fontSize: '28px',
   },
+  savingsHighlight: {
+    backgroundColor: '#FFF0F0', // Very light red background to draw attention
+    padding: '5px 12px',
+    borderRadius: '8px',
+    border: '1px solid #D32F2F',
+  },
   discountText: {
-    fontSize: '24px',
-    fontWeight: '800',
+    fontSize: '26px',
+    fontWeight: '900',
     color: '#D32F2F',
   },
   ctaButton: {
     display: 'block',
-    backgroundColor: '#D32F2F',
+    backgroundColor: '#28a745', // SUCCESS GREEN
     color: '#ffffff',
     padding: '20px',
     borderRadius: '14px',
     textDecoration: 'none',
     fontWeight: '900',
     fontSize: '19px',
-    boxShadow: '0 15px 30px -5px rgba(211, 47, 47, 0.4)',
+    boxShadow: '0 10px 20px -5px rgba(40, 167, 69, 0.4)',
+    transition: 'transform 0.2s ease',
   },
   urgencyText: {
     fontSize: '13px',
