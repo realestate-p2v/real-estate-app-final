@@ -8,9 +8,7 @@ export default function PromoPopup() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // ONLY run on the homepage
     if (pathname === '/') {
-      // Changed timer to 10000ms (10 seconds)
       const timer = setTimeout(() => {
         setIsVisible(true);
       }, 10000); 
@@ -35,7 +33,6 @@ export default function PromoPopup() {
         </button>
 
         <div style={styles.content}>
-          {/* Navy Blue Rounded Rectangle around the Logo */}
           <div style={styles.logoWrapper}>
             <img 
               src="/p2v-logo.png" 
@@ -54,9 +51,10 @@ export default function PromoPopup() {
           </p>
 
           <div style={styles.promoBox}>
-            <p style={styles.promoLabel}>EXCLUSIVELY FOR YOU:</p>
+            {/* Clear instruction added here */}
+            <p style={styles.promoLabel}>COPY & USE PROMO CODE AT CHECKOUT:</p>
             <div style={styles.couponRow}>
-              <span style={styles.couponCode}>P2V</span>
+              <span style={styles.couponCode} className="pulse-text">P2V</span>
               <span style={styles.divider}>|</span>
               <div style={styles.savingsHighlight}>
                 <span style={styles.discountText}>EXTRA $30 OFF</span>
@@ -76,6 +74,15 @@ export default function PromoPopup() {
         @keyframes slideInUp {
           from { transform: translateY(100px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); color: #D32F2F; }
+          100% { transform: scale(1); }
+        }
+        .pulse-text {
+          display: inline-block;
+          animation: pulse 2s infinite ease-in-out;
         }
         .cta-hover {
           transition: all 0.3s ease !important;
@@ -100,7 +107,6 @@ const styles = {
     left: 0,
     width: '100%',
     height: '100%',
-    // Lighter Blue with lower opacity (Two shades lighter than previous)
     backgroundColor: 'rgba(52, 101, 164, 0.6)', 
     zIndex: 99999,
     display: 'flex',
@@ -141,7 +147,7 @@ const styles = {
     padding: '40px 30px',
   },
   logoWrapper: {
-    backgroundColor: '#0D1B2A', // Navy Blue Rectangle
+    backgroundColor: '#0D1B2A',
     padding: '15px',
     borderRadius: '16px',
     display: 'inline-block',
@@ -149,7 +155,7 @@ const styles = {
     boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
   },
   logo: {
-    height: '65px', // Adjusted size to fit comfortably in the rectangle
+    height: '65px',
     width: 'auto',
     display: 'block',
   },
@@ -179,11 +185,11 @@ const styles = {
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
   },
   promoLabel: {
-    fontSize: '11px',
+    fontSize: '12px', // Slightly larger for clarity
     fontWeight: '800',
-    color: '#6c757d',
-    margin: '0 0 8px 0',
-    letterSpacing: '2px',
+    color: '#D32F2F', // Changed to Red to make the instruction stand out
+    margin: '0 0 10px 0',
+    letterSpacing: '1px',
   },
   couponRow: {
     display: 'flex',
