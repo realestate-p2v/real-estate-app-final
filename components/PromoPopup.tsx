@@ -37,13 +37,14 @@ export default function PromoPopup() {
             />
           </div>
 
+          {/* Updated Headline with "Extra" */}
           <h2 style={styles.headline}>
-            Stop Scrolling! <br/>
-            <span style={styles.redText}>Get The Listing Edge.</span>
+            Wait! Grab An <span style={styles.redText}>Extra $30 Off</span> <br/>
+            Before You Go!
           </h2>
           
           <p style={styles.subtext}>
-            Transform your photos into <strong>high-converting video tours</strong> today and save big!
+            Boost your listings with the industry's best <strong>video tours</strong>. Your exclusive bonus is ready!
           </p>
 
           <div style={styles.promoBox}>
@@ -51,16 +52,15 @@ export default function PromoPopup() {
             <div style={styles.couponRow}>
               <span style={styles.couponCode}>P2V</span>
               <span style={styles.divider}>|</span>
-              {/* Highlighted Savings */}
               <div style={styles.savingsHighlight}>
-                <span style={styles.discountText}>$30 OFF</span>
+                <span style={styles.discountText}>EXTRA $30 OFF</span>
               </div>
             </div>
           </div>
 
           {/* High-Conversion Green Button */}
           <a href="/order" style={styles.ctaButton}>
-            YES! CLAIM MY $30 SAVINGS NOW →
+            YES! CLAIM MY EXTRA $30 OFF →
           </a>
 
           <p style={styles.urgencyText}>*Valid for new orders only. Act fast!</p>
@@ -130,10 +130,10 @@ const styles = {
   },
   headline: {
     color: '#0D1B2A',
-    fontSize: '30px',
+    fontSize: '28px',
     fontWeight: '900',
     margin: '0 0 15px 0',
-    lineHeight: '1.1',
+    lineHeight: '1.2',
     letterSpacing: '-1px',
   },
   redText: {
@@ -141,7 +141,7 @@ const styles = {
   },
   subtext: {
     color: '#4a5568',
-    fontSize: '18px',
+    fontSize: '17px',
     lineHeight: '1.5',
     marginBottom: '30px',
   },
@@ -154,7 +154,7 @@ const styles = {
     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
   },
   promoLabel: {
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: '800',
     color: '#718096',
     margin: '0 0 8px 0',
@@ -164,40 +164,39 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '20px',
+    gap: '15px',
   },
   couponCode: {
-    fontSize: '36px',
+    fontSize: '32px',
     fontWeight: '900',
     color: '#0D1B2A',
-    letterSpacing: '3px',
+    letterSpacing: '2px',
   },
   divider: {
     color: '#cbd5e0',
     fontSize: '28px',
   },
   savingsHighlight: {
-    backgroundColor: '#FFF0F0', // Very light red background to draw attention
+    backgroundColor: '#FFF0F0',
     padding: '5px 12px',
     borderRadius: '8px',
     border: '1px solid #D32F2F',
   },
   discountText: {
-    fontSize: '26px',
+    fontSize: '20px', // Adjusted slightly to fit "EXTRA"
     fontWeight: '900',
     color: '#D32F2F',
   },
   ctaButton: {
     display: 'block',
-    backgroundColor: '#28a745', // SUCCESS GREEN
+    backgroundColor: '#28a745', 
     color: '#ffffff',
     padding: '20px',
     borderRadius: '14px',
     textDecoration: 'none',
     fontWeight: '900',
-    fontSize: '19px',
+    fontSize: '18px',
     boxShadow: '0 10px 20px -5px rgba(40, 167, 69, 0.4)',
-    transition: 'transform 0.2s ease',
   },
   urgencyText: {
     fontSize: '13px',
