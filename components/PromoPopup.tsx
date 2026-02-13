@@ -184,11 +184,11 @@ const styles = {
   },
   headline: {
     color: '#0D1B2A',
-    fontSize: '28px',
-    fontWeight: '900',
+    fontSize: '30px',
+    fontWeight: '1200',
     margin: '0 0 15px 0',
     lineHeight: '1.2',
-    letterSpacing: '-1px',
+    letterSpacing: '1px',
   },
   redText: {
     color: '#D32F2F',
