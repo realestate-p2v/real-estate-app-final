@@ -21,7 +21,7 @@ export default function PromoPopup() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText('P2V');
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset "Copied" message after 2 seconds
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (!isVisible || pathname !== '/') return null;
@@ -49,15 +49,16 @@ export default function PromoPopup() {
           </div>
 
           <h2 style={styles.headline}>
-            Grab An <span style={styles.redText}>Extra $30 Off!</span>
+            Wait! Grab An <span style={styles.redText}>Extra $30 Off</span> <br/>
+            Before You Go!
           </h2>
           
           <p style={styles.subtext}>
-            Get a 12-clip walkthrough video, with branding </br> <strong>for just $49!</strong>
+            Get a 12-clip walkthrough video with branding <br/>
+            <strong>for just $49!</strong>
           </p>
 
           <div style={styles.promoBox}>
-            {/* Standing out with 'PROMO CODE' emphasized */}
             <p style={styles.promoLabel}>
               CLICK TO COPY <span style={styles.highlightLabel}>PROMO CODE</span>:
             </p>
@@ -65,7 +66,6 @@ export default function PromoPopup() {
             <div 
               style={styles.couponRow} 
               onClick={copyToClipboard}
-              title="Click to copy code"
               className="coupon-clickable"
             >
               <span style={styles.couponCode} className="pulse-text">
@@ -184,11 +184,11 @@ const styles = {
   },
   headline: {
     color: '#0D1B2A',
-    fontSize: '30px',
-    fontWeight: '1200',
+    fontSize: '28px',
+    fontWeight: '900',
     margin: '0 0 15px 0',
     lineHeight: '1.2',
-    letterSpacing: '1px',
+    letterSpacing: '-1px',
   },
   redText: {
     color: '#D32F2F',
@@ -212,7 +212,6 @@ const styles = {
     fontWeight: '700',
     color: '#495057',
     margin: '0 0 10px 0',
-    letterSpacing: '0.5px',
   },
   highlightLabel: {
     color: '#D32F2F',
@@ -234,7 +233,7 @@ const styles = {
     fontWeight: '900',
     color: '#0D1B2A',
     letterSpacing: '2px',
-    minWidth: '100px', // Prevents shifting when text changes to "COPIED!"
+    minWidth: '100px',
   },
   divider: {
     color: '#dee2e6',
