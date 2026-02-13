@@ -21,7 +21,7 @@ export default function PromoPopup() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText('P2V');
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset "Copied" message after 2 seconds
+    setTimeout(() => setCopied(false), 2000); 
   };
 
   if (!isVisible || pathname !== '/') return null;
@@ -53,11 +53,10 @@ export default function PromoPopup() {
           </h2>
           
           <p style={styles.subtext}>
-          12-clip walkthrough video, with branding <br /><strong>for just $49!</strong>
+            12-clip walkthrough video, with branding <br /><strong>for just $49!</strong>
           </p>
 
           <div style={styles.promoBox}>
-            {/* Standing out with 'PROMO CODE' emphasized */}
             <p style={styles.promoLabel}>
               CLICK TO COPY <span style={styles.highlightLabel}>PROMO CODE</span>:
             </p>
@@ -183,12 +182,14 @@ const styles = {
     display: 'block',
   },
   headline: {
+    // NEW: Product Sans Bold implementation
+    fontFamily: "'Product Sans', 'Product Sans Bold', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     color: '#0D1B2A',
-    fontSize: '30px',
-    fontWeight: '900',
+    fontSize: '32px',
+    fontWeight: '700', // Bold
     margin: '0 0 15px 0',
-    lineHeight: '1.2',
-    letterSpacing: '1px',
+    lineHeight: '1.1',
+    letterSpacing: '-0.5px', // Product Sans looks best with slightly tight tracking
   },
   redText: {
     color: '#D32F2F',
@@ -234,7 +235,7 @@ const styles = {
     fontWeight: '900',
     color: '#0D1B2A',
     letterSpacing: '2px',
-    minWidth: '100px', // Prevents shifting when text changes to "COPIED!"
+    minWidth: '100px',
   },
   divider: {
     color: '#dee2e6',
