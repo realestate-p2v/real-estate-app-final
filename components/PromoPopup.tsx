@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation'; // 1. Import the 'GPS' tool
 
 export default function PromoPopup() {
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
-  const pathname = usePathname();
+  const pathname = usePathname(); // 2. Check the current web address
 
   useEffect(() => {
+    // 3. ONLY start the timer if the address is exactly the homepage ('/')
     if (pathname === '/') {
       const timer = setTimeout(() => {
         setIsVisible(true);
@@ -24,6 +25,7 @@ export default function PromoPopup() {
     setTimeout(() => setCopied(false), 2000); 
   };
 
+  // 4. THE GUARD: If we aren't on the homepage, or the popup isn't ready, show nothing.
   if (!isVisible || pathname !== '/') return null;
 
   return (
@@ -185,10 +187,10 @@ const styles = {
     fontFamily: "var(--font-inter), 'Product Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     color: '#0D1B2A',
     fontSize: '32px',
-    fontWeight: '900', // Heaviest font weight
+    fontWeight: '900', 
     margin: '0 0 15px 0',
     lineHeight: '1.1',
-    letterSpacing: '0.2px', // Specific requested spacing
+    letterSpacing: '0.2px',
   },
   redText: {
     color: '#D32F2F',
