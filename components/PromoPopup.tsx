@@ -99,7 +99,7 @@ export default function PromoPopup() {
         }
         .pulse-text {
           display: inline-block;
-          animation: pulse 3s infinite ease-in-out;
+          animation: pulse 1s infinite ease-in-out;
         }
         .coupon-clickable {
           cursor: pointer;
