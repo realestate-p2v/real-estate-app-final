@@ -83,7 +83,7 @@ export default function PromoPopup() {
             YES! CLAIM MY EXTRA $30 OFF →
           </a>
 
-          <p style={styles.urgencyText}>*Valid for new orders only. Act fast!</p>
+          
         </div>
       </div>
 
@@ -232,7 +232,7 @@ const styles = {
     borderRadius: '12px',
   },
   couponCode: {
-    fontSize: '32px',
+    fontSize: '36px',
     fontWeight: '900',
     color: '#0D1B2A',
     letterSpacing: '2px',
