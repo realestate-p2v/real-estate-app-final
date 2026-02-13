@@ -197,7 +197,7 @@ const styles = {
   },
   subtext: {
     color: '#495057',
-    fontSize: '19px',
+    fontSize: '21px',
     lineHeight: '1.5',
     marginBottom: '30px',
   },
