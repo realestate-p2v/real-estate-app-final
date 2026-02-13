@@ -182,14 +182,13 @@ const styles = {
     display: 'block',
   },
   headline: {
-    // NEW: Product Sans Bold implementation
-    fontFamily: "'Product Sans', 'Product Sans Bold', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    fontFamily: "var(--font-inter), 'Product Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     color: '#0D1B2A',
     fontSize: '32px',
-    fontWeight: '700', // Bold
+    fontWeight: '900', // Heaviest font weight
     margin: '0 0 15px 0',
     lineHeight: '1.1',
-    letterSpacing: '-0.5px', // Product Sans looks best with slightly tight tracking
+    letterSpacing: '0.2px', // Specific requested spacing
   },
   redText: {
     color: '#D32F2F',
