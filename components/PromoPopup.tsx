@@ -232,6 +232,7 @@ const styles = {
     borderRadius: '12px',
   },
   couponCode: {
+    fontFamily: "var(--font-inter), 'Product Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     fontSize: '36px',
     fontWeight: '900',
     color: '#0D1B2A',
