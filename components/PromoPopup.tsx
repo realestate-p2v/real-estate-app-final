@@ -53,7 +53,7 @@ export default function PromoPopup() {
           </h2>
           
           <p style={styles.subtext}>
-            Boost your listings with the industry's best <strong>video tours</strong>. Your exclusive bonus is ready!
+            Get a 12-clip walkthrough video, with branding <strong>for just $49!</strong>
           </p>
 
           <div style={styles.promoBox}>
