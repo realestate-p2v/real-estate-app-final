@@ -53,7 +53,7 @@ export default function PromoPopup() {
           </h2>
           
           <p style={styles.subtext}>
-            Get a 12-clip walkthrough video, with branding \n <strong>for just $49!</strong>
+            Get a 12-clip walkthrough video, with branding <br> <strong>for just $49!</strong>
           </p>
 
           <div style={styles.promoBox}>
