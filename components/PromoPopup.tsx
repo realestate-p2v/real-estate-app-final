@@ -12,7 +12,7 @@ export default function PromoPopup() {
     if (pathname === '/') {
       const timer = setTimeout(() => {
         setIsVisible(true);
-      }, 1000); 
+      }, 10000); 
 
       return () => clearTimeout(timer);
     }
