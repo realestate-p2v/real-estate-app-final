@@ -142,6 +142,7 @@ const styles = {
     background: 'linear-gradient(180deg, #E9ECEF 0%, #F8F9FA 100%)',
     width: '90%',
     maxWidth: '460px',
+    maxHeight: '80%',
     borderRadius: '24px',
     position: 'relative',
     textAlign: 'center',
