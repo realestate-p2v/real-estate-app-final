@@ -33,7 +33,7 @@ export function DemoSection() {
             See the Transformation
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            From a collection of listing photos to a professional walkthrough video
+            You upload the photos, we create the video.
           </p>
         </div>
 
