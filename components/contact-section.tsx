@@ -80,7 +80,7 @@ export function ContactSection() {
 
               {/* Email Card */}
               <a 
-                href="mailto:realestatephoto2video@gmail.com" 
+                href="mailto:matt@realestatephoto2video.com" 
                 className="group flex items-center gap-6 p-6 rounded-2xl bg-primary/5 border border-transparent hover:border-primary/20 hover:bg-primary/10 transition-all duration-300"
               >
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
@@ -88,7 +88,7 @@ export function ContactSection() {
                 </div>
                 <div className="overflow-hidden">
                   <p className="text-sm font-bold uppercase tracking-wider text-primary">Email Us</p>
-                  <p className="text-xl md:text-2xl font-black text-foreground truncate">realestatephoto2video@gmail.com</p>
+                  <p className="text-xl md:text-2xl font-black text-foreground truncate">matt@realestatephoto2video.com</p>
                 </div>
               </a>
 
