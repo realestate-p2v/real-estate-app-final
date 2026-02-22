@@ -221,7 +221,7 @@ export function PhotoUploader({
                   className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all text-left ${
                     selectedUrlPackage === pkg.id
                       ? "border-primary bg-primary/[0.03] shadow-md"
-                      : "border-border bg-card hover:border-primary/40 hover:bg-accent/50"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-blue/50"
                   }`}
                 >
                   <div className="flex justify-between w-full mb-1 items-start">
