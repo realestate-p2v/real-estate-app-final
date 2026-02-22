@@ -18,11 +18,13 @@ import { ArrowRight, Loader2, ChevronLeft } from "lucide-react";
 type OrderStep = "upload" | "details";
 
 export function OrderForm() {
-  // 1. ORIGINAL STATE (Restored for Component Compatibility)
   const [step, setStep] = useState<OrderStep>("upload");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [useUrl, setUseUrl] = useState(false);
+  const [listingUrl, setListingUrl] = useState("");
+  const [urlInstructions, setUrlInstructions] = useState("");
+  
   const [musicSelection, setMusicSelection] = useState("");
-  const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
   const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
   const [voiceoverSelection, setVoiceoverSelection] = useState("none");
@@ -31,43 +33,23 @@ export function OrderForm() {
   const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
 
-  // 2. LISTING URL STATE
-  const [useUrl, setUseUrl] = useState(false);
-  const [listingUrl, setListingUrl] = useState("");
-  const [urlPackage, setUrlPackage] = useState("15");
-  const [urlInstructions, setUrlInstructions] = useState("");
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    notes: "",
-  });
-
-  // 3. CALCULATION & VALIDATION
-  const photoCount = useUrl ? parseInt(urlPackage) : photos.length;
-  const isUrlValid = useUrl && listingUrl.trim().length > 0;
-  const isManualValid = !useUrl && photos.length > 0 && sequenceConfirmed;
-  const canProceed = (isUrlValid || isManualValid) && musicSelection !== "";
+  // If using URL, we assume 15 photos for pricing. Otherwise use photo count.
+  const photoCount = useUrl ? 15 : photos.length;
+  
+  // Validation logic
+  const canProceed = musicSelection && (useUrl ? listingUrl.length > 5 : (photos.length > 0 && sequenceConfirmed));
 
   const getBasePrice = () => {
-    if (photoCount === 1) return 1; // Test price
+    if (photoCount === 1) return 1;
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
     if (photoCount <= 35) return 179;
     return 0;
   };
+  const getTotalPrice = () => getBasePrice() + (voiceoverSelection === "voiceover" ? 25 : 0) + (includeEditedPhotos ? 15 : 0);
 
-  const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
-  const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
-  const getTotalPrice = () => getBasePrice() + getVoiceoverPrice() + getEditedPhotosPrice();
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // 4. CLOUDINARY UPLOAD LOGIC
   const uploadToCloudinary = async (file: Blob, folder: string) => {
     try {
       const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -76,8 +58,6 @@ export function OrderForm() {
         body: JSON.stringify({ folder: `photo2video/${folder}` }),
       });
       const sigData = await sigResponse.json();
-      if (!sigData.success) throw new Error("Signature failed");
-
       const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
       const uploadData = new FormData();
       uploadData.append("file", file);
@@ -85,77 +65,57 @@ export function OrderForm() {
       uploadData.append("timestamp", timestamp.toString());
       uploadData.append("signature", signature);
       uploadData.append("folder", folderPath);
-
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { 
-        method: "POST", 
-        body: uploadData 
-      });
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: uploadData });
       return await response.json();
-    } catch (error) {
-      console.error("Cloudinary Error:", error);
-      return null;
-    }
+    } catch (e) { return null; }
   };
 
-  // 5. SUBMIT ORDER & STRIPE CHECKOUT
   const handleSubmitOrder = async () => {
-    if (!formData.name || !formData.email) {
-      alert("Please fill in your name and email.");
-      return;
-    }
     setIsSubmitting(true);
     try {
       const uploadedPhotos = [];
-      // Only require/upload photos if NOT using a listing URL
+      
       if (!useUrl) {
-        if (photos.length === 0) throw new Error("At least one photo is required.");
         for (let i = 0; i < photos.length; i++) {
           const photo = photos[i];
           const blob = photo.file || await (await fetch(photo.preview)).blob();
           const result = await uploadToCloudinary(blob, "orders");
-          if (result) {
-            uploadedPhotos.push({
-              public_id: result.public_id,
-              secure_url: result.secure_url,
-              order: i,
-              description: photo.description || "",
-            });
-          }
+          if (result) uploadedPhotos.push({ public_id: result.public_id, secure_url: result.secure_url, order: i, description: photo.description });
         }
+      } else {
+        // If using URL, we send 1 "dummy" photo so the API doesn't complain
+        uploadedPhotos.push({ 
+          public_id: "url_order", 
+          secure_url: "https://via.placeholder.com/150?text=Listing+URL+Order", 
+          order: 0, 
+          description: "URL Order" 
+        });
       }
 
-      let brandingLogoUrl = "";
-      if (brandingData.logoFile) {
-        const logoResult = await uploadToCloudinary(brandingData.logoFile, "logos");
-        brandingLogoUrl = logoResult?.secure_url || "";
-      }
+      // Combine URL info into special instructions so we don't need new DB columns
+      const finalNotes = useUrl 
+        ? `LISTING URL: ${listingUrl}\nURL INSTRUCTIONS: ${urlInstructions}\n---\nUSER NOTES: ${formData.notes}`
+        : formData.notes;
 
       const dbResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: { name: formData.name, email: formData.email, phone: formData.phone },
-          uploadedPhotos, // Will be empty [] if using Listing URL
-          listingUrl: useUrl ? listingUrl : null,
-          urlInstructions: useUrl ? urlInstructions : null,
+          uploadedPhotos,
           musicSelection,
-          branding: {
-            type: brandingSelection,
-            logoUrl: brandingLogoUrl,
-            agentName: brandingData.agentName,
-            companyName: brandingData.companyName,
-          },
+          branding: { type: brandingSelection, agentName: brandingData.agentName, companyName: brandingData.companyName },
           voiceover: voiceoverSelection === "voiceover",
           voiceoverScript,
           voiceoverVoice: selectedVoice,
           includeEditedPhotos,
           totalPrice: getTotalPrice(),
-          specialInstructions: formData.notes
+          specialInstructions: finalNotes
         }),
       });
 
       const dbResult = await dbResponse.json();
-      if (!dbResult.success) throw new Error(dbResult.error || "Database save failed");
+      if (!dbResult.success) throw new Error(dbResult.error);
 
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
@@ -166,10 +126,7 @@ export function OrderForm() {
           orderData: { orderId: dbResult.data.orderId, photoCount },
         }),
       });
-
       const session = await checkoutResponse.json();
-      if (!checkoutResponse.ok || !session.url) throw new Error(session.error || "Checkout failed");
-
       window.location.href = session.url;
     } catch (error: any) {
       alert("Error: " + error.message);
@@ -179,107 +136,54 @@ export function OrderForm() {
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto px-4 py-8">
+    <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto px-4 py-8">
       <Script src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN" strategy="afterInteractive" />
-
       <div className="lg:col-span-2 space-y-6">
         {step === "upload" && (
           <div className="space-y-6">
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">1</div>
-                <h2 className="text-xl font-bold">Step 1: Upload or URL</h2>
-              </div>
-              
+            <div className="bg-card rounded-2xl border p-6">
+              <h2 className="text-xl font-bold mb-6">Step 1: Photos</h2>
               <PhotoUploader 
                 photos={photos} onPhotosChange={setPhotos}
-                useUrl={useUrl} setUseUrl={setUseUrl}
-                url={listingUrl} setUrl={setListingUrl}
-                urlPackage={urlPackage} setUrlPackage={setUrlPackage}
-                instructions={urlInstructions} setInstructions={setUrlInstructions}
+                useUrl={useUrl} onUseUrlChange={setUseUrl}
+                url={listingUrl} onUrlChange={setListingUrl}
+                urlInstructions={urlInstructions} onUrlInstructionsChange={setUrlInstructions}
               />
             </div>
-
-            {!useUrl && photos.length > 0 && (
-              <div className={`rounded-2xl border-2 p-6 transition-colors ${sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"}`}>
-                <div className="flex items-center gap-4">
-                  <Checkbox
-                    id="confirm"
-                    checked={sequenceConfirmed}
-                    onCheckedChange={(checked) => setSequenceConfirmed(checked === true)}
-                    className="h-6 w-6 bg-white"
-                  />
-                  <label htmlFor="confirm" className="font-medium cursor-pointer">
-                    I confirm these photos are in the correct sequence.
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {(isUrlValid || (photos.length > 0)) && (
-              <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
-                <MusicSelector 
-                  selected={musicSelection} 
-                  onSelect={setMusicSelection} 
-                  customAudioFile={customAudioFile} 
-                  onCustomAudioChange={setCustomAudioFile} 
-                />
-                <div className="border-t pt-6">
-                  <BrandingSelector 
-                    selected={brandingSelection} 
-                    onSelect={setBrandingSelection} 
-                    brandingData={brandingData} 
-                    onBrandingDataChange={setBrandingData} 
-                  />
-                </div>
-                <div className="border-t pt-6">
-                  <VoiceoverSelector 
-                    selected={voiceoverSelection} 
-                    onSelect={setVoiceoverSelection} 
-                    script={voiceoverScript} 
-                    onScriptChange={setVoiceoverScript} 
-                    selectedVoice={selectedVoice} 
-                    onVoiceSelect={setSelectedVoice} 
-                  />
-                </div>
-                <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
-                  <div className="pr-4">
-                    <p className="font-bold">Include Edited Photos (+$15)</p>
-                    <p className="text-sm text-muted-foreground">Receive high-res professionally edited files.</p>
+            {(photos.length > 0 || useUrl) && (
+              <div className="bg-card rounded-2xl border p-6 space-y-8">
+                {!useUrl && (
+                  <div className="flex items-center gap-4 p-4 bg-muted rounded-xl">
+                    <Checkbox id="confirm" checked={sequenceConfirmed} onCheckedChange={(c) => setSequenceConfirmed(c === true)} />
+                    <label htmlFor="confirm" className="text-sm font-medium">I confirm the photo sequence is correct.</label>
                   </div>
-                  <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} className="scale-150 mr-2" />
+                )}
+                <MusicSelector selected={musicSelection} onSelect={setMusicSelection} />
+                <BrandingSelector selected={brandingSelection} onSelect={setBrandingSelection} brandingData={brandingData} onBrandingDataChange={setBrandingData} />
+                <VoiceoverSelector selected={voiceoverSelection} onSelect={setVoiceoverSelection} script={voiceoverScript} onScriptChange={setVoiceoverScript} selectedVoice={selectedVoice} onVoiceSelect={setSelectedVoice} />
+                <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
+                  <div><p className="font-bold">Include Edited Photos (+$15)</p></div>
+                  <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} />
                 </div>
-
-                <div className="flex flex-col gap-2">
-                  {!musicSelection && <p className="text-xs text-red-500 italic text-right">* Please select a music</p>}
-                  <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
-                    Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
+                <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 bg-accent">Continue <ArrowRight className="ml-2" /></Button>
               </div>
             )}
           </div>
         )}
-
         {step === "details" && (
-          <div className="bg-card rounded-2xl border border-border p-8 space-y-6">
-            <Button variant="ghost" onClick={() => setStep("upload")} className="mb-4">
-              <ChevronLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-            <h2 className="text-2xl font-bold">Your Details</h2>
+          <div className="bg-card rounded-2xl border p-8 space-y-6">
+            <Button variant="ghost" onClick={() => setStep("upload")}><ChevronLeft className="mr-2" /> Back</Button>
             <div className="grid gap-4">
-              <div className="space-y-2"><Label>Full Name</Label><Input name="name" value={formData.name} onChange={handleInputChange} /></div>
-              <div className="space-y-2"><Label>Email</Label><Input name="email" type="email" value={formData.email} onChange={handleInputChange} /></div>
-              <div className="space-y-2"><Label>Phone</Label><Input name="phone" value={formData.phone} onChange={handleInputChange} /></div>
-              <div className="space-y-2"><Label>Special Instructions</Label><Textarea name="notes" value={formData.notes} onChange={handleInputChange} /></div>
+              <Input placeholder="Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <Input placeholder="Email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              <Textarea placeholder="Notes" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
             </div>
-            <Button onClick={handleSubmitOrder} disabled={isSubmitting || !formData.name || !formData.email} className="w-full py-6 text-lg bg-accent">
-              {isSubmitting ? <><Loader2 className="mr-2 animate-spin" /> Processing...</> : <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>}
+            <Button onClick={handleSubmitOrder} disabled={isSubmitting} className="w-full py-6 bg-accent">
+              {isSubmitting ? "Processing..." : "Pay & Complete Order"}
             </Button>
           </div>
         )}
       </div>
-
       <div className="lg:col-span-1">
         <OrderSummary photoCount={photoCount} brandingOption={brandingSelection} voiceoverOption={voiceoverSelection} includeEditedPhotos={includeEditedPhotos} />
       </div>
