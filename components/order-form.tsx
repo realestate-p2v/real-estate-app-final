@@ -15,7 +15,8 @@ export function OrderForm() {
   const [useUrl, setUseUrl] = React.useState(false);
   const [url, setUrl] = React.useState("");
   const [urlPackage, setUrlPackage] = React.useState("15");
-  
+  const [additionalInstructions, setAdditionalInstructions] = React.useState("");
+ 
   // Add-on Selections
   const [musicSelection, setMusicSelection] = React.useState("none");
   const [brandingSelection, setBrandingSelection] = React.useState("unbranded");
