@@ -37,6 +37,7 @@ export function OrderForm() {
   const [listingUrl, setListingUrl] = useState("");
   const [listingPackage, setListingPackage] = useState<ListingPackage | null>(null);
   const [listingPermission, setListingPermission] = useState(false);
+  const [listingInstructions, setListingInstructions] = useState("");
   const [musicSelection, setMusicSelection] = useState("");
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
@@ -157,6 +158,7 @@ export function OrderForm() {
           listing_url: isUrlMode ? listingUrl.trim() : null,
           listing_package_price: isUrlMode && listingPackage ? listingPackage.price : null,
           listing_package_label: isUrlMode && listingPackage ? listingPackage.label : null,
+          listing_instructions: isUrlMode ? listingInstructions.trim() : null,
           musicSelection,
           musicFile: musicFileUrl,
           branding: {
@@ -221,14 +223,15 @@ export function OrderForm() {
       setListingUrl("");
       setListingPackage(null);
       setListingPermission(false);
+      setListingInstructions("");
     } else {
       setSequenceConfirmed(false);
     }
   };
 
   // Determine if the customization options (music, branding, etc.) should be shown
- const showCustomizationOptions =
-  (isUploadMode && photos.length > 0) || (isUrlMode && listingUrl.trim() !== "");
+  const showCustomizationOptions =
+    (isUploadMode && photos.length > 0) || isUrlMode;
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
@@ -324,6 +327,21 @@ export function OrderForm() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Photo Instructions */}
+                  <div className="space-y-2">
+                    <Label htmlFor="listing-instructions" className="font-semibold">
+                      Photo Instructions <span className="text-muted-foreground font-normal">(Optional)</span>
+                    </Label>
+                    <Textarea
+                      id="listing-instructions"
+                      placeholder="e.g. Don't use basement photos, only include the master bathroom, skip the backyard..."
+                      value={listingInstructions}
+                      onChange={(e) => setListingInstructions(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                    />
                   </div>
 
                   {/* Permission Checkbox */}
