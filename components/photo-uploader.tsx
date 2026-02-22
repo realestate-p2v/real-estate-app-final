@@ -220,7 +220,7 @@ export function PhotoUploader({
                   onClick={() => onUrlPackageChange(pkg.id)}
                   className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all text-left ${
                     selectedUrlPackage === pkg.id
-                      ? "border-primary bg-primary/[0.03] shadow-md"
+                      ? "border-primary bg-primary/[0.04] shadow-lg"
                       : "border-border bg-card hover:border-primary/40 hover:bg-blue/50"
                   }`}
                 >
