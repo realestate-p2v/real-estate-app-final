@@ -227,8 +227,8 @@ export function OrderForm() {
   };
 
   // Determine if the customization options (music, branding, etc.) should be shown
-  const showCustomizationOptions =
-    (isUploadMode && photos.length > 0) || isUrlMode;
+ const showCustomizationOptions =
+  (isUploadMode && photos.length > 0) || (isUrlMode && listingUrl.trim() !== "");
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
