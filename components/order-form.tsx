@@ -27,7 +27,7 @@ export function OrderForm() {
   const [urlInstructions, setUrlInstructions] = useState("");
   const [selectedUrlPackage, setSelectedUrlPackage] = useState(15);
   
-  // MUSIC STATES (Fixed: Added customAudioFile state)
+  // MUSIC STATES
   const [musicSelection, setMusicSelection] = useState("");
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
 
@@ -117,7 +117,7 @@ export function OrderForm() {
         ? `PACKAGE: ${selectedUrlPackage} Photos\nURL: ${listingUrl}\nINSTRUCTIONS: ${urlInstructions}\n---\nNOTES: ${formData.notes}`
         : formData.notes;
 
-      // 3. SEND TO DATABASE (Now including customAudioUrl)
+      // 3. SEND TO DATABASE
       const dbResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,7 +126,7 @@ export function OrderForm() {
           uploadedPhotos,
           photoCount,
           musicSelection: musicSelection === "custom" ? "Custom Upload" : musicSelection,
-          customAudioUrl, // Added this field for Supabase
+          customAudioUrl,
           branding: { type: brandingSelection, ...brandingData },
           voiceover: voiceoverSelection === "voiceover",
           voiceoverScript,
@@ -138,9 +138,9 @@ export function OrderForm() {
       });
 
       const dbResult = await dbResponse.json();
-      if (!dbResult.success) throw new Error(dbResult.error);
+      if (!dbResult.success) throw new Error(dbResult.error || "Failed to save order");
 
-      // 4. CHECKOUT
+      // 4. CHECKOUT (REVISED to prevent /undefined redirect)
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,10 +150,18 @@ export function OrderForm() {
           orderData: { orderId: dbResult.data.orderId, photoCount },
         }),
       });
+      
       const session = await checkoutResponse.json();
-      window.location.href = session.url;
+      
+      if (session && session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error(session.error || "Stripe checkout session could not be created.");
+      }
+
     } catch (error: any) {
-      alert("Error: " + error.message);
+      console.error("Submission Error:", error);
+      alert("Checkout Error: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -191,7 +199,6 @@ export function OrderForm() {
                   </div>
                 )}
                 
-                {/* FIXED: Passing custom audio props to MusicSelector */}
                 <MusicSelector 
                   selected={musicSelection} 
                   onSelect={setMusicSelection} 
