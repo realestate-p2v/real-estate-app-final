@@ -1,200 +1,59 @@
-"use client";
+import { NextResponse } from "next/server";
+import type { Order, OrderPhoto } from "@/lib/types/order";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-import React, { useState } from "react";
-import Script from "next/script";
-import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
-import { MusicSelector } from "@/components/music-selector";
-import { BrandingSelector, type BrandingData } from "@/components/branding-selector";
-import { VoiceoverSelector } from "@/components/voiceover-selector";
-import { OrderSummary } from "@/components/order-summary";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Loader2, ChevronLeft } from "lucide-react";
-
-type OrderStep = "upload" | "details";
-
-export function OrderForm() {
-  const [step, setStep] = useState<OrderStep>("upload");
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  
-  // URL STATES
-  const [useUrl, setUseUrl] = useState(false);
-  const [listingUrl, setListingUrl] = useState("");
-  const [urlInstructions, setUrlInstructions] = useState("");
-  const [selectedUrlPackage, setSelectedUrlPackage] = useState(15); // Default to 15
-  
-  const [musicSelection, setMusicSelection] = useState("");
-  const [brandingSelection, setBrandingSelection] = useState("unbranded");
-  const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
-  const [voiceoverSelection, setVoiceoverSelection] = useState("none");
-  const [voiceoverScript, setVoiceoverScript] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("");
-  const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
-  const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
-
-  // DYNAMIC PHOTO COUNT
-  // If using URL, use the package they clicked. Otherwise, count the manual uploads.
-  const photoCount = useUrl ? selectedUrlPackage : photos.length;
-  
-  const canProceed = musicSelection && (useUrl ? listingUrl.length > 5 : (photos.length > 0 && sequenceConfirmed));
-
-  const getBasePrice = () => {
-    if (photoCount === 1) return 1; // Test
-    if (photoCount <= 15) return 79;
-    if (photoCount <= 25) return 129;
-    if (photoCount <= 35) return 179;
-    return 0;
-  };
-
-  const getTotalPrice = () => getBasePrice() + (voiceoverSelection === "voiceover" ? 25 : 0) + (includeEditedPhotos ? 15 : 0);
-
-  const uploadToCloudinary = async (file: Blob, folder: string) => {
-    try {
-      const sigResponse = await fetch("/api/cloudinary-signature", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folder: `photo2video/${folder}` }),
-      });
-      const sigData = await sigResponse.json();
-      const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
-      const uploadData = new FormData();
-      uploadData.append("file", file);
-      uploadData.append("api_key", apiKey);
-      uploadData.append("timestamp", timestamp.toString());
-      uploadData.append("signature", signature);
-      uploadData.append("folder", folderPath);
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: uploadData });
-      return await response.json();
-    } catch (e) { return null; }
-  };
-
-  const handleSubmitOrder = async () => {
-    setIsSubmitting(true);
-    try {
-      const uploadedPhotos = [];
-      
-      if (!useUrl) {
-        for (let i = 0; i < photos.length; i++) {
-          const photo = photos[i];
-          const blob = photo.file || await (await fetch(photo.preview)).blob();
-          const result = await uploadToCloudinary(blob, "orders");
-          if (result) uploadedPhotos.push({ public_id: result.public_id, secure_url: result.secure_url, order: i, description: photo.description });
-        }
-      } else {
-        // Placeholder for API validation
-        uploadedPhotos.push({ 
-          public_id: "url_order", 
-          secure_url: "https://via.placeholder.com/150?text=Listing+URL+Order", 
-          order: 0, 
-          description: "URL Order" 
-        });
-      }
-
-      const finalNotes = useUrl 
-        ? `PACKAGE CHOSEN: ${selectedUrlPackage} Photos\nLISTING URL: ${listingUrl}\nURL INSTRUCTIONS: ${urlInstructions}\n---\nUSER NOTES: ${formData.notes}`
-        : formData.notes;
-
-      const dbResponse = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: { name: formData.name, email: formData.email, phone: formData.phone },
-          uploadedPhotos,
-          musicSelection,
-          branding: { type: brandingSelection, agentName: brandingData.agentName, companyName: brandingData.companyName },
-          voiceover: voiceoverSelection === "voiceover",
-          voiceoverScript,
-          voiceoverVoice: selectedVoice,
-          includeEditedPhotos,
-          totalPrice: getTotalPrice(),
-          specialInstructions: finalNotes
-        }),
-      });
-
-      const dbResult = await dbResponse.json();
-      if (!dbResult.success) throw new Error(dbResult.error);
-
-      const checkoutResponse = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: [{ name: `${photoCount} Photo Video Package`, amount: getTotalPrice() * 100 }],
-          customerDetails: formData,
-          orderData: { orderId: dbResult.data.orderId, photoCount },
-        }),
-      });
-      const session = await checkoutResponse.json();
-      window.location.href = session.url;
-    } catch (error: any) {
-      alert("Error: " + error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto px-4 py-8">
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN" strategy="afterInteractive" />
-      <div className="lg:col-span-2 space-y-6">
-        {step === "upload" && (
-          <div className="space-y-6">
-            <div className="bg-card rounded-2xl border p-6">
-              <h2 className="text-xl font-bold mb-6">Step 1: Photos</h2>
-              
-              {/* Added Package Selection for URL Mode within PhotoUploader Props */}
-              <PhotoUploader 
-                photos={photos} onPhotosChange={setPhotos}
-                useUrl={useUrl} onUseUrlChange={setUseUrl}
-                url={listingUrl} onUrlChange={setListingUrl}
-                urlInstructions={urlInstructions} onUrlInstructionsChange={setUrlInstructions}
-                selectedUrlPackage={selectedUrlPackage} onUrlPackageChange={setSelectedUrlPackage}
-              />
-            </div>
-            
-            {(photos.length > 0 || useUrl) && (
-              <div className="bg-card rounded-2xl border p-6 space-y-8">
-                {!useUrl && (
-                  <div className="flex items-center gap-4 p-4 bg-muted rounded-xl">
-                    <Checkbox id="confirm" checked={sequenceConfirmed} onCheckedChange={(c) => setSequenceConfirmed(c === true)} />
-                    <label htmlFor="confirm" className="text-sm font-medium">I confirm the photo sequence is correct.</label>
-                  </div>
-                )}
-                <MusicSelector selected={musicSelection} onSelect={setMusicSelection} />
-                <BrandingSelector selected={brandingSelection} onSelect={setBrandingSelection} brandingData={brandingData} onBrandingDataChange={setBrandingData} />
-                <VoiceoverSelector selected={voiceoverSelection} onSelect={setVoiceoverSelection} script={voiceoverScript} onScriptChange={setVoiceoverScript} selectedVoice={selectedVoice} onVoiceSelect={setSelectedVoice} />
-                <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
-                  <div><p className="font-bold">Include Edited Photos (+$15)</p></div>
-                  <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} />
-                </div>
-                <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 bg-accent">Continue <ArrowRight className="ml-2" /></Button>
-              </div>
-            )}
-          </div>
-        )}
-        {step === "details" && (
-          <div className="bg-card rounded-2xl border p-8 space-y-6">
-            <Button variant="ghost" onClick={() => setStep("upload")}><ChevronLeft className="mr-2" /> Back</Button>
-            <div className="grid gap-4">
-              <Input placeholder="Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <Input placeholder="Email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-              <Textarea placeholder="Notes" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
-            </div>
-            <Button onClick={handleSubmitOrder} disabled={isSubmitting} className="w-full py-6 bg-accent">
-              {isSubmitting ? "Processing..." : "Pay & Complete Order"}
-            </Button>
-          </div>
-        )}
-      </div>
-      <div className="lg:col-span-1">
-        <OrderSummary photoCount={photoCount} brandingOption={brandingSelection} voiceoverOption={voiceoverSelection} includeEditedPhotos={includeEditedPhotos} />
-      </div>
-    </div>
-  );
+function generateOrderId(): string {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `P2V-${timestamp}-${random}`;
 }
-                                        
+
+function calculateBasePrice(photoCount: number): number {
+  if (photoCount === 1) return 1;
+  if (photoCount <= 12) return 99;
+  if (photoCount <= 25) return 149;
+  if (photoCount <= 35) return 199;
+  return 199 + Math.ceil((photoCount - 35) / 10) * 50;
+}
+
+export async function POST(request: Request) {
+  try {
+    const input = await request.json();
+
+    if (!input.customer?.name || !input.customer?.email) {
+      return NextResponse.json({ success: false, error: "Required fields missing" }, { status: 400 });
+    }
+
+    const uploadedPhotos: OrderPhoto[] = input.uploadedPhotos || [];
+    const basePrice = calculateBasePrice(input.photoCount || uploadedPhotos.length);
+    const orderId = generateOrderId();
+
+    const orderData = {
+      order_id: orderId,
+      customer_name: input.customer.name,
+      customer_email: input.customer.email,
+      customer_phone: input.customer.phone || null,
+      photos: uploadedPhotos,
+      photo_count: input.photoCount || uploadedPhotos.length,
+      music_selection: input.musicSelection,
+      branding: input.branding,
+      voiceover: input.voiceover || false,
+      voiceover_script: input.voiceoverScript || null,
+      special_instructions: input.specialInstructions || null,
+      total_price: input.totalPrice,
+      payment_status: "pending",
+      status: "New",
+    };
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.from("orders").insert(orderData).select().single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data: { orderId: orderId } });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// Keep your original GET function below if you had one
