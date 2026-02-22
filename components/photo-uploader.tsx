@@ -114,7 +114,7 @@ export function PhotoUploader({
         <div className="space-y-8 animate-in fade-in duration-500">
           {/* URL Input */}
           <div className="space-y-4">
-            <Label htmlFor="listing-url" className="text-base font-bold">Paste Listing URL</Label>
+            <Label htmlFor="listing-url" className="text-base font-bold">Paste Listing URL to Continue</Label>
             <Input
               id="listing-url"
               placeholder="e.g., https://www.zillow.com/homedetails/..."
@@ -123,7 +123,7 @@ export function PhotoUploader({
               className="h-12 text-lg"
             />
             <p className="text-xs text-muted-foreground italic">
-              * We will grab the photos directly from your Zillow, Realtor.com, or Redfin link.
+              * We will grab the selected number of photos directly from your listing.
             </p>
           </div>
 
