@@ -109,110 +109,97 @@ export function OrderForm() {
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-      {/* ... Script tag ... */}
-
-      <div className="lg:col-span-2 space-y-6">
-        {step === "upload" && (
-          <div className="space-y-6">
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">1</div>
-                <h2 className="text-xl font-bold">
-                  {useUrl ? "Provide Listing Details" : "Start by uploading Your Photos"}
-                </h2>
-              </div>
-              
-              <PhotoUploader 
-                photos={photos} 
-                onPhotosChange={setPhotos} 
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 lg:col-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* STEP 1: UPLOAD & ADD-ONS */}
+          {step === "upload" && (
+            <div className="space-y-8">
+              <PhotoUploader
+                photos={photos}
+                setPhotos={setPhotos}
                 useUrl={useUrl}
-                onUseUrlChange={setUseUrl}
-                urlValue={urlValue}
-                onUrlValueChange={setUrlValue}
+                setUseUrl={setUseUrl}
+                url={url}
+                setUrl={setUrl}
                 urlPackage={urlPackage}
-                onUrlPackageChange={setUrlPackage}
-                urlPermission={urlPermission}
-                onUrlPermissionChange={setUrlPermission}
+                setUrlPackage={setUrlPackage}
               />
-            </div>
 
-            {/* Sequence Confirmation: Only show if NOT using URL and photos are uploaded */}
-            {!useUrl && photos.length > 0 && (
-              <div className={`rounded-2xl border-2 p-6 transition-colors ${sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"}`}>
-                <div className="flex items-center gap-4">
-                  <Checkbox
-                    id="confirm"
-                    checked={sequenceConfirmed}
-                    onCheckedChange={(checked) => setSequenceConfirmed(checked === true)}
-                    className="h-6 w-6 bg-white"
+              {(isUrlModeValid || isUploadModeValid) && (
+                <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
+                  <MusicSelector 
+                    value={musicSelection} 
+                    onValueChange={setMusicSelection} 
                   />
-                  <label htmlFor="confirm" className="font-medium cursor-pointer">
-                    I confirm these photos are in the correct sequence for my video.
-                  </label>
+                  
+                  <div className="border-t pt-6">
+                    <BrandingSelector 
+                      value={brandingSelection} 
+                      onValueChange={setBrandingSelection} 
+                    />
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <VoiceoverSelector 
+                      value={voiceoverSelection} 
+                      onValueChange={setVoiceoverSelection} 
+                    />
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="editedPhotos" 
+                        checked={includeEditedPhotos}
+                        onCheckedChange={(checked) => setIncludeEditedPhotos(!!checked)}
+                      />
+                      <label htmlFor="editedPhotos" className="text-sm font-medium leading-none">
+                        Include Edited Photos Package (+$15)
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => setStep("details")}
+                    className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold text-lg hover:opacity-90 transition-opacity"
+                  >
+                    Next: Property Details
+                  </button>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 2: PROPERTY DETAILS */}
+          {step === "details" && (
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <h2 className="text-2xl font-bold mb-6">Property Details</h2>
+              {/* If you have a DetailsForm component, it goes here */}
+              <div className="space-y-4">
+                <p className="text-muted-foreground">Please enter the property address and any special instructions.</p>
+                <button
+                  onClick={() => setStep("upload")}
+                  className="text-sm text-primary hover:underline"
+                >
+                  ← Back to uploads
+                </button>
               </div>
-            )}
+            </div>
+          )}
+        </div>
 
-            {/* Step 2 triggers if either mode is valid */}
-           {(isUrlModeValid || isUploadModeValid) && (
-  <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
-    <MusicSelector 
-      value={musicSelection} 
-      onValueChange={setMusicSelection} 
-    />
-    
-    <div className="border-t pt-6">
-      <BrandingSelector 
-        value={brandingSelection} 
-        onValueChange={setBrandingSelection} 
-      />
-    </div>
-
-    <div className="border-t pt-6">
-      <VoiceoverSelector 
-        value={voiceoverSelection} 
-        onValueChange={setVoiceoverSelection} 
-      />
-    </div>
-
-    <div className="border-t pt-6">
-      <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="editedPhotos" 
-          checked={includeEditedPhotos}
-          onCheckedChange={(checked) => setIncludeEditedPhotos(!!checked)}
-        />
-        <label htmlFor="editedPhotos" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          Include Edited Photos Package (+$15)
-        </label>
-      </div>
-    </div>
-  </div>
-)}
-                <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
-                    {/* Edited Photos Toggle */}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  {!musicSelection && <p className="text-xs text-red-500 italic text-right">* Please select a music</p>}
-                  <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
-                    Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        {/* ... step === "details" stays largely the same ... */}
-      </div>
-      <div className="lg:col-span-1">
-        <OrderSummary 
-          photoCount={useUrl ? parseInt(urlPackage) : photos.length} 
-          brandingOption={brandingSelection} 
-          voiceoverOption={voiceoverSelection} 
-          includeEditedPhotos={includeEditedPhotos} 
-        />
+        {/* RIGHT SIDE: ORDER SUMMARY */}
+        <div className="lg:col-span-1">
+          <OrderSummary 
+            photoCount={useUrl ? parseInt(urlPackage) : photos.length} 
+            brandingOption={brandingSelection} 
+            voiceoverOption={voiceoverSelection} 
+            includeEditedPhotos={includeEditedPhotos} 
+            isUrlMode={useUrl}
+          />
+        </div>
       </div>
     </div>
   );
