@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Upload, Link, X, ImageIcon } from "lucide-react";
+import { Upload, Link, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,8 @@ interface PhotoUploaderProps {
   setUrl: (value: string) => void;
   urlPackage: string;
   setUrlPackage: (value: string) => void;
+  instructions: string;                             // NEW
+  setInstructions: (value: string) => void;         // NEW
 }
 
 export function PhotoUploader({
@@ -28,6 +29,8 @@ export function PhotoUploader({
   setUrl,
   urlPackage,
   setUrlPackage,
+  instructions,
+  setInstructions,
 }: PhotoUploaderProps) {
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,7 +70,7 @@ export function PhotoUploader({
         </button>
       </div>
 
-      {/* 2. UPLOAD CONTENT */}
+      {/* 2. CONTENT AREA */}
       {!useUrl ? (
         <div className="space-y-4">
           <div className="border-2 border-dashed border-border rounded-2xl p-12 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
@@ -89,7 +92,6 @@ export function PhotoUploader({
             </div>
           </div>
 
-          {/* Photo Preview Grid */}
           {photos.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mt-6">
               {photos.map((photo, index) => (
@@ -114,7 +116,7 @@ export function PhotoUploader({
         <div className="space-y-8 animate-in fade-in duration-500">
           {/* URL Input */}
           <div className="space-y-4">
-            <Label htmlFor="listing-url" className="text-base font-bold">Paste Listing URL to Continue</Label>
+            <Label htmlFor="listing-url" className="text-base font-bold">Paste Listing URL</Label>
             <Input
               id="listing-url"
               placeholder="e.g., https://www.zillow.com/homedetails/..."
@@ -123,19 +125,36 @@ export function PhotoUploader({
               className="h-12 text-lg"
             />
             <p className="text-xs text-muted-foreground italic">
-              * We will grab the selected number of photos directly from your listing.
+              * We will grab the photos directly from your Zillow, Realtor.com, or Redfin link.
             </p>
+
+            {/* ADDITIONAL INSTRUCTIONS FIELD */}
+            <div className="pt-2 space-y-2">
+              <Label htmlFor="instructions" className="text-sm font-bold text-foreground">
+                Additional Instruction
+              </Label>
+              <textarea
+                id="instructions"
+                maxLength={500}
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="If left blank, you give us permission to select and sequence the images."
+                className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <div className="text-right text-[10px] text-muted-foreground">
+                {instructions.length}/500 characters
+              </div>
+            </div>
           </div>
 
           {/* Package Selection */}
-          <div className="space-y-4">
+          <div className="space-y-4 border-t pt-6">
             <Label className="text-base font-bold">Select your package limit</Label>
             <RadioGroup 
               value={urlPackage} 
               onValueChange={setUrlPackage} 
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
             >
-              {/* Standard */}
               <div 
                 onClick={() => setUrlPackage("15")}
                 className={cn(
@@ -151,7 +170,6 @@ export function PhotoUploader({
                 <span className="text-2xl font-bold text-primary">$79</span>
               </div>
 
-              {/* Premium */}
               <div 
                 onClick={() => setUrlPackage("25")}
                 className={cn(
@@ -167,7 +185,6 @@ export function PhotoUploader({
                 <span className="text-2xl font-bold text-primary">$129</span>
               </div>
 
-              {/* Professional */}
               <div 
                 onClick={() => setUrlPackage("35")}
                 className={cn(
