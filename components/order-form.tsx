@@ -20,9 +20,12 @@ type OrderStep = "upload" | "details";
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  
+  // URL STATES
   const [useUrl, setUseUrl] = useState(false);
   const [listingUrl, setListingUrl] = useState("");
   const [urlInstructions, setUrlInstructions] = useState("");
+  const [selectedUrlPackage, setSelectedUrlPackage] = useState(15); // This holds the clicked package value
   
   const [musicSelection, setMusicSelection] = useState("");
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
@@ -35,19 +38,20 @@ export function OrderForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
 
-  // If using URL, we assume 15 photos for pricing. Otherwise use photo count.
-  const photoCount = useUrl ? 15 : photos.length;
+  // DYNAMIC PHOTO COUNT logic for Saylor 1.0
+  const photoCount = useUrl ? selectedUrlPackage : photos.length;
   
-  // Validation logic
   const canProceed = musicSelection && (useUrl ? listingUrl.length > 5 : (photos.length > 0 && sequenceConfirmed));
 
   const getBasePrice = () => {
-    if (photoCount === 1) return 1;
+    // Saylor 1.0 Pricing Logic
+    if (photoCount === 1) return 1; // Test mode
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
     if (photoCount <= 35) return 179;
-    return 0;
+    return 179;
   };
+
   const getTotalPrice = () => getBasePrice() + (voiceoverSelection === "voiceover" ? 25 : 0) + (includeEditedPhotos ? 15 : 0);
 
   const uploadToCloudinary = async (file: Blob, folder: string) => {
@@ -82,19 +86,10 @@ export function OrderForm() {
           const result = await uploadToCloudinary(blob, "orders");
           if (result) uploadedPhotos.push({ public_id: result.public_id, secure_url: result.secure_url, order: i, description: photo.description });
         }
-      } else {
-        // If using URL, we send 1 "dummy" photo so the API doesn't complain
-        uploadedPhotos.push({ 
-          public_id: "url_order", 
-          secure_url: "https://via.placeholder.com/150?text=Listing+URL+Order", 
-          order: 0, 
-          description: "URL Order" 
-        });
       }
 
-      // Combine URL info into special instructions so we don't need new DB columns
       const finalNotes = useUrl 
-        ? `LISTING URL: ${listingUrl}\nURL INSTRUCTIONS: ${urlInstructions}\n---\nUSER NOTES: ${formData.notes}`
+        ? `PACKAGE: ${selectedUrlPackage} Photos\nURL: ${listingUrl}\nINSTRUCTIONS: ${urlInstructions}\n---\nNOTES: ${formData.notes}`
         : formData.notes;
 
       const dbResponse = await fetch("/api/orders", {
@@ -103,8 +98,9 @@ export function OrderForm() {
         body: JSON.stringify({
           customer: { name: formData.name, email: formData.email, phone: formData.phone },
           uploadedPhotos,
+          photoCount, // Explicitly pass the package size
           musicSelection,
-          branding: { type: brandingSelection, agentName: brandingData.agentName, companyName: brandingData.companyName },
+          branding: { type: brandingSelection, ...brandingData },
           voiceover: voiceoverSelection === "voiceover",
           voiceoverScript,
           voiceoverVoice: selectedVoice,
@@ -143,15 +139,23 @@ export function OrderForm() {
           <div className="space-y-6">
             <div className="bg-card rounded-2xl border p-6">
               <h2 className="text-xl font-bold mb-6">Step 1: Photos</h2>
+              
               <PhotoUploader 
-                photos={photos} onPhotosChange={setPhotos}
-                useUrl={useUrl} onUseUrlChange={setUseUrl}
-                url={listingUrl} onUrlChange={setListingUrl}
-                urlInstructions={urlInstructions} onUrlInstructionsChange={setUrlInstructions}
+                photos={photos} 
+                onPhotosChange={setPhotos}
+                useUrl={useUrl} 
+                onUseUrlChange={setUseUrl}
+                url={listingUrl} 
+                onUrlChange={setListingUrl}
+                urlInstructions={urlInstructions} 
+                onUrlInstructionsChange={setUrlInstructions}
+                selectedUrlPackage={selectedUrlPackage} 
+                onUrlPackageChange={(val) => setSelectedUrlPackage(val)} // FIXED: This connects the buttons
               />
             </div>
+            
             {(photos.length > 0 || useUrl) && (
-              <div className="bg-card rounded-2xl border p-6 space-y-8">
+              <div className="bg-card rounded-2xl border p-6 space-y-8 animate-in fade-in">
                 {!useUrl && (
                   <div className="flex items-center gap-4 p-4 bg-muted rounded-xl">
                     <Checkbox id="confirm" checked={sequenceConfirmed} onCheckedChange={(c) => setSequenceConfirmed(c === true)} />
@@ -162,30 +166,61 @@ export function OrderForm() {
                 <BrandingSelector selected={brandingSelection} onSelect={setBrandingSelection} brandingData={brandingData} onBrandingDataChange={setBrandingData} />
                 <VoiceoverSelector selected={voiceoverSelection} onSelect={setVoiceoverSelection} script={voiceoverScript} onScriptChange={setVoiceoverScript} selectedVoice={selectedVoice} onVoiceSelect={setSelectedVoice} />
                 <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
-                  <div><p className="font-bold">Include Edited Photos (+$15)</p></div>
+                  <div><p className="font-bold text-sm">Include Edited Photos (+$15)</p></div>
                   <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} />
                 </div>
-                <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 bg-accent">Continue <ArrowRight className="ml-2" /></Button>
+                <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 bg-accent text-white font-bold text-lg">
+                  Continue <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
               </div>
             )}
           </div>
         )}
         {step === "details" && (
-          <div className="bg-card rounded-2xl border p-8 space-y-6">
-            <Button variant="ghost" onClick={() => setStep("upload")}><ChevronLeft className="mr-2" /> Back</Button>
+          <div className="bg-card rounded-2xl border p-8 space-y-6 animate-in slide-in-from-right-4">
+            <Button variant="ghost" onClick={() => setStep("upload")} className="mb-4">
+              <ChevronLeft className="mr-2 h-4 w-4" /> Back to Customization
+            </Button>
             <div className="grid gap-4">
-              <Input placeholder="Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <Input placeholder="Email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-              <Textarea placeholder="Notes" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
+              <div className="space-y-2">
+                <Label>Full Name</Label>
+                <Input placeholder="John Doe" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input type="email" placeholder="john@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone Number (Optional)</Label>
+                <Input type="tel" placeholder="(555) 000-0000" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Additional Order Notes</Label>
+                <Textarea placeholder="Any specific requests for our editors?" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
+              </div>
             </div>
-            <Button onClick={handleSubmitOrder} disabled={isSubmitting} className="w-full py-6 bg-accent">
-              {isSubmitting ? "Processing..." : "Pay & Complete Order"}
+            <Button onClick={handleSubmitOrder} disabled={isSubmitting || !formData.name || !formData.email} className="w-full py-6 bg-accent text-white font-bold text-lg">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing Order...
+                </>
+              ) : (
+                `Pay ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getTotalPrice())} & Complete Order`
+              )}
             </Button>
           </div>
         )}
       </div>
       <div className="lg:col-span-1">
-        <OrderSummary photoCount={photoCount} brandingOption={brandingSelection} voiceoverOption={voiceoverSelection} includeEditedPhotos={includeEditedPhotos} />
+        <div className="sticky top-8">
+          <OrderSummary 
+            photoCount={photoCount} 
+            brandingOption={brandingSelection} 
+            voiceoverOption={voiceoverSelection} 
+            includeEditedPhotos={includeEditedPhotos} 
+          />
+        </div>
       </div>
     </div>
   );
