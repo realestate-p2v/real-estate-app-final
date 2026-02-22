@@ -71,8 +71,6 @@ export function MusicSelector({
 }: MusicSelectorProps) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Create a direct reference to the file input
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePlayPause = (
     e: React.MouseEvent,
@@ -104,14 +102,9 @@ export function MusicSelector({
     }
   };
 
-  const handleRemoveCustomAudio = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleRemoveCustomAudio = () => {
     if (onCustomAudioChange) {
       onCustomAudioChange(null);
-    }
-    // Clear the input so the same file can be re-uploaded if needed
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
     }
   };
 
@@ -124,6 +117,7 @@ export function MusicSelector({
         <div>
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             Select Background Music
+            {/* Added Mandatory Label Below */}
             <span className="text-[10px] uppercase tracking-wider text-red-500 font-bold">
               * Mandatory
             </span>
@@ -185,27 +179,17 @@ export function MusicSelector({
         ))}
       </div>
 
-      {/* Custom Audio Upload Section */}
+      {/* Custom Audio Upload */}
       {selected === "custom" && (
         <div className="mt-4 p-4 bg-muted/50 rounded-xl border border-border">
           <p className="text-sm font-medium text-foreground mb-3">
             Upload your own audio file (optional)
           </p>
-          
-          {/* Hidden File Input using Ref instead of ID for better reliability */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="audio/*"
-            onChange={handleCustomAudioUpload}
-            className="hidden"
-          />
-
           {customAudioFile ? (
             <div className="flex items-center justify-between bg-card p-3 rounded-lg border border-border">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <Music className="h-5 w-5 text-primary flex-shrink-0" />
-                <span className="text-sm text-foreground truncate">
+              <div className="flex items-center gap-3">
+                <Music className="h-5 w-5 text-primary" />
+                <span className="text-sm text-foreground truncate max-w-[200px]">
                   {customAudioFile.name}
                 </span>
               </div>
@@ -214,18 +198,27 @@ export function MusicSelector({
                 variant="ghost"
                 size="sm"
                 onClick={handleRemoveCustomAudio}
-                className="text-muted-foreground hover:text-foreground shrink-0"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           ) : (
             <div>
+              <input
+                type="file"
+                id="custom-audio-upload"
+                accept="audio/*"
+                onChange={handleCustomAudioUpload}
+                className="hidden"
+              />
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-dashed border-primary/50 text-primary hover:bg-primary/5 h-12"
+                onClick={() =>
+                  document.getElementById("custom-audio-upload")?.click()
+                }
+                className="w-full border-dashed border-primary/50 text-primary hover:bg-primary/5"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Audio File
