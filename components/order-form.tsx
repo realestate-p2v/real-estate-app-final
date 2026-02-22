@@ -155,15 +155,41 @@ export function OrderForm() {
             )}
 
             {/* Step 2 triggers if either mode is valid */}
-            {(isUrlModeValid || isUploadModeValid) && (
-              <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
-                <MusicSelector ... />
-                <div className="border-t pt-6">
-                  <BrandingSelector ... />
-                </div>
-                <div className="border-t pt-6">
-                  <VoiceoverSelector ... />
-                </div>
+           {(isUrlModeValid || isUploadModeValid) && (
+  <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
+    <MusicSelector 
+      value={musicSelection} 
+      onValueChange={setMusicSelection} 
+    />
+    
+    <div className="border-t pt-6">
+      <BrandingSelector 
+        value={brandingSelection} 
+        onValueChange={setBrandingSelection} 
+      />
+    </div>
+
+    <div className="border-t pt-6">
+      <VoiceoverSelector 
+        value={voiceoverSelection} 
+        onValueChange={setVoiceoverSelection} 
+      />
+    </div>
+
+    <div className="border-t pt-6">
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id="editedPhotos" 
+          checked={includeEditedPhotos}
+          onCheckedChange={(checked) => setIncludeEditedPhotos(!!checked)}
+        />
+        <label htmlFor="editedPhotos" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Include Edited Photos Package (+$15)
+        </label>
+      </div>
+    </div>
+  </div>
+)}
                 <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                     {/* Edited Photos Toggle */}
                 </div>
