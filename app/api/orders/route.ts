@@ -1,5 +1,4 @@
-
-  import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { Order, OrderPhoto } from "@/lib/types/order";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -13,23 +12,24 @@ function generateOrderId(): string {
 function calculateBasePrice(photoCount: number): number {
   // Test product: 1 photo = $1
   if (photoCount === 1) return 1;
-  // Standard: 2-12 photos = $99
-  if (photoCount <= 12) return 99;
-  // Premium: 13-25 photos = $149
-  if (photoCount <= 25) return 149;
-  // Professional: 26-35 photos = $199
-  if (photoCount <= 35) return 199;
+  // Standard: 2–15 photos = $79
+  if (photoCount <= 15) return 79;
+  // Premium: 16–25 photos = $129
+  if (photoCount <= 25) return 129;
+  // Professional: 26–35 photos = $179
+  if (photoCount <= 35) return 179;
   // Agency: 36+ photos
-  return 199 + Math.ceil((photoCount - 35) / 10) * 50;
+  return 179 + Math.ceil((photoCount - 35) / 10) * 50;
 }
 
 export async function POST(request: Request) {
   console.log("[v0] POST /api/orders - Starting order creation");
   try {
     const input = await request.json();
-    console.log("[v0] Received order input:", JSON.stringify({ 
-      customer: input.customer, 
-      photoCount: input.uploadedPhotos?.length 
+    console.log("[v0] Received order input:", JSON.stringify({
+      customer: input.customer,
+      photoCount: input.uploadedPhotos?.length,
+      listing_url: input.listing_url || null,
     }));
 
     // Validate required fields (phone is optional)
@@ -40,17 +40,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Photos should already be uploaded from client
     const uploadedPhotos: OrderPhoto[] = input.uploadedPhotos || [];
-    
-    if (uploadedPhotos.length === 0) {
+    const isUrlOrder = !!input.listing_url;
+
+    // Photos are required unless the customer provided a listing URL instead
+    if (uploadedPhotos.length === 0 && !isUrlOrder) {
       return NextResponse.json(
         { success: false, error: "At least one photo is required" },
         { status: 400 }
       );
     }
 
-    // Handle custom audio (from customAudioUrl/customAudioFilename or musicFile from form)
+    // Handle custom audio
     let customAudio = undefined;
     if (input.customAudioUrl && input.customAudioFilename) {
       customAudio = {
@@ -67,7 +68,15 @@ export async function POST(request: Request) {
     }
 
     // Calculate pricing
-    const basePrice = calculateBasePrice(uploadedPhotos.length);
+    // For URL-based orders the price comes from the package the customer selected on the frontend.
+    // For upload-based orders we calculate from the photo count.
+    let basePrice: number;
+    if (isUrlOrder && input.listing_package_price != null) {
+      basePrice = Number(input.listing_package_price);
+    } else {
+      basePrice = calculateBasePrice(uploadedPhotos.length);
+    }
+
     const brandingFee = input.branding.type === "custom" ? 25 : 0;
     const voiceoverFee = input.voiceover ? 25 : 0;
     const editedPhotosFee = input.includeEditedPhotos ? 15 : 0;
@@ -82,7 +91,13 @@ export async function POST(request: Request) {
       customer_email: input.customer.email,
       customer_phone: input.customer.phone || null,
       photos: uploadedPhotos.sort((a: OrderPhoto, b: OrderPhoto) => a.order - b.order),
-      photo_count: uploadedPhotos.length,
+      photo_count: isUrlOrder && input.listing_package_price != null
+        // For URL orders, record the max photos of the chosen package as the photo count
+        ? (input.listing_package_label?.toLowerCase().includes("35") ? 35
+          : input.listing_package_label?.toLowerCase().includes("25") ? 25
+          : 15)
+        : uploadedPhotos.length,
+      listing_url: input.listing_url || null,
       music_selection: input.musicSelection,
       custom_audio: customAudio || null,
       branding: input.branding,
@@ -97,18 +112,18 @@ export async function POST(request: Request) {
       edited_photos_fee: editedPhotosFee,
       total_price: totalPrice,
       payment_status: "pending",
-      status: "New", // Set status to "New" for admin dashboard
+      status: "New",
     };
 
     // Save to Supabase using admin client (bypasses RLS)
     console.log("[v0] Creating Supabase admin client...");
     console.log("[v0] SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "NOT SET");
     console.log("[v0] SERVICE_ROLE_KEY:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "SET (length: " + process.env.SUPABASE_SERVICE_ROLE_KEY.length + ")" : "NOT SET");
-    
+
     const supabase = createAdminClient();
     console.log("[v0] Inserting order into Supabase...");
     console.log("[v0] Order data:", JSON.stringify(orderData, null, 2));
-    
+
     const { data, error } = await supabase
       .from("orders")
       .insert(orderData)
@@ -117,16 +132,13 @@ export async function POST(request: Request) {
 
     console.log("[v0] Supabase response - data:", data ? "received" : "null", "error:", error ? error.message : "none");
 
-if (error) {
+    if (error) {
       console.error("[v0] Supabase insert error:", error.message);
-      // STOP HERE and tell the user why it failed
       return NextResponse.json({
-        success: false, 
-        error: `Database Error: ${error.message}. Check if your Supabase table has all columns.`
+        success: false,
+        error: `Database Error: ${error.message}. Check if your Supabase table has all columns.`,
       }, { status: 500 });
     }
-
-    
 
     // Build the Order object for response
     const order: Order = {
