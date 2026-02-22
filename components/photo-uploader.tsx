@@ -4,6 +4,9 @@ import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   Upload,
   X,
@@ -12,13 +15,13 @@ import {
   ImageIcon,
   AlertCircle,
   Phone,
-  Camera,
-  GripVertical, // Added for the drag handle icon
+  GripVertical,
+  Link as LinkIcon,
 } from "lucide-react";
 
 export interface PhotoItem {
   id: string;
-  file: File;
+  file?: File; // Optional because URL method doesn't have a File
   preview: string;
   description: string;
 }
@@ -26,12 +29,31 @@ export interface PhotoItem {
 interface PhotoUploaderProps {
   photos: PhotoItem[];
   onPhotosChange: (photos: PhotoItem[]) => void;
+  // New props for URL logic
+  useUrl: boolean;
+  onUseUrlChange: (checked: boolean) => void;
+  urlValue: string;
+  onUrlValueChange: (val: string) => void;
+  urlPackage: string;
+  onUrlPackageChange: (val: string) => void;
+  urlPermission: boolean;
+  onUrlPermissionChange: (checked: boolean) => void;
 }
 
-export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
+export function PhotoUploader({
+  photos,
+  onPhotosChange,
+  useUrl,
+  onUseUrlChange,
+  urlValue,
+  onUrlValueChange,
+  urlPackage,
+  onUrlPackageChange,
+  urlPermission,
+  onUrlPermissionChange,
+}: PhotoUploaderProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [showPhotoTips, setShowPhotoTips] = useState(false);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +72,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
   const handleRemove = useCallback(
     (id: string) => {
       const photo = photos.find((p) => p.id === id);
-      if (photo) {
+      if (photo && photo.preview.startsWith("blob:")) {
         URL.revokeObjectURL(photo.preview);
       }
       onPhotosChange(photos.filter((p) => p.id !== id));
@@ -69,14 +91,9 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
     [photos, onPhotosChange]
   );
 
-  // --- Drag and Drop Logic ---
-
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
+  const handleDragStart = (index: number) => setDraggedIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault(); // This is required to allow a "drop"
+    e.preventDefault();
     setDragOverIndex(index);
   };
 
@@ -91,151 +108,125 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
     setDragOverIndex(null);
   };
 
-  // --- Arrow Button Logic ---
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const newPhotos = [...photos];
+    [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
+    onPhotosChange(newPhotos);
+  };
 
-  const moveUp = useCallback(
-    (index: number) => {
-      if (index === 0) return;
-      const newPhotos = [...photos];
-      [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
-      onPhotosChange(newPhotos);
-    },
-    [photos, onPhotosChange]
-  );
-
-  const moveDown = useCallback(
-    (index: number) => {
-      if (index === photos.length - 1) return;
-      const newPhotos = [...photos];
-      [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]];
-      onPhotosChange(newPhotos);
-    },
-    [photos, onPhotosChange]
-  );
-
-  const showTooManyPhotosWarning = photos.length > 35;
+  const moveDown = (index: number) => {
+    if (index === photos.length - 1) return;
+    const newPhotos = [...photos];
+    [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]];
+    onPhotosChange(newPhotos);
+  };
 
   return (
     <div className="space-y-6">
-    
+      {/* 1. Standard Upload Area (Visible unless URL is confirmed) */}
+      {!useUrl && (
+        <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+          <input type="file" id="photo-upload" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
+          <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Upload className="h-8 w-8 text-primary" />
+            </div>
+            <p className="text-lg font-semibold">Upload your listing photos</p>
+            <p className="text-muted-foreground">Drag and drop or click to select</p>
+          </label>
+        </div>
+      )}
 
-      {/* Upload Area */}
-      <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-        <input type="file" id="photo-upload" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
-        <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Upload className="h-8 w-8 text-primary" />
-          </div>
-          <p className="text-lg font-semibold">Upload your listing photos</p>
-          <p className="text-muted-foreground">Drag and drop or click to select</p>
-        </label>
+      {/* 2. Toggle Option */}
+      <div className="flex items-center space-x-3 p-4 bg-muted/30 rounded-lg border border-dashed border-border">
+        <Checkbox 
+          id="useUrl" 
+          checked={useUrl} 
+          onCheckedChange={(checked) => onUseUrlChange(checked === true)} 
+        />
+        <Label htmlFor="useUrl" className="text-sm font-medium cursor-pointer">
+          Use the photos from my listing URL instead
+        </Label>
       </div>
 
-      {/* Too Many Photos Warning */}
-      {showTooManyPhotosWarning && (
-        <div className="bg-accent/10 border border-accent rounded-xl p-4 flex items-start gap-4">
-          <AlertCircle className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold">More than 35 photos detected</p>
-            <a href="tel:+18455366954" className="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline">
-              <Phone className="h-4 w-4" />1 (845) 536-6954
-            </a>
+      {/* 3. Expanded URL Container */}
+      {useUrl && (
+        <div className="space-y-6 p-6 border rounded-xl bg-card animate-in fade-in slide-in-from-top-2">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <LinkIcon className="h-4 w-4" /> Listing URL
+            </Label>
+            <Input 
+              placeholder="https://www.zillow.com/homedetails/..." 
+              value={urlValue}
+              onChange={(e) => onUrlValueChange(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label>Select Photo Package</Label>
+            <RadioGroup value={urlPackage} onValueChange={onUrlPackageChange} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                <RadioGroupItem value="15" id="r15" />
+                <Label htmlFor="r15" className="cursor-pointer">Up to 15 photos <br/><span className="font-bold">$79</span></Label>
+              </div>
+              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                <RadioGroupItem value="25" id="r25" />
+                <Label htmlFor="r25" className="cursor-pointer">Up to 25 photos <br/><span className="font-bold">$129</span></Label>
+              </div>
+              <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                <RadioGroupItem value="35" id="r35" />
+                <Label htmlFor="r35" className="cursor-pointer">Up to 35 photos <br/><span className="font-bold">$179</span></Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="flex items-center space-x-3 pt-2">
+            <Checkbox 
+              id="permission" 
+              checked={urlPermission} 
+              onCheckedChange={(checked) => onUrlPermissionChange(checked === true)} 
+            />
+            <Label htmlFor="permission" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+              I give permission to choose and sequence the photos as you decide.
+            </Label>
           </div>
         </div>
       )}
 
-      {/* Photo Count */}
-      {photos.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ImageIcon className="h-5 w-5" />
-            <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</span>
-          </div>
-          <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
-        </div>
-      )}
-
-      {/* Photo List */}
-      <div className="flex flex-col gap-2">
-        {photos.map((photo, index) => (
-          <div
-            key={photo.id}
-            draggable // Enables dragging
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDrop={handleDrop}
-            className={`relative bg-card border rounded-xl overflow-hidden transition-all flex items-center gap-2 p-2 sm:p-3 cursor-move ${
-              dragOverIndex === index ? "border-primary border-t-4" : "border-border"
-            } ${draggedIndex === index ? "opacity-50" : "opacity-100"}`}
-          >
-            {/* Drag Handle Icon */}
-            <div className="text-muted-foreground/50">
-              <GripVertical className="h-5 w-5" />
-            </div>
-
-            {/* Reorder Buttons (Arrows) */}
-            <div className="flex flex-col gap-1 flex-shrink-0">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); moveUp(index); }}
-                disabled={index === 0}
-                className={`p-1 rounded-lg ${index === 0 ? "text-muted-foreground/20" : "hover:bg-muted"}`}
-              >
-                <ChevronUp className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); moveDown(index); }}
-                disabled={index === photos.length - 1}
-                className={`p-1 rounded-lg ${index === photos.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted"}`}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Photo Number */}
-            <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {index + 1}
-            </div>
-
-            {/* Thumbnail */}
-            <div className="h-14 w-20 sm:h-16 sm:w-24 relative rounded-lg overflow-hidden flex-shrink-0 border">
-              <Image src={photo.preview || "/placeholder.svg"} alt="" fill className="object-cover" />
-            </div>
-
-            {/* Description */}
-            <div className="flex-1 min-w-0 hidden sm:block">
+      {/* 4. Photo List (Only show if not using URL and photos exist) */}
+      {!useUrl && photos.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {photos.map((photo, index) => (
+            <div
+              key={photo.id}
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={handleDrop}
+              className={`relative bg-card border rounded-xl overflow-hidden flex items-center gap-2 p-2 sm:p-3 cursor-move ${
+                dragOverIndex === index ? "border-primary border-t-4" : "border-border"
+              } ${draggedIndex === index ? "opacity-50" : "opacity-100"}`}
+            >
+              <GripVertical className="h-5 w-5 text-muted-foreground/50" />
+              <div className="flex flex-col gap-1">
+                <button type="button" onClick={() => moveUp(index)} disabled={index === 0} className="p-1"><ChevronUp className="h-4 w-4"/></button>
+                <button type="button" onClick={() => moveDown(index)} disabled={index === photos.length - 1} className="p-1"><ChevronDown className="h-4 w-4"/></button>
+              </div>
+              <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold">{index + 1}</div>
+              <div className="h-14 w-20 relative rounded-lg overflow-hidden border">
+                <Image src={photo.preview} alt="" fill className="object-cover" />
+              </div>
               <Input
-                placeholder="Label (e.g. Kitchen)"
+                placeholder="Label"
                 value={photo.description}
                 onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
-                maxLength={30}
                 className="text-sm h-8"
               />
+              <button type="button" onClick={() => handleRemove(photo.id)} className="p-2 text-muted-foreground hover:text-destructive ml-auto"><X className="h-5 w-5" /></button>
             </div>
-
-            {/* Remove Button */}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRemove(photo.id); }}
-              className="p-2 text-muted-foreground hover:text-destructive ml-auto"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Add More Button */}
-      {photos.length > 0 && !showTooManyPhotosWarning && (
-        <div className="text-center pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => document.getElementById("photo-upload")?.click()}
-          >
-            <Upload className="mr-2 h-4 w-4" /> Add More Photos
-          </Button>
+          ))}
         </div>
       )}
     </div>
