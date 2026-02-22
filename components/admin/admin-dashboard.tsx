@@ -568,6 +568,39 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
 
 
 
+             {/* Listing URL indicator — shown for URL-based orders with no uploaded photos */}
+             {order.listing_url && sortedPhotos.length === 0 && (
+
+               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-2">
+
+                 <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest block">🔗 Listing URL Order</span>
+
+                 <p className="text-[11px] text-slate-500 italic">No photos uploaded — download from the listing link below.</p>
+
+                 <a
+
+                   href={order.listing_url}
+
+                   target="_blank"
+
+                   rel="noreferrer"
+
+                   className="inline-flex items-center gap-2 text-blue-600 font-black text-[11px] underline underline-offset-2 hover:text-blue-800 break-all"
+
+                 >
+
+                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
+
+                   {order.listing_url}
+
+                 </a>
+
+               </div>
+
+             )}
+
+
+
              <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-inner">
 
                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -805,4 +838,3 @@ function OrderRow({ order, isLive }: { order: any, isLive: boolean }) {
   )
 
 }
-
