@@ -13,13 +13,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
+import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
 
 type OrderStep = "upload" | "details" | "payment";
+type PhotoInputMode = "upload" | "url";
+
+interface ListingPackage {
+  label: string;
+  photoCount: number;
+  price: number;
+}
+
+const LISTING_PACKAGES: ListingPackage[] = [
+  { label: "Up to 15 Photos", photoCount: 15, price: 79 },
+  { label: "Up to 25 Photos", photoCount: 25, price: 129 },
+  { label: "Up to 35 Photos", photoCount: 35, price: 179 },
+];
 
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
+  const [photoInputMode, setPhotoInputMode] = useState<PhotoInputMode>("upload");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [listingUrl, setListingUrl] = useState("");
+  const [listingPackage, setListingPackage] = useState<ListingPackage | null>(null);
+  const [listingPermission, setListingPermission] = useState(false);
   const [musicSelection, setMusicSelection] = useState("");
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
@@ -39,9 +56,17 @@ export function OrderForm() {
   });
 
   const photoCount = photos.length;
-  const canProceed = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
+
+  const isUrlMode = photoInputMode === "url";
+  const isUploadMode = photoInputMode === "upload";
+
+  // Determine if the user can proceed to step 2
+  const canProceedUpload = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
+  const canProceedUrl = listingUrl.trim() !== "" && listingPackage !== null && listingPermission && musicSelection !== "";
+  const canProceed = isUploadMode ? canProceedUpload : canProceedUrl;
 
   const getBasePrice = () => {
+    if (isUrlMode && listingPackage) return listingPackage.price;
     if (photoCount === 1) return 1; // Test price
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
@@ -65,7 +90,6 @@ export function OrderForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder: `photo2video/${folder}` }),
       });
-      
       const sigData = await sigResponse.json();
       if (!sigData.success) throw new Error("Signature failed");
       const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
@@ -75,9 +99,9 @@ export function OrderForm() {
       uploadData.append("timestamp", timestamp.toString());
       uploadData.append("signature", signature);
       uploadData.append("folder", folderPath);
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { 
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
         method: "POST",
-        body: uploadData
+        body: uploadData,
       });
       return await response.json();
     } catch (error) {
@@ -93,36 +117,46 @@ export function OrderForm() {
     }
     setIsSubmitting(true);
     try {
-      const uploadedPhotos = [];
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        const blob = photo.file || await (await fetch(photo.preview)).blob();
-        const result = await uploadToCloudinary(blob, "orders");
-        if (result) {
-          uploadedPhotos.push({
-            public_id: result.public_id,
-            secure_url: result.secure_url,
-            order: i,
-            description: photo.description || "",
-          });
+      let uploadedPhotos: any[] = [];
+
+      // Only upload photos if in upload mode
+      if (isUploadMode) {
+        for (let i = 0; i < photos.length; i++) {
+          const photo = photos[i];
+          const blob = photo.file || await (await fetch(photo.preview)).blob();
+          const result = await uploadToCloudinary(blob, "orders");
+          if (result) {
+            uploadedPhotos.push({
+              public_id: result.public_id,
+              secure_url: result.secure_url,
+              order: i,
+              description: photo.description || "",
+            });
+          }
         }
       }
+
       let brandingLogoUrl = "";
       if (brandingData.logoFile) {
         const logoResult = await uploadToCloudinary(brandingData.logoFile, "logos");
         brandingLogoUrl = logoResult?.secure_url || "";
       }
+
       let musicFileUrl = "";
       if (customAudioFile) {
         const musicResult = await uploadToCloudinary(customAudioFile, "audio");
         musicFileUrl = musicResult?.secure_url || "";
       }
+
       const dbResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: { name: formData.name, email: formData.email, phone: formData.phone },
           uploadedPhotos,
+          listing_url: isUrlMode ? listingUrl.trim() : null,
+          listing_package_price: isUrlMode && listingPackage ? listingPackage.price : null,
+          listing_package_label: isUrlMode && listingPackage ? listingPackage.label : null,
           musicSelection,
           musicFile: musicFileUrl,
           branding: {
@@ -139,21 +173,35 @@ export function OrderForm() {
           voiceoverVoice: selectedVoice,
           includeEditedPhotos,
           totalPrice: getTotalPrice(),
-          specialInstructions: formData.notes
+          specialInstructions: formData.notes,
         }),
       });
+
       const dbResult = await dbResponse.json();
       if (!dbResult.success) throw new Error(dbResult.error || "Failed to save to database");
+
       const createdOrderId = dbResult.data.orderId;
+
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: [{ name: `${photoCount} Photo Video Package`, amount: getTotalPrice() * 100 }],
+          items: [
+            {
+              name: isUrlMode && listingPackage
+                ? `${listingPackage.label} — Listing URL Order`
+                : `${photoCount} Photo Video Package`,
+              amount: getTotalPrice() * 100,
+            },
+          ],
           customerDetails: formData,
-          orderData: { orderId: createdOrderId, photoCount },
+          orderData: {
+            orderId: createdOrderId,
+            photoCount: isUrlMode && listingPackage ? listingPackage.photoCount : photoCount,
+          },
         }),
       });
+
       const session = await checkoutResponse.json();
       if (!checkoutResponse.ok || !session.url) {
         throw new Error(session.error || "Checkout failed");
@@ -165,6 +213,22 @@ export function OrderForm() {
       setIsSubmitting(false);
     }
   };
+
+  const handleModeSwitch = (mode: PhotoInputMode) => {
+    setPhotoInputMode(mode);
+    // Reset the other mode's state to avoid stale data
+    if (mode === "upload") {
+      setListingUrl("");
+      setListingPackage(null);
+      setListingPermission(false);
+    } else {
+      setSequenceConfirmed(false);
+    }
+  };
+
+  // Determine if the customization options (music, branding, etc.) should be shown
+  const showCustomizationOptions =
+    (isUploadMode && photos.length > 0) || isUrlMode;
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
@@ -178,13 +242,117 @@ export function OrderForm() {
           <div className="space-y-6">
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">1</div>
-                <h2 className="text-xl font-bold">Start by uploading Your Photos</h2>
+                <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                  1
+                </div>
+                <h2 className="text-xl font-bold">Start by Uploading Your Photos</h2>
               </div>
-              <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
+
+              {/* Mode Toggle Buttons */}
+              <div className="flex gap-2 mb-6">
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("upload")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all ${
+                    isUploadMode
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload My Photos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("url")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all ${
+                    isUrlMode
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  🔗 Use My Listing Link
+                </button>
+              </div>
+
+              {/* Upload Mode */}
+              {isUploadMode && (
+                <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
+              )}
+
+              {/* URL Mode */}
+              {isUrlMode && (
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="listing-url" className="font-semibold">
+                      Paste Your Listing URL
+                    </Label>
+                    <Input
+                      id="listing-url"
+                      type="url"
+                      placeholder="https://www.zillow.com/homedetails/your-listing..."
+                      value={listingUrl}
+                      onChange={(e) => setListingUrl(e.target.value)}
+                      className="h-11"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      We'll visit your listing page and download the photos on your behalf.
+                    </p>
+                  </div>
+
+                  {/* Package Selection */}
+                  <div className="space-y-3">
+                    <Label className="font-semibold">Select Your Package</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {LISTING_PACKAGES.map((pkg) => (
+                        <button
+                          key={pkg.photoCount}
+                          type="button"
+                          onClick={() => setListingPackage(pkg)}
+                          className={`flex flex-col items-center justify-center gap-1 py-4 px-2 rounded-xl border-2 font-semibold text-sm transition-all ${
+                            listingPackage?.photoCount === pkg.photoCount
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          <span className="text-xl font-black text-foreground">
+                            ${pkg.price}
+                          </span>
+                          <span className="text-xs font-medium text-muted-foreground text-center leading-tight">
+                            {pkg.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Permission Checkbox */}
+                  <div className={`rounded-xl border-2 p-4 transition-colors ${
+                    listingPermission
+                      ? "bg-green-50/50 border-green-500"
+                      : "bg-muted/30 border-border"
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="listing-permission"
+                        checked={listingPermission}
+                        onCheckedChange={(checked) => setListingPermission(checked === true)}
+                        className="h-5 w-5 mt-0.5 bg-white"
+                      />
+                      <label htmlFor="listing-permission" className="text-sm font-medium cursor-pointer leading-snug">
+                        I give permission to select and sequence the photos from my listing as they see fit to create the best possible video.
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            {photos.length > 0 && (
-              <div className={`rounded-2xl border-2 p-6 transition-colors ${sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"}`}>
+
+            {/* Sequence confirmation — only in upload mode */}
+            {isUploadMode && photos.length > 0 && (
+              <div className={`rounded-2xl border-2 p-6 transition-colors ${
+                sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"
+              }`}>
                 <div className="flex items-center gap-4">
                   <Checkbox
                     id="confirm"
@@ -198,33 +366,67 @@ export function OrderForm() {
                 </div>
               </div>
             )}
-            {photos.length > 0 && (
+
+            {/* Customization options — show when photos uploaded OR url mode active */}
+            {showCustomizationOptions && (
               <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
-                <MusicSelector selected={musicSelection} onSelect={setMusicSelection} customAudioFile={customAudioFile} onCustomAudioChange={setCustomAudioFile} />
+                <MusicSelector
+                  selected={musicSelection}
+                  onSelect={setMusicSelection}
+                  customAudioFile={customAudioFile}
+                  onCustomAudioChange={setCustomAudioFile}
+                />
                 <div className="border-t pt-6">
-                  <BrandingSelector selected={brandingSelection} onSelect={setBrandingSelection} brandingData={brandingData} onBrandingDataChange={setBrandingData} />
+                  <BrandingSelector
+                    selected={brandingSelection}
+                    onSelect={setBrandingSelection}
+                    brandingData={brandingData}
+                    onBrandingDataChange={setBrandingData}
+                  />
                 </div>
                 <div className="border-t pt-6">
-                  <VoiceoverSelector selected={voiceoverSelection} onSelect={setVoiceoverSelection} script={voiceoverScript} onScriptChange={setVoiceoverScript} selectedVoice={selectedVoice} onVoiceSelect={setSelectedVoice} />
+                  <VoiceoverSelector
+                    selected={voiceoverSelection}
+                    onSelect={setVoiceoverSelection}
+                    script={voiceoverScript}
+                    onScriptChange={setVoiceoverScript}
+                    selectedVoice={selectedVoice}
+                    onVoiceSelect={setSelectedVoice}
+                  />
                 </div>
                 <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                   <div className="pr-4">
                     <p className="font-bold">Include Edited Photos (+$15)</p>
-                    <p className="text-sm text-muted-foreground">Receive high-res professionally edited files of your photos.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Receive high-res professionally edited files of your photos.
+                    </p>
                   </div>
-                  <Switch 
-                    checked={includeEditedPhotos} 
-                    onCheckedChange={setIncludeEditedPhotos} // FIXED: Now correctly triggers the setter
+                  <Switch
+                    checked={includeEditedPhotos}
+                    onCheckedChange={setIncludeEditedPhotos}
                     className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
                   {!musicSelection && (
-                    <p className="text-xs text-red-500 italic text-right">* Please select a music</p>
+                    <p className="text-xs text-red-500 italic text-right">* Please select a music track</p>
                   )}
-                  
-                  <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
+                  {isUrlMode && !listingUrl.trim() && (
+                    <p className="text-xs text-red-500 italic text-right">* Please paste your listing URL</p>
+                  )}
+                  {isUrlMode && !listingPackage && (
+                    <p className="text-xs text-red-500 italic text-right">* Please select a package</p>
+                  )}
+                  {isUrlMode && !listingPermission && (
+                    <p className="text-xs text-red-500 italic text-right">* Please confirm the permission checkbox</p>
+                  )}
+
+                  <Button
+                    onClick={() => setStep("details")}
+                    disabled={!canProceed}
+                    className="w-full py-6 text-lg bg-accent"
+                  >
                     Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </div>
@@ -232,11 +434,12 @@ export function OrderForm() {
             )}
           </div>
         )}
+
         {step === "details" && (
           <div className="bg-card rounded-2xl border border-border p-8 space-y-6">
-             <Button variant="ghost" onClick={() => setStep("upload")} className="mb-4">
-                <ChevronLeft className="mr-2 h-4 w-4" /> Back to Customization
-             </Button>
+            <Button variant="ghost" onClick={() => setStep("upload")} className="mb-4">
+              <ChevronLeft className="mr-2 h-4 w-4" /> Back to Customization
+            </Button>
             <h2 className="text-2xl font-bold">Your Details</h2>
             <div className="grid gap-4">
               <div className="space-y-2">
@@ -257,17 +460,27 @@ export function OrderForm() {
               </div>
             </div>
             <Button
-                onClick={handleSubmitOrder}
-                disabled={isSubmitting || !formData.name || !formData.email}
-                className="w-full py-6 text-lg bg-accent"
+              onClick={handleSubmitOrder}
+              disabled={isSubmitting || !formData.name || !formData.email}
+              className="w-full py-6 text-lg bg-accent"
             >
-              {isSubmitting ? <><Loader2 className="mr-2 animate-spin" /> Processing Order...</> : <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>}
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 animate-spin" /> Processing Order...</>
+              ) : (
+                <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>
+              )}
             </Button>
           </div>
         )}
       </div>
+
       <div className="lg:col-span-1">
-        <OrderSummary photoCount={photoCount} brandingOption={brandingSelection} voiceoverOption={voiceoverSelection} includeEditedPhotos={includeEditedPhotos} />
+        <OrderSummary
+          photoCount={isUrlMode && listingPackage ? listingPackage.photoCount : photoCount}
+          brandingOption={brandingSelection}
+          voiceoverOption={voiceoverSelection}
+          includeEditedPhotos={includeEditedPhotos}
+        />
       </div>
     </div>
   );
