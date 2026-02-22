@@ -104,7 +104,12 @@ export async function POST(request: Request) {
       voiceover: input.voiceover || false,
       voiceover_script: input.voiceoverScript || null,
       voiceover_voice: input.voiceoverVoice || null,
-      special_instructions: input.specialInstructions || null,
+      special_instructions: (() => {
+        const parts = [];
+        if (input.listing_instructions) parts.push(`📸 Photo Instructions: ${input.listing_instructions}`);
+        if (input.specialInstructions) parts.push(input.specialInstructions);
+        return parts.length > 0 ? parts.join("\n\n") : null;
+      })(),
       include_edited_photos: input.includeEditedPhotos || false,
       base_price: basePrice,
       branding_fee: brandingFee,
