@@ -1,121 +1,44 @@
-"use client";
+ "use client";
 
-import React, { useState } from "react";
-import Script from "next/script";
-import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
-// ... other imports remain the same
+import * as React from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PhotoUploader } from "@/components/photo-uploader";
+import { OrderSummary } from "@/components/order-summary";
+import { MusicSelector } from "@/components/music-selector";
+import { BrandingSelector } from "@/components/branding-selector";
+import { VoiceoverSelector } from "@/components/voiceover-selector";
 
 export function OrderForm() {
-  const [step, setStep] = useState<OrderStep>("upload");
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  // 1. STATE MANAGEMENT
+  const [step, setStep] = React.useState<"upload" | "details">("upload");
+  const [photos, setPhotos] = React.useState<File[]>([]);
+  const [useUrl, setUseUrl] = React.useState(false);
+  const [url, setUrl] = React.useState("");
+  const [urlPackage, setUrlPackage] = React.useState("15");
   
-  // NEW URL STATES
-  const [useUrl, setUseUrl] = useState(false);
-  const [urlValue, setUrlValue] = useState("");
-  const [urlPackage, setUrlPackage] = useState("15"); // Default to 15
-  const [urlPermission, setUrlPermission] = useState(false);
+  // Add-on Selections
+  const [musicSelection, setMusicSelection] = React.useState("none");
+  const [brandingSelection, setBrandingSelection] = React.useState("unbranded");
+  const [voiceoverSelection, setVoiceoverSelection] = React.useState("none");
+  const [includeEditedPhotos, setIncludeEditedPhotos] = React.useState(false);
 
-  const [musicSelection, setMusicSelection] = useState("");
-  const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
-  const [brandingSelection, setBrandingSelection] = useState("unbranded");
-  const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
-  const [voiceoverSelection, setVoiceoverSelection] = useState("none");
-  const [voiceoverScript, setVoiceoverScript] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("");
-  const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
-  const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
-
-  // UPDATED VALIDATION LOGIC
-  const isUrlModeValid = useUrl && urlValue.length > 5 && urlPermission;
-  const isUploadModeValid = !useUrl && photos.length > 0 && photos.length <= 35 && sequenceConfirmed;
-  
-  const canProceed = (isUrlModeValid || isUploadModeValid) && musicSelection !== "";
-
-  // UPDATED PRICE CALCULATION
-  const getBasePrice = () => {
-    if (useUrl) {
-      if (urlPackage === "15") return 79;
-      if (urlPackage === "25") return 129;
-      if (urlPackage === "35") return 179;
-    } else {
-      const count = photos.length;
-      if (count === 0) return 0;
-      if (count === 1) return 1; // Your test price
-      if (count <= 15) return 79;
-      if (count <= 25) return 129;
-      if (count <= 35) return 179;
-    }
-    return 0;
-  };
-
-  const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
-  const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
-  const getTotalPrice = () => getBasePrice() + getVoiceoverPrice() + getEditedPhotosPrice();
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // UPDATED SUBMISSION LOGIC
-  const handleSubmitOrder = async () => {
-    if (!formData.name || !formData.email) {
-      alert("Please fill in your name and email.");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      let uploadedPhotos = [];
-      
-      // Only upload photos if NOT using URL
-      if (!useUrl) {
-        for (let i = 0; i < photos.length; i++) {
-          const photo = photos[i];
-          const blob = photo.file || await (await fetch(photo.preview)).blob();
-          const result = await uploadToCloudinary(blob, "orders");
-          if (result) {
-            uploadedPhotos.push({
-              public_id: result.public_id,
-              secure_url: result.secure_url,
-              order: i,
-              description: photo.description || "",
-            });
-          }
-        }
-      }
-
-      // ... existing branding/music upload logic ...
-
-      const dbResponse = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: { name: formData.name, email: formData.email, phone: formData.phone },
-          uploadedPhotos, // Will be empty if useUrl is true
-          listingUrl: useUrl ? urlValue : null,
-          photoPackage: useUrl ? urlPackage : photos.length,
-          musicSelection,
-          // ... rest of your payload ...
-        }),
-      });
-      
-      // ... rest of checkout logic ...
-    } catch (error: any) {
-      alert("Error processing order: " + error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // 2. VALIDATION HELPERS
+  // A user can only proceed if they've uploaded photos OR provided a URL
+  const isUrlModeValid = useUrl && url.trim().length > 0;
+  const isUploadModeValid = !useUrl && photos.length > 0;
+  const canProceed = isUrlModeValid || isUploadModeValid;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:col-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* LEFT COLUMN: THE FORM */}
         <div className="lg:col-span-2 space-y-8">
           
           {/* STEP 1: UPLOAD & ADD-ONS */}
           {step === "upload" && (
             <div className="space-y-8">
+              {/* Photo Upload Section */}
               <PhotoUploader
                 photos={photos}
                 setPhotos={setPhotos}
@@ -127,8 +50,11 @@ export function OrderForm() {
                 setUrlPackage={setUrlPackage}
               />
 
-              {(isUrlModeValid || isUploadModeValid) && (
-                <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
+              {/* Only show Add-ons and Next button if they have started the order */}
+              {canProceed && (
+                <div className="bg-card rounded-2xl border border-border p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <h2 className="text-xl font-bold border-b pb-4">Customize Your Video</h2>
+                  
                   <MusicSelector 
                     value={musicSelection} 
                     onValueChange={setMusicSelection} 
@@ -149,21 +75,28 @@ export function OrderForm() {
                   </div>
 
                   <div className="border-t pt-6">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                       <Checkbox 
                         id="editedPhotos" 
                         checked={includeEditedPhotos}
                         onCheckedChange={(checked) => setIncludeEditedPhotos(!!checked)}
+                        className="h-5 w-5"
                       />
-                      <label htmlFor="editedPhotos" className="text-sm font-medium leading-none">
+                      <label 
+                        htmlFor="editedPhotos" 
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Include Edited Photos Package (+$15)
                       </label>
                     </div>
+                    <p className="text-xs text-muted-foreground ml-8 mt-1">
+                      Get the professionally edited still photos used in your video.
+                    </p>
                   </div>
                   
                   <button
                     onClick={() => setStep("details")}
-                    className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold text-lg hover:opacity-90 transition-opacity"
+                    className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold text-lg hover:opacity-90 transition-all shadow-lg active:scale-[0.98]"
                   >
                     Next: Property Details
                   </button>
@@ -172,25 +105,27 @@ export function OrderForm() {
             </div>
           )}
 
-          {/* STEP 2: PROPERTY DETAILS */}
+          {/* STEP 2: PROPERTY DETAILS (Placeholder for now) */}
           {step === "details" && (
-            <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="bg-card rounded-2xl border border-border p-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <button
+                onClick={() => setStep("upload")}
+                className="text-sm text-muted-foreground hover:text-primary mb-4 transition-colors"
+              >
+                ← Back to uploads
+              </button>
+              
               <h2 className="text-2xl font-bold mb-6">Property Details</h2>
-              {/* If you have a DetailsForm component, it goes here */}
-              <div className="space-y-4">
-                <p className="text-muted-foreground">Please enter the property address and any special instructions.</p>
-                <button
-                  onClick={() => setStep("upload")}
-                  className="text-sm text-primary hover:underline"
-                >
-                  ← Back to uploads
-                </button>
+              <div className="p-12 border-2 border-dashed rounded-xl text-center space-y-4">
+                <p className="text-muted-foreground">Address and Checkout fields will appear here.</p>
+                <div className="h-4 w-48 bg-muted animate-pulse mx-auto rounded" />
+                <div className="h-4 w-64 bg-muted animate-pulse mx-auto rounded" />
               </div>
             </div>
           )}
         </div>
 
-        {/* RIGHT SIDE: ORDER SUMMARY */}
+        {/* RIGHT COLUMN: ORDER SUMMARY (Sticky) */}
         <div className="lg:col-span-1">
           <OrderSummary 
             photoCount={useUrl ? parseInt(urlPackage) : photos.length} 
@@ -200,6 +135,7 @@ export function OrderForm() {
             isUrlMode={useUrl}
           />
         </div>
+        
       </div>
     </div>
   );
