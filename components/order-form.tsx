@@ -17,7 +17,7 @@ import { ArrowRight, ChevronLeft, Loader2 } from "lucide-react";
 export function OrderForm() {
   // 1. STATE MANAGEMENT
   const [step, setStep] = React.useState<"upload" | "details">("upload");
-  const [photos, setPhotos] = React.useState<File[]>([]);
+  const [photos, setPhotos] = React.useState<any[]>([]);
   const [useUrl, setUseUrl] = React.useState(false);
   const [url, setUrl] = React.useState("");
   const [urlPackage, setUrlPackage] = React.useState("15");
@@ -37,11 +37,13 @@ export function OrderForm() {
     notes: ""
   });
 
-  // 3. CALCULATION HELPERS (Matching your original logic)
+  // 3. CALCULATION HELPERS
   const photoCount = useUrl ? parseInt(urlPackage) : photos.length;
   const isUrlModeValid = useUrl && url.trim().length > 0;
   const isUploadModeValid = !useUrl && photos.length > 0;
-  const canProceed = (isUrlModeValid || isUploadModeValid) && musicSelection !== "none";
+  
+  // FIXED: Ensure canProceed requires music selection as per your original logic
+  const canProceed = (isUrlModeValid || isUploadModeValid) && musicSelection !== "none" && musicSelection !== "";
 
   const getBasePrice = () => {
     if (photoCount === 1) return 1; // Test price
@@ -60,7 +62,7 @@ export function OrderForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 4. STRIPE & CLOUDINARY LOGIC (Pasted from your original)
+  // 4. STRIPE & CLOUDINARY LOGIC
   const uploadToCloudinary = async (file: Blob, folder: string) => {
     try {
       const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -95,11 +97,11 @@ export function OrderForm() {
     }
     setIsSubmitting(true);
     try {
-      // Upload manual photos only if NOT using a URL
       const uploadedPhotos = [];
       if (!useUrl) {
         for (let i = 0; i < photos.length; i++) {
-          const result = await uploadToCloudinary(photos[i], "orders");
+          const fileToUpload = photos[i].file || photos[i]; 
+          const result = await uploadToCloudinary(fileToUpload, "orders");
           if (result) {
             uploadedPhotos.push({
               public_id: result.public_id,
@@ -160,7 +162,9 @@ export function OrderForm() {
           {step === "upload" && (
             <div className="space-y-8">
               <PhotoUploader
-                photos={photos} setPhotos={setPhotos}
+                photos={photos} 
+                setPhotos={setPhotos} // Used for new version
+                onPhotosChange={setPhotos} // Support for old version naming
                 useUrl={useUrl} setUseUrl={setUseUrl}
                 url={url} setUrl={setUrl}
                 urlPackage={urlPackage} setUrlPackage={setUrlPackage}
@@ -168,14 +172,27 @@ export function OrderForm() {
               />
 
               {(isUrlModeValid || isUploadModeValid) && (
-                <div className="bg-card rounded-2xl border border-border p-6 space-y-8 relative z-10">
+                <div className="bg-card rounded-2xl border border-border p-6 space-y-8 relative z-20">
                   <h2 className="text-xl font-bold border-b pb-4">Customize Your Video</h2>
-                  <MusicSelector value={musicSelection} onValueChange={setMusicSelection} />
+                  
+                  {/* FIXED: Using your original prop names 'selected' and 'onSelect' */}
+                  <MusicSelector 
+                    selected={musicSelection} 
+                    onSelect={setMusicSelection} 
+                  />
+                  
                   <div className="border-t pt-6">
-                    <BrandingSelector value={brandingSelection} onValueChange={setBrandingSelection} />
+                    <BrandingSelector 
+                      selected={brandingSelection} 
+                      onSelect={setBrandingSelection} 
+                    />
                   </div>
+
                   <div className="border-t pt-6">
-                    <VoiceoverSelector value={voiceoverSelection} onValueChange={setVoiceoverSelection} />
+                    <VoiceoverSelector 
+                      selected={voiceoverSelection} 
+                      onSelect={setVoiceoverSelection} 
+                    />
                   </div>
 
                   <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
@@ -183,12 +200,22 @@ export function OrderForm() {
                       <p className="font-bold">Include Edited Photos (+$15)</p>
                       <p className="text-sm text-muted-foreground">Receive high-res professionally edited files of your photos.</p>
                     </div>
-                    <Switch checked={includeEditedPhotos} onCheckedChange={setIncludeEditedPhotos} className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400" />
+                    <Switch 
+                      checked={includeEditedPhotos} 
+                      onCheckedChange={setIncludeEditedPhotos} 
+                      className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400" 
+                    />
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    {musicSelection === "none" && <p className="text-xs text-red-500 italic text-right">* Please select a music</p>}
-                    <Button onClick={() => setStep("details")} disabled={!canProceed} className="w-full py-6 text-lg bg-accent">
+                    {(musicSelection === "none" || musicSelection === "") && (
+                      <p className="text-xs text-red-500 italic text-right">* Please select a music</p>
+                    )}
+                    <Button 
+                      onClick={() => setStep("details")} 
+                      disabled={!canProceed} 
+                      className="w-full py-6 text-lg bg-accent"
+                    >
                       Continue to Details <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                   </div>
@@ -209,15 +236,29 @@ export function OrderForm() {
                 <div className="space-y-2"><Label>Phone (Optional)</Label><Input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="(555) 000-0000" /></div>
                 <div className="space-y-2"><Label>Special Instructions</Label><Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Add any specific requests here..." /></div>
               </div>
-              <Button onClick={handleSubmitOrder} disabled={isSubmitting || !formData.name || !formData.email} className="w-full py-6 text-lg bg-accent">
-                {isSubmitting ? <><Loader2 className="mr-2 animate-spin" /> Processing Order...</> : <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>}
+              <Button 
+                onClick={handleSubmitOrder} 
+                disabled={isSubmitting || !formData.name || !formData.email} 
+                className="w-full py-6 text-lg bg-accent"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="mr-2 animate-spin" /> Processing Order...</>
+                ) : (
+                  <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>
+                )}
               </Button>
             </div>
           )}
         </div>
 
         <div className="lg:col-span-1">
-          <OrderSummary photoCount={photoCount} brandingOption={brandingSelection} voiceoverOption={voiceoverSelection} includeEditedPhotos={includeEditedPhotos} isUrlMode={useUrl} />
+          <OrderSummary 
+            photoCount={photoCount} 
+            brandingOption={brandingSelection} 
+            voiceoverOption={voiceoverSelection} 
+            includeEditedPhotos={includeEditedPhotos} 
+            isUrlMode={useUrl} 
+          />
         </div>
       </div>
     </div>
