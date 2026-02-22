@@ -1,205 +1,171 @@
 "use client";
 
-import * as React from "react";
-import { Upload, Link, X } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea"; // Ensure you have this UI component
+import {
+  Upload,
+  X,
+  ChevronUp,
+  ChevronDown,
+  ImageIcon,
+  AlertCircle,
+  Phone,
+  GripVertical,
+  Link as LinkIcon
+} from "lucide-react";
 
-interface PhotoUploaderProps {
-  photos: File[];
-  setPhotos: React.Dispatch<React.SetStateAction<File[]>>;
-  useUrl: boolean;
-  setUseUrl: (value: boolean) => void;
-  url: string;
-  setUrl: (value: string) => void;
-  urlPackage: string;
-  setUrlPackage: (value: string) => void;
-  instructions: string;                             // NEW
-  setInstructions: (value: string) => void;         // NEW
+export interface PhotoItem {
+  id: string;
+  file: File;
+  preview: string;
+  description: string;
 }
 
-export function PhotoUploader({
-  photos,
-  setPhotos,
+interface PhotoUploaderProps {
+  photos: PhotoItem[];
+  onPhotosChange: (photos: PhotoItem[]) => void;
+  // Added these props
+  useUrl: boolean;
+  onUseUrlChange: (val: boolean) => void;
+  url: string;
+  onUrlChange: (val: string) => void;
+  urlInstructions: string;
+  onUrlInstructionsChange: (val: string) => void;
+}
+
+export function PhotoUploader({ 
+  photos, 
+  onPhotosChange,
   useUrl,
-  setUseUrl,
+  onUseUrlChange,
   url,
-  setUrl,
-  urlPackage,
-  setUrlPackage,
-  instructions,
-  setInstructions,
+  onUrlChange,
+  urlInstructions,
+  onUrlInstructionsChange
 }: PhotoUploaderProps) {
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setPhotos((prev) => [...prev, ...newFiles]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      const newPhotos: PhotoItem[] = files.map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        file,
+        preview: URL.createObjectURL(file),
+        description: "",
+      }));
+      onPhotosChange([...photos, ...newPhotos]);
+    },
+    [photos, onPhotosChange]
+  );
+
+  const handleRemove = useCallback(
+    (id: string) => {
+      const photo = photos.find((p) => p.id === id);
+      if (photo) { URL.revokeObjectURL(photo.preview); }
+      onPhotosChange(photos.filter((p) => p.id !== id));
+    },
+    [photos, onPhotosChange]
+  );
+
+  const handleDragStart = (index: number) => setDraggedIndex(index);
+  const handleDragOver = (e: React.DragEvent, index: number) => { e.preventDefault(); setDragOverIndex(index); };
+  const handleDrop = () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newPhotos = [...photos];
+      const [movedItem] = newPhotos.splice(draggedIndex, 1);
+      newPhotos.splice(dragOverIndex, 0, movedItem);
+      onPhotosChange(newPhotos);
     }
+    setDraggedIndex(null); setDragOverIndex(null);
   };
 
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const newPhotos = [...photos];
+    [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
+    onPhotosChange(newPhotos);
+  };
+
+  const moveDown = (index: number) => {
+    if (index === photos.length - 1) return;
+    const newPhotos = [...photos];
+    [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]];
+    onPhotosChange(newPhotos);
   };
 
   return (
     <div className="space-y-6">
-      {/* 1. SELECTION TABS */}
+      {/* Selector Toggle */}
       <div className="flex bg-muted p-1 rounded-xl">
-        <button
-          onClick={() => setUseUrl(false)}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all",
-            !useUrl ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          )}
+        <button 
+          onClick={() => onUseUrlChange(false)}
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!useUrl ? "bg-background shadow-sm" : "text-muted-foreground"}`}
         >
-          <Upload className="h-4 w-4" />
           Upload Photos
         </button>
-        <button
-          onClick={() => setUseUrl(true)}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all",
-            useUrl ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          )}
+        <button 
+          onClick={() => onUseUrlChange(true)}
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${useUrl ? "bg-background shadow-sm" : "text-muted-foreground"}`}
         >
-          <Link className="h-4 w-4" />
           Use Listing URL
         </button>
       </div>
 
-      {/* 2. CONTENT AREA */}
       {!useUrl ? (
-        <div className="space-y-4">
-          <div className="border-2 border-dashed border-border rounded-2xl p-12 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileChange}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-            <div className="flex flex-col items-center gap-4">
-              <div className="bg-primary/10 p-4 rounded-full text-primary">
-                <Upload className="h-8 w-8" />
+        <>
+          <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+            <input type="file" id="photo-upload" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
+            <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Upload className="h-8 w-8 text-primary" />
               </div>
-              <div>
-                <p className="text-lg font-semibold">Click or drag photos here</p>
-                <p className="text-sm text-muted-foreground">Upload the photos you want in your video</p>
-              </div>
-            </div>
+              <p className="text-lg font-semibold">Upload listing photos</p>
+              <p className="text-muted-foreground">Click to select files</p>
+            </label>
           </div>
 
-          {photos.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mt-6">
-              {photos.map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-border group">
-                  <img
-                    src={URL.createObjectURL(photo)}
-                    alt="Preview"
-                    className="object-cover w-full h-full"
-                  />
-                  <button
-                    onClick={() => removePhoto(index)}
-                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+          <div className="flex flex-col gap-2">
+            {photos.map((photo, index) => (
+              <div
+                key={photo.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={handleDrop}
+                className={`relative bg-card border rounded-xl flex items-center gap-2 p-2 cursor-move ${dragOverIndex === index ? "border-primary border-t-4" : "border-border"}`}
+              >
+                <div className="text-muted-foreground/50"><GripVertical className="h-5 w-5" /></div>
+                <div className="flex flex-col gap-1">
+                  <button type="button" onClick={() => moveUp(index)} disabled={index === 0} className="p-1"><ChevronUp className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => moveDown(index)} disabled={index === photos.length - 1} className="p-1"><ChevronDown className="h-4 w-4" /></button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold">{index + 1}</div>
+                <div className="h-14 w-20 relative rounded-lg overflow-hidden border"><Image src={photo.preview} alt="" fill className="object-cover" /></div>
+                <div className="flex-1 hidden sm:block">
+                  <Input placeholder="Label" value={photo.description} onChange={(e) => onPhotosChange(photos.map(p => p.id === photo.id ? {...p, description: e.target.value} : p))} maxLength={30} className="h-8 text-sm" />
+                </div>
+                <button type="button" onClick={() => handleRemove(photo.id)} className="p-2 text-muted-foreground hover:text-destructive"><X className="h-5 w-5" /></button>
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          {/* URL Input */}
-          <div className="space-y-4">
-            <Label htmlFor="listing-url" className="text-base font-bold">Paste Listing URL</Label>
-            <Input
-              id="listing-url"
-              placeholder="e.g., https://www.zillow.com/homedetails/..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="h-12 text-lg"
-            />
-            <p className="text-xs text-muted-foreground italic">
-              * We will grab the photos directly from your Zillow, Realtor.com, or Redfin link.
-            </p>
-
-            {/* ADDITIONAL INSTRUCTIONS FIELD */}
-            <div className="pt-2 space-y-2">
-              <Label htmlFor="instructions" className="text-sm font-bold text-foreground">
-                Additional Instruction
-              </Label>
-              <textarea
-                id="instructions"
-                maxLength={500}
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                placeholder="If left blank, you give us permission to select and sequence the images."
-                className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <div className="text-right text-[10px] text-muted-foreground">
-                {instructions.length}/500 characters
-              </div>
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Zillow, Redfin, or MLS URL</label>
+            <div className="relative">
+              <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9" placeholder="https://www.zillow.com/homedetails/..." value={url} onChange={(e) => onUrlChange(e.target.value)} />
             </div>
           </div>
-
-          {/* Package Selection */}
-          <div className="space-y-4 border-t pt-6">
-            <Label className="text-base font-bold">Select your package limit</Label>
-            <RadioGroup 
-              value={urlPackage} 
-              onValueChange={setUrlPackage} 
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
-            >
-              <div 
-                onClick={() => setUrlPackage("15")}
-                className={cn(
-                  "relative flex flex-col p-4 rounded-xl border-2 transition-all cursor-pointer hover:border-primary/50",
-                  urlPackage === "15" ? "border-primary bg-primary/5 shadow-md" : "border-border"
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-lg">Standard</span>
-                  <RadioGroupItem value="15" id="p15" />
-                </div>
-                <span className="text-sm text-muted-foreground mb-3">Up to 15 photos</span>
-                <span className="text-2xl font-bold text-primary">$79</span>
-              </div>
-
-              <div 
-                onClick={() => setUrlPackage("25")}
-                className={cn(
-                  "relative flex flex-col p-4 rounded-xl border-2 transition-all cursor-pointer hover:border-primary/50",
-                  urlPackage === "25" ? "border-primary bg-primary/5 shadow-md" : "border-border"
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-lg">Premium</span>
-                  <RadioGroupItem value="25" id="p25" />
-                </div>
-                <span className="text-sm text-muted-foreground mb-3">16-25 photos</span>
-                <span className="text-2xl font-bold text-primary">$129</span>
-              </div>
-
-              <div 
-                onClick={() => setUrlPackage("35")}
-                className={cn(
-                  "relative flex flex-col p-4 rounded-xl border-2 transition-all cursor-pointer hover:border-primary/50",
-                  urlPackage === "35" ? "border-primary bg-primary/5 shadow-md" : "border-border"
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-lg">Professional</span>
-                  <RadioGroupItem value="35" id="p35" />
-                </div>
-                <span className="text-sm text-muted-foreground mb-3">26-35 photos</span>
-                <span className="text-2xl font-bold text-primary">$179</span>
-              </div>
-            </RadioGroup>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Which photos should we use?</label>
+            <Textarea placeholder="E.g. Use the first 15 photos, or focus on the kitchen and backyard." value={urlInstructions} onChange={(e) => onUrlInstructionsChange(e.target.value)} />
           </div>
         </div>
       )}
