@@ -26,7 +26,7 @@ export function HeroSection() {
         {/* Mosaic/Attention-Grabbing Headline */}
         <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mb-4 text-white leading-tight">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-yellow-300 to-cyan-400">
-            Big Gay Icecream 
+            Turn your Listing Photos into
           </span>
           <br />
           Professional Real Estate Videos
