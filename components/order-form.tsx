@@ -355,7 +355,7 @@ export function OrderForm() {
                         id="listing-permission"
                         checked={listingPermission}
                         onCheckedChange={(checked) => setListingPermission(checked === true)}
-                        className="h-8 w-8 mt-0.5 bg-white border-4"
+                        className="h-8 w-8 mt-0.5 bg-white border-3 border-gray-600"
                       />
                       <label htmlFor="listing-permission" className="text-sm font-medium cursor-pointer leading-snug">
                         I give permission to select and sequence the photos from my listing as they see fit to create the best possible video.
