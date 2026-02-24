@@ -345,7 +345,7 @@ export function OrderForm() {
                   </div>
 
                   {/* Permission Checkbox */}
-                  <div className={`rounded-xl border-3 p-4 transition-colors ${
+                  <div className={`rounded-xl border-2 p-4 transition-colors ${
                     listingPermission
                       ? "bg-green-50/50 border-green-500"
                       : "bg-muted/30 border-border"
@@ -355,7 +355,7 @@ export function OrderForm() {
                         id="listing-permission"
                         checked={listingPermission}
                         onCheckedChange={(checked) => setListingPermission(checked === true)}
-                        className="h-8 w-8 mt-0.5 bg-white"
+                        className="h-8 w-8 mt-0.5 bg-white border-4"
                       />
                       <label htmlFor="listing-permission" className="text-sm font-medium cursor-pointer leading-snug">
                         I give permission to select and sequence the photos from my listing as they see fit to create the best possible video.
