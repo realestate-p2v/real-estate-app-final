@@ -256,7 +256,7 @@ export function OrderForm() {
                 <button
                   type="button"
                   onClick={() => handleModeSwitch("upload")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold text-md transition-all ${
                     isUploadMode
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/40"
@@ -268,7 +268,7 @@ export function OrderForm() {
                 <button
                   type="button"
                   onClick={() => handleModeSwitch("url")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 font-semibold text-md transition-all ${
                     isUrlMode
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/40"
@@ -312,7 +312,7 @@ export function OrderForm() {
                           key={pkg.photoCount}
                           type="button"
                           onClick={() => setListingPackage(pkg)}
-                          className={`flex flex-col items-center justify-center gap-1 py-4 px-2 rounded-xl border-2 font-semibold text-sm transition-all ${
+                          className={`flex flex-col items-center justify-center gap-1 py-4 px-2 rounded-xl border-2 font-semibold text-md transition-all ${
                             listingPackage?.photoCount === pkg.photoCount
                               ? "border-primary bg-primary/10 text-primary"
                               : "border-border text-muted-foreground hover:border-primary/40"
@@ -355,7 +355,7 @@ export function OrderForm() {
                         id="listing-permission"
                         checked={listingPermission}
                         onCheckedChange={(checked) => setListingPermission(checked === true)}
-                        className="h-5 w-5 mt-0.5 bg-white"
+                        className="h-8 w-8 mt-0.5 bg-white"
                       />
                       <label htmlFor="listing-permission" className="text-sm font-medium cursor-pointer leading-snug">
                         I give permission to select and sequence the photos from my listing as they see fit to create the best possible video.
@@ -376,7 +376,7 @@ export function OrderForm() {
                     id="confirm"
                     checked={sequenceConfirmed}
                     onCheckedChange={(checked) => setSequenceConfirmed(checked === true)}
-                    className="h-6 w-6 bg-white"
+                    className="h-8 w-8 bg-white"
                   />
                   <label htmlFor="confirm" className="font-medium cursor-pointer">
                     I confirm these photos are in the correct sequence for my video.
