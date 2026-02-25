@@ -33,7 +33,7 @@ function useCountdown(createdAt: string) {
   useEffect(() => {
     const tick = () => {
       const start = new Date(createdAt).getTime()
-      const deadline = start + 72 * 60 * 60 * 1000
+      const deadline = start + 24 * 60 * 60 * 1000
       const now = Date.now()
       const distance = deadline - now
       if (distance < 0) {
