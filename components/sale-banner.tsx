@@ -47,7 +47,11 @@ export function SaleBanner() {
           </div>
 
           {/* Title Row */}
-          <div className="flex flex-col items-center justify-center gap-3 md:gap-6">
+          <div className="flex flex-col items-center justify-center gap-3 md:gap-6"
+            <p className="text-right text-[9px] md:text-[10px] text-slate-400/60">
+            *24-hour turnaround = 1 full business day
+            </p>
+            >
        
             <h2 className="text-2xl md:text-4xl font-black tracking-tighter text-white uppercase italic drop-shadow-lg text-center">
               Exclusive <span className="text-emerald-400">February</span> Pricing
