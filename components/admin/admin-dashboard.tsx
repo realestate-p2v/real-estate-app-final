@@ -33,7 +33,7 @@ function useCountdown(createdAt: string) {
   useEffect(() => {
     const tick = () => {
       const start = new Date(createdAt).getTime()
-      const deadline = start + 24 * 60 * 60 * 1000
+      const deadline = start + 72 * 60 * 60 * 1000
       const now = Date.now()
       const distance = deadline - now
       if (distance < 0) {
@@ -110,7 +110,7 @@ function isOrderOverdue(createdAt: string) {
 }
 
 // Change this to whatever PIN you want
-const REVENUE_PIN = "2292"
+const REVENUE_PIN = "1234"
 
 function formatOrderDate(dateStr: string): string {
   const d = new Date(dateStr)
@@ -843,16 +843,26 @@ function OrderRow({
                   </div>
                 </div>
               ) : (
-                <Button
-                  onClick={toggle}
-                  className={`w-full h-11 text-sm font-semibold rounded-xl transition-all ${
-                    isLive
-                      ? "bg-gray-800 hover:bg-gray-900 text-white"
-                      : "bg-emerald-500 hover:bg-emerald-600 text-white"
-                  }`}
-                >
-                  {isLive ? "Mark as Delivered" : "Re-open Production"}
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={toggle}
+                    disabled={isLive && !savedUrl}
+                    title={isLive && !savedUrl ? "Add a delivery link before marking as delivered" : undefined}
+                    className={`w-full h-11 text-sm font-semibold rounded-xl transition-all ${
+                      isLive
+                        ? "bg-gray-800 hover:bg-gray-900 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                        : "bg-emerald-500 hover:bg-emerald-600 text-white"
+                    }`}
+                  >
+                    {isLive ? "Mark as Delivered" : "Re-open Production"}
+                  </Button>
+                  {isLive && !savedUrl && (
+                    <p className="text-xs text-amber-600 font-semibold text-center flex items-center justify-center gap-1.5">
+                      <Flag className="w-3 h-3" />
+                      Paste a delivery link above first
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
