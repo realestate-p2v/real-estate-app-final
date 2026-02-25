@@ -194,11 +194,11 @@ function RevenueTile({ totalRevenue, dark }: { totalRevenue: number; dark: boole
         {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
 
-      {/* PIN overlay */}
+      {/* PIN overlay — compact to fit inside tile */}
       {showPin && (
-        <div className={`absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl z-10 ${dk.pinOverlay(dark)}`}>
-          <div className={`flex items-center gap-1.5 ${dk.muted(dark)}`}>
-            <Lock className="w-3.5 h-3.5" />
+        <div className={`absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-2xl z-10 ${dk.pinOverlay(dark)}`}>
+          <div className={`flex items-center gap-1 ${dk.muted(dark)}`}>
+            <Lock className="w-3 h-3" />
             <span className="text-xs font-semibold">Enter PIN</span>
           </div>
           <input
@@ -209,16 +209,16 @@ function RevenueTile({ totalRevenue, dark }: { totalRevenue: number; dark: boole
             value={pin}
             onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
             onKeyDown={e => e.key === "Enter" && submitPin()}
-            className={`w-24 h-10 text-center text-lg font-black tracking-widest border-2 rounded-xl outline-none transition-all ${dk.pinInput(dark, shake)}`}
+            className={`w-20 h-8 text-center text-base font-black tracking-widest border-2 rounded-xl outline-none transition-all ${dk.pinInput(dark, shake)}`}
             placeholder="••••"
           />
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button onClick={submitPin}
-              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors">
+              className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors">
               Unlock
             </button>
             <button onClick={() => { setShowPin(false); setPin("") }}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${dark ? "bg-gray-700 hover:bg-gray-600 text-gray-300" : "bg-gray-100 hover:bg-gray-200 text-gray-500"}`}>
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${dark ? "bg-gray-700 hover:bg-gray-600 text-gray-300" : "bg-gray-100 hover:bg-gray-200 text-gray-500"}`}>
               Cancel
             </button>
           </div>
