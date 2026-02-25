@@ -368,7 +368,7 @@ export function OrderForm() {
 
             {/* Sequence confirmation — only in upload mode */}
             {isUploadMode && photos.length > 0 && (
-              <div className={`rounded-2xl border-2 p-6 transition-colors ${
+              <div className={`rounded-2xl border-3 border-gray-500 p-6 transition-colors ${
                 sequenceConfirmed ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"
               }`}>
                 <div className="flex items-center gap-4">
