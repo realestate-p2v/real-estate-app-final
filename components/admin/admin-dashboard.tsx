@@ -560,20 +560,20 @@ function OrderRow({
           <div className="flex-1 grid grid-cols-2 md:grid-cols-5 items-center gap-4">
             <div>
               <p className={`font-bold text-base leading-tight ${dk.text(dark)}`}>{order.customer_name || "Client"}</p>
-              <p className={`text-xs mt-0.5 ${dk.muted(dark)}`}>#{order.order_id?.slice(0, 8)}</p>
+              <p className={`text-sm mt-0.5 ${dk.muted(dark)}`}>#{order.order_id?.slice(0, 8)}</p>
             </div>
             <div>
-              <p className={`text-xs font-medium mb-0.5 ${dk.label(dark)}`}>Fee paid</p>
+              <p className={`text-sm font-medium mb-0.5 ${dk.label(dark)}`}>Fee paid</p>
               <p className={`text-2xl font-black ${isLive ? "text-emerald-500" : dark ? "text-gray-500" : "text-gray-400"}`}>
                 ${order.total_price}
               </p>
             </div>
             <div className="hidden md:block">
-              <p className={`text-xs font-medium mb-0.5 ${dk.label(dark)}`}>Package</p>
+              <p className={`text-sm font-medium mb-0.5 ${dk.label(dark)}`}>Package</p>
               <p className={`text-base font-semibold ${dk.text(dark)}`}>{packageLabel}</p>
             </div>
             <div className="hidden md:block">
-              <p className={`text-xs font-medium mb-0.5 ${dk.label(dark)}`}>Due in</p>
+              <p className={`text-sm font-medium mb-0.5 ${dk.label(dark)}`}>Due in</p>
               <div className={`flex items-center gap-1.5 text-base font-semibold ${
                 isOverdue && isLive ? "text-red-500" : isUrgent && isLive ? "text-amber-500" : dk.muted(dark)}`}>
                 <Clock className={`w-4 h-4 ${isUrgent && isLive ? "animate-pulse" : ""}`} />
