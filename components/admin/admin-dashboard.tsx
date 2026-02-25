@@ -159,19 +159,35 @@ const dk = {
 
 // ---------------------------------------------------------------------------
 // Revenue Tile — PIN protected
-// ---------------------------------------------------------------------------
 function RevenueTile({ totalRevenue, dark }: { totalRevenue: number; dark: boolean }) {
-  const [visible,  setVisible]  = useState(false)
-  const [showPin,  setShowPin]  = useState(false)
-  const [pin,      setPin]      = useState("")
-  const [shake,    setShake]    = useState(false)
+  const [visible, setVisible] = useState(false)
+  const [showPin, setShowPin] = useState(false)
+  const [pin, setPin] = useState("")
+  const [shake, setShake] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const openPinPrompt = () => { setPin(""); setShowPin(true); setTimeout(() => inputRef.current?.focus(), 50) }
-  const handleHide    = () => { setVisible(false); setShowPin(false); setPin("") }
-  const submitPin     = () => {
-    if (pin === REVENUE_PIN) { setVisible(true); setShowPin(false); setPin("") }
-    else { setShake(true); setPin(""); setTimeout(() => setShake(false), 600) }
+  const openPinPrompt = () => { 
+    setPin(""); 
+    setShowPin(true); 
+    setTimeout(() => inputRef.current?.focus(), 50) 
+  }
+
+  const handleHide = () => { 
+    setVisible(false); 
+    setShowPin(false); 
+    setPin("") 
+  }
+
+  const submitPin = () => {
+    if (pin === REVENUE_PIN) { 
+      setVisible(true); 
+      setShowPin(false); 
+      setPin("") 
+    } else { 
+      setShake(true); 
+      setPin(""); 
+      setTimeout(() => setShake(false), 600) 
+    }
   }
 
   return (
@@ -193,6 +209,46 @@ function RevenueTile({ totalRevenue, dark }: { totalRevenue: number; dark: boole
       >
         {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
+
+      {/* PIN overlay — FIXED VERSION */}
+      {showPin && (
+        <div className={`absolute inset-0 flex flex-col items-center justify-center gap-5 rounded-2xl z-10 px-6 py-8 ${dk.pinOverlay(dark)}`}>
+          <div className={`flex items-center gap-1.5 ${dk.muted(dark)}`}>
+            <Lock className="w-4 h-4" />
+            <span className="text-sm font-semibold">Enter PIN</span>
+          </div>
+
+          <input
+            ref={inputRef}
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={pin}
+            onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={e => e.key === "Enter" && submitPin()}
+            className={`w-28 h-11 text-center text-xl font-black tracking-widest border-2 rounded-xl outline-none transition-all ${dk.pinInput(dark, shake)}`}
+            placeholder="••••"
+          />
+
+          <div className="flex gap-3 mt-2">
+            <button 
+              onClick={submitPin}
+              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors min-w-[90px]"
+            >
+              Unlock
+            </button>
+            <button 
+              onClick={() => { setShowPin(false); setPin("") }}
+              className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors min-w-[90px] ${dark ? "bg-gray-700 hover:bg-gray-600 text-gray-300" : "bg-gray-100 hover:bg-gray-200 text-gray-500"}`}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
       {/* PIN overlay */}
       {showPin && (
