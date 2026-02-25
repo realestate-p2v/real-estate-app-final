@@ -7,7 +7,7 @@ import {
   Music, Brush, ImageIcon, ArrowLeft,
   FileText, CheckCircle2, Copy, Check, Clock, Flag,
   Mail, Phone, AlertTriangle, PackageCheck, DollarSign,
-  Search, Link2, SortAsc, Filter,
+  Search, Link2, SortAsc, Filter, Eye, EyeOff, Lock, CalendarDays,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -109,6 +109,114 @@ function isOrderOverdue(createdAt: string) {
   return Date.now() > new Date(createdAt).getTime() + 72 * 60 * 60 * 1000
 }
 
+// Change this to whatever PIN you want
+const REVENUE_PIN = "1234"
+
+function formatOrderDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Revenue Tile — PIN protected
+// ---------------------------------------------------------------------------
+function RevenueTile({ totalRevenue }: { totalRevenue: number }) {
+  const [visible, setVisible] = useState(false)
+  const [showPin, setShowPin] = useState(false)
+  const [pin, setPin] = useState("")
+  const [shake, setShake] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const openPinPrompt = () => {
+    setPin("")
+    setShowPin(true)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  const handleHide = () => {
+    setVisible(false)
+    setShowPin(false)
+    setPin("")
+  }
+
+  const submitPin = () => {
+    if (pin === REVENUE_PIN) {
+      setVisible(true)
+      setShowPin(false)
+      setPin("")
+    } else {
+      setShake(true)
+      setPin("")
+      setTimeout(() => setShake(false), 600)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 shadow-sm flex items-center gap-4 relative overflow-hidden">
+      <div className="h-10 w-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 border border-gray-100">
+        <DollarSign className="w-5 h-5 text-emerald-500" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-400 mb-0.5">Total Revenue</p>
+        {visible ? (
+          <p className="text-2xl font-black text-emerald-600">${totalRevenue.toLocaleString()}</p>
+        ) : (
+          <p className="text-2xl font-black text-gray-300 tracking-widest select-none">••••••</p>
+        )}
+      </div>
+
+      {/* Toggle button */}
+      <button
+        onClick={visible ? handleHide : openPinPrompt}
+        className="flex-shrink-0 h-8 w-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        title={visible ? "Hide revenue" : "Show revenue"}
+      >
+        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+
+      {/* PIN overlay */}
+      {showPin && (
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center gap-3 rounded-2xl z-10">
+          <div className="flex items-center gap-1.5 text-gray-500">
+            <Lock className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold">Enter PIN</span>
+          </div>
+          <input
+            ref={inputRef}
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={pin}
+            onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={e => { if (e.key === "Enter") submitPin() }}
+            className={`w-24 h-10 text-center text-lg font-black tracking-widest border-2 rounded-xl outline-none transition-all
+              ${shake ? "border-red-400 bg-red-50 animate-[shake_0.5s_ease-in-out]" : "border-gray-200 focus:border-emerald-400 bg-gray-50"}`}
+            placeholder="••••"
+          />
+          <div className="flex gap-2">
+            <button onClick={submitPin}
+              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors">
+              Unlock
+            </button>
+            <button onClick={() => { setShowPin(false); setPin("") }}
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs font-semibold rounded-lg transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Stats Bar
 // ---------------------------------------------------------------------------
@@ -137,12 +245,6 @@ function StatsBar({ orders }: { orders: any[] }) {
       value: delivered.length,
       valueClass: "text-gray-600",
     },
-    {
-      icon: <DollarSign className="w-5 h-5 text-emerald-500" />,
-      label: "Total Revenue",
-      value: `$${totalRevenue.toLocaleString()}`,
-      valueClass: "text-emerald-600",
-    },
   ]
 
   return (
@@ -153,11 +255,12 @@ function StatsBar({ orders }: { orders: any[] }) {
             {s.icon}
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-400 mb-0.5">{s.label}</p>
+            <p className="text-sm font-semibold text-gray-400 mb-0.5">{s.label}</p>
             <p className={`text-2xl font-black ${s.valueClass}`}>{s.value}</p>
           </div>
         </div>
       ))}
+      <RevenueTile totalRevenue={totalRevenue} />
     </div>
   )
 }
@@ -472,32 +575,40 @@ function OrderRow({
           {/* Info columns */}
           <div className="flex-1 grid grid-cols-2 md:grid-cols-5 items-center gap-4">
             <div>
-              <p className="font-bold text-gray-800 leading-tight">{order.customer_name || "Client"}</p>
+              <p className="font-bold text-base text-gray-800 leading-tight">{order.customer_name || "Client"}</p>
               <p className="text-xs text-gray-400 mt-0.5">#{order.order_id?.slice(0, 8)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400 font-medium mb-0.5">Fee paid</p>
-              <p className={`text-xl font-black ${isLive ? "text-emerald-600" : "text-gray-500"}`}>
+              <p className={`text-2xl font-black ${isLive ? "text-emerald-600" : "text-gray-500"}`}>
                 ${order.total_price}
               </p>
             </div>
             <div className="hidden md:block">
               <p className="text-xs text-gray-400 font-medium mb-0.5">Package</p>
-              <p className="text-sm font-semibold text-gray-700">{packageLabel}</p>
+              <p className="text-base font-semibold text-gray-700">{packageLabel}</p>
             </div>
             <div className="hidden md:block">
               <p className="text-xs text-gray-400 font-medium mb-0.5">Due in</p>
-              <div className={`flex items-center gap-1.5 text-sm font-semibold ${
+              <div className={`flex items-center gap-1.5 text-base font-semibold ${
                 isOverdue && isLive ? "text-red-500" :
                 isUrgent && isLive  ? "text-amber-500" :
                 "text-gray-500"
               }`}>
-                <Clock className={`w-3.5 h-3.5 ${isUrgent && isLive ? "animate-pulse" : ""}`} />
+                <Clock className={`w-4 h-4 ${isUrgent && isLive ? "animate-pulse" : ""}`} />
                 {isLive ? timeLeft : "Delivered"}
               </div>
             </div>
-            <div className="flex justify-end">
+            <div className="hidden md:flex flex-col items-end gap-1 pr-1">
+              <div className="flex items-center gap-1.5 text-gray-400">
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span className="text-xs font-semibold">{formatOrderDate(order.created_at)}</span>
+              </div>
               <ChevronDown className={`w-5 h-5 text-gray-300 group-hover:text-gray-400 transition-transform duration-200 ${open ? "rotate-180 text-emerald-500" : ""}`} />
+            </div>
+            {/* Mobile chevron */}
+            <div className="flex md:hidden justify-end">
+              <ChevronDown className={`w-5 h-5 text-gray-300 transition-transform duration-200 ${open ? "rotate-180 text-emerald-500" : ""}`} />
             </div>
           </div>
         </CollapsibleTrigger>
@@ -508,7 +619,7 @@ function OrderRow({
 
             {/* ── Col 1: Branding ── */}
             <div className="space-y-4">
-              <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h4 className="text-base font-bold text-gray-700 flex items-center gap-2">
                 <Brush className="w-4 h-4 text-gray-400" /> Branding
               </h4>
 
@@ -521,8 +632,8 @@ function OrderRow({
                   { label: "Website", value: b.web },
                 ].map(row => (
                   <div key={row.label} className="flex justify-between items-center px-4 py-3">
-                    <span className="text-xs font-semibold text-gray-400">{row.label}</span>
-                    <span className="text-sm font-semibold text-gray-700 text-right max-w-[60%] truncate">{row.value}</span>
+                    <span className="text-sm font-semibold text-gray-400">{row.label}</span>
+                    <span className="text-sm font-bold text-gray-700 text-right max-w-[60%] truncate">{row.value}</span>
                   </div>
                 ))}
                 {b.logo && (
@@ -535,7 +646,7 @@ function OrderRow({
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <p className="text-xs font-semibold text-gray-400 mb-2">Client Instructions</p>
+                <p className="text-sm font-semibold text-gray-400 mb-2">Client Instructions</p>
                 <p className="text-sm text-gray-600 leading-relaxed italic">
                   {order.special_instructions || "No special instructions."}
                 </p>
@@ -544,9 +655,9 @@ function OrderRow({
 
             {/* ── Col 2: Assets ── */}
             <div className="space-y-4">
-              <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h4 className="text-base font-bold text-gray-700 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-gray-400" /> Assets
-                <span className="ml-auto text-xs font-semibold text-gray-400">{sortedPhotos.length} photos</span>
+                <span className="ml-auto text-sm font-semibold text-gray-400">{sortedPhotos.length} photos</span>
               </h4>
 
               {/* Listing URL card */}
@@ -589,8 +700,8 @@ function OrderRow({
 
               {/* Descriptions */}
               <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-                <p className="text-xs font-semibold text-gray-400 mb-2">Photo Descriptions</p>
-                <ul className="text-xs text-gray-600 space-y-1.5 max-h-28 overflow-y-auto">
+                <p className="text-sm font-semibold text-gray-400 mb-2">Photo Descriptions</p>
+                <ul className="text-sm text-gray-600 space-y-1.5 max-h-28 overflow-y-auto">
                   {sortedPhotos.map((img: any, i: number) => (
                     <li key={i} className="flex gap-2">
                       <span className="font-bold text-gray-300 w-5 flex-shrink-0">{i + 1}.</span>
@@ -616,15 +727,15 @@ function OrderRow({
                   { label: "Music", value: order.music_selection || "—" },
                 ].map(item => (
                   <div key={item.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
-                    <p className="text-[10px] font-semibold text-gray-400 mb-1">{item.label}</p>
-                    <p className="text-xs font-bold text-gray-600 truncate">{item.value}</p>
+                    <p className="text-xs font-semibold text-gray-400 mb-1">{item.label}</p>
+                    <p className="text-sm font-bold text-gray-600 truncate">{item.value}</p>
                   </div>
                 ))}
               </div>
 
               <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-                <p className="text-xs font-semibold text-gray-400 mb-2">Narrative Script</p>
-                <p className="text-xs text-gray-500 max-h-28 overflow-y-auto leading-relaxed">
+                <p className="text-sm font-semibold text-gray-400 mb-2">Narrative Script</p>
+                <p className="text-sm text-gray-500 max-h-28 overflow-y-auto leading-relaxed">
                   {order.voiceover_script || "No script provided."}
                 </p>
               </div>
@@ -632,14 +743,14 @@ function OrderRow({
               <div className="flex gap-2">
                 {(order.custom_audio?.secure_url || order.music_file) && (
                   <a href={order.custom_audio?.secure_url || order.music_file} target="_blank" rel="noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 transition-colors">
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 transition-colors">
                     <Music className="w-3.5 h-3.5 text-emerald-500" /> Music File
                   </a>
                 )}
                 {order.voiceover_script && (
                   <a href={`data:text/plain;charset=utf-8,${encodeURIComponent(order.voiceover_script)}`}
                     download={`order-${order.order_id?.slice(0, 8)}-script.txt`}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 transition-colors">
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 transition-colors">
                     <FileText className="w-3.5 h-3.5 text-emerald-500" /> Script
                   </a>
                 )}
@@ -650,7 +761,7 @@ function OrderRow({
             <div className={`space-y-4 p-5 rounded-2xl border ${
               isLive ? "bg-white border-gray-100 shadow-sm" : "bg-gray-100 border-gray-200"
             }`}>
-              <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h4 className="text-base font-bold text-gray-700 flex items-center gap-2">
                 <Flag className="w-4 h-4 text-gray-400" /> Delivery
               </h4>
 
@@ -675,11 +786,11 @@ function OrderRow({
 
               {/* Contact details */}
               <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-2">
-                <p className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                <p className="flex items-center gap-2 text-sm font-semibold text-gray-600">
                   <Mail className="w-3.5 h-3.5 text-emerald-400" />
                   {order.customer_email}
                 </p>
-                <p className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                <p className="flex items-center gap-2 text-sm font-semibold text-gray-600">
                   <Phone className="w-3.5 h-3.5 text-emerald-400" />
                   {order.customer_phone || "No phone on file"}
                 </p>
@@ -687,7 +798,7 @@ function OrderRow({
 
               {/* Delivery URL — auto-saves */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500">Delivery Link</label>
+                <label className="text-sm font-semibold text-gray-500">Delivery Link</label>
                 <div className="relative">
                   <Input
                     value={url}
@@ -699,7 +810,7 @@ function OrderRow({
                     <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
                   )}
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-sm text-gray-400">
                   {url === savedUrl && savedUrl
                     ? "✓ Saved"
                     : url !== savedUrl
@@ -708,7 +819,7 @@ function OrderRow({
                 </p>
                 {savedUrl && (
                   <a href={savedUrl} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2 p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors">
+                    className="flex items-center gap-2 p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors">
                     <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{savedUrl}</span>
                   </a>
@@ -719,14 +830,14 @@ function OrderRow({
               {confirmReopen ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-bold text-amber-700">Re-open this order?</p>
-                  <p className="text-xs text-amber-600">This will move it back to the active production queue.</p>
+                  <p className="text-sm text-amber-600">This will move it back to the active production queue.</p>
                   <div className="flex gap-2">
                     <Button onClick={confirmReopenOrder}
-                      className="flex-1 h-9 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg">
+                      className="flex-1 h-9 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg">
                       Yes, Re-open
                     </Button>
                     <Button onClick={() => setConfirmReopen(false)} variant="outline"
-                      className="flex-1 h-9 text-xs font-semibold rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50">
+                      className="flex-1 h-9 text-sm font-semibold rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50">
                       Cancel
                     </Button>
                   </div>
