@@ -55,7 +55,10 @@ export function SaleBanner() {
           </div>
 
           {/* Pricing Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
+            <p className="text-right text-[9px] md:text-[10px] text-slate-400/60">
+            *24-hour turnaround = 1 full business day
+            </p>>
             
             {/* Standard Tier */}
             <a 
