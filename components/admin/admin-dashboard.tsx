@@ -110,7 +110,7 @@ function isOrderOverdue(createdAt: string) {
 }
 
 // Change this to whatever PIN you want
-const REVENUE_PIN = "1234"
+const REVENUE_PIN = "2292"
 
 function formatOrderDate(dateStr: string): string {
   const d = new Date(dateStr)
