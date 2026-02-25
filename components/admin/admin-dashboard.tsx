@@ -91,9 +91,24 @@ function getVoiceDisplayName(voiceId?: string | null) {
 }
 
 function getPackageLabel(order: any): string {
+  // URL-mode orders store the label explicitly — always trust this first
   if (order.listing_package_label) return order.listing_package_label
+
+  // For upload orders, derive the tier from the base price paid.
+  // We strip out known add-ons so photo count doesn't mislead us
+  // (e.g. someone uploads 12 photos but paid for the 25-photo tier).
+  const total = Number(order.total_price) || 0
+  const voiceoverAddon = order.voiceover ? 25 : 0
+  const editedPhotosAddon = order.include_edited_photos ? 15 : 0
+  const basePrice = total - voiceoverAddon - editedPhotosAddon
+
+  if (basePrice === 1)   return "Test Order"
+  if (basePrice === 79)  return "Up to 15 Photos"
+  if (basePrice === 129) return "Up to 25 Photos"
+  if (basePrice === 179) return "Up to 35 Photos"
+
+  // Fallback: derive from photo count if price doesn't match a known tier
   const count = order.photos?.length ?? 0
-  if (count === 1) return "Test Order"
   if (count <= 15) return "Up to 15 Photos"
   if (count <= 25) return "Up to 25 Photos"
   if (count <= 35) return "Up to 35 Photos"
