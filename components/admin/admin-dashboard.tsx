@@ -541,7 +541,7 @@ function OrderRow({
         {/* Overdue banner */}
         {isOverdue && isLive && (
           <div className={`border-b text-sm font-semibold text-center py-2 flex items-center justify-center gap-2 ${dk.overdueBanner(dark)}`}>
-            <AlertTriangle className="w-3.5 h-3.5" />
+            <AlertTriangle className="w-4.5 h-4.5" />
             Deadline has passed — this order is overdue
           </div>
         )}
