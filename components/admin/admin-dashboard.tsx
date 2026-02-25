@@ -34,7 +34,7 @@ function useCountdown(createdAt: string) {
   useEffect(() => {
     const tick = () => {
       const start    = new Date(createdAt).getTime()
-      const deadline = start + 72 * 60 * 60 * 1000
+      const deadline = start + 24 * 60 * 60 * 1000
       const distance = deadline - Date.now()
       if (distance < 0) {
         setTimeLeft("Overdue"); setIsUrgent(true); setIsOverdue(true); return
@@ -101,11 +101,11 @@ function getPackageLabel(order: any): string {
 }
 
 function isOrderOverdue(createdAt: string) {
-  return Date.now() > new Date(createdAt).getTime() + 72 * 60 * 60 * 1000
+  return Date.now() > new Date(createdAt).getTime() + 24 * 60 * 60 * 1000
 }
 
 // Change this PIN to whatever you like
-const REVENUE_PIN = "1234"
+const REVENUE_PIN = "2292"
 
 function formatOrderDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString("en-US", {
