@@ -346,9 +346,9 @@ export function OrderForm() {
 
                   {/* Permission Checkbox */}
                   <div className={`rounded-xl border-2 p-4 transition-colors ${
-                    listingPermission
-                      ? "bg-green-50/50 border-green-500"
-                      : "bg-muted/30 border-border"
+                  listingPermission
+                  ? "bg-green-50/50 border-green-500"
+                  : "bg-red-50/50 border-red-400"
                   }`}>
                     <div className="flex items-start gap-3">
                       <Checkbox
