@@ -136,14 +136,15 @@ export function SaleBanner() {
                 </ul>
               </div>
               
-              {/* Disclaimer */}
-          <p className="text-right text-[10px] text-slate-400/60">
-            *24-hour turnaround = 1 full business day
-          </p>
-              
             </a>
 
           </div>
+          
+          {/* Disclaimer */}
+          <p className="text-right text-[10px] text-slate-400/60">
+            *24-hour turnaround = 1 full business day
+          </p>
+          
         </div>
       </div>
     </div>
