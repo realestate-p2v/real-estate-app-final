@@ -582,8 +582,8 @@ function OrderRow({
             </div>
             <div className="hidden md:flex flex-col items-end gap-1 pr-1">
               <div className={`flex items-center gap-1.5 ${dk.muted(dark)}`}>
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span className="text-xs font-semibold">{formatOrderDate(order.created_at)}</span>
+                <CalendarDays className="w-4.5 h-4.5" />
+                <span className="text-sm font-semibold">{formatOrderDate(order.created_at)}</span>
               </div>
               <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${open ? "rotate-180 text-emerald-500" : dk.muted(dark)}`} />
             </div>
