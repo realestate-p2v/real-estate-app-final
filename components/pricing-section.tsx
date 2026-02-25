@@ -17,7 +17,7 @@ const plans = [
       "AI video enhancement (perspective/shadows)",
       "Background music selection",
       "24-hour delivery",
-      "1 revision included",
+      "*1 revision included",
     ],
     popular: false,
   },
