@@ -141,7 +141,7 @@ export function SaleBanner() {
           </div>
           
           {/* Disclaimer */}
-          <p className="text-right text-[10px] text-slate-100/60">
+          <p className="text-right text-[10px] text-slate-100/80">
             *24-hour turnaround = 1 full business day
           </p>
           
