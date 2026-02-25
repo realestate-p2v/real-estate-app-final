@@ -239,7 +239,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3 border-l pl-6 border-slate-300">
             <img src="/logo.png" alt="Logo" className="h-8 w-auto opacity-80" />
             <h1 className="font-black text-slate-800 tracking-tighter text-xl uppercase">
-              Command <span className="text-emerald-500 font-black">10.0</span>
+              Command Center <span className="text-emerald-500 font-black">1.4</span>
             </h1>
           </div>
         </div>
