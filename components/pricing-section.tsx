@@ -16,7 +16,7 @@ const plans = [
       "Manual Photoshop enhancement",
       "AI video enhancement (perspective/shadows)",
       "Background music selection",
-      "*24-hour delivery",
+      "24-hour delivery",
       "1 revision included",
     ],
     popular: false,
@@ -34,7 +34,7 @@ const plans = [
       "Manual Photoshop enhancement",
       "AI video enhancement (perspective/shadows)",
       "Background music selection",
-      "*24-hour delivery",
+      "24-hour delivery",
       "1 revision included",
     ],
     popular: true,
@@ -53,7 +53,7 @@ const plans = [
       "AI video enhancement (perspective/shadows)",
       "Background music selection",
       "Priority delivery",
-      "*24-hour delivery"
+      "24-hour delivery"
       "2 revisions included",
     ],
     popular: false,
