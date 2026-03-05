@@ -53,10 +53,6 @@ export default function PromoPopup() {
           <h2 style={styles.headline}>
             March Sale <br /><span style={styles.redText}>Extra $30 Off!</span>
           </h2>
-          
-          <p style={styles.subtext}>
-            15-clip walkthrough video, with branding <br /><strong>for just $49!</strong>
-          </p>
 
           <div style={styles.promoBox}>
             <p style={styles.promoLabel}>
