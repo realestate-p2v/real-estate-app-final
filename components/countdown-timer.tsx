@@ -10,7 +10,7 @@ interface TimeLeft {
 }
 
 export function CountdownTimer() {
-  const targetDate = useMemo(() => new Date("2026-03-01T00:00:00").getTime(), []);
+  const targetDate = useMemo(() => new Date("2026-04-01T00:00:00").getTime(), []);
 
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({
     days: "00", hours: "00", minutes: "00", seconds: "00",
