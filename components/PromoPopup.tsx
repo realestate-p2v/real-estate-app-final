@@ -51,7 +51,7 @@ export default function PromoPopup() {
           </div>
 
           <h2 style={styles.headline}>
-            February Sale <br /><span style={styles.redText}>Extra $30 Off!</span>
+            March Sale <br /><span style={styles.redText}>Extra $30 Off!</span>
           </h2>
           
           <p style={styles.subtext}>
