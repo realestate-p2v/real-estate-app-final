@@ -14,6 +14,7 @@ import {
   Phone,
   Camera,
   GripVertical, // Added for the drag handle icon
+  Loader2,
 } from "lucide-react";
 
 export interface PhotoItem {
@@ -21,6 +22,8 @@ export interface PhotoItem {
   file: File;
   preview: string;
   description: string;
+  secure_url?: string;
+  uploadStatus: 'uploading' | 'complete' | 'failed';
 }
 
 interface PhotoUploaderProps {
@@ -41,8 +44,57 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
         file,
         preview: URL.createObjectURL(file),
         description: "",
+        uploadStatus: 'uploading' as const,
       }));
-      onPhotosChange([...photos, ...newPhotos]);
+      
+      const allPhotos = [...photos, ...newPhotos];
+      onPhotosChange(allPhotos);
+
+      // Upload each new photo to Cloudinary immediately
+      newPhotos.forEach(async (photo) => {
+        try {
+          const sigResponse = await fetch("/api/cloudinary-signature", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: "photo2video/orders" }),
+          });
+          const sigData = await sigResponse.json();
+          if (!sigData.success) throw new Error("Signature failed");
+          
+          const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
+          const uploadData = new FormData();
+          uploadData.append("file", photo.file);
+          uploadData.append("api_key", apiKey);
+          uploadData.append("timestamp", timestamp.toString());
+          uploadData.append("signature", signature);
+          uploadData.append("folder", folder);
+          
+          const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
+            method: "POST",
+            body: uploadData,
+          });
+          const result = await response.json();
+          
+          if (result.secure_url) {
+            onPhotosChange((prev: PhotoItem[]) => 
+              prev.map(p => p.id === photo.id 
+                ? { ...p, secure_url: result.secure_url, uploadStatus: 'complete' as const }
+                : p
+              )
+            );
+          } else {
+            throw new Error("No secure_url returned");
+          }
+        } catch (error) {
+          console.error("Upload failed for", photo.id, error);
+          onPhotosChange((prev: PhotoItem[]) =>
+            prev.map(p => p.id === photo.id
+              ? { ...p, uploadStatus: 'failed' as const }
+              : p
+            )
+          );
+        }
+      });
     },
     [photos, onPhotosChange]
   );
@@ -198,9 +250,27 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
               {index + 1}
             </div>
 
-            {/* Thumbnail */}
+           {/* Thumbnail */}
             <div className="h-14 w-20 sm:h-16 sm:w-24 relative rounded-lg overflow-hidden flex-shrink-0 border">
               <Image src={photo.preview || "/placeholder.svg"} alt="" fill className="object-cover" />
+              {photo.uploadStatus === 'uploading' && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 text-white animate-spin" />
+                </div>
+              )}
+            </div>
+
+            {/* Upload Status */}
+            <div className="flex-shrink-0">
+              {photo.uploadStatus === 'complete' && (
+                <span className="text-green-500 text-xs font-medium">✓ Ready</span>
+              )}
+              {photo.uploadStatus === 'uploading' && (
+                <span className="text-amber-500 text-xs font-medium animate-pulse">Uploading...</span>
+              )}
+              {photo.uploadStatus === 'failed' && (
+                <span className="text-red-500 text-xs font-medium">✕ Failed</span>
+              )}
             </div>
 
             {/* Description */}
