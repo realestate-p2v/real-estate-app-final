@@ -139,15 +139,15 @@ async function fetchOrderWithRetry(orderId: string): Promise<Order> {
       console.log(`[WEBHOOK] SUCCESS: Order found on attempt ${attempt}`);
       console.log(`[WEBHOOK] Photos in order: ${data.photos?.length || 0}`);
 
-      // Update payment status to paid
+      // Update payment status to paid AND set status to new so pipeline picks it up
       const { error: updateError } = await supabase
         .from("orders")
-        .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+        .update({ 
+          payment_status: "paid", 
+          status: "new",
+          updated_at: new Date().toISOString() 
+        })
         .eq("order_id", orderId);
-      
-      if (updateError) {
-        console.error("[WEBHOOK] Warning: Failed to update payment_status:", updateError.message);
-      }
 
       // Map to Order type
       const order: Order = {
