@@ -74,6 +74,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
             body: uploadData,
           });
           const result = await response.json();
+          console.log("Cloudinary full response:", JSON.stringify(result));
           
           if (result.secure_url) {
             onPhotosChange((prev: PhotoItem[]) => 
