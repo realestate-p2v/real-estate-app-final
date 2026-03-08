@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       edited_photos_fee: editedPhotosFee,
       total_price: totalPrice,
       payment_status: "pending",
-      status: "New",
+      status: "pending_payment",
     };
 
     // Save to Supabase using admin client (bypasses RLS)
