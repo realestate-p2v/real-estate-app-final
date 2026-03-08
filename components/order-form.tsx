@@ -62,7 +62,8 @@ export function OrderForm() {
   const isUploadMode = photoInputMode === "upload";
 
   // Determine if the user can proceed to step 2
-  const canProceedUpload = photoCount > 0 && photoCount <= 35 && sequenceConfirmed && musicSelection;
+  const allUploadsComplete = photos.length > 0 && photos.every(p => p.uploadStatus === 'complete');
+  const canProceedUpload = allUploadsComplete && photoCount <= 35 && sequenceConfirmed && musicSelection;
   const canProceedUrl = listingUrl.trim() !== "" && listingPackage !== null && listingPermission && musicSelection !== "";
   const canProceed = isUploadMode ? canProceedUpload : canProceedUrl;
 
@@ -119,22 +120,12 @@ export function OrderForm() {
     setIsSubmitting(true);
     try {
       let uploadedPhotos: any[] = [];
-
-      // Only upload photos if in upload mode
       if (isUploadMode) {
-        for (let i = 0; i < photos.length; i++) {
-          const photo = photos[i];
-          const blob = photo.file || await (await fetch(photo.preview)).blob();
-          const result = await uploadToCloudinary(blob, "orders");
-          if (result) {
-            uploadedPhotos.push({
-              public_id: result.public_id,
-              secure_url: result.secure_url,
-              order: i,
-              description: photo.description || "",
-            });
-          }
-        }
+        uploadedPhotos = photos.map((photo, i) => ({
+          secure_url: photo.secure_url,
+          order: i,
+          description: photo.description || "",
+        }));
       }
 
       let brandingLogoUrl = "";
