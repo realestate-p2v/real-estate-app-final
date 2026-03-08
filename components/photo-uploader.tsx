@@ -36,6 +36,36 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showPhotoTips, setShowPhotoTips] = useState(false);
 
+  const compressImage = (file: File, maxSizeMB: number = 8): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        
+        // Scale down if very large
+        const maxDim = 3000;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => resolve(blob || file),
+          'image/jpeg',
+          0.85
+        );
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+  
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
@@ -63,7 +93,8 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
           
           const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
           const uploadData = new FormData();
-          uploadData.append("file", photo.file);
+          const compressed = await compressImage(photo.file);
+          uploadData.append("file", compressed, photo.file.name);
           uploadData.append("api_key", apiKey);
           uploadData.append("timestamp", timestamp.toString());
           uploadData.append("signature", signature);
