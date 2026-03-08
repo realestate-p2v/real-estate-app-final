@@ -28,7 +28,7 @@ export interface PhotoItem {
 
 interface PhotoUploaderProps {
   photos: PhotoItem[];
-  onPhotosChange: (photos: PhotoItem[]) => void;
+  onPhotosChange: (photos: PhotoItem[] | ((prev: PhotoItem[]) => PhotoItem[])) => void;
 }
 
 export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
