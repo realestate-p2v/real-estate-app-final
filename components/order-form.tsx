@@ -545,11 +545,12 @@ export function OrderForm() {
       </div>
 
       <div className="lg:col-span-1">
-        <OrderSummary
+       <OrderSummary
           photoCount={isUrlMode && listingPackage ? listingPackage.photoCount : photoCount}
           brandingOption={brandingSelection}
           voiceoverOption={voiceoverSelection}
           includeEditedPhotos={includeEditedPhotos}
+          resolution={resolution}
         />
       </div>
     </div>
