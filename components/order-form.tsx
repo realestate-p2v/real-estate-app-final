@@ -397,7 +397,7 @@ export function OrderForm() {
                           : 'border-border hover:border-primary/40'
                       }`}
                     >
-                      <div className="font-semibold">768P Standard</div>
+                      <div className="font-semibold">768P HD</div>
                       <div className="text-sm text-muted-foreground">Included</div>
                     </button>
                     <button
@@ -409,7 +409,7 @@ export function OrderForm() {
                           : 'border-border hover:border-primary/40'
                       }`}
                     >
-                      <div className="font-semibold">1080P HD</div>
+                      <div className="font-semibold">1080P FULL HD</div>
                       <div className="text-sm text-green-600 font-medium">+ $10</div>
                     </button>
                   </div>
