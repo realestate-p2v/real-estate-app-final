@@ -39,6 +39,7 @@ export function OrderForm() {
   const [listingPermission, setListingPermission] = useState(false);
   const [listingInstructions, setListingInstructions] = useState("");
   const [musicSelection, setMusicSelection] = useState("");
+  const [resolution, setResolution] = useState<'768P' | '1080P'>('768P');
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
   const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
@@ -80,8 +81,9 @@ export function OrderForm() {
   const getBrandingPrice = () => 0;
   const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
   const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
-  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice();
-
+  const getResolutionPrice = () => resolution === '1080P' ? 10 : 0;
+  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice();
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -151,6 +153,7 @@ export function OrderForm() {
           listing_package_price: isUrlMode && listingPackage ? listingPackage.price : null,
           listing_package_label: isUrlMode && listingPackage ? listingPackage.label : null,
           listing_instructions: isUrlMode ? listingInstructions.trim() : null,
+          resolution,
           musicSelection,
           musicFile: musicFileUrl,
           branding: {
@@ -379,13 +382,47 @@ export function OrderForm() {
 
             {/* Customization options — show when photos uploaded OR url mode active */}
             {showCustomizationOptions && (
-              <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
+             <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
+                
+                {/* Resolution Selector */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Video Resolution</label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setResolution('768P')}
+                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                        resolution === '768P'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="font-semibold">768P Standard</div>
+                      <div className="text-sm text-muted-foreground">Included</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResolution('1080P')}
+                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                        resolution === '1080P'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="font-semibold">1080P HD</div>
+                      <div className="text-sm text-green-600 font-medium">+ $10</div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
                 <MusicSelector
                   selected={musicSelection}
                   onSelect={setMusicSelection}
                   customAudioFile={customAudioFile}
                   onCustomAudioChange={setCustomAudioFile}
                 />
+                </div>
                 <div className="border-t pt-6">
                   <BrandingSelector
                     selected={brandingSelection}
