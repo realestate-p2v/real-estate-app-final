@@ -17,6 +17,22 @@ import {
   Loader2,
 } from "lucide-react";
 
+const DIRECTIONS = [
+  { key: 'pan_left', label: '← Left' },
+  { key: 'pan_right', label: '→ Right' },
+  { key: 'tilt_up', label: '↑ Up' },
+  { key: 'tilt_down', label: '↓ Down' },
+  { key: 'push_in', label: '⟶ Push' },
+  { key: 'pull_back', label: '⟵ Pull' },
+  { key: 'diagonal_top_left', label: '↖ TL' },
+  { key: 'diagonal_top_right', label: '↗ TR' },
+  { key: 'diagonal_bottom_left', label: '↙ BL' },
+  { key: 'diagonal_bottom_right', label: '↘ BR' },
+  { key: 'orbit_left', label: '↺ Orbit L' },
+  { key: 'orbit_right', label: '↻ Orbit R' },
+  { key: 'rise', label: '⬆ Rise' },
+];
+
 export interface PhotoItem {
   id: string;
   file: File;
@@ -24,6 +40,7 @@ export interface PhotoItem {
   description: string;
   secure_url?: string;
   uploadStatus: 'uploading' | 'complete' | 'failed';
+  camera_direction?: string | null;
 }
 
 interface PhotoUploaderProps {
@@ -35,6 +52,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showPhotoTips, setShowPhotoTips] = useState(false);
+  const [openDirectionIndex, setOpenDirectionIndex] = useState<number | null>(null);
 
   const compressImage = (file: File, maxSizeMB: number = 8): Promise<Blob> => {
     return new Promise((resolve) => {
@@ -149,6 +167,15 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
           photos.map((p) => (p.id === id ? { ...p, description } : p))
         );
       }
+    },
+    [photos, onPhotosChange]
+  );
+
+  const handleDirectionChange = useCallback(
+    (id: string, direction: string | null) => {
+      onPhotosChange(
+        photos.map((p) => (p.id === id ? { ...p, camera_direction: direction } : p))
+      );
     },
     [photos, onPhotosChange]
   );
@@ -314,6 +341,55 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                 maxLength={30}
                 className="text-sm h-8"
               />
+            </div>
+
+            {/* Description + Camera Direction */}
+            <div className="flex-1 min-w-0 hidden sm:block space-y-1">
+              <Input
+                placeholder="Label (e.g. Kitchen)"
+                value={photo.description}
+                onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
+                maxLength={30}
+                className="text-sm h-8"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenDirectionIndex(openDirectionIndex === index ? null : index);
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                {photo.camera_direction
+                  ? `Camera: ${DIRECTIONS.find(d => d.key === photo.camera_direction)?.label || photo.camera_direction}`
+                  : 'Set camera direction (optional) ▾'
+                }
+              </button>
+              {openDirectionIndex === index && (
+                <div className="grid grid-cols-4 gap-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, null); }}
+                    className={`text-xs p-1.5 rounded border ${
+                      !photo.camera_direction ? 'bg-blue-100 border-blue-400 font-bold' : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    🤖 Auto
+                  </button>
+                  {DIRECTIONS.map(d => (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); }}
+                      className={`text-xs p-1.5 rounded border ${
+                        photo.camera_direction === d.key ? 'bg-blue-100 border-blue-400 font-bold' : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Remove Button */}
