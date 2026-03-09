@@ -7,6 +7,7 @@ interface OrderSummaryProps {
   brandingOption?: string;
   voiceoverOption?: string;
   includeEditedPhotos?: boolean;
+  resolution?: string;
 }
 
 export function OrderSummary({
@@ -14,6 +15,7 @@ export function OrderSummary({
   brandingOption = "unbranded",
   voiceoverOption = "none",
   includeEditedPhotos = false,
+  resolution = "768P",
 }: OrderSummaryProps) {
   const getPricing = () => {
     if (photoCount === 0) {
@@ -40,7 +42,8 @@ export function OrderSummary({
   const brandingPrice = brandingOption === "custom" ? 0 : 0;
   const voiceoverPrice = voiceoverOption === "voiceover" ? 25 : 0;
   const editedPhotosPrice = includeEditedPhotos ? 15 : 0;
-  const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice;
+  const resolutionPrice = resolution === "1080P" ? 10 : 0;
+  const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice + resolutionPrice;
   const totalPrice = price + totalAddons;
 
   const features = [
@@ -100,7 +103,7 @@ export function OrderSummary({
             </div>
 
             {/* Add-ons */}
-            {(brandingPrice > 0 || voiceoverPrice > 0 || editedPhotosPrice > 0) && (
+            {(brandingPrice > 0 || voiceoverPrice > 0 || editedPhotosPrice > 0 || resolutionPrice > 0) && (
               <div className="py-4 border-b border-border space-y-3">
                 <span className="text-sm font-medium text-muted-foreground">
                   Add-ons:
@@ -121,6 +124,12 @@ export function OrderSummary({
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-foreground">Edited Photos Package</span>
                     <span className="font-semibold text-foreground">+$15</span>
+                  </div>
+                )}
+                {resolutionPrice > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">1080P HD Upgrade</span>
+                    <span className="font-semibold text-foreground">+$10</span>
                   </div>
                 )}
               </div>
