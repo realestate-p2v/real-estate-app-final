@@ -13,7 +13,7 @@ import {
   AlertCircle,
   Phone,
   Camera,
-  GripVertical, // Added for the drag handle icon
+  GripVertical,
   Loader2,
 } from "lucide-react";
 
@@ -60,20 +60,16 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        
-        // Scale down if very large
         const maxDim = 3000;
         if (width > maxDim || height > maxDim) {
           const ratio = Math.min(maxDim / width, maxDim / height);
           width = Math.round(width * ratio);
           height = Math.round(height * ratio);
         }
-        
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d')!;
         ctx.drawImage(img, 0, 0, width, height);
-        
         canvas.toBlob(
           (blob) => resolve(blob || file),
           'image/jpeg',
@@ -83,7 +79,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
       img.src = URL.createObjectURL(file);
     });
   };
-  
+
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
@@ -94,11 +90,10 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
         description: "",
         uploadStatus: 'uploading' as const,
       }));
-      
+
       const allPhotos = [...photos, ...newPhotos];
       onPhotosChange(allPhotos);
 
-      // Upload each new photo to Cloudinary immediately
       newPhotos.forEach(async (photo) => {
         try {
           const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -108,7 +103,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
           });
           const sigData = await sigResponse.json();
           if (!sigData.success) throw new Error("Signature failed");
-          
+
           const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
           const uploadData = new FormData();
           const compressed = await compressImage(photo.file);
@@ -117,17 +112,16 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
           uploadData.append("timestamp", timestamp.toString());
           uploadData.append("signature", signature);
           uploadData.append("folder", folder);
-          
+
           const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
             method: "POST",
             body: uploadData,
           });
           const result = await response.json();
-          console.log("Cloudinary full response:", JSON.stringify(result));
-          
+
           if (result.secure_url) {
-            onPhotosChange((prev: PhotoItem[]) => 
-              prev.map(p => p.id === photo.id 
+            onPhotosChange((prev: PhotoItem[]) =>
+              prev.map(p => p.id === photo.id
                 ? { ...p, secure_url: result.secure_url, uploadStatus: 'complete' as const }
                 : p
               )
@@ -180,14 +174,12 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
     [photos, onPhotosChange]
   );
 
-  // --- Drag and Drop Logic ---
-
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault(); // This is required to allow a "drop"
+    e.preventDefault();
     setDragOverIndex(index);
   };
 
@@ -201,8 +193,6 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
-
-  // --- Arrow Button Logic ---
 
   const moveUp = useCallback(
     (index: number) => {
@@ -228,7 +218,6 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
 
   return (
     <div className="space-y-6">
-    
 
       {/* Upload Area */}
       <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
@@ -267,111 +256,122 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
       )}
 
       {/* Photo List */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {photos.map((photo, index) => (
           <div
             key={photo.id}
-            draggable // Enables dragging
+            draggable
             onDragStart={() => handleDragStart(index)}
             onDragOver={(e) => handleDragOver(e, index)}
             onDrop={handleDrop}
-            className={`relative bg-card border rounded-xl overflow-hidden transition-all flex items-center gap-2 p-2 sm:p-3 cursor-move ${
+            className={`relative bg-card border rounded-xl transition-all p-3 cursor-move ${
               dragOverIndex === index ? "border-primary border-t-4" : "border-border"
             } ${draggedIndex === index ? "opacity-50" : "opacity-100"}`}
           >
-            {/* Drag Handle Icon */}
-            <div className="text-muted-foreground/50">
-              <GripVertical className="h-5 w-5" />
-            </div>
+            {/* Top row: drag handle, arrows, number, thumbnail, label, status, remove */}
+            <div className="flex items-center gap-2">
+              {/* Drag Handle */}
+              <div className="text-muted-foreground/50 flex-shrink-0">
+                <GripVertical className="h-5 w-5" />
+              </div>
 
-            {/* Reorder Buttons (Arrows) */}
-            <div className="flex flex-col gap-1 flex-shrink-0">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); moveUp(index); }}
-                disabled={index === 0}
-                className={`p-1 rounded-lg ${index === 0 ? "text-muted-foreground/20" : "hover:bg-muted"}`}
-              >
-                <ChevronUp className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); moveDown(index); }}
-                disabled={index === photos.length - 1}
-                className={`p-1 rounded-lg ${index === photos.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted"}`}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </button>
-            </div>
+              {/* Reorder Arrows */}
+              <div className="flex flex-col gap-0.5 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); moveUp(index); }}
+                  disabled={index === 0}
+                  className={`p-0.5 rounded ${index === 0 ? "text-muted-foreground/20" : "hover:bg-muted"}`}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); moveDown(index); }}
+                  disabled={index === photos.length - 1}
+                  className={`p-0.5 rounded ${index === photos.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted"}`}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
 
-            {/* Photo Number */}
-            <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {index + 1}
-            </div>
+              {/* Photo Number */}
+              <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {index + 1}
+              </div>
 
-           {/* Thumbnail */}
-            <div className="h-14 w-20 sm:h-16 sm:w-24 relative rounded-lg overflow-hidden flex-shrink-0 border">
-              <Image src={photo.preview || "/placeholder.svg"} alt="" fill className="object-cover" />
-              {photo.uploadStatus === 'uploading' && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <Loader2 className="h-5 w-5 text-white animate-spin" />
-                </div>
-              )}
-            </div>
+              {/* Thumbnail */}
+              <div className="h-24 w-36 sm:h-28 sm:w-40 relative rounded-lg overflow-hidden flex-shrink-0 border">
+                <Image src={photo.preview || "/placeholder.svg"} alt="" fill className="object-cover" />
+                {photo.uploadStatus === 'uploading' && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
+                )}
+              </div>
 
-            {/* Upload Status */}
-            <div className="flex-shrink-0">
-              {photo.uploadStatus === 'complete' && (
-                <span className="text-green-500 text-xs font-medium">✓ Ready</span>
-              )}
-              {photo.uploadStatus === 'uploading' && (
-                <span className="text-amber-500 text-xs font-medium animate-pulse">Uploading...</span>
-              )}
-              {photo.uploadStatus === 'failed' && (
-                <span className="text-red-500 text-xs font-medium">✕ Failed</span>
-              )}
-            </div>
+              {/* Label + Status + Camera toggle */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <Input
+                  placeholder="Label (e.g. Kitchen)"
+                  value={photo.description}
+                  onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
+                  maxLength={30}
+                  className="text-sm h-9"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex items-center gap-3">
+                  {/* Upload Status */}
+                  {photo.uploadStatus === 'complete' && (
+                    <span className="text-green-500 text-xs font-medium">✓ Ready</span>
+                  )}
+                  {photo.uploadStatus === 'uploading' && (
+                    <span className="text-amber-500 text-xs font-medium animate-pulse">Uploading...</span>
+                  )}
+                  {photo.uploadStatus === 'failed' && (
+                    <span className="text-red-500 text-xs font-medium">✕ Failed</span>
+                  )}
 
-            {/* Description */}
-            <div className="flex-1 min-w-0 hidden sm:block">
-              <Input
-                placeholder="Label (e.g. Kitchen)"
-                value={photo.description}
-                onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
-                maxLength={30}
-                className="text-sm h-8"
-              />
-            </div>
-
-            {/* Description + Camera Direction */}
-            <div className="flex-1 min-w-0 hidden sm:block space-y-1">
-              <Input
-                placeholder="Label (e.g. Kitchen)"
-                value={photo.description}
-                onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
-                maxLength={30}
-                className="text-sm h-8"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDirectionIndex(openDirectionIndex === index ? null : index);
-                }}
-                className="text-xs text-blue-600 hover:text-blue-800"
-              >
-                {photo.camera_direction
-                  ? `Camera: ${DIRECTIONS.find(d => d.key === photo.camera_direction)?.label || photo.camera_direction}`
-                  : 'Set camera direction (optional) ▾'
-                }
-              </button>
-              {openDirectionIndex === index && (
-                <div className="grid grid-cols-4 gap-1 pt-1">
+                  {/* Camera Direction Toggle */}
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, null); }}
-                    className={`text-xs p-1.5 rounded border ${
-                      !photo.camera_direction ? 'bg-blue-100 border-blue-400 font-bold' : 'border-gray-200 hover:bg-gray-50'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDirectionIndex(openDirectionIndex === index ? null : index);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <Camera className="h-3 w-3" />
+                    {photo.camera_direction
+                      ? DIRECTIONS.find(d => d.key === photo.camera_direction)?.label || 'Custom'
+                      : 'Auto'}
+                    <span className="text-muted-foreground">▾</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Remove Button */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleRemove(photo.id); }}
+                className="p-2 text-muted-foreground hover:text-destructive flex-shrink-0"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Camera Direction Picker (expandable) */}
+            {openDirectionIndex === index && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-2">Choose camera movement (or leave on Auto):</p>
+                <div className="grid grid-cols-7 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, null); setOpenDirectionIndex(null); }}
+                    className={`text-xs py-2 px-1 rounded-lg border text-center transition-all ${
+                      !photo.camera_direction
+                        ? 'bg-primary/10 border-primary text-primary font-semibold'
+                        : 'border-border hover:bg-muted'
                     }`}
                   >
                     🤖 Auto
@@ -380,26 +380,19 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                     <button
                       key={d.key}
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); }}
-                      className={`text-xs p-1.5 rounded border ${
-                        photo.camera_direction === d.key ? 'bg-blue-100 border-blue-400 font-bold' : 'border-gray-200 hover:bg-gray-50'
+                      onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); setOpenDirectionIndex(null); }}
+                      className={`text-xs py-2 px-1 rounded-lg border text-center transition-all ${
+                        photo.camera_direction === d.key
+                          ? 'bg-primary/10 border-primary text-primary font-semibold'
+                          : 'border-border hover:bg-muted'
                       }`}
                     >
                       {d.label}
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Remove Button */}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRemove(photo.id); }}
-              className="p-2 text-muted-foreground hover:text-destructive ml-auto"
-            >
-              <X className="h-5 w-5" />
-            </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
