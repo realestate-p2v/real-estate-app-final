@@ -18,19 +18,23 @@ import {
 } from "lucide-react";
 
 const DIRECTIONS = [
-  { key: 'pan_left', label: '← Left' },
-  { key: 'pan_right', label: '→ Right' },
-  { key: 'tilt_up', label: '↑ Up' },
-  { key: 'tilt_down', label: '↓ Down' },
-  { key: 'push_in', label: '⟶ Push' },
-  { key: 'pull_back', label: '⟵ Pull' },
-  { key: 'diagonal_top_left', label: '↖ TL' },
-  { key: 'diagonal_top_right', label: '↗ TR' },
-  { key: 'diagonal_bottom_left', label: '↙ BL' },
-  { key: 'diagonal_bottom_right', label: '↘ BR' },
-  { key: 'orbit_left', label: '↺ Orbit L' },
-  { key: 'orbit_right', label: '↻ Orbit R' },
-  { key: 'rise', label: '⬆ Rise' },
+  { key: 'push_in', label: 'Fwd' },
+  { key: 'pull_back', label: 'Back' },
+  { key: 'diagonal_top_left', label: 'Fwd + L' },
+  { key: 'diagonal_top_right', label: 'Fwd + R' },
+  { key: 'diagonal_bottom_left', label: 'Back + L' },
+  { key: 'diagonal_bottom_right', label: 'Back + R' },
+  { key: 'tilt_up', label: 'Look Up' },
+  { key: 'tilt_down', label: 'Look Down' },
+  { key: 'orbit_left', label: 'Orbit L' },
+  { key: 'orbit_right', label: 'Orbit R' },
+  { key: 'rise', label: 'Rise' },
+];
+
+const SPEEDS = [
+  { key: 'slow', label: 'Slow' },
+  { key: 'medium', label: 'Med' },
+  { key: 'fast', label: 'Fast' },
 ];
 
 export interface PhotoItem {
@@ -41,6 +45,8 @@ export interface PhotoItem {
   secure_url?: string;
   uploadStatus: 'uploading' | 'complete' | 'failed';
   camera_direction?: string | null;
+  camera_speed?: string | null;
+  custom_motion?: string;
 }
 
 interface PhotoUploaderProps {
@@ -168,8 +174,28 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
   const handleDirectionChange = useCallback(
     (id: string, direction: string | null) => {
       onPhotosChange(
-        photos.map((p) => (p.id === id ? { ...p, camera_direction: direction } : p))
+        photos.map((p) => (p.id === id ? { ...p, camera_direction: direction, custom_motion: direction ? '' : p.custom_motion } : p))
       );
+    },
+    [photos, onPhotosChange]
+  );
+
+  const handleSpeedChange = useCallback(
+    (id: string, speed: string | null) => {
+      onPhotosChange(
+        photos.map((p) => (p.id === id ? { ...p, camera_speed: speed } : p))
+      );
+    },
+    [photos, onPhotosChange]
+  );
+
+  const handleCustomMotionChange = useCallback(
+    (id: string, custom_motion: string) => {
+      if (custom_motion.length <= 80) {
+        onPhotosChange(
+          photos.map((p) => (p.id === id ? { ...p, custom_motion, camera_direction: custom_motion ? null : p.camera_direction } : p))
+        );
+      }
     },
     [photos, onPhotosChange]
   );
@@ -215,6 +241,16 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
   );
 
   const showTooManyPhotosWarning = photos.length > 35;
+
+  const getCameraDisplayText = (photo: PhotoItem) => {
+    if (photo.custom_motion) return `"${photo.custom_motion}"`;
+    if (photo.camera_direction) {
+      const dir = DIRECTIONS.find(d => d.key === photo.camera_direction);
+      const speed = SPEEDS.find(s => s.key === photo.camera_speed);
+      return `${dir?.label || photo.camera_direction}${speed ? ` · ${speed.label}` : ''}`;
+    }
+    return 'Select Camera Movement';
+  };
 
   return (
     <div className="space-y-6">
@@ -268,7 +304,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
               dragOverIndex === index ? "border-primary border-t-4" : "border-border"
             } ${draggedIndex === index ? "opacity-50" : "opacity-100"}`}
           >
-            {/* Top row: drag handle, arrows, number, thumbnail, label, status, remove */}
+            {/* Top row: controls + thumbnail + label + status */}
             <div className="flex items-center gap-2">
               {/* Drag Handle */}
               <div className="text-muted-foreground/50 flex-shrink-0">
@@ -341,10 +377,8 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                   >
-                    <Camera className="h-3 w-3" />
-                    {photo.camera_direction
-                      ? DIRECTIONS.find(d => d.key === photo.camera_direction)?.label || 'Custom'
-                      : 'Select Camera Movement'}
+                    <Camera className="h-3.5 w-3.5" />
+                    <span className="truncate max-w-[180px]">{getCameraDisplayText(photo)}</span>
                     <span className="text-muted-foreground">▾</span>
                   </button>
                 </div>
@@ -362,35 +396,85 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
 
             {/* Camera Direction Picker (expandable) */}
             {openDirectionIndex === index && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground mb-2">Choose camera movement (or leave on Auto):</p>
-                <div className="grid grid-cols-7 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, null); setOpenDirectionIndex(null); }}
-                    className={`text-xs py-2 px-1 rounded-lg border text-center transition-all ${
-                      !photo.camera_direction
-                        ? 'bg-primary/10 border-primary text-primary font-semibold'
-                        : 'border-border hover:bg-muted'
-                    }`}
-                  >
-                    🤖 Auto
-                  </button>
-                  {DIRECTIONS.map(d => (
+              <div className="mt-3 pt-3 border-t border-border space-y-3">
+
+                {/* Direction buttons */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Direction:</p>
+                  <div className="flex flex-wrap gap-1.5">
                     <button
-                      key={d.key}
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); setOpenDirectionIndex(null); }}
-                      className={`text-xs py-2 px-1 rounded-lg border text-center transition-all ${
-                        photo.camera_direction === d.key
+                      onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, null); }}
+                      className={`text-xs py-2 px-3 rounded-lg border text-center transition-all ${
+                        !photo.camera_direction && !photo.custom_motion
                           ? 'bg-primary/10 border-primary text-primary font-semibold'
                           : 'border-border hover:bg-muted'
                       }`}
                     >
-                      {d.label}
+                      🤖 Auto
                     </button>
-                  ))}
+                    {DIRECTIONS.map(d => (
+                      <button
+                        key={d.key}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); }}
+                        className={`text-xs py-2 px-3 rounded-lg border text-center transition-all ${
+                          photo.camera_direction === d.key
+                            ? 'bg-primary/10 border-primary text-primary font-semibold'
+                            : 'border-border hover:bg-muted'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Speed buttons */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Speed:</p>
+                  <div className="flex gap-1.5">
+                    {SPEEDS.map(s => (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleSpeedChange(photo.id, photo.camera_speed === s.key ? null : s.key); }}
+                        className={`text-xs py-2 px-4 rounded-lg border text-center transition-all ${
+                          photo.camera_speed === s.key
+                            ? 'bg-primary/10 border-primary text-primary font-semibold'
+                            : 'border-border hover:bg-muted'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom motion input */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Or describe your own camera movement:</p>
+                  <Input
+                    placeholder="e.g. Slowly zoom into the fireplace then pan right"
+                    value={photo.custom_motion || ''}
+                    onChange={(e) => { handleCustomMotionChange(photo.id, e.target.value); }}
+                    onClick={(e) => e.stopPropagation()}
+                    maxLength={80}
+                    className="text-sm h-9"
+                  />
+                  {photo.custom_motion && (
+                    <p className="text-xs text-muted-foreground mt-1">{80 - (photo.custom_motion?.length || 0)} characters remaining</p>
+                  )}
+                </div>
+
+                {/* Done button */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(null); }}
+                  className="text-xs text-primary font-semibold hover:underline"
+                >
+                  Done ✓
+                </button>
               </div>
             )}
           </div>
