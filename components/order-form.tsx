@@ -47,6 +47,7 @@ export function OrderForm() {
   const [selectedVoice, setSelectedVoice] = useState("");
   const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
+  const [photoPermission, setPhotoPermission] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -468,9 +469,32 @@ export function OrderForm() {
                 <Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Add any specific requests here..." />
               </div>
             </div>
+            
+            <div className={`rounded-2xl border-2 p-4 transition-colors ${
+  photoPermission ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"
+}`}>
+  <div className="flex items-start gap-3">
+    <Checkbox
+      id="photo-permission"
+      checked={photoPermission}
+      onCheckedChange={(checked) => setPhotoPermission(checked === true)}
+      className="h-6 w-6 mt-0.5"
+    />
+    <div>
+      
+      <label htmlFor="photo-permission" className="font-medium cursor-pointer">
+        I confirm I own these photos or have permission from the owner to use them.
+      </label>
+      <p className="text-xs text-muted-foreground mt-1">
+        This includes photos taken by a photographer hired for your listing.
+      </p>
+    </div>
+  </div>
+</div>
+            
             <Button
               onClick={handleSubmitOrder}
-              disabled={isSubmitting || !formData.name || !formData.email}
+              disabled={isSubmitting || !formData.name || !formData.email || !photoPermission}
               className="w-full py-6 text-lg bg-accent"
             >
               {isSubmitting ? (
