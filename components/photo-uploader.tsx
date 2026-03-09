@@ -323,13 +323,13 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                 <div className="flex items-center gap-3">
                   {/* Upload Status */}
                   {photo.uploadStatus === 'complete' && (
-                    <span className="text-green-500 text-xs font-medium">✓ Ready</span>
+                    <span className="text-green-500 text-sm font-semibold">✓ Ready</span>
                   )}
                   {photo.uploadStatus === 'uploading' && (
-                    <span className="text-amber-500 text-xs font-medium animate-pulse">Uploading...</span>
+                    <span className="text-amber-500 text-sm font-semibold animate-pulse">Uploading...</span>
                   )}
                   {photo.uploadStatus === 'failed' && (
-                    <span className="text-red-500 text-xs font-medium">✕ Failed</span>
+                    <span className="text-red-500 text-sm font-semibold">✕ Failed</span>
                   )}
 
                   {/* Camera Direction Toggle */}
@@ -339,12 +339,12 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                       e.stopPropagation();
                       setOpenDirectionIndex(openDirectionIndex === index ? null : index);
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                   >
                     <Camera className="h-3 w-3" />
                     {photo.camera_direction
                       ? DIRECTIONS.find(d => d.key === photo.camera_direction)?.label || 'Custom'
-                      : 'Auto'}
+                      : 'Select Camera Movement'}
                     <span className="text-muted-foreground">▾</span>
                   </button>
                 </div>
