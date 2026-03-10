@@ -27,6 +27,9 @@ export default function PortfolioPage() {
           <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
             Real examples of listing videos created from photos just like yours.
           </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            ⚙️ For HD quality, click the gear icon on the video player and select 1080p
+          </p>
         </div>
         {/* Horizontal videos */}
         <div className="grid md:grid-cols-2 gap-8 mb-8">
@@ -38,6 +41,7 @@ export default function PortfolioPage() {
                   className="w-full h-full border-0"
                   allow="autoplay; encrypted-media"
                   allowFullScreen
+                  loading="eager"
                 />
               </div>
               <div className="p-5">
@@ -62,6 +66,7 @@ export default function PortfolioPage() {
                   className="w-full h-full border-0"
                   allow="autoplay; encrypted-media"
                   allowFullScreen
+                  loading="lazy"
                 />
               </div>
               <div className="p-5">
