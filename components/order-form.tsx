@@ -374,7 +374,7 @@ export function OrderForm() {
                     className="h-8 w-8 bg-white"
                   />
                   <label htmlFor="confirm" className="font-medium cursor-pointer">
-                    I confirm these photos are in the correct sequence for my video.
+                    I confirm these photos & camera movements are in the correct sequence for my video.
                   </label>
                 </div>
               </div>
