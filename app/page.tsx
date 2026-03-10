@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/navigation";
 import { HeroSection } from "@/components/hero-section";
+import { Testimonials } from "@/components/testimonials";
 import { DemoSection } from "@/components/demo-section";
 import { ProcessSection } from "@/components/process-section";
 import { SaleBanner } from "@/components/sale-banner";
@@ -16,6 +17,7 @@ export default function HomePage() {
     <main className="min-h-screen">
       <Navigation />
       <HeroSection />
+      <Testimonials /> 
       <DemoSection />
      
       <SaleBanner />
