@@ -384,7 +384,7 @@ export function OrderForm() {
             {showCustomizationOptions && (
              <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
 
-            <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
+            <div className="border-2 pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                   <div className="pr-4">
                     <p className="font-bold">
                       Include Edited Photos {includeEditedPhotos && photos.length > 0 ? `(+$${(photos.length * 2.99).toFixed(2)})` : '(+$2.99/photo)'}
