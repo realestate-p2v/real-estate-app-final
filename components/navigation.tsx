@@ -25,6 +25,9 @@ export function Navigation() {
             </span>
           </div>
           <div className="hidden xl:flex items-center gap-8">
+            <Link href="/portfolio" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
+              Portfolio
+            </Link>
             <CountdownTimer />
             
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
@@ -46,6 +49,12 @@ export function Navigation() {
               <div className="flex justify-center py-3 bg-white/5 rounded-xl">
                 <CountdownTimer />
               </div>
+             <Link href="/portfolio" className="text-primary-foreground text-lg font-semibold py-3">
+                Portfolio
+              </Link>
+              <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black">
+                <Link href="/order">Order Now</Link>
+              </Button>
               <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black">
                 <Link href="/order">Order Now</Link>
               </Button>
