@@ -1,6 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
@@ -9,11 +8,11 @@ export const metadata = {
 };
 
 const SAMPLES = [
-  { title: "P2V Demo Walkthrough", location: "Sample Listing", photos: 15, music: "Upbeat Modern", url: "https://drive.google.com/file/d/1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3/preview" },
-  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", url: "https://drive.google.com/file/d/1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5/preview" },
-  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", url: "https://drive.google.com/file/d/1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO/preview" },
-  { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", url: "https://drive.google.com/file/d/1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU/preview" },
-  { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", url: "https://drive.google.com/file/d/1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw/preview" },
+  { title: "P2V Demo Walkthrough", location: "Sample Listing", photos: 15, music: "Upbeat Modern", fileId: "1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3" },
+  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", fileId: "1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5" },
+  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", fileId: "1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO" },
+  { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", fileId: "1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU" },
+  { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", fileId: "1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw" },
 ];
 
 export default function PortfolioPage() {
@@ -32,19 +31,13 @@ export default function PortfolioPage() {
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           {SAMPLES.map((v, i) => (
             <div key={i} className="bg-card rounded-2xl border overflow-hidden">
-              <div className="aspect-video bg-muted flex items-center justify-center relative">
-                <a href={v.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
-                  <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center">
-                    <div className="aspect-video bg-muted">
-                      <iframe
-                        src={v.url}
-                        className="w-full h-full"
-                        allow="autoplay"
-                        allowFullScreen
-                       />
-                    </div>
-                  </div>
-                </a>
+              <div className="aspect-video bg-black">
+                <iframe
+                  src={`https://drive.google.com/file/d/${v.fileId}/preview`}
+                  className="w-full h-full border-0"
+                  allow="autoplay; encrypted-media"
+                  allowFullScreen
+                />
               </div>
               <div className="p-5">
                 <h3 className="font-bold text-lg">{v.title}</h3>
@@ -59,7 +52,7 @@ export default function PortfolioPage() {
         </div>
         <div className="text-center">
           <Link href="/order">
-            <Button size="lg" className="bg-accent text-lg px-8 py-6">
+            <Button size="lg" className="bg-accent text-lg px-8 py-6 hover:bg-accent/90">
               Create My Listing Video
             </Button>
           </Link>
