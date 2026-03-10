@@ -88,7 +88,7 @@ const steps = [
     step: "2",
     icon: Paintbrush,
     title: "Photo Enhancement",
-    description: "Our professional team cleans up and enhances your photos in Photoshop for the best visual quality.",
+    description: "Our professional team cleans up and enhances your photos in Photoshop for the best quality if needed.",
     type: "slider",
   },
   {
