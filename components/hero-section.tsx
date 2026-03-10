@@ -34,7 +34,7 @@ export function HeroSection() {
 
         <div className="bg-primary/5 border border-primary/20 rounded-xl px-6 py-3 text-center max-w-xl mx-auto mt-6">
           <p className="text-lg font-bold text-white">
-            Listings with video get <span className="text-primary">400% more inquiries</span>
+            Listings with video get <span className="text-blue-300">400% more inquiries</span>
           </p>
         <p className="text-xs text-white mt-1">— National Association of Realtors</p>
         </div>
