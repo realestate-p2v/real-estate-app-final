@@ -298,7 +298,7 @@ export function MusicSelector({
       {/* Generate Custom Tab */}
       {tab === "generate" && (
         <div className="space-y-4">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Select a vibe and our AI will compose 4 custom tracks for your
             video:
           </p>
