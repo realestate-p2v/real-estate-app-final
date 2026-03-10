@@ -146,7 +146,7 @@ export function BrandingSelector({
           
           {/* Logo Upload */}
           <div className="space-y-2">
-            <Label>Logo (optional)</Label>
+            <Label>Agent Photo or Logo (optional)</Label>
             <div className="flex items-center gap-4">
               {logoPreview ? (
                 <div className="relative">
