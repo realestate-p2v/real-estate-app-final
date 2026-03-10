@@ -28,7 +28,7 @@ export function Navigation() {
             <CountdownTimer />
             
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
-              <Link href="/order">Get Started</Link>
+              <Link href="/order">Create My Listing Video</Link>
             </Button>
           </div>
 
