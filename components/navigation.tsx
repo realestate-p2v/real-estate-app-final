@@ -19,16 +19,16 @@ export function Navigation() {
             <Link href="/" className="flex-shrink-0">
               <Image src="/logo.png" alt="Logo" width={192} height={77} className="h-12 w-auto" />
             </Link> 
-           
- <div className="hidden md:block h-10 w-[1px] bg-white/30" />
-            <span className="hidden md:block text-lg text-primary-foreground/90 italic font-semibold">
-            </span>
+            <div className="hidden md:block h-10 w-[1px] bg-white/30" />
+            <div className="hidden md:block">
+              <CountdownTimer />
+            </div>
           </div>
+         
           <div className="hidden xl:flex items-center gap-8">
             <Link href="/portfolio" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
               Portfolio
             </Link>
-            <CountdownTimer />
             
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
               <Link href="/order">Create My Listing Video</Link>
