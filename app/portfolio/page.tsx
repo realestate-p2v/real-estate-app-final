@@ -37,7 +37,14 @@ export default function PortfolioPage() {
               <div className="aspect-video bg-muted flex items-center justify-center relative">
                 <a href={v.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
                   <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center">
-                    <Play className="h-8 w-8 text-primary ml-1" />
+                    <div className="aspect-video bg-muted">
+                      <iframe
+                        src={v.url}
+                        className="w-full h-full"
+                        allow="autoplay"
+                        allowFullScreen
+                       />
+                    </div>
                   </div>
                 </a>
               </div>
