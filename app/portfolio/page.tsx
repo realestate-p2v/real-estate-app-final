@@ -8,11 +8,11 @@ export const metadata = {
 };
 
 const SAMPLES = [
-  { title: "P2V Demo Walkthrough", location: "Sample Listing", photos: 15, music: "Upbeat Modern", fileId: "1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3" },
-  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", fileId: "1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5" },
-  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", fileId: "1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO" },
-  { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", fileId: "1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU" },
-  { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", fileId: "1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw" },
+  { title: "P2V Demo Walkthrough", location: "Sample Listing", photos: 15, music: "Upbeat Modern", fileId: "1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3", vertical: false },
+  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", fileId: "1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5", vertical: false },
+  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", fileId: "1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO", vertical: true },
+  { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", fileId: "1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU", vertical: true },
+  { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", fileId: "1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw", vertical: true },
 ];
 
 export default function PortfolioPage() {
@@ -28,10 +28,35 @@ export default function PortfolioPage() {
             Real examples of listing videos created from photos just like yours.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {SAMPLES.map((v, i) => (
+        {/* Horizontal videos */}
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
+          {SAMPLES.filter(v => !v.vertical).map((v, i) => (
             <div key={i} className="bg-card rounded-2xl border overflow-hidden">
               <div className="aspect-video bg-black">
+                <iframe
+                  src={`https://drive.google.com/file/d/${v.fileId}/preview`}
+                  className="w-full h-full border-0"
+                  allow="autoplay; encrypted-media"
+                  allowFullScreen
+                />
+              </div>
+              <div className="p-5">
+                <h3 className="font-bold text-lg">{v.title}</h3>
+                <p className="text-sm text-muted-foreground">{v.location}</p>
+                <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                  <span>{v.photos} photos</span>
+                  <span>Music: {v.music}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Vertical videos */}
+        <div className="grid md:grid-cols-3 gap-8 mb-12">
+          {SAMPLES.filter(v => v.vertical).map((v, i) => (
+            <div key={i} className="bg-card rounded-2xl border overflow-hidden">
+              <div className="aspect-[9/16] bg-black">
                 <iframe
                   src={`https://drive.google.com/file/d/${v.fileId}/preview`}
                   className="w-full h-full border-0"
