@@ -111,6 +111,11 @@ export async function POST(request: Request) {
         if (input.specialInstructions) parts.push(input.specialInstructions);
         return parts.length > 0 ? parts.join("\n\n") : null;
       })(),
+      property_address: input.propertyAddress || null,
+      property_city: input.propertyCity || null,
+      property_state: input.propertyState || null,
+      property_bedrooms: input.propertyBedrooms ? parseInt(input.propertyBedrooms) : null,
+      property_bathrooms: input.propertyBathrooms ? parseInt(input.propertyBathrooms) : null,
       include_edited_photos: input.includeEditedPhotos || false,
       base_price: basePrice,
       branding_fee: brandingFee,
