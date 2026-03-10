@@ -98,6 +98,7 @@ export async function POST(request: Request) {
           : 15)
         : uploadedPhotos.length,
       listing_url: input.listing_url || null,
+      resolution: input.resolution || '768P',
       music_selection: input.musicSelection,
       custom_audio: customAudio || null,
       branding: input.branding,
