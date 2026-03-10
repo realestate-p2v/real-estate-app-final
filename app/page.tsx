@@ -19,12 +19,12 @@ export default function HomePage() {
       <Navigation />
       <HeroSection />
       <Testimonials />
+      <TrustSection /> {/* Placed right under Hero */}
       
       <DemoSection />
      
       <SaleBanner />
      
-    <TrustSection /> {/* Placed right under Hero */}
        <ProcessSection />
       <CTASection />
       <FAQ />
