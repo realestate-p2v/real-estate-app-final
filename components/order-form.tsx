@@ -31,12 +31,6 @@ const LISTING_PACKAGES: ListingPackage[] = [
   { label: "Up to 35 Photos", photoCount: 35, price: 179 },
 ];
 
-const [propertyAddress, setPropertyAddress] = useState("");
-const [propertyCity, setPropertyCity] = useState("");
-const [propertyState, setPropertyState] = useState("");
-const [propertyBedrooms, setPropertyBedrooms] = useState("");
-const [propertyBathrooms, setPropertyBathrooms] = useState("");
-
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
   const [photoInputMode, setPhotoInputMode] = useState<PhotoInputMode>("upload");
@@ -65,6 +59,11 @@ export function OrderForm() {
     notes: "",
   });
 
+  const [propertyAddress, setPropertyAddress] = useState("");
+  const [propertyCity, setPropertyCity] = useState("");
+  const [propertyState, setPropertyState] = useState("");
+  const [propertyBedrooms, setPropertyBedrooms] = useState("");
+  const [propertyBathrooms, setPropertyBathrooms] = useState("");
   const photoCount = photos.length;
 
   const isUrlMode = photoInputMode === "url";
