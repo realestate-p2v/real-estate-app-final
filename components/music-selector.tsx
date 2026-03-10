@@ -84,12 +84,11 @@ export function MusicSelector({
     handlePlayTrack(`curated-${trackId}`, url);
   };
 
-  const handleGenerate = async () => {
+ const handleGenerate = async () => {
     if (!selectedVibe) return;
     setIsGenerating(true);
     setGenerationStatus("Starting generation...");
     setGeneratedTracks([]);
-
     try {
       const resp = await fetch("/api/generate-music", {
         method: "POST",
@@ -97,66 +96,29 @@ export function MusicSelector({
         body: JSON.stringify({ vibe: selectedVibe, photoCount }),
       });
       const data = await resp.json();
-
-      if (!data.success || !data.taskIds?.length) {
-        throw new Error(data.error || "Generation failed");
-      }
-
-      const taskIds = data.taskIds;
+      if (!data.success || !data.sessionId) throw new Error(data.error || "Generation failed");
       setGenerationStatus("AI is composing your tracks...");
-
       for (let attempt = 0; attempt < 24; attempt++) {
         await new Promise((r) => setTimeout(r, 10000));
-
-        const pollResp = await fetch(
-          `/api/generate-music?taskIds=${taskIds.join(",")}`
-        );
+        const pollResp = await fetch(`/api/generate-music?sessionId=${data.sessionId}`);
         const pollData = await pollResp.json();
-
-        if (pollData.tracks?.length > 0) {
-          setGenerationStatus(
-            `${pollData.tracks.length} track${pollData.tracks.length > 1 ? "s" : ""} ready...`
-          );
-        }
-
         if (pollData.complete) {
           if (pollData.tracks.length > 0) {
-            setGeneratedTracks(
-              pollData.tracks.map((t: any) => ({ ...t, vote: null }))
-            );
+            setGeneratedTracks(pollData.tracks.map((t: any) => ({ ...t, vote: null })));
             setGenerationCount((prev) => prev + 1);
             setGenerationStatus("");
-          } else {
-            setGenerationStatus("Generation failed — try again or pick a curated track.");
-          }
+          } else { setGenerationStatus(""); setGenerationCount(0); }
           break;
         }
-
         const elapsed = (attempt + 1) * 10;
-        if (elapsed < 60) {
-          setGenerationStatus(`AI is composing your tracks... (${elapsed}s)`);
-        } else if (elapsed < 180) {
-          setGenerationStatus(`Almost done... (${elapsed}s)`);
-        } else {
-          // Timed out after 3 minutes
-          setGenerationStatus("");
-          setGenerationCount(0);
-          setIsGenerating(false);
-          return;
-        }
-      }
-
-      // If loop completed without SUCCESS
-      if (generatedTracks.length === 0 && !generationStatus.includes("failed")) {
-        setGenerationStatus("");
-        setGenerationCount(0);
+        if (elapsed < 60) setGenerationStatus(`AI is composing your tracks... (${elapsed}s)`);
+        else if (elapsed < 180) setGenerationStatus(`Almost done... (${elapsed}s)`);
+        else { setGenerationStatus(""); setGenerationCount(0); setIsGenerating(false); return; }
       }
     } catch (error) {
       console.error("Music generation error:", error);
-      setGenerationStatus("");
-      setGenerationCount(0);
+      setGenerationStatus(""); setGenerationCount(0);
     }
-
     setIsGenerating(false);
   };
 
