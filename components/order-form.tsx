@@ -438,6 +438,7 @@ export function OrderForm() {
                   onSelect={setMusicSelection}
                   customAudioFile={customAudioFile}
                   onCustomAudioChange={setCustomAudioFile}
+                  photoCount={photos.length}
                 />
                 </div>
                 <div className="border-t pt-6">
