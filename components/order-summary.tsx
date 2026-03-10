@@ -41,7 +41,7 @@ export function OrderSummary({
 
   const brandingPrice = brandingOption === "custom" ? 0 : 0;
   const voiceoverPrice = voiceoverOption === "voiceover" ? 25 : 0;
-  const editedPhotosPrice = includeEditedPhotos ? 15 : 0;
+  const editedPhotosPrice = includeEditedPhotos ? photoCount * 2.99 : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
   const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice + resolutionPrice;
   const totalPrice = price + totalAddons;
@@ -120,10 +120,10 @@ export function OrderSummary({
                     <span className="font-semibold text-foreground">+$25</span>
                   </div>
                 )}
-                {editedPhotosPrice > 0 && (
+               {editedPhotosPrice > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Edited Photos Package</span>
-                    <span className="font-semibold text-foreground">+$15</span>
+                    <span className="text-sm text-foreground">Photo Editing ({photoCount} × $2.99)</span>
+                    <span className="font-semibold text-foreground">+${editedPhotosPrice.toFixed(2)}</span>
                   </div>
                 )}
                 {resolutionPrice > 0 && (
