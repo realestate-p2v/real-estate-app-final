@@ -25,7 +25,6 @@ const VIBE_PRESETS = [
   { key: "smooth_jazz", label: "Smooth Jazz", emoji: "🎺" },
 ];
 
-// Audio file URLs for curated tracks (update these paths to match your public folder)
 const CURATED_AUDIO_BASE = "/music";
 
 interface MusicSelectorProps {
@@ -59,6 +58,7 @@ export function MusicSelector({
   const [generationCount, setGenerationCount] = useState(0);
   const [generationStatus, setGenerationStatus] = useState("");
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [audioPermission, setAudioPermission] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handlePlayTrack = (trackId: string, audioUrl: string) => {
@@ -91,7 +91,6 @@ export function MusicSelector({
     setGeneratedTracks([]);
 
     try {
-      // Step 1: Fire generation
       const resp = await fetch("/api/generate-music", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -106,7 +105,6 @@ export function MusicSelector({
       const taskIds = data.taskIds;
       setGenerationStatus("AI is composing your tracks...");
 
-      // Step 2: Poll every 10 seconds
       for (let attempt = 0; attempt < 24; attempt++) {
         await new Promise((r) => setTimeout(r, 10000));
 
@@ -134,7 +132,6 @@ export function MusicSelector({
           break;
         }
 
-        // Update status message
         const elapsed = (attempt + 1) * 10;
         if (elapsed < 60) {
           setGenerationStatus(`AI is composing your tracks... (${elapsed}s)`);
@@ -159,7 +156,6 @@ export function MusicSelector({
   };
 
   const handleSelectGenerated = (track: GeneratedTrack) => {
-    // Select this track and auto thumbs-up it
     onSelect(`generated:${track.id}:${track.audioUrl}`);
     setGeneratedTracks((prev) =>
       prev.map((t) => (t.id === track.id ? { ...t, vote: "up" } : t))
@@ -264,14 +260,36 @@ export function MusicSelector({
               onChange={(e) => {
                 const file = e.target.files?.[0] || null;
                 onCustomAudioChange(file);
-                if (file) onSelect("custom");
+                if (file) {
+                  onSelect("custom");
+                  setAudioPermission(false);
+                }
               }}
               className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
             />
             {customAudioFile && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ {customAudioFile.name}
-              </p>
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-green-600">
+                  ✓ {customAudioFile.name}
+                </p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={audioPermission}
+                    onChange={(e) => {
+                      setAudioPermission(e.target.checked);
+                      if (!e.target.checked) {
+                        onCustomAudioChange(null);
+                        onSelect("");
+                      }
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    I have permission to use this audio track.
+                  </span>
+                </label>
+              </div>
             )}
           </div>
         </div>
@@ -304,30 +322,48 @@ export function MusicSelector({
             ))}
           </div>
 
-          {/* Generate button */}
-          <Button
-            type="button"
-            onClick={handleGenerate}
-            disabled={!selectedVibe || isGenerating}
-            className="w-full py-5 text-base"
-          >
-            {isGenerating ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {generationStatus || "Generating..."}
-              </span>
-            ) : generationCount === 0 ? (
-              <span className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Generate 4 Custom Tracks — FREE
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Generate 4 More — $1.99
-              </span>
-            )}
-          </Button>
+          {/* Generate button — free first time, login required after */}
+          {generationCount === 0 ? (
+            <div>
+              <Button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!selectedVibe || isGenerating}
+                className="w-full py-5 text-base"
+              >
+                {isGenerating ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {generationStatus || "Generating..."}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Generate 4 Custom Tracks — FREE
+                  </span>
+                )}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                AI-generated music · ~2 minutes · No account needed
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Button
+                type="button"
+                onClick={() => window.location.href = '/login'}
+                className="w-full py-5 text-base"
+              >
+                <span className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Login to Generate More Custom AI Music
+                </span>
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Free account required · 2 generations per day · 4 tracks each
+              </p>
+            </div>
+          )}
 
           {/* Generation status */}
           {isGenerating && generationStatus && (
