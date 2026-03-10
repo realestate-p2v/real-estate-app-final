@@ -19,6 +19,14 @@ export default function HomePage() {
       <Navigation />
       <HeroSection />
       <Testimonials />
+      
+      <DemoSection />
+     
+      <SaleBanner />
+     
+    <TrustSection /> {/* Placed right under Hero */}
+       <ProcessSection />
+      <CTASection />
       <FAQ />
       
       <section className="py-16 bg-primary/5">
@@ -37,14 +45,6 @@ export default function HomePage() {
     </div>
   </div>
 </section>
-      
-      <DemoSection />
-     
-      <SaleBanner />
-     
-    <TrustSection /> {/* Placed right under Hero */}
-       <ProcessSection />
-      <CTASection />
       <ContactSection />
       <Footer />
       <WhatsAppButton />
