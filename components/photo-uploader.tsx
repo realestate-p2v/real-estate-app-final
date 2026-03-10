@@ -256,7 +256,30 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
     <div className="space-y-6">
 
       {/* Upload Area */}
-      <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+      <div
+        className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.classList.add("border-primary", "bg-primary/5");
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            const input = document.getElementById("photo-upload") as HTMLInputElement;
+            input.files = files;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }}
+      >
         <input type="file" id="photo-upload" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
         <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -266,7 +289,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
           <p className="text-muted-foreground">Drag and drop or click to select</p>
         </label>
       </div>
-
+      
       {/* Too Many Photos Warning */}
       {showTooManyPhotosWarning && (
         <div className="bg-accent/10 border border-accent rounded-xl p-4 flex items-start gap-4">
