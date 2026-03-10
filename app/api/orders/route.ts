@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     const brandingFee = input.branding.type === "custom" ? 25 : 0;
     const voiceoverFee = input.voiceover ? 25 : 0;
-    const editedPhotosFee = input.includeEditedPhotos ? 15 : 0;
+    const editedPhotosFee = input.includeEditedPhotos ? (uploadedPhotos.length * 2.99) : 0;
     const totalPrice = basePrice + brandingFee + voiceoverFee + editedPhotosFee;
 
     const orderId = generateOrderId();
