@@ -31,6 +31,13 @@ export function HeroSection() {
           <br />
           Professional Real Estate Videos
         </h1>
+
+        <div className="bg-primary/5 border border-primary/20 rounded-xl px-6 py-3 text-center max-w-xl mx-auto mt-6">
+          <p className="text-lg font-bold text-foreground">
+            Listings with video get <span className="text-primary">403% more inquiries</span>
+          </p>
+        <p className="text-xs text-muted-foreground mt-1">— National Association of Realtors</p>
+        </div>
         
         {/* The 3 Steps */}
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 md:gap-12 text-white/90 my-10 text-lg font-medium">
