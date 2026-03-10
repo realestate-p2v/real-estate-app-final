@@ -11,8 +11,8 @@ export const metadata = {
 const SAMPLES = [
   const SAMPLES = [
   { title: "P2V Demo Walkthrough", location: "Sample Listing", photos: 15, music: "Upbeat Modern", url: "https://drive.google.com/file/d/1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3/preview" },
-  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", url: "https://drive.google.com/file/d/1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5/view?usp=sharing" },
-  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", url: "https://drive.google.com/file/d/1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO/view?usp=sharing" },
+  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", url: "https://drive.google.com/file/d/1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5/preview" },
+  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", url: "https://drive.google.com/file/d/1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO/preview" },
   { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", url: "https://drive.google.com/file/d/1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU/preview" },
   { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", url: "https://drive.google.com/file/d/1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw/preview" },
 ];
