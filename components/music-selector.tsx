@@ -23,6 +23,7 @@ const VIBE_PRESETS = [
   { key: "bold_cinematic", label: "Bold Cinematic", emoji: "🎬" },
   { key: "funky_groove", label: "Funky Groove", emoji: "🎷" },
   { key: "smooth_jazz", label: "Smooth Jazz", emoji: "🎺" },
+  { key: "ambient", label: "Ambient", emoji: "🌙" },
 ];
 
 const CURATED_AUDIO_BASE = "/music";
