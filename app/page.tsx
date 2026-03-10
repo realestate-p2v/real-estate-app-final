@@ -11,13 +11,15 @@ import { ContactSection } from "@/components/contact-section";
 import { Footer } from "@/components/footer";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { TrustSection } from "@/components/trust-section";
+import { FAQ } from "@/components/faq";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen">
       <Navigation />
       <HeroSection />
-      <Testimonials /> 
+      <Testimonials />
+      <FAQ />
       <DemoSection />
      
       <SaleBanner />
