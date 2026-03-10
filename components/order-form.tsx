@@ -80,7 +80,7 @@ export function OrderForm() {
 
   const getBrandingPrice = () => 0;
   const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
-  const getEditedPhotosPrice = () => includeEditedPhotos ? 15 : 0;
+  const getEditedPhotosPrice = () => includeEditedPhotos ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => resolution === '1080P' ? 10 : 0;
   const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice();
   
@@ -443,9 +443,11 @@ export function OrderForm() {
                 </div>
                 <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                   <div className="pr-4">
-                    <p className="font-bold">Include Edited Photos (+$15)</p>
+                    <p className="font-bold">
+                      Include Edited Photos {includeEditedPhotos && photos.length > 0 ? `(+$${(photos.length * 2.99).toFixed(2)})` : '(+$2.99/photo)'}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Receive high-res professionally edited files of your photos.
+                      Professional auto-correction: brightness, contrast, white balance, horizon straightening.
                     </p>
                   </div>
                   <Switch
