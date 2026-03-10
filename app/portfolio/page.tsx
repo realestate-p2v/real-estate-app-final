@@ -15,7 +15,6 @@ const SAMPLES = [
   { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", url: "https://drive.google.com/file/d/1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU/preview" },
   { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", url: "https://drive.google.com/file/d/1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw/preview" },
 ];
-];
 
 export default function PortfolioPage() {
   return (
