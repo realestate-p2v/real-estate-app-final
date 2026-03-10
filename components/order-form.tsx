@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
 
+
 type OrderStep = "upload" | "details" | "payment";
 type PhotoInputMode = "upload" | "url";
 
@@ -29,6 +30,12 @@ const LISTING_PACKAGES: ListingPackage[] = [
   { label: "Up to 25 Photos", photoCount: 25, price: 129 },
   { label: "Up to 35 Photos", photoCount: 35, price: 179 },
 ];
+
+const [propertyAddress, setPropertyAddress] = useState("");
+const [propertyCity, setPropertyCity] = useState("");
+const [propertyState, setPropertyState] = useState("");
+const [propertyBedrooms, setPropertyBedrooms] = useState("");
+const [propertyBathrooms, setPropertyBathrooms] = useState("");
 
 export function OrderForm() {
   const [step, setStep] = useState<OrderStep>("upload");
@@ -154,6 +161,11 @@ export function OrderForm() {
           listing_package_label: isUrlMode && listingPackage ? listingPackage.label : null,
           listing_instructions: isUrlMode ? listingInstructions.trim() : null,
           resolution,
+          propertyAddress,
+          propertyCity,
+          propertyState,
+          propertyBedrooms,
+          propertyBathrooms,
           musicSelection,
           musicFile: musicFileUrl,
           branding: {
@@ -523,6 +535,43 @@ export function OrderForm() {
       className="h-6 w-6 mt-0.5"
     />
     <div>
+
+      {/* Property Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold">Property Details</h3>
+                  <p className="text-sm text-muted-foreground">Used for your video intro and outro cards</p>
+                  <div className="grid grid-cols-1 gap-4">
+                    <Input
+                      placeholder="Property Address (e.g. 123 Main Street)"
+                      value={propertyAddress}
+                      onChange={(e) => setPropertyAddress(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Input
+                      placeholder="City"
+                      value={propertyCity}
+                      onChange={(e) => setPropertyCity(e.target.value)}
+                    />
+                    <Input
+                      placeholder="State"
+                      value={propertyState}
+                      onChange={(e) => setPropertyState(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Bedrooms"
+                      type="number"
+                      value={propertyBedrooms}
+                      onChange={(e) => setPropertyBedrooms(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Bathrooms"
+                      type="number"
+                      value={propertyBathrooms}
+                      onChange={(e) => setPropertyBathrooms(e.target.value)}
+                    />
+                  </div>
+                </div>
       
       <label htmlFor="photo-permission" className="font-medium cursor-pointer">
         I confirm I own these photos or have permission from the owner to use them.
