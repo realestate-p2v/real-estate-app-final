@@ -383,7 +383,24 @@ export function OrderForm() {
             {/* Customization options — show when photos uploaded OR url mode active */}
             {showCustomizationOptions && (
              <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
-                
+
+            <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
+                  <div className="pr-4">
+                    <p className="font-bold">
+                      Include Edited Photos {includeEditedPhotos && photos.length > 0 ? `(+$${(photos.length * 2.99).toFixed(2)})` : '(+$2.99/photo)'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Professional auto-correction: brightness, contrast, white balance, horizon straightening.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={includeEditedPhotos}
+                    onCheckedChange={setIncludeEditedPhotos}
+                    className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400"
+                  />
+                </div>
+
+               
                 {/* Resolution Selector */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Video Resolution</label>
@@ -441,22 +458,7 @@ export function OrderForm() {
                     onVoiceSelect={setSelectedVoice}
                   />
                 </div>
-                <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
-                  <div className="pr-4">
-                    <p className="font-bold">
-                      Include Edited Photos {includeEditedPhotos && photos.length > 0 ? `(+$${(photos.length * 2.99).toFixed(2)})` : '(+$2.99/photo)'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Professional auto-correction: brightness, contrast, white balance, horizon straightening.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={includeEditedPhotos}
-                    onCheckedChange={setIncludeEditedPhotos}
-                    className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400"
-                  />
-                </div>
-
+                
                 <div className="flex flex-col gap-2">
                   {!musicSelection && (
                     <p className="text-xs text-red-500 italic text-right">* Please select a music track</p>
