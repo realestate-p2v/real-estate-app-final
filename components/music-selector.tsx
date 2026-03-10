@@ -135,13 +135,26 @@ export function MusicSelector({
         const elapsed = (attempt + 1) * 10;
         if (elapsed < 60) {
           setGenerationStatus(`AI is composing your tracks... (${elapsed}s)`);
-        } else {
+        } else if (elapsed < 180) {
           setGenerationStatus(`Almost done... (${elapsed}s)`);
+        } else {
+          // Timed out after 3 minutes
+          setGenerationStatus("");
+          setGenerationCount(0);
+          setIsGenerating(false);
+          return;
         }
+      }
+
+      // If loop completed without SUCCESS
+      if (generatedTracks.length === 0 && !generationStatus.includes("failed")) {
+        setGenerationStatus("");
+        setGenerationCount(0);
       }
     } catch (error) {
       console.error("Music generation error:", error);
-      setGenerationStatus("Generation failed. Please try again.");
+      setGenerationStatus("");
+      setGenerationCount(0);
     }
 
     setIsGenerating(false);
@@ -372,6 +385,18 @@ export function MusicSelector({
               <p className="text-sm text-muted-foreground">{generationStatus}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 This usually takes 2–3 minutes
+              </p>
+            </div>
+          )}
+
+          {/* Timeout/error message */}
+          {!isGenerating && generatedTracks.length === 0 && generationCount === 0 && tab === "generate" && selectedVibe && (
+            <div className="text-center py-4 px-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-sm font-medium text-amber-800">
+                Our AI music service is temporarily busy.
+              </p>
+              <p className="text-xs text-amber-600 mt-1">
+                Please try again shortly, or select a track from the Browse Library tab.
               </p>
             </div>
           )}
