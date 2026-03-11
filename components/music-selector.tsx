@@ -211,7 +211,8 @@ export function MusicSelector({
           ) : libraryTracks.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">No tracks found</p>
           ) : (
-            libraryTracks.map((track) => (
+            <div className={`space-y-2 ${libraryTracks.length > 10 ? 'max-h-[500px] overflow-y-auto pr-2' : ''}`}>
+            {libraryTracks.map((track) => (
               <button
                 key={track.id}
                 type="button"
@@ -241,7 +242,8 @@ export function MusicSelector({
                   <Check className="h-5 w-5 text-primary flex-shrink-0" />
                 )}
               </button>
-            ))
+            ))}
+            </div>
           )}
 
           {/* Custom audio upload */}
