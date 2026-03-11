@@ -28,7 +28,9 @@ const DIRECTIONS = [
   { key: 'tilt_down', label: 'Look Down' },
   { key: 'orbit_left', label: 'Orbit L' },
   { key: 'orbit_right', label: 'Orbit R' },
+  { key: 'rise', label: 'Rise' 
   { key: 'rise', label: 'Rise' },
+  { key: 'bring_to_life', label: '✨ Bring to Life' },
 ];
 
 const SPEEDS = [
@@ -454,7 +456,8 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                   </div>
                 </div>
 
-                {/* Speed buttons */}
+                {/* Speed buttons — hidden for Bring to Life */}
+                {photo.camera_direction !== 'bring_to_life' && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Speed:</p>
                   <div className="flex gap-1.5">
@@ -473,13 +476,21 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                       </button>
                     ))}
                   </div>
+                  </div>
+                )}
                 </div>
 
                 {/* Custom motion input */}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Or describe your own camera movement:</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {photo.camera_direction === 'bring_to_life'
+                      ? 'Describe the action (warm, friendly actions work best):'
+                      : 'Or describe your own camera movement:'}
+                  </p>
                   <Input
-                    placeholder="e.g. Slowly zoom into the fireplace then pan right"
+                    placeholder={photo.camera_direction === 'bring_to_life'
+                      ? "e.g. Agent waves warmly at camera and smiles"
+                      : "e.g. Slowly zoom into the fireplace then pan right"}
                     value={photo.custom_motion || ''}
                     onChange={(e) => { handleCustomMotionChange(photo.id, e.target.value); }}
                     onClick={(e) => e.stopPropagation()}
