@@ -4,6 +4,24 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Music, Loader2, ThumbsUp, ThumbsDown, Check, Sparkles } from "lucide-react";
 
+const [libraryTracks, setLibraryTracks] = useState<any[]>([]);
+  const [libraryFilter, setLibraryFilter] = useState('');
+  const [libraryLoading, setLibraryLoading] = useState(false);
+
+  const fetchLibrary = async (vibe: string = '') => {
+    setLibraryLoading(true);
+    try {
+      const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
+      const data = await resp.json();
+      setLibraryTracks(data.tracks || []);
+    } catch (e) {
+      console.error('Library fetch error:', e);
+    }
+    setLibraryLoading(false);
+  };
+
+  React.useEffect(() => { fetchLibrary(); }, []);
+
 const CURATED_TRACKS = [
   { id: "island", name: "Island", vibe: "Chill Tropical" },
   { id: "swing", name: "Swing", vibe: "Funky Groove" },
@@ -180,51 +198,96 @@ export function MusicSelector({
         </button>
       </div>
 
-      {/* Browse Library Tab */}
       {tab === "browse" && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Select a curated track for your video:
-          </p>
-          {CURATED_TRACKS.map((track) => (
+          {/* Vibe filter */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
             <button
-              key={track.id}
               type="button"
-              onClick={() => onSelect(track.id)}
-              className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                selected === track.id
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "border-border hover:bg-muted/50"
+              onClick={() => { setLibraryFilter(''); fetchLibrary(''); }}
+              className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
+                libraryFilter === '' ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
               }`}
-            >
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayCurated(track.id);
-                  }}
-                  className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                >
-                  {playingTrackId === `curated-${track.id}` ? (
-                    <span className="text-primary text-xs font-bold">■</span>
-                  ) : (
-                    <span className="text-primary text-xs font-bold ml-0.5">▶</span>
-                  )}
-                </button>
-                <div>
-                  <span className="font-medium text-sm">{track.name}</span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {track.vibe}
-                  </span>
-                </div>
-              </div>
-              {selected === track.id && (
-                <Check className="h-5 w-5 text-primary flex-shrink-0" />
-              )}
-            </button>
-          ))}
+            >All</button>
+            {VIBE_PRESETS.map(v => (
+              <button
+                key={v.key}
+                type="button"
+                onClick={() => { setLibraryFilter(v.key); fetchLibrary(v.key); }}
+                className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
+                  libraryFilter === v.key ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
+                }`}
+              >{v.emoji} {v.label}</button>
+            ))}
+          </div>
 
+          {libraryLoading ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+            </div>
+          ) : libraryTracks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No tracks found</p>
+          ) : (
+            libraryTracks.map((track) => (
+              <button
+                key={track.id}
+                type="button"
+                onClick={() => onSelect(`library:${track.id}:${track.file_url}`)}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                  selected.includes(track.id) ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handlePlayTrack(track.id, track.file_url); }}
+                    className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                  >
+                    {playingTrackId === track.id ? (
+                      <span className="text-primary text-xs font-bold">■</span>
+                    ) : (
+                      <span className="text-primary text-xs font-bold ml-0.5">▶</span>
+                    )}
+                  </button>
+                  <div>
+                    <span className="font-medium text-sm">{track.display_name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{track.duration_seconds}s</span>
+                  </div>
+                </div>
+                {selected.includes(track.id) && (
+                  <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                )}
+              </button>
+            ))
+          )}
+
+          {/* Custom audio upload */}
+          <div className="pt-3 border-t border-border mt-3">
+            <p className="text-xs text-muted-foreground mb-2">Or upload your own audio:</p>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                onCustomAudioChange(file);
+                if (file) { onSelect("custom"); setAudioPermission(false); }
+              }}
+              className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+            />
+            {customAudioFile && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-green-600">✓ {customAudioFile.name}</p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={audioPermission}
+                    onChange={(e) => { setAudioPermission(e.target.checked); if (!e.target.checked) { onCustomAudioChange(null); onSelect(""); } }}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary" />
+                  <span className="text-xs text-muted-foreground">I have permission to use this audio track.</span>
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
           {/* Custom audio upload */}
           <div className="pt-3 border-t border-border mt-3">
             <p className="text-xs text-muted-foreground mb-2">
