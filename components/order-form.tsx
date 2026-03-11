@@ -89,7 +89,8 @@ export function OrderForm() {
   const getVoiceoverPrice = () => voiceoverSelection === "voiceover" ? 25 : 0;
   const getEditedPhotosPrice = () => includeEditedPhotos ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => resolution === '1080P' ? 10 : 0;
-  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice();
+  const getOrientationPrice = () => orientation === 'both' ? 15 : 0;
+  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice() + getOrientationPrice();
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -161,6 +162,7 @@ export function OrderForm() {
           listing_package_label: isUrlMode && listingPackage ? listingPackage.label : null,
           listing_instructions: isUrlMode ? listingInstructions.trim() : null,
           resolution,
+          orientation,
           propertyAddress,
           propertyCity,
           propertyState,
