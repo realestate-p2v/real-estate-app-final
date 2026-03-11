@@ -287,6 +287,7 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
           </div>
           <p className="text-lg font-semibold">Upload your listing photos</p>
           <p className="text-muted-foreground">Drag and drop or click to select</p>
+          <p className="text-xs text-muted-foreground mt-2">💡 Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
         </label>
       </div>
       
