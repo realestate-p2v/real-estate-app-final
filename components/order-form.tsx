@@ -658,6 +658,7 @@ export function OrderForm() {
           voiceoverOption={voiceoverSelection}
           includeEditedPhotos={includeEditedPhotos}
           resolution={resolution}
+          orientation={orientation}
         />
       </div>
     </div>
