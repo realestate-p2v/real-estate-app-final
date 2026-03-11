@@ -175,7 +175,7 @@ export function MusicSelector({
         >
           <span className="flex items-center gap-1.5">
             <Sparkles className="h-4 w-4" />
-            Generate Custom
+            Generate Custom (Coming Soon)
           </span>
         </button>
       </div>
@@ -276,10 +276,17 @@ export function MusicSelector({
 
       {/* Generate Custom Tab */}
       {tab === "generate" && (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Select a vibe and our AI will compose 4 custom tracks for your video:
+        <div className="text-center py-8 space-y-3">
+          <Sparkles className="h-10 w-10 text-primary mx-auto" />
+          <h3 className="text-lg font-semibold">Custom AI Music Generation</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Soon you'll be able to generate custom music tracks tailored to your listing's vibe. Choose from 9 styles including Upbeat Modern, Chill Tropical, Elegant Classical, and more.
           </p>
+          <p className="text-xs text-muted-foreground">
+            In the meantime, browse our library of curated tracks — there's something for every listing.
+          </p>
+        </div>
+      )}
 
           {/* Vibe picker */}
           <div className="grid grid-cols-2 gap-2">
