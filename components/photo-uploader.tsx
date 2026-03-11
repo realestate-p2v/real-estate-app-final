@@ -179,6 +179,31 @@ function CropPreview({
           {cropsTopBottom ? 'Bottom ↓' : 'Right →'}
         </span>
       </div>
+
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOffsetChange(Math.max(0, offset - 5)); }}
+          className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition-all"
+        >
+          {cropsTopBottom ? '↑ Move Up' : '← Move Left'}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOffsetChange(50); }}
+          className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition-all"
+        >
+          Center
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOffsetChange(Math.min(100, offset + 5)); }}
+          className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition-all"
+        >
+          {cropsTopBottom ? 'Move Down ↓' : 'Move Right →'}
+        </button>
+      </div>
+      
       <div className="flex items-center justify-center gap-3">
         <button
           type="button"
