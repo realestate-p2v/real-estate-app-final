@@ -1,8 +1,6 @@
-"use client";
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Music, Loader2, ThumbsUp, ThumbsDown, Check, Sparkles } from "lucide-react";
+import { Music, Loader2, Check, Sparkles } from "lucide-react";
 
 const VIBE_PRESETS = [
   { key: "upbeat_modern", label: "Upbeat Modern", emoji: "🎵" },
@@ -24,15 +22,6 @@ interface MusicSelectorProps {
   photoCount?: number;
 }
 
-interface GeneratedTrack {
-  id: string;
-  audioUrl: string;
-  streamUrl?: string;
-  title: string;
-  duration?: number;
-  vote?: "up" | "down" | null;
-}
-
 export function MusicSelector({
   selected,
   onSelect,
@@ -41,33 +30,28 @@ export function MusicSelector({
   photoCount = 10,
 }: MusicSelectorProps) {
   const [tab, setTab] = useState<"browse" | "generate">("browse");
-  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
-  const [generatedTracks, setGeneratedTracks] = useState<GeneratedTrack[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationCount, setGenerationCount] = useState(0);
-  const [generationStatus, setGenerationStatus] = useState("");
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [audioPermission, setAudioPermission] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Library state
   const [libraryTracks, setLibraryTracks] = useState<any[]>([]);
-  const [libraryFilter, setLibraryFilter] = useState('');
+  const [libraryFilter, setLibraryFilter] = useState("");
   const [libraryLoading, setLibraryLoading] = useState(false);
 
-  const fetchLibrary = async (vibe: string = '') => {
+  const fetchLibrary = async (vibe: string = "") => {
     setLibraryLoading(true);
     try {
       const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
       const data = await resp.json();
       setLibraryTracks(data.tracks || []);
     } catch (e) {
-      console.error('Library fetch error:', e);
+      console.error("Library fetch error:", e);
     }
     setLibraryLoading(false);
   };
 
-  React.useEffect(() => { fetchLibrary(); }, []);
+  React.useEffect(() => {
+    fetchLibrary();
+  }, []);
 
   const handlePlayTrack = (trackId: string, audioUrl: string) => {
     if (audioRef.current) {
@@ -83,63 +67,6 @@ export function MusicSelector({
     audio.onended = () => setPlayingTrackId(null);
     audioRef.current = audio;
     setPlayingTrackId(trackId);
-  };
-
-  const handleGenerate = async () => {
-    if (!selectedVibe) return;
-    setIsGenerating(true);
-    setGenerationStatus("Starting generation...");
-    setGeneratedTracks([]);
-    try {
-      const resp = await fetch("/api/generate-music", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vibe: selectedVibe, photoCount }),
-      });
-      const data = await resp.json();
-      if (!data.success || !data.sessionId) throw new Error(data.error || "Generation failed");
-      setGenerationStatus("AI is composing your tracks...");
-      for (let attempt = 0; attempt < 24; attempt++) {
-        await new Promise((r) => setTimeout(r, 10000));
-        const pollResp = await fetch(`/api/generate-music?sessionId=${data.sessionId}`);
-        const pollData = await pollResp.json();
-        if (pollData.complete) {
-          if (pollData.tracks.length > 0) {
-            setGeneratedTracks(pollData.tracks.map((t: any) => ({ ...t, vote: null })));
-            setGenerationCount((prev) => prev + 1);
-            setGenerationStatus("");
-          } else { setGenerationStatus(""); setGenerationCount(0); }
-          break;
-        }
-        const elapsed = (attempt + 1) * 10;
-        if (elapsed < 60) setGenerationStatus(`AI is composing your tracks... (${elapsed}s)`);
-        else if (elapsed < 180) setGenerationStatus(`Almost done... (${elapsed}s)`);
-        else { setGenerationStatus(""); setGenerationCount(0); setIsGenerating(false); return; }
-      }
-    } catch (error) {
-      console.error("Music generation error:", error);
-      setGenerationStatus(""); setGenerationCount(0);
-    }
-    setIsGenerating(false);
-  };
-
-  const handleVoteTrack = (trackId: string, vote: "up" | "down") => {
-    setGeneratedTracks((prev) =>
-      prev.map((t) =>
-        t.id === trackId ? { ...t, vote: t.vote === vote ? null : vote } : t
-      )
-    );
-  };
-
-  const handleSelectGenerated = (track: GeneratedTrack) => {
-    onSelect(`generated:${track.id}:${track.audioUrl}`);
-    setGeneratedTracks((prev) =>
-      prev.map((t) => (t.id === track.id ? { ...t, vote: "up" } : t))
-    );
-  };
-
-  const isSelectedGenerated = (trackId: string) => {
-    return selected.startsWith(`generated:${trackId}`);
   };
 
   return (
@@ -187,20 +114,24 @@ export function MusicSelector({
           <div className="flex flex-wrap gap-1.5 mb-3">
             <button
               type="button"
-              onClick={() => { setLibraryFilter(''); fetchLibrary(''); }}
+              onClick={() => { setLibraryFilter(""); fetchLibrary(""); }}
               className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
-                libraryFilter === '' ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
+                libraryFilter === "" ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border hover:bg-muted"
               }`}
-            >All</button>
-            {VIBE_PRESETS.map(v => (
+            >
+              All
+            </button>
+            {VIBE_PRESETS.map((v) => (
               <button
                 key={v.key}
                 type="button"
                 onClick={() => { setLibraryFilter(v.key); fetchLibrary(v.key); }}
                 className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
-                  libraryFilter === v.key ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
+                  libraryFilter === v.key ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border hover:bg-muted"
                 }`}
-              >{v.emoji} {v.label}</button>
+              >
+                {v.emoji} {v.label}
+              </button>
             ))}
           </div>
 
@@ -211,38 +142,38 @@ export function MusicSelector({
           ) : libraryTracks.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">No tracks found</p>
           ) : (
-            <div className={`space-y-2 ${libraryTracks.length > 10 ? 'max-h-[500px] overflow-y-auto pr-2' : ''}`}>
-            {libraryTracks.map((track) => (
-              <button
-                key={track.id}
-                type="button"
-                onClick={() => onSelect(`library:${track.id}:${track.file_url}`)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                  selected.includes(track.id) ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handlePlayTrack(track.id, track.file_url); }}
-                    className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                  >
-                    {playingTrackId === track.id ? (
-                      <span className="text-primary text-xs font-bold">■</span>
-                    ) : (
-                      <span className="text-primary text-xs font-bold ml-0.5">▶</span>
-                    )}
-                  </button>
-                  <div>
-                    <span className="font-medium text-sm">{track.display_name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{track.duration_seconds}s</span>
+            <div className={`space-y-2 ${libraryTracks.length > 10 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
+              {libraryTracks.map((track) => (
+                <button
+                  key={track.id}
+                  type="button"
+                  onClick={() => onSelect(`library:${track.id}:${track.file_url}`)}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                    selected.includes(track.id) ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handlePlayTrack(track.id, track.file_url); }}
+                      className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                    >
+                      {playingTrackId === track.id ? (
+                        <span className="text-primary text-xs font-bold">■</span>
+                      ) : (
+                        <span className="text-primary text-xs font-bold ml-0.5">▶</span>
+                      )}
+                    </button>
+                    <div>
+                      <span className="font-medium text-sm">{track.display_name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{track.duration_seconds}s</span>
+                    </div>
                   </div>
-                </div>
-                {selected.includes(track.id) && (
-                  <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                )}
-              </button>
-            ))}
+                  {selected.includes(track.id) && (
+                    <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                  )}
+                </button>
+              ))}
             </div>
           )}
 
@@ -263,9 +194,12 @@ export function MusicSelector({
               <div className="mt-2 space-y-2">
                 <p className="text-xs text-green-600">✓ {customAudioFile.name}</p>
                 <label className="flex items-start gap-2 cursor-pointer">
-                  <input type="checkbox" checked={audioPermission}
+                  <input
+                    type="checkbox"
+                    checked={audioPermission}
                     onChange={(e) => { setAudioPermission(e.target.checked); if (!e.target.checked) { onCustomAudioChange(null); onSelect(""); } }}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary" />
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
+                  />
                   <span className="text-xs text-muted-foreground">I have permission to use this audio track.</span>
                 </label>
               </div>
@@ -274,186 +208,17 @@ export function MusicSelector({
         </div>
       )}
 
-      {/* Generate Custom Tab */}
+      {/* Generate Custom Tab — Coming Soon */}
       {tab === "generate" && (
         <div className="text-center py-8 space-y-3">
           <Sparkles className="h-10 w-10 text-primary mx-auto" />
           <h3 className="text-lg font-semibold">Custom AI Music Generation</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Soon you'll be able to generate custom music tracks tailored to your listing's vibe. Choose from 9 styles including Upbeat Modern, Chill Tropical, Elegant Classical, and more.
+            Soon you&apos;ll be able to generate custom music tracks tailored to your listing&apos;s vibe. Choose from 9 styles including Upbeat Modern, Chill Tropical, Elegant Classical, and more.
           </p>
           <p className="text-xs text-muted-foreground">
-            In the meantime, browse our library of curated tracks — there's something for every listing.
+            In the meantime, browse our library of curated tracks — there&apos;s something for every listing.
           </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-          {/* Vibe picker */}
-          <div className="grid grid-cols-2 gap-2">
-            {VIBE_PRESETS.map((vibe) => (
-              <button
-                key={vibe.key}
-                type="button"
-                onClick={() => setSelectedVibe(vibe.key)}
-                className={`p-3 rounded-xl border text-left text-sm transition-all ${
-                  selectedVibe === vibe.key
-                    ? "border-primary bg-primary/5 ring-1 ring-primary font-semibold"
-                    : "border-border hover:bg-muted/50"
-                }`}
-              >
-                <span className="mr-1.5">{vibe.emoji}</span>
-                {vibe.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Generate button — free first time, login required after */}
-          {generationCount === 0 ? (
-            <div>
-              <Button
-                type="button"
-                onClick={handleGenerate}
-                disabled={!selectedVibe || isGenerating}
-                className="w-full py-5 text-base"
-              >
-                {isGenerating ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {generationStatus || "Generating..."}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Generate 4 Custom Tracks — FREE
-                  </span>
-                )}
-              </Button>
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                AI-generated music · ~2 minutes · No account needed
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Button
-                type="button"
-                onClick={() => window.location.href = '/login'}
-                className="w-full py-5 text-base"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Login to Generate More Custom AI Music
-                </span>
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                Free account required · 2 generations per day · 4 tracks each
-              </p>
-            </div>
-          )}
-
-          {/* Generation status */}
-          {isGenerating && generationStatus && (
-            <div className="text-center py-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">{generationStatus}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                This usually takes 2–3 minutes
-              </p>
-            </div>
-          )}
-
-          {/* Timeout/error message */}
-          {!isGenerating && generatedTracks.length === 0 && generationCount === 0 && tab === "generate" && selectedVibe && (
-            <div className="text-center py-4 px-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <p className="text-sm font-medium text-amber-800">
-                Our AI music service is temporarily busy.
-              </p>
-              <p className="text-xs text-amber-600 mt-1">
-                Please try again shortly, or select a track from the Browse Library tab.
-              </p>
-            </div>
-          )}
-
-          {/* Generated tracks */}
-          {generatedTracks.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-semibold uppercase">
-                Your Generated Tracks
-              </p>
-              {generatedTracks.map((track, i) => (
-                <div
-                  key={track.id}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    isSelectedGenerated(track.id)
-                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : "border-border"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handlePlayTrack(track.id, track.streamUrl || track.audioUrl)
-                      }
-                      className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                    >
-                      {playingTrackId === track.id ? (
-                        <span className="text-primary text-xs font-bold">■</span>
-                      ) : (
-                        <span className="text-primary text-xs font-bold ml-0.5">▶</span>
-                      )}
-                    </button>
-                    <div>
-                      <span className="font-medium text-sm">Option {i + 1}</span>
-                      {track.duration && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {Math.round(track.duration)}s
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleVoteTrack(track.id, "up")}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        track.vote === "up"
-                          ? "bg-green-100 text-green-600"
-                          : "hover:bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <ThumbsUp className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleVoteTrack(track.id, "down")}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        track.vote === "down"
-                          ? "bg-red-100 text-red-600"
-                          : "hover:bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <ThumbsDown className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectGenerated(track)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                        isSelectedGenerated(track.id)
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted hover:bg-muted/80 text-foreground"
-                      }`}
-                    >
-                      {isSelectedGenerated(track.id) ? "✓ Selected" : "Use This"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>
