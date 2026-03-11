@@ -501,7 +501,6 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
                   </div>
                   </div>
                 )}
-                </div>
 
                 {/* Custom motion input */}
                 <div>
