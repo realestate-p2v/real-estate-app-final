@@ -169,7 +169,7 @@ function CropPreview({
           max={100}
           value={offset}
           onChange={(e) => onOffsetChange(parseInt(e.target.value))}
-          className="flex-1 h-2 accent-primary cursor-pointer"
+          className="flex-1 h-3 accent-primary cursor-pointer [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:border-0"
         />
         <span className="text-xs text-muted-foreground w-14 text-right">
           {cropsTopBottom ? 'Bottom ↓' : 'Right →'}
