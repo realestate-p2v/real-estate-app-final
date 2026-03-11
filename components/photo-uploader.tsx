@@ -89,9 +89,33 @@ export function PhotoUploader({ photos, onPhotosChange }: PhotoUploaderProps) {
   };
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
-      const newPhotos: PhotoItem[] = files.map((file) => ({
+      
+      // Check minimum dimensions (768px on shortest side)
+      const validFiles: File[] = [];
+      for (const file of files) {
+        const valid = await new Promise<boolean>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const minSide = Math.min(img.width, img.height);
+            if (minSide < 768) {
+              alert(`"${file.name}" is too small (${img.width}×${img.height}). Minimum dimension is 768px. Please upload a higher quality photo.`);
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+            URL.revokeObjectURL(img.src);
+          };
+          img.onerror = () => resolve(false);
+          img.src = URL.createObjectURL(file);
+        });
+        if (valid) validFiles.push(file);
+      }
+      
+      if (validFiles.length === 0) return;
+      
+      const newPhotos: PhotoItem[] = validFiles.map((file) => ({
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         file,
         preview: URL.createObjectURL(file),
