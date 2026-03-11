@@ -173,15 +173,35 @@ function CropPreview({
           onTouchStart={(e) => e.stopPropagation()}
           draggable={false}
           onDragStart={(e) => e.preventDefault()}
-          className="flex-1 h-4 cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-muted [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:mt-[-8px] [&::-webkit-slider-thumb]:cursor-grab [&::-moz-range-track]:h-3 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-muted [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-grab"
+          className="flex-1 h-3 accent-primary cursor-pointer"
         />
         <span className="text-xs text-muted-foreground w-14 text-right">
           {cropsTopBottom ? 'Bottom ↓' : 'Right →'}
         </span>
       </div>
-    </div>
-  );
-}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOffsetChange(Math.max(0, offset - 5)); }}
+          className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition-all"
+        >
+          {cropsTopBottom ? '↑ Move Up' : '← Move Left'}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOffsetChange(50); }}
+          className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition-all"
+        >
+          Center
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOffsetChange(Math.min(100, offset + 5)); }}
+          className="px-4 py-2 text-sm font-semibold rounded-lg border border-border hover:bg-muted transition-all"
+        >
+          {cropsTopBottom ? 'Move Down ↓' : 'Move Right →'}
+        </button>
+      </div>
 
 export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape" }: PhotoUploaderProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
