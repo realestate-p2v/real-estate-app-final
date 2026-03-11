@@ -4,34 +4,6 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Music, Loader2, ThumbsUp, ThumbsDown, Check, Sparkles } from "lucide-react";
 
-const [libraryTracks, setLibraryTracks] = useState<any[]>([]);
-  const [libraryFilter, setLibraryFilter] = useState('');
-  const [libraryLoading, setLibraryLoading] = useState(false);
-
-  const fetchLibrary = async (vibe: string = '') => {
-    setLibraryLoading(true);
-    try {
-      const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
-      const data = await resp.json();
-      setLibraryTracks(data.tracks || []);
-    } catch (e) {
-      console.error('Library fetch error:', e);
-    }
-    setLibraryLoading(false);
-  };
-
-  React.useEffect(() => { fetchLibrary(); }, []);
-
-const CURATED_TRACKS = [
-  { id: "island", name: "Island", vibe: "Chill Tropical" },
-  { id: "swing", name: "Swing", vibe: "Funky Groove" },
-  { id: "afternoon", name: "Afternoon", vibe: "Warm Acoustic" },
-  { id: "tamarindo", name: "Tamarindo", vibe: "Chill Tropical" },
-  { id: "sunshine", name: "Sunshine", vibe: "Upbeat Modern" },
-  { id: "star-night", name: "Star Night", vibe: "Elegant Classical" },
-  { id: "energetic", name: "Energetic", vibe: "Energetic Pop" },
-];
-
 const VIBE_PRESETS = [
   { key: "upbeat_modern", label: "Upbeat Modern", emoji: "🎵" },
   { key: "chill_tropical", label: "Chill Tropical", emoji: "🌴" },
@@ -43,8 +15,6 @@ const VIBE_PRESETS = [
   { key: "smooth_jazz", label: "Smooth Jazz", emoji: "🎺" },
   { key: "ambient", label: "Ambient", emoji: "🌙" },
 ];
-
-const CURATED_AUDIO_BASE = "/music";
 
 interface MusicSelectorProps {
   selected: string;
@@ -80,17 +50,34 @@ export function MusicSelector({
   const [audioPermission, setAudioPermission] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Library state
+  const [libraryTracks, setLibraryTracks] = useState<any[]>([]);
+  const [libraryFilter, setLibraryFilter] = useState('');
+  const [libraryLoading, setLibraryLoading] = useState(false);
+
+  const fetchLibrary = async (vibe: string = '') => {
+    setLibraryLoading(true);
+    try {
+      const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
+      const data = await resp.json();
+      setLibraryTracks(data.tracks || []);
+    } catch (e) {
+      console.error('Library fetch error:', e);
+    }
+    setLibraryLoading(false);
+  };
+
+  React.useEffect(() => { fetchLibrary(); }, []);
+
   const handlePlayTrack = (trackId: string, audioUrl: string) => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
-
     if (playingTrackId === trackId) {
       setPlayingTrackId(null);
       return;
     }
-
     const audio = new Audio(audioUrl);
     audio.play();
     audio.onended = () => setPlayingTrackId(null);
@@ -98,12 +85,7 @@ export function MusicSelector({
     setPlayingTrackId(trackId);
   };
 
-  const handlePlayCurated = (trackId: string) => {
-    const url = `${CURATED_AUDIO_BASE}/${trackId}.mp3`;
-    handlePlayTrack(`curated-${trackId}`, url);
-  };
-
- const handleGenerate = async () => {
+  const handleGenerate = async () => {
     if (!selectedVibe) return;
     setIsGenerating(true);
     setGenerationStatus("Starting generation...");
@@ -198,6 +180,7 @@ export function MusicSelector({
         </button>
       </div>
 
+      {/* Browse Library Tab */}
       {tab === "browse" && (
         <div className="space-y-2">
           {/* Vibe filter */}
@@ -288,58 +271,12 @@ export function MusicSelector({
           </div>
         </div>
       )}
-          {/* Custom audio upload */}
-          <div className="pt-3 border-t border-border mt-3">
-            <p className="text-xs text-muted-foreground mb-2">
-              Or upload your own audio:
-            </p>
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                onCustomAudioChange(file);
-                if (file) {
-                  onSelect("custom");
-                  setAudioPermission(false);
-                }
-              }}
-              className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-            />
-            {customAudioFile && (
-              <div className="mt-2 space-y-2">
-                <p className="text-xs text-green-600">
-                  ✓ {customAudioFile.name}
-                </p>
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={audioPermission}
-                    onChange={(e) => {
-                      setAudioPermission(e.target.checked);
-                      if (!e.target.checked) {
-                        onCustomAudioChange(null);
-                        onSelect("");
-                      }
-                    }}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    I have permission to use this audio track.
-                  </span>
-                </label>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Generate Custom Tab */}
       {tab === "generate" && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Select a vibe and our AI will compose 4 custom tracks for your
-            video:
+            Select a vibe and our AI will compose 4 custom tracks for your video:
           </p>
 
           {/* Vibe picker */}
@@ -443,7 +380,6 @@ export function MusicSelector({
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    {/* Play button */}
                     <button
                       type="button"
                       onClick={() =>
@@ -468,7 +404,6 @@ export function MusicSelector({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Thumbs up */}
                     <button
                       type="button"
                       onClick={() => handleVoteTrack(track.id, "up")}
@@ -480,8 +415,6 @@ export function MusicSelector({
                     >
                       <ThumbsUp className="h-4 w-4" />
                     </button>
-
-                    {/* Thumbs down */}
                     <button
                       type="button"
                       onClick={() => handleVoteTrack(track.id, "down")}
@@ -493,8 +426,6 @@ export function MusicSelector({
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </button>
-
-                    {/* Select button */}
                     <button
                       type="button"
                       onClick={() => handleSelectGenerated(track)}
