@@ -289,7 +289,7 @@ export function OrderForm() {
 
               {/* Upload Mode */}
               {isUploadMode && (
-                <PhotoUploader photos={photos} onPhotosChange={setPhotos} />
+                <PhotoUploader photos={photos} onPhotosChange={setPhotos} orientation={orientation} />
               )}
 
               {/* URL Mode */}
