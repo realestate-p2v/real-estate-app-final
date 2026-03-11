@@ -287,6 +287,9 @@ export function MusicSelector({
           </p>
         </div>
       )}
+    </div>
+  );
+}
 
           {/* Vibe picker */}
           <div className="grid grid-cols-2 gap-2">
