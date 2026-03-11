@@ -41,6 +41,7 @@ export function OrderForm() {
   const [listingInstructions, setListingInstructions] = useState("");
   const [musicSelection, setMusicSelection] = useState("");
   const [resolution, setResolution] = useState<'768P' | '1080P'>('768P');
+  const [orientation, setOrientation] = useState<'landscape' | 'vertical' | 'both'>('landscape');
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [brandingSelection, setBrandingSelection] = useState("unbranded");
   const [brandingData, setBrandingData] = useState<BrandingData>({ type: "unbranded" });
@@ -441,6 +442,57 @@ export function OrderForm() {
                       <div className="text-sm text-green-600 font-medium">+ $10</div>
                     </button>
                   </div>
+                </div>
+
+               {/* Orientation Selector */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Video Orientation</label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setOrientation('landscape')}
+                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                        orientation === 'landscape'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="font-semibold">Landscape (16:9)</div>
+                      <div className="text-xs text-muted-foreground mt-1">Best for MLS, Zillow, websites</div>
+                      <div className="text-sm text-muted-foreground mt-1">Included</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrientation('vertical')}
+                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                        orientation === 'vertical'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="font-semibold">Vertical (9:16)</div>
+                      <div className="text-xs text-muted-foreground mt-1">Best for Reels, TikTok, Shorts</div>
+                      <div className="text-sm text-muted-foreground mt-1">Included</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrientation('both')}
+                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                        orientation === 'both'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="font-semibold">Both</div>
+                      <div className="text-xs text-muted-foreground mt-1">Get landscape + vertical</div>
+                      <div className="text-sm text-green-600 font-medium mt-1">+ $15</div>
+                    </button>
+                  </div>
+                  {orientation === 'vertical' || orientation === 'both' ? (
+                    <p className="text-xs text-amber-600 mt-2">
+                      ⚠️ Vertical videos will crop the left and right edges of your photos to fit the 9:16 format.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="border-t pt-6">
