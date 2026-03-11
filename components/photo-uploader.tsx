@@ -28,7 +28,6 @@ const DIRECTIONS = [
   { key: 'tilt_down', label: 'Look Down' },
   { key: 'orbit_left', label: 'Orbit L' },
   { key: 'orbit_right', label: 'Orbit R' },
-  { key: 'rise', label: 'Rise' 
   { key: 'rise', label: 'Rise' },
   { key: 'bring_to_life', label: '✨ Bring to Life' },
 ];
