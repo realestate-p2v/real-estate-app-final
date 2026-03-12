@@ -167,7 +167,7 @@ export function OrderSummary({
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-foreground">Total</span>
                 <span className="text-3xl font-bold text-foreground">
-                  {totalPrice > 0 ? `$${totalPrice}` : "--"}
+                  {totalPrice > 0 ? `$${totalPrice.toFixed(2)}` : "--"}
                 </span>
               </div>
               {price > 0 && (
