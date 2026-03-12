@@ -15,7 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
 
-
 type OrderStep = "upload" | "details" | "payment";
 type PhotoInputMode = "upload" | "url";
 
@@ -70,7 +69,6 @@ export function OrderForm() {
   const isUrlMode = photoInputMode === "url";
   const isUploadMode = photoInputMode === "upload";
 
-  // Determine if the user can proceed to step 2
   const allUploadsComplete = photos.length > 0 && photos.every(p => p.uploadStatus === 'complete');
   const canProceedUpload = allUploadsComplete && photoCount <= 35 && sequenceConfirmed && musicSelection;
   const canProceedUrl = listingUrl.trim() !== "" && listingPackage !== null && listingPermission && musicSelection !== "";
@@ -78,7 +76,7 @@ export function OrderForm() {
 
   const getBasePrice = () => {
     if (isUrlMode && listingPackage) return listingPackage.price;
-    if (photoCount === 1) return 1; // Test price
+    if (photoCount === 1) return 1;
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
     if (photoCount <= 35) return 179;
@@ -90,9 +88,9 @@ export function OrderForm() {
   const getEditedPhotosPrice = () => includeEditedPhotos ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => resolution === '1080P' ? 10 : 0;
   const getOrientationPrice = () => orientation === 'both' ? 15 : 0;
-  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice() + getOrientationPrice() + getUrlServicePrice();
   const getUrlServicePrice = () => isUrlMode ? 25 : 0;
-  
+  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice() + getOrientationPrice() + getUrlServicePrice();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -228,7 +226,6 @@ export function OrderForm() {
 
   const handleModeSwitch = (mode: PhotoInputMode) => {
     setPhotoInputMode(mode);
-    // Reset the other mode's state to avoid stale data
     if (mode === "upload") {
       setListingUrl("");
       setListingPackage(null);
@@ -239,7 +236,6 @@ export function OrderForm() {
     }
   };
 
-  // Determine if the customization options (music, branding, etc.) should be shown
   const showCustomizationOptions =
     (isUploadMode && photos.length > 0) || isUrlMode;
 
@@ -284,7 +280,7 @@ export function OrderForm() {
                       : "border-border text-muted-foreground hover:border-primary/40"
                   }`}
                 >
-                  🔗 Use My Listing Link
+                  <span>🔗 Use My Listing Link</span> <span className="text-green-600 font-medium">(+$25)</span>
                 </button>
               </div>
 
@@ -321,6 +317,7 @@ export function OrderForm() {
                 <div className="pb-2" />
               </div>
 
+              {/* Upload Mode */}
               {isUploadMode && (
                 <PhotoUploader photos={photos} onPhotosChange={setPhotos} orientation={orientation} />
               )}
@@ -388,9 +385,9 @@ export function OrderForm() {
 
                   {/* Permission Checkbox */}
                   <div className={`rounded-xl border-2 p-4 transition-colors ${
-                  listingPermission
-                  ? "bg-green-50/50 border-green-500"
-                  : "bg-red-50/50 border-red-400"
+                    listingPermission
+                      ? "bg-green-50/50 border-green-500"
+                      : "bg-red-50/50 border-red-400"
                   }`}>
                     <div className="flex items-start gap-3">
                       <Checkbox
@@ -427,11 +424,11 @@ export function OrderForm() {
               </div>
             )}
 
-            {/* Customization options — show when photos uploaded OR url mode active */}
+            {/* Customization options */}
             {showCustomizationOptions && (
-             <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
+              <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
 
-            <div className="border-2 pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
+                <div className="border-2 pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                   <div className="pr-4">
                     <p className="font-bold">
                       Include Edited Photos {includeEditedPhotos && photos.length > 0 ? `(+$${(photos.length * 2.99).toFixed(2)})` : '(+$2.99/photo)'}
@@ -447,7 +444,6 @@ export function OrderForm() {
                   />
                 </div>
 
-               
                 {/* Resolution Selector */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground">Video Resolution</label>
@@ -479,65 +475,14 @@ export function OrderForm() {
                   </div>
                 </div>
 
-               {/* Orientation Selector */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Video Orientation</label>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setOrientation('landscape')}
-                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
-                        orientation === 'landscape'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="font-semibold">Landscape (16:9)</div>
-                      <div className="text-xs text-muted-foreground mt-1">Best for MLS, Zillow, websites</div>
-                      <div className="text-sm text-muted-foreground mt-1">Included</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOrientation('vertical')}
-                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
-                        orientation === 'vertical'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="font-semibold">Vertical (9:16)</div>
-                      <div className="text-xs text-muted-foreground mt-1">Best for Reels, TikTok, Shorts</div>
-                      <div className="text-sm text-muted-foreground mt-1">Included</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOrientation('both')}
-                      className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
-                        orientation === 'both'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="font-semibold">Both</div>
-                      <div className="text-xs text-muted-foreground mt-1">Get landscape + vertical</div>
-                      <div className="text-sm text-green-600 font-medium mt-1">+ $15</div>
-                    </button>
-                  </div>
-                  {orientation === 'vertical' || orientation === 'both' ? (
-                    <p className="text-xs text-amber-600 mt-2">
-                      ⚠️ Vertical videos will crop the left and right edges of your photos to fit the 9:16 format.
-                    </p>
-                  ) : null}
-                </div>
-
                 <div className="border-t pt-6">
-                <MusicSelector
-                  selected={musicSelection}
-                  onSelect={setMusicSelection}
-                  customAudioFile={customAudioFile}
-                  onCustomAudioChange={setCustomAudioFile}
-                  photoCount={photos.length}
-                />
+                  <MusicSelector
+                    selected={musicSelection}
+                    onSelect={setMusicSelection}
+                    customAudioFile={customAudioFile}
+                    onCustomAudioChange={setCustomAudioFile}
+                    photoCount={photos.length}
+                  />
                 </div>
                 <div className="border-t pt-6">
                   <BrandingSelector
@@ -557,7 +502,7 @@ export function OrderForm() {
                     onVoiceSelect={setSelectedVoice}
                   />
                 </div>
-                
+
                 <div className="flex flex-col gap-2">
                   {!musicSelection && (
                     <p className="text-xs text-red-500 italic text-right">* Please select a music track</p>
@@ -609,66 +554,66 @@ export function OrderForm() {
                 <Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Add any specific requests here..." />
               </div>
             </div>
-            
-            <div className={`rounded-2xl border-2 p-4 transition-colors ${
-  photoPermission ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"
-}`}>
-  <div className="flex items-start gap-3">
-    <Checkbox
-      id="photo-permission"
-      checked={photoPermission}
-      onCheckedChange={(checked) => setPhotoPermission(checked === true)}
-      className="h-6 w-6 mt-0.5"
-    />
-    <div>
 
-      {/* Property Details */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold">Property Details</h3>
-                  <p className="text-sm text-muted-foreground">Used for your video intro and outro cards</p>
-                  <div className="grid grid-cols-1 gap-4">
-                    <Input
-                      placeholder="Property Address (e.g. 123 Main Street)"
-                      value={propertyAddress}
-                      onChange={(e) => setPropertyAddress(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Input
-                      placeholder="City"
-                      value={propertyCity}
-                      onChange={(e) => setPropertyCity(e.target.value)}
-                    />
-                    <Input
-                      placeholder="State"
-                      value={propertyState}
-                      onChange={(e) => setPropertyState(e.target.value)}
-                    />
-                    <Input
-                      placeholder="Bedrooms"
-                      type="number"
-                      value={propertyBedrooms}
-                      onChange={(e) => setPropertyBedrooms(e.target.value)}
-                    />
-                    <Input
-                      placeholder="Bathrooms"
-                      type="number"
-                      value={propertyBathrooms}
-                      onChange={(e) => setPropertyBathrooms(e.target.value)}
-                    />
-                  </div>
+            {/* Property Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold">Property Details</h3>
+              <p className="text-sm text-muted-foreground">Used for your video intro and outro cards</p>
+              <div className="grid grid-cols-1 gap-4">
+                <Input
+                  placeholder="Property Address (e.g. 123 Main Street)"
+                  value={propertyAddress}
+                  onChange={(e) => setPropertyAddress(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Input
+                  placeholder="City"
+                  value={propertyCity}
+                  onChange={(e) => setPropertyCity(e.target.value)}
+                />
+                <Input
+                  placeholder="State"
+                  value={propertyState}
+                  onChange={(e) => setPropertyState(e.target.value)}
+                />
+                <Input
+                  placeholder="Bedrooms"
+                  type="number"
+                  value={propertyBedrooms}
+                  onChange={(e) => setPropertyBedrooms(e.target.value)}
+                />
+                <Input
+                  placeholder="Bathrooms"
+                  type="number"
+                  value={propertyBathrooms}
+                  onChange={(e) => setPropertyBathrooms(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Photo Permission */}
+            <div className={`rounded-2xl border-2 p-4 transition-colors ${
+              photoPermission ? "bg-green-50/50 border-green-500" : "bg-red-50/50 border-red-400"
+            }`}>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="photo-permission"
+                  checked={photoPermission}
+                  onCheckedChange={(checked) => setPhotoPermission(checked === true)}
+                  className="h-6 w-6 mt-0.5"
+                />
+                <div>
+                  <label htmlFor="photo-permission" className="font-medium cursor-pointer">
+                    I confirm I own these photos or have permission from the owner to use them.
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This includes photos taken by a photographer hired for your listing.
+                  </p>
                 </div>
-      
-      <label htmlFor="photo-permission" className="font-medium cursor-pointer">
-        I confirm I own these photos or have permission from the owner to use them.
-      </label>
-      <p className="text-xs text-muted-foreground mt-1">
-        This includes photos taken by a photographer hired for your listing.
-      </p>
-    </div>
-  </div>
-</div>
-            
+              </div>
+            </div>
+
             <Button
               onClick={handleSubmitOrder}
               disabled={isSubmitting || !formData.name || !formData.email || !photoPermission}
@@ -685,7 +630,7 @@ export function OrderForm() {
       </div>
 
       <div className="lg:col-span-1">
-       <OrderSummary
+        <OrderSummary
           photoCount={isUrlMode && listingPackage ? listingPackage.photoCount : photoCount}
           brandingOption={brandingSelection}
           voiceoverOption={voiceoverSelection}
