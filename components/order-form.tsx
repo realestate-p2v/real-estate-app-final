@@ -64,6 +64,7 @@ export function OrderForm() {
   const [propertyState, setPropertyState] = useState("");
   const [propertyBedrooms, setPropertyBedrooms] = useState("");
   const [propertyBathrooms, setPropertyBathrooms] = useState("");
+  const [includeAddressOnCard, setIncludeAddressOnCard] = useState(true);
   const photoCount = photos.length;
 
   const isUrlMode = photoInputMode === "url";
@@ -189,6 +190,7 @@ export function OrderForm() {
           voiceoverScript,
           voiceoverVoice: selectedVoice,
           includeEditedPhotos,
+          includeAddressOnCard,
           totalPrice: getTotalPrice(),
           specialInstructions: formData.notes,
         }),
@@ -435,7 +437,52 @@ export function OrderForm() {
             {showCustomizationOptions && (
               <div className="bg-card rounded-2xl border border-border p-6 space-y-8">
 
-                <div className="border-2 pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
+                {/* Property Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold">Property Details</h3>
+                  <p className="text-xs text-muted-foreground">*Used for order processing and video branding</p>
+                  <div className="grid grid-cols-1 gap-4">
+                    <Input
+                      placeholder="Property Address (e.g. 123 Main Street)"
+                      value={propertyAddress}
+                      onChange={(e) => setPropertyAddress(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Input
+                      placeholder="City"
+                      value={propertyCity}
+                      onChange={(e) => setPropertyCity(e.target.value)}
+                    />
+                    <Input
+                      placeholder="State"
+                      value={propertyState}
+                      onChange={(e) => setPropertyState(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Bedrooms"
+                      type="number"
+                      value={propertyBedrooms}
+                      onChange={(e) => setPropertyBedrooms(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Bathrooms"
+                      type="number"
+                      value={propertyBathrooms}
+                      onChange={(e) => setPropertyBathrooms(e.target.value)}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={includeAddressOnCard}
+                      onCheckedChange={(checked) => setIncludeAddressOnCard(checked === true)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-sm text-muted-foreground">Include address on video intro/outro card</span>
+                  </label>
+                </div>
+
+                <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
                   <div className="pr-4">
                     <p className="font-bold">
                       Include Edited Photos {includeEditedPhotos && photos.length > 0 ? `(+$${(photos.length * 2.99).toFixed(2)})` : '(+$2.99/photo)'}
@@ -497,6 +544,12 @@ export function OrderForm() {
                     onSelect={setBrandingSelection}
                     brandingData={brandingData}
                     onBrandingDataChange={setBrandingData}
+                    propertyCity={propertyCity}
+                    propertyState={propertyState}
+                    propertyBedrooms={propertyBedrooms}
+                    propertyBathrooms={propertyBathrooms}
+                    propertyAddress={propertyAddress}
+                    includeAddressOnCard={includeAddressOnCard}
                   />
                 </div>
                 <div className="border-t pt-6">
@@ -559,43 +612,6 @@ export function OrderForm() {
               <div className="space-y-2">
                 <Label>Special Instructions</Label>
                 <Textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Add any specific requests here..." />
-              </div>
-            </div>
-
-            {/* Property Details */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold">Property Details</h3>
-              <p className="text-sm text-muted-foreground">Used for your video intro and outro cards</p>
-              <div className="grid grid-cols-1 gap-4">
-                <Input
-                  placeholder="Property Address (e.g. 123 Main Street)"
-                  value={propertyAddress}
-                  onChange={(e) => setPropertyAddress(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Input
-                  placeholder="City"
-                  value={propertyCity}
-                  onChange={(e) => setPropertyCity(e.target.value)}
-                />
-                <Input
-                  placeholder="State"
-                  value={propertyState}
-                  onChange={(e) => setPropertyState(e.target.value)}
-                />
-                <Input
-                  placeholder="Bedrooms"
-                  type="number"
-                  value={propertyBedrooms}
-                  onChange={(e) => setPropertyBedrooms(e.target.value)}
-                />
-                <Input
-                  placeholder="Bathrooms"
-                  type="number"
-                  value={propertyBathrooms}
-                  onChange={(e) => setPropertyBathrooms(e.target.value)}
-                />
               </div>
             </div>
 
