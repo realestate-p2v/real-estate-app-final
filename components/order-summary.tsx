@@ -9,6 +9,7 @@ interface OrderSummaryProps {
   includeEditedPhotos?: boolean;
   resolution?: string;
   orientation?: string;
+  isUrlMode?: boolean;
 }
 
 export function OrderSummary({
@@ -18,6 +19,7 @@ export function OrderSummary({
   includeEditedPhotos = false,
   resolution = "768P",
   orientation = "landscape",
+  isUrlMode = false,
 }: OrderSummaryProps) {
   const getPricing = () => {
     if (photoCount === 0) {
@@ -46,7 +48,8 @@ export function OrderSummary({
   const editedPhotosPrice = includeEditedPhotos ? photoCount * 2.99 : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
   const orientationPrice = orientation === "both" ? 15 : 0;
-  const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice + resolutionPrice + orientationPrice;
+  const urlServicePrice = isUrlMode ? 25 : 0;
+  const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice + resolutionPrice + orientationPrice + urlServicePrice;
   const totalPrice = price + totalAddons;
 
   const features = [
@@ -106,7 +109,7 @@ export function OrderSummary({
             </div>
 
             {/* Add-ons */}
-            {(brandingPrice > 0 || voiceoverPrice > 0 || editedPhotosPrice > 0 || resolutionPrice > 0 || orientationPrice > 0) && (
+            {(brandingPrice > 0 || voiceoverPrice > 0 || editedPhotosPrice > 0 || resolutionPrice > 0 || orientationPrice > 0 || urlServicePrice > 0) && (
               <div className="py-4 border-b border-border space-y-3">
                 <span className="text-sm font-medium text-muted-foreground">
                   Add-ons:
@@ -123,7 +126,7 @@ export function OrderSummary({
                     <span className="font-semibold text-foreground">+$25</span>
                   </div>
                 )}
-               {editedPhotosPrice > 0 && (
+                {editedPhotosPrice > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-foreground">Photo Editing ({photoCount} × $2.99)</span>
                     <span className="font-semibold text-foreground">+${editedPhotosPrice.toFixed(2)}</span>
@@ -139,6 +142,12 @@ export function OrderSummary({
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-foreground">Both Orientations</span>
                     <span className="font-semibold text-foreground">+$15</span>
+                  </div>
+                )}
+                {urlServicePrice > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Listing URL Service</span>
+                    <span className="font-semibold text-foreground">+$25</span>
                   </div>
                 )}
               </div>
