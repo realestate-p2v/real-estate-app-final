@@ -203,6 +203,9 @@ function CropPreview({
           {cropsTopBottom ? 'Move Down ↓' : 'Move Right →'}
         </button>
       </div>
+    </div>
+    );
+}
 
 export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape" }: PhotoUploaderProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
