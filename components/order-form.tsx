@@ -317,11 +317,7 @@ export function OrderForm() {
                     <div className="text-sm text-green-600 font-medium mt-1">+ $15</div>
                   </button>
                 </div>
-                {(orientation === 'vertical' || orientation === 'both') && (
-                  <p className="text-xs text-amber-600">
-                    ⚠️ Vertical videos will crop the left and right edges of your photos to fit the 9:16 format.
-                  </p>
-                )}
+                <div className="pb-2" />
               </div>
 
               {isUploadMode && (
