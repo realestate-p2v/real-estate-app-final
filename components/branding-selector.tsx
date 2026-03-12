@@ -58,7 +58,7 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-6">
         {isEmpty ? (
           <div className="space-y-2">
             <p className="text-white/40 text-sm font-medium">Your branding preview</p>
@@ -235,7 +235,7 @@ export function BrandingSelector({
           <h4 className="font-medium text-foreground">Branding Details</h4>
           
           {/* Two-column layout: form left, preview right */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left: Form fields */}
             <div className="space-y-4">
               {/* Logo Upload */}
