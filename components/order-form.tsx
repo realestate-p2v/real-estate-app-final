@@ -472,14 +472,6 @@ export function OrderForm() {
                       onChange={(e) => setPropertyBathrooms(e.target.value)}
                     />
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={includeAddressOnCard}
-                      onCheckedChange={(checked) => setIncludeAddressOnCard(checked === true)}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-sm text-muted-foreground">Include address on video intro/outro card</span>
-                  </label>
                 </div>
 
                 <div className="border-t pt-6 flex items-center justify-between p-4 bg-muted/80 rounded-xl">
@@ -550,6 +542,7 @@ export function OrderForm() {
                     propertyBathrooms={propertyBathrooms}
                     propertyAddress={propertyAddress}
                     includeAddressOnCard={includeAddressOnCard}
+                    onIncludeAddressChange={setIncludeAddressOnCard}
                   />
                 </div>
                 <div className="border-t pt-6">
