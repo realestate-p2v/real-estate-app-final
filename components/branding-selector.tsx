@@ -36,9 +36,24 @@ interface BrandingSelectorProps {
   onSelect: (id: string) => void;
   brandingData?: BrandingData;
   onBrandingDataChange?: (data: BrandingData) => void;
+  propertyCity?: string;
+  propertyState?: string;
+  propertyBedrooms?: string;
+  propertyBathrooms?: string;
+  propertyAddress?: string;
+  includeAddressOnCard?: boolean;
 }
 
-function BrandingPreview({ brandingData, logoPreview }: { brandingData?: BrandingData; logoPreview: string | null }) {
+function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyState, propertyBedrooms, propertyBathrooms, propertyAddress, includeAddressOnCard }: { 
+  brandingData?: BrandingData; 
+  logoPreview: string | null;
+  propertyCity?: string;
+  propertyState?: string;
+  propertyBedrooms?: string;
+  propertyBathrooms?: string;
+  propertyAddress?: string;
+  includeAddressOnCard?: boolean;
+}) {
   const agent = brandingData?.agentName || "";
   const company = brandingData?.companyName || "";
   const phone = brandingData?.phone || "";
@@ -112,10 +127,22 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
             </p>
 
             {/* Property line */}
-            <p className="text-white/50 mt-1"
-               style={{ fontSize: 'clamp(7px, 1.8vw, 10px)' }}>
-              3 BD | 2 BA | City, ST
-            </p>
+            {(() => {
+              const parts = [];
+              if (propertyBedrooms) parts.push(`${propertyBedrooms} BD`);
+              if (propertyBathrooms) parts.push(`${propertyBathrooms} BA`);
+              if (propertyCity || propertyState) {
+                parts.push([propertyCity, propertyState].filter(Boolean).join(", "));
+              }
+              const propertyLine = parts.length > 0 ? parts.join(" | ") : "3 BD | 2 BA | City, ST";
+              const isPlaceholder = parts.length === 0;
+              return (
+                <p className={`mt-1 ${isPlaceholder ? 'text-white/25' : 'text-white/70'}`}
+                   style={{ fontSize: 'clamp(7px, 1.8vw, 10px)' }}>
+                  {includeAddressOnCard && propertyAddress ? `${propertyAddress} · ` : ""}{propertyLine}
+                </p>
+              );
+            })()}
           </>
         )}
       </div>
@@ -132,7 +159,13 @@ export function BrandingSelector({
   selected, 
   onSelect,
   brandingData,
-  onBrandingDataChange 
+  onBrandingDataChange,
+  propertyCity,
+  propertyState,
+  propertyBedrooms,
+  propertyBathrooms,
+  propertyAddress,
+  includeAddressOnCard,
 }: BrandingSelectorProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(brandingData?.logoUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -332,7 +365,16 @@ export function BrandingSelector({
 
             {/* Right: Live Preview */}
             <div className="flex flex-col justify-start">
-              <BrandingPreview brandingData={brandingData} logoPreview={logoPreview} />
+              <BrandingPreview 
+                brandingData={brandingData} 
+                logoPreview={logoPreview}
+                propertyCity={propertyCity}
+                propertyState={propertyState}
+                propertyBedrooms={propertyBedrooms}
+                propertyBathrooms={propertyBathrooms}
+                propertyAddress={propertyAddress}
+                includeAddressOnCard={includeAddressOnCard}
+              />
               <p className="text-[10px] text-muted-foreground text-center mt-2">
                 This preview approximates your video intro &amp; outro cards
               </p>
