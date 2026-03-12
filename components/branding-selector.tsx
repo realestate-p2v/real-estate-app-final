@@ -58,7 +58,7 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-between text-center px-4 py-8">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
         {isEmpty ? (
           <div className="space-y-2">
             <p className="text-white/40 text-sm font-medium">Your branding preview</p>
@@ -91,7 +91,7 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
 
             {/* Contact — fontsize 3.5% of height, y=51%, white@0.8 */}
             {(contactLine || (!agent && !company)) && (
-              <p className={`leading-tight mt-2 ${contactLine ? 'text-white/80' : 'text-white/20'}`}
+              <p className={`leading-tight mt-1 ${contactLine ? 'text-white/80' : 'text-white/20'}`}
                  style={{ fontSize: 'clamp(9px, 2.5vw, 13px)' }}>
                 {contactLine || "(555) 123-4567 | agent@email.com"}
               </p>
@@ -106,13 +106,13 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
             )}
 
             {/* CTA — fontsize 4%, y=70%, gold bold */}
-            <p className="font-bold mt-4"
+            <p className="font-bold mt-2"
                style={{ fontSize: 'clamp(11px, 3vw, 15px)', color: '#FFD700' }}>
               Schedule a Showing Today
             </p>
 
             {/* Property line — fontsize 3.2%, y=82%, white@0.7 */}
-            <p className="text-white/50 mt-3"
+            <p className="text-white/50 mt-1"
                style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
               3 BD | 2 BA | City, ST
             </p>
