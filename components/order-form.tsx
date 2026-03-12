@@ -77,7 +77,7 @@ export function OrderForm() {
   const canProceed = isUploadMode ? canProceedUpload : canProceedUrl;
 
   const getBasePrice = () => {
-    if (isUrlMode && listingPackage) return listingPackage.price;
+    if (isUrlMode && listingPackage) return listingPackage.price + 25;
     if (photoCount === 1) return 1; // Test price
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
