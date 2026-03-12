@@ -101,8 +101,8 @@ function CropPreview({
     cropPercent = Math.round((1 - visibleW / w) * 100);
   }
 
-  const previewW = 200;
-  const previewH = 133;
+  const previewW = 240;
+  const previewH = 135;
   
   const getOverlayStyle = () => {
     if (cropsTopBottom) {
