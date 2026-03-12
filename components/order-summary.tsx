@@ -52,13 +52,22 @@ export function OrderSummary({
   const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice + resolutionPrice + orientationPrice + urlServicePrice;
   const totalPrice = price + totalAddons;
 
-  const features = [
-    "HD 1080p video quality",
-    "Manual photo enhancement",
-    "AI perspective correction",
-    "24-hour delivery",
-    "Revisions included",
-  ];
+  const features: string[] = [];
+  features.push(resolution === "1080P" ? "1080P Full HD video" : "768P HD video");
+  features.push(orientation === "both" ? "Landscape + Vertical videos" : orientation === "vertical" ? "Vertical (9:16) video" : "Landscape (16:9) video");
+  if (brandingOption === "custom") {
+    features.push("Custom branded intro & outro");
+  }
+  if (voiceoverOption === "voiceover") {
+    features.push("Professional AI voiceover");
+  }
+  if (includeEditedPhotos) {
+    features.push("Professional photo editing");
+  }
+  features.push("AI-enhanced motion clips");
+  features.push("Choice of music");
+  features.push("48-hour delivery");
+  features.push("1 revision included");
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 sticky top-24">
