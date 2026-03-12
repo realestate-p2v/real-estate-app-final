@@ -568,7 +568,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenCropIndex(null); }}
                   className="text-xs text-primary font-semibold hover:underline">
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-left">
                   <p className="text-xs font-semibold text-foreground">Cropping tips:</p>
                   <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don't crop too tight on the roofline</p>
                   <p className="text-xs text-muted-foreground">• Front doors and entryways look best <span className="font-medium text-foreground">slightly below center</span></p>
