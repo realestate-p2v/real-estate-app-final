@@ -58,7 +58,7 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
         {isEmpty ? (
           <div className="space-y-2">
             <p className="text-white/40 text-sm font-medium">Your branding preview</p>
@@ -66,54 +66,54 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
           </div>
         ) : (
           <>
-            {/* Logo — 18% height, centered, at y=8% */}
+            {/* Logo */}
             {logoPreview && (
-              <div className="mb-3" style={{ marginTop: '2%' }}>
+              <div className="mb-1">
                 <img
                   src={logoPreview}
                   alt="Logo"
-                  className="h-12 sm:h-14 w-auto object-contain mx-auto"
+                  className="h-10 sm:h-12 w-auto object-contain mx-auto"
                 />
               </div>
             )}
 
-            {/* Agent name — fontsize 6% of height, y=34%, bold white */}
+            {/* Agent name */}
             <p className={`text-white font-bold leading-tight ${agent ? '' : 'text-white/30'}`}
-               style={{ fontSize: 'clamp(14px, 4vw, 20px)', marginTop: logoPreview ? '4%' : '8%' }}>
+               style={{ fontSize: 'clamp(13px, 3.5vw, 18px)', marginTop: logoPreview ? '1%' : '0' }}>
               {agent || "Agent Name"}
             </p>
 
-            {/* Company — fontsize 4% of height, y=43%, white@0.85 */}
-            <p className={`leading-tight mt-1 ${company ? 'text-white/85' : 'text-white/25'}`}
-               style={{ fontSize: 'clamp(11px, 3vw, 15px)' }}>
+            {/* Company */}
+            <p className={`leading-tight mt-0.5 ${company ? 'text-white/85' : 'text-white/25'}`}
+               style={{ fontSize: 'clamp(10px, 2.5vw, 13px)' }}>
               {company || "Company / Brokerage"}
             </p>
 
-            {/* Contact — fontsize 3.5% of height, y=51%, white@0.8 */}
+            {/* Contact */}
             {(contactLine || (!agent && !company)) && (
               <p className={`leading-tight mt-1 ${contactLine ? 'text-white/80' : 'text-white/20'}`}
-                 style={{ fontSize: 'clamp(9px, 2.5vw, 13px)' }}>
+                 style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
                 {contactLine || "(555) 123-4567 | agent@email.com"}
               </p>
             )}
 
-            {/* Website — fontsize 3.5%, y=58%, white@0.75 */}
+            {/* Website */}
             {(website || (!agent && !company)) && (
-              <p className={`leading-tight mt-1 ${website ? 'text-white/75' : 'text-white/20'}`}
-                 style={{ fontSize: 'clamp(9px, 2.5vw, 12px)' }}>
+              <p className={`leading-tight mt-0.5 ${website ? 'text-white/75' : 'text-white/20'}`}
+                 style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
                 {website || "www.example.com"}
               </p>
             )}
 
-            {/* CTA — fontsize 4%, y=70%, gold bold */}
+            {/* CTA */}
             <p className="font-bold mt-2"
-               style={{ fontSize: 'clamp(11px, 3vw, 15px)', color: '#FFD700' }}>
+               style={{ fontSize: 'clamp(10px, 2.5vw, 13px)', color: '#FFD700' }}>
               Schedule a Showing Today
             </p>
 
-            {/* Property line — fontsize 3.2%, y=82%, white@0.7 */}
+            {/* Property line */}
             <p className="text-white/50 mt-1"
-               style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
+               style={{ fontSize: 'clamp(7px, 1.8vw, 10px)' }}>
               3 BD | 2 BA | City, ST
             </p>
           </>
@@ -235,7 +235,7 @@ export function BrandingSelector({
           <h4 className="font-medium text-foreground">Branding Details</h4>
           
           {/* Two-column layout: form left, preview right */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Form fields */}
             <div className="space-y-4">
               {/* Logo Upload */}
