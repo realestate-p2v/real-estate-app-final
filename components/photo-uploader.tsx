@@ -485,8 +485,8 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         {photos.map((photo, index) => (
           <div
             key={photo.id}
-            draggable
-            onDragStart={() => handleDragStart(index)}
+            draggable={openCropIndex !== index}
+            onDragStart={() => { if (openCropIndex === index) return; handleDragStart(index); }}
             onDragOver={(e) => handleDragOver(e, index)}
             onDrop={handleDrop}
             className={`relative bg-card border rounded-xl transition-all p-3 cursor-move ${
