@@ -135,8 +135,14 @@ export function OrderForm() {
           secure_url: photo.secure_url,
           order: i,
           description: photo.description || "",
+          camera_direction: photo.camera_direction || null,
+          camera_speed: photo.camera_speed || null,
+          custom_motion: photo.custom_motion || "",
+          crop_offset_landscape: photo.crop_offset_landscape ?? 50,
+          crop_offset_vertical: photo.crop_offset_vertical ?? 50,
+          original_width: photo.original_width || null,
+          original_height: photo.original_height || null,
         }));
-      }
 
       let brandingLogoUrl = "";
       if (brandingData.logoFile) {
