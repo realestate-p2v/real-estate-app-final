@@ -143,6 +143,7 @@ export function OrderForm() {
           original_width: photo.original_width || null,
           original_height: photo.original_height || null,
         }));
+      }
 
       let brandingLogoUrl = "";
       if (brandingData.logoFile) {
