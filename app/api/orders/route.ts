@@ -94,6 +94,7 @@ export async function POST(request: Request) {
         voiceover_script: voiceoverScript || null,
         voiceover_voice: voiceoverVoice || null,
         include_edited_photos: includeEditedPhotos || false,
+        include_address_on_card: body.includeAddressOnCard ?? true,
         total_price: totalPrice || 0,
         special_instructions: specialInstructions || null,
       })
