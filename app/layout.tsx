@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     siteName: 'Real Estate Photo 2 Video',
     images: [
       {
-        // The "?v=2" at the end is the cache-buster that forces an update
         url: 'https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2', 
         width: 1200,
         height: 630,
@@ -31,14 +30,12 @@ export const metadata: Metadata = {
     locale: 'en_US',
     type: 'website',
   },
-
   twitter: {
     card: 'summary_large_image',
     title: 'Real Estate Photo 2 Video',
     description: 'Hand-edited professional real estate videos from your listing photos.',
     images: ['https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2'],
   },
-
   icons: {
     icon: '/icon.svg',
     apple: '/apple-icon.png',
@@ -52,12 +49,37 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geist.className} font-sans antialiased`}>
+      <head>
+        {/* Google Tag Manager - Head */}
         <Script
-  id="meta-pixel"
-  strategy="afterInteractive"
-  dangerouslySetInnerHTML={{
-    __html: `
+          id="gtm-head"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MKVR4C6N');`,
+          }}
+        />
+      </head>
+      <body className={`${geist.className} font-sans antialiased`}>
+        {/* Google Tag Manager - Noscript */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-MKVR4C6N"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+
+        {/* Meta Pixel */}
+        <Script
+          id="meta-pixel"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
       !function(f,b,e,v,n,t,s)
       {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -69,8 +91,8 @@ export default function RootLayout({
       fbq('init', '1769748957035473');
       fbq('track', 'PageView');
     `,
-  }}
-/>
+          }}
+        />
         {children}
         <PromoPopup />
         <Analytics />
