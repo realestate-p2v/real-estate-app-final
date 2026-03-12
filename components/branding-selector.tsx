@@ -139,7 +139,7 @@ function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyStat
               const propertyLine = parts.length > 0 ? parts.join(" | ") : "3 BD | 2 BA | City, ST";
               const isPlaceholder = parts.length === 0;
               return (
-                <p className={`mt-1 ${isPlaceholder ? 'text-white/25' : 'text-white/70'}`}
+                <p className={`mt-1 ${isPlaceholder ? 'text-white/25' : 'text-white/95'}`}
                    style={{ fontSize: 'clamp(7px, 1.8vw, 10px)' }}>
                   {includeAddressOnCard && propertyAddress ? `${propertyAddress} · ` : ""}{propertyLine}
                 </p>
