@@ -38,6 +38,96 @@ interface BrandingSelectorProps {
   onBrandingDataChange?: (data: BrandingData) => void;
 }
 
+function BrandingPreview({ brandingData, logoPreview }: { brandingData?: BrandingData; logoPreview: string | null }) {
+  const agent = brandingData?.agentName || "";
+  const company = brandingData?.companyName || "";
+  const phone = brandingData?.phone || "";
+  const email = brandingData?.email || "";
+  const website = brandingData?.website || "";
+
+  const contactParts = [phone, email].filter(x => x.trim());
+  const contactLine = contactParts.join(" | ");
+
+  const isEmpty = !agent && !company && !contactLine && !website && !logoPreview;
+
+  return (
+    <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border shadow-lg">
+      {/* Blurred background placeholder */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900" />
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/55" />
+
+      {/* Content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+        {isEmpty ? (
+          <div className="space-y-2">
+            <p className="text-white/40 text-sm font-medium">Your branding preview</p>
+            <p className="text-white/25 text-xs">Fill in the fields to see a live preview</p>
+          </div>
+        ) : (
+          <>
+            {/* Logo — 18% height, centered, at y=8% */}
+            {logoPreview && (
+              <div className="mb-3" style={{ marginTop: '2%' }}>
+                <img
+                  src={logoPreview}
+                  alt="Logo"
+                  className="h-12 sm:h-14 w-auto object-contain mx-auto"
+                />
+              </div>
+            )}
+
+            {/* Agent name — fontsize 6% of height, y=34%, bold white */}
+            <p className={`text-white font-bold leading-tight ${agent ? '' : 'text-white/30'}`}
+               style={{ fontSize: 'clamp(14px, 4vw, 20px)', marginTop: logoPreview ? '4%' : '8%' }}>
+              {agent || "Agent Name"}
+            </p>
+
+            {/* Company — fontsize 4% of height, y=43%, white@0.85 */}
+            <p className={`leading-tight mt-1 ${company ? 'text-white/85' : 'text-white/25'}`}
+               style={{ fontSize: 'clamp(11px, 3vw, 15px)' }}>
+              {company || "Company / Brokerage"}
+            </p>
+
+            {/* Contact — fontsize 3.5% of height, y=51%, white@0.8 */}
+            {(contactLine || (!agent && !company)) && (
+              <p className={`leading-tight mt-2 ${contactLine ? 'text-white/80' : 'text-white/20'}`}
+                 style={{ fontSize: 'clamp(9px, 2.5vw, 13px)' }}>
+                {contactLine || "(555) 123-4567 | agent@email.com"}
+              </p>
+            )}
+
+            {/* Website — fontsize 3.5%, y=58%, white@0.75 */}
+            {(website || (!agent && !company)) && (
+              <p className={`leading-tight mt-1 ${website ? 'text-white/75' : 'text-white/20'}`}
+                 style={{ fontSize: 'clamp(9px, 2.5vw, 12px)' }}>
+                {website || "www.example.com"}
+              </p>
+            )}
+
+            {/* CTA — fontsize 4%, y=70%, gold bold */}
+            <p className="font-bold mt-4"
+               style={{ fontSize: 'clamp(11px, 3vw, 15px)', color: '#FFD700' }}>
+              Schedule a Showing Today
+            </p>
+
+            {/* Property line — fontsize 3.2%, y=82%, white@0.7 */}
+            <p className="text-white/50 mt-3"
+               style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
+              3 BD | 2 BA | City, ST
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Label */}
+      <div className="absolute top-2 left-2 bg-black/60 text-white/70 text-[9px] font-medium px-2 py-0.5 rounded-full">
+        Preview — Intro / Outro Card
+      </div>
+    </div>
+  );
+}
+
 export function BrandingSelector({ 
   selected, 
   onSelect,
@@ -144,94 +234,108 @@ export function BrandingSelector({
         <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border space-y-4">
           <h4 className="font-medium text-foreground">Branding Details</h4>
           
-          {/* Logo Upload */}
-          <div className="space-y-2">
-            <Label>Agent Photo or Logo (optional)</Label>
-            <div className="flex items-center gap-4">
-              {logoPreview ? (
-                <div className="relative">
-                  <img 
-                    src={logoPreview} 
-                    alt="Logo preview" 
-                    className="h-16 w-16 object-contain rounded-lg border border-border bg-background"
+          {/* Two-column layout: form left, preview right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Form fields */}
+            <div className="space-y-4">
+              {/* Logo Upload */}
+              <div className="space-y-2">
+                <Label>Agent Photo or Logo (optional)</Label>
+                <div className="flex items-center gap-4">
+                  {logoPreview ? (
+                    <div className="relative">
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo preview" 
+                        className="h-16 w-16 object-contain rounded-lg border border-border bg-background"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="h-16 w-16 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center transition-colors"
+                    >
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    </button>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={handleRemoveLogo}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB</p>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-16 w-16 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center transition-colors"
-                >
-                  <Upload className="h-6 w-6 text-muted-foreground" />
-                </button>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="hidden"
-              />
-              <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB</p>
-            </div>
-          </div>
+              </div>
 
-          {/* Agent/Company Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="agentName">Agent Name</Label>
-              <Input
-                id="agentName"
-                placeholder="John Smith"
-                value={brandingData?.agentName || ""}
-                onChange={(e) => handleFieldChange("agentName", e.target.value)}
-              />
+              {/* Agent/Company Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="agentName">Agent Name</Label>
+                  <Input
+                    id="agentName"
+                    placeholder="John Smith"
+                    value={brandingData?.agentName || ""}
+                    onChange={(e) => handleFieldChange("agentName", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company/Brokerage</Label>
+                  <Input
+                    id="companyName"
+                    placeholder="RE/MAX Premier"
+                    value={brandingData?.companyName || ""}
+                    onChange={(e) => handleFieldChange("companyName", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandingPhone">Phone</Label>
+                  <Input
+                    id="brandingPhone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={brandingData?.phone || ""}
+                    onChange={(e) => handleFieldChange("phone", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandingEmail">Email</Label>
+                  <Input
+                    id="brandingEmail"
+                    type="email"
+                    placeholder="agent@example.com"
+                    value={brandingData?.email || ""}
+                    onChange={(e) => handleFieldChange("email", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="website">Website (optional)</Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    placeholder="https://www.example.com"
+                    value={brandingData?.website || ""}
+                    onChange={(e) => handleFieldChange("website", e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company/Brokerage</Label>
-              <Input
-                id="companyName"
-                placeholder="RE/MAX Premier"
-                value={brandingData?.companyName || ""}
-                onChange={(e) => handleFieldChange("companyName", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="brandingPhone">Phone</Label>
-              <Input
-                id="brandingPhone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={brandingData?.phone || ""}
-                onChange={(e) => handleFieldChange("phone", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="brandingEmail">Email</Label>
-              <Input
-                id="brandingEmail"
-                type="email"
-                placeholder="agent@example.com"
-                value={brandingData?.email || ""}
-                onChange={(e) => handleFieldChange("email", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="website">Website (optional)</Label>
-              <Input
-                id="website"
-                type="url"
-                placeholder="https://www.example.com"
-                value={brandingData?.website || ""}
-                onChange={(e) => handleFieldChange("website", e.target.value)}
-              />
+
+            {/* Right: Live Preview */}
+            <div className="flex flex-col justify-start">
+              <BrandingPreview brandingData={brandingData} logoPreview={logoPreview} />
+              <p className="text-[10px] text-muted-foreground text-center mt-2">
+                This preview approximates your video intro &amp; outro cards
+              </p>
             </div>
           </div>
         </div>
