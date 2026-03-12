@@ -692,6 +692,7 @@ export function OrderForm() {
           includeEditedPhotos={includeEditedPhotos}
           resolution={resolution}
           orientation={orientation}
+          isUrlMode={isUrlMode}
         />
       </div>
     </div>
