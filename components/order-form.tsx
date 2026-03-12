@@ -287,7 +287,43 @@ export function OrderForm() {
                 </button>
               </div>
 
-              {/* Upload Mode */}
+              {/* Video Format Selection */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-bold">I am making a...</h3>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setOrientation('landscape')}
+                    className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                      orientation === 'landscape' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'
+                    }`}>
+                    <div className="text-2xl mb-1">📺</div>
+                    <div className="font-semibold">Landscape Video</div>
+                    <div className="text-xs text-muted-foreground mt-1">16:9 · MLS, Zillow, websites</div>
+                  </button>
+                  <button type="button" onClick={() => setOrientation('vertical')}
+                    className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                      orientation === 'vertical' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'
+                    }`}>
+                    <div className="text-2xl mb-1">📱</div>
+                    <div className="font-semibold">Vertical Video</div>
+                    <div className="text-xs text-muted-foreground mt-1">9:16 · Reels, TikTok, Shorts</div>
+                  </button>
+                  <button type="button" onClick={() => setOrientation('both')}
+                    className={`flex-1 p-4 rounded-xl border-2 text-center transition-all ${
+                      orientation === 'both' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'
+                    }`}>
+                    <div className="text-2xl mb-1">🎬</div>
+                    <div className="font-semibold">Both</div>
+                    <div className="text-xs text-muted-foreground mt-1">Landscape + Vertical</div>
+                    <div className="text-sm text-green-600 font-medium mt-1">+ $15</div>
+                  </button>
+                </div>
+                {(orientation === 'vertical' || orientation === 'both') && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Vertical videos will crop the left and right edges of your photos to fit the 9:16 format.
+                  </p>
+                )}
+              </div>
+
               {isUploadMode && (
                 <PhotoUploader photos={photos} onPhotosChange={setPhotos} orientation={orientation} />
               )}
