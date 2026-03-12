@@ -633,6 +633,14 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   )}
                 </div>
 
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-foreground">Tips for best results:</p>
+                  <p className="text-xs text-muted-foreground">• Move <span className="font-medium text-foreground">toward</span> the focal point of the photo (Fwd is most popular)</p>
+                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Slow or Med</span> speed looks most professional</p>
+                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Auto</span> works great — our AI picks the best movement for each photo</p>
+                  <p className="text-xs text-muted-foreground">• Use <span className="font-medium text-foreground">Bring to Life</span> for photos with people, pets, or nature</p>
+                </div>
+                
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(null); }}
                   className="text-xs text-primary font-semibold hover:underline">
                   Done ✓
