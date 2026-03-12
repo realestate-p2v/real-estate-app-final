@@ -90,7 +90,8 @@ export function OrderForm() {
   const getEditedPhotosPrice = () => includeEditedPhotos ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => resolution === '1080P' ? 10 : 0;
   const getOrientationPrice = () => orientation === 'both' ? 15 : 0;
-  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice() + getOrientationPrice();
+  const getTotalPrice = () => getBasePrice() + getBrandingPrice() + getVoiceoverPrice() + getEditedPhotosPrice() + getResolutionPrice() + getOrientationPrice() + getUrlServicePrice();
+  const getUrlServicePrice = () => isUrlMode ? 25 : 0;
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
