@@ -58,7 +58,7 @@ function BrandingPreview({ brandingData, logoPreview }: { brandingData?: Brandin
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-6">
+      <div className="absolute inset-0 flex flex-col items-center justify-between text-center px-4 py-8">
         {isEmpty ? (
           <div className="space-y-2">
             <p className="text-white/40 text-sm font-medium">Your branding preview</p>
