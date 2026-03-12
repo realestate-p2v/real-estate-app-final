@@ -170,7 +170,7 @@ export function OrderSummary({
                   {totalPrice > 0 ? `$${totalPrice.toFixed(2)}` : "--"}
                 </span>
               </div>
-              {price > 0 && (
+              {price > 0 && originalPrice > price && (
                 <div className="text-right mt-2">
                   <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-semibold">
                     Save ${originalPrice - price}
