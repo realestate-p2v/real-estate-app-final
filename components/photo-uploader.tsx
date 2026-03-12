@@ -590,9 +590,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   Done ✓
                 </button>
               </div>
-            </div>
-            );
-          }
+            )}
 
             {openDirectionIndex === index && (
               <div className="mt-3 pt-3 border-t border-border space-y-3">
