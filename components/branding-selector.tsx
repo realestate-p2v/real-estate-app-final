@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Check, ImageIcon, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const brandingOptions = [
   {
@@ -42,6 +43,7 @@ interface BrandingSelectorProps {
   propertyBathrooms?: string;
   propertyAddress?: string;
   includeAddressOnCard?: boolean;
+  onIncludeAddressChange?: (val: boolean) => void;
 }
 
 function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyState, propertyBedrooms, propertyBathrooms, propertyAddress, includeAddressOnCard }: { 
@@ -166,6 +168,7 @@ export function BrandingSelector({
   propertyBathrooms,
   propertyAddress,
   includeAddressOnCard,
+  onIncludeAddressChange,
 }: BrandingSelectorProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(brandingData?.logoUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -362,6 +365,16 @@ export function BrandingSelector({
                 </div>
               </div>
             </div>
+
+            {/* Address on card checkbox */}
+            <label className="flex items-center gap-2 cursor-pointer mt-2">
+              <Checkbox
+                checked={includeAddressOnCard}
+                onCheckedChange={(checked) => onIncludeAddressChange?.(checked === true)}
+                className="h-4 w-4"
+              />
+              <span className="text-sm text-muted-foreground">Include address on video intro/outro card</span>
+            </label>
 
             {/* Right: Live Preview */}
             <div className="flex flex-col justify-start">
