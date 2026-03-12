@@ -436,7 +436,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           <p className="text-lg font-semibold">Upload your listing photos</p>
           <p className="text-muted-foreground">Drag and drop or click to select</p>
           <p className="text-xs text-muted-foreground mt-2">💡 Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
-          <p className="text-xs text-muted-foreground mt-1">📐 For best results, use landscape-oriented photos (wider than tall). Photos with different aspect ratios will be automatically cropped to fit your video format — you can adjust the crop position after uploading.</p>
+          <p className="text-xs text-muted-foreground mt-1">📐 You can adjust the crop position after uploading.</p>
         </label>
       </div>
       
