@@ -41,7 +41,7 @@ const SPEEDS = [
 
 export interface PhotoItem {
   id: string;
-  file: File;
+  file?: File;
   preview: string;
   description: string;
   secure_url?: string;
@@ -274,8 +274,8 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
           const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
           const uploadData = new FormData();
-          const compressed = await compressImage(photo.file);
-          uploadData.append("file", compressed, photo.file.name);
+          const compressed = await compressImage(photo.file!);
+          uploadData.append("file", compressed, photo.file!.name);
           uploadData.append("api_key", apiKey);
           uploadData.append("timestamp", timestamp.toString());
           uploadData.append("signature", signature);
