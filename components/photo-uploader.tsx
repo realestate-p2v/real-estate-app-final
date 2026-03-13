@@ -574,7 +574,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                 </div>
 
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenCropIndex(null); }}
-                  className="text-xs text-primary font-semibold hover:underline">
+                  className="text-sm text-primary font-semibold hover:underline">
                   Done ✓
                 </button>
               </div>
@@ -649,7 +649,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                 </div>
                 
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(null); }}
-                  className="text-xs text-primary font-semibold hover:underline">
+                  className="text-sm text-primary font-semibold hover:underline">
                   Done ✓
                 </button>
               </div>
