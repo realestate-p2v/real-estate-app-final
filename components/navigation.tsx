@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { CountdownTimer } from "@/components/countdown-timer";
  
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
-
   return (
     <nav className="bg-primary border-b border-primary/80 sticky top-0 z-40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -29,19 +27,20 @@ export function Navigation() {
             <Link href="/portfolio" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
               Portfolio
             </Link>
+            <Link href="/resources/photography-guide" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
+              Free Guide
+            </Link>
             
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
               <Link href="/order">Create My Listing Video</Link>
             </Button>
           </div>
-
           <div className="xl:hidden flex items-center">
             <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-primary-foreground">
               {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
             </button>
           </div>
         </div>
-
         {isOpen && (
           <div className="xl:hidden py-8 border-t border-white/10 bg-primary">
             <div className="flex flex-col gap-6 text-center px-4">
@@ -52,9 +51,9 @@ export function Navigation() {
              <Link href="/portfolio" className="text-primary-foreground text-lg font-semibold py-3">
                 Portfolio
               </Link>
-              <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black">
-                <Link href="/order">Order Now</Link>
-              </Button>
+              <Link href="/resources/photography-guide" className="text-primary-foreground text-lg font-semibold py-3">
+                Free Photography Guide
+              </Link>
               <Button asChild className="bg-accent text-accent-foreground py-8 text-xl font-black">
                 <Link href="/order">Order Now</Link>
               </Button>
