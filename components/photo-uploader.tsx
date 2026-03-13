@@ -452,6 +452,37 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         </div>
       )}
 
+      {/* Photo Sequencing Guide — collapsible tip */}
+      {photos.length > 0 && (
+        <div className="bg-muted/50 rounded-xl border border-border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowPhotoTips(!showPhotoTips)}
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/80 transition-colors"
+          >
+            <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+              🏠 How to sequence your photos for the best walkthrough video
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showPhotoTips ? 'rotate-180' : ''}`} />
+          </button>
+          {showPhotoTips && (
+            <div className="px-4 pb-4 space-y-1.5">
+              <p className="text-xs text-muted-foreground">Order your photos as if the viewer is walking through the home:</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">1.</span> Best exterior shot first (hero shot — strongest first impression)</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">2.</span> Front door / entryway</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">3.</span> Living room / main living spaces</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">4.</span> Kitchen / dining</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">5.</span> Finish the main floor</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">6.</span> Staircase (if applicable)</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">7.</span> Upstairs bedrooms / bathrooms</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">8.</span> Backyard / outdoor spaces</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">9.</span> Best photo last (strong closing shot)</p>
+              <p className="text-xs text-muted-foreground mt-2 italic">Think of it as a real home tour — guide the viewer through the space naturally.</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {photos.length > 0 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
