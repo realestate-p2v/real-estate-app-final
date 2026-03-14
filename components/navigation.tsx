@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video } from "lucide-react";
+import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -11,7 +11,9 @@ export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const toolsRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -28,9 +30,8 @@ export function Navigation() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowDropdown(false);
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setShowTools(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -53,25 +54,57 @@ export function Navigation() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-20 items-center justify-between">
           
-          {/* Left — Logo + Timer */}
+          {/* Left — Logo + Clickable Timer */}
           <div className="flex items-center gap-6">
             <Link href="/" className="flex-shrink-0">
               <Image src="/logo.png" alt="Logo" width={192} height={77} className="h-12 w-auto" />
             </Link> 
             <div className="hidden md:block h-10 w-[1px] bg-white/30" />
-            <div className="hidden md:block">
+            <Link href="/order" className="hidden md:block hover:opacity-80 transition-opacity">
               <CountdownTimer />
-            </div>
+            </Link>
           </div>
          
           {/* Desktop Nav */}
-          <div className="hidden xl:flex items-center gap-8">
+          <div className="hidden xl:flex items-center gap-7">
             <Link href="/portfolio" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
               Portfolio
             </Link>
-            <Link href="/resources/photography-guide" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
-              Free Guide
-            </Link>
+
+            {/* Tools Dropdown */}
+            <div className="relative" ref={toolsRef}>
+              <button
+                onClick={() => { setShowTools(!showTools); setShowDropdown(false); }}
+                className="flex items-center gap-1.5 text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors"
+              >
+                Tools
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showTools ? "rotate-180" : ""}`} />
+              </button>
+              {showTools && (
+                <div className="absolute left-0 top-full mt-2 w-56 bg-card rounded-xl border border-border shadow-lg py-2 z-50">
+                  <Link href="/resources/photography-guide" onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    Free Photography Guide
+                  </Link>
+                  <Link href="/directory" onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    Photographer Directory
+                  </Link>
+                  <Link href="/support" onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    Support
+                  </Link>
+                  <Link href="/partners" onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    Partners
+                  </Link>
+                </div>
+              )}
+            </div>
             
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">
               <Link href="/order">Create My Listing Video</Link>
@@ -86,7 +119,7 @@ export function Navigation() {
             {user && (
               <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={() => setShowDropdown(!showDropdown)}
+                  onClick={() => { setShowDropdown(!showDropdown); setShowTools(false); }}
                   className="h-10 w-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-white/30 hover:border-white/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
                 >
                   {avatarUrl ? (
@@ -115,6 +148,10 @@ export function Navigation() {
                       className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       Saved Drafts
                     </Link>
+                    <Link href="/directory/edit" onClick={() => setShowDropdown(false)}
+                      className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                      My Directory Listing
+                    </Link>
                     <button onClick={handleSignOut}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
                       <LogOut className="h-3.5 w-3.5" />
@@ -126,9 +163,9 @@ export function Navigation() {
             )}
           </div>
 
-          {/* Mobile — Hamburger only */}
+          {/* Mobile — Hamburger */}
           <div className="xl:hidden">
-            <button onClick={() => { setIsOpen(!isOpen); setShowDropdown(false); }} className="p-2 text-primary-foreground">
+            <button onClick={() => { setIsOpen(!isOpen); setShowDropdown(false); setShowTools(false); }} className="p-2 text-primary-foreground">
               {isOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
             </button>
           </div>
@@ -139,16 +176,14 @@ export function Navigation() {
           <div className="xl:hidden py-5 border-t border-white/10 bg-primary">
             <div className="flex flex-col gap-1 px-4">
 
-              {/* User info bar (if logged in) */}
+              {/* User info (if logged in) */}
               {user && (
                 <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3 mb-3">
                   <div className="h-9 w-9 rounded-full flex items-center justify-center overflow-hidden border-2 border-white/30 flex-shrink-0">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                      <div className="h-full w-full bg-accent flex items-center justify-center text-accent-foreground font-bold text-xs">
-                        {initial}
-                      </div>
+                      <div className="h-full w-full bg-accent flex items-center justify-center text-accent-foreground font-bold text-xs">{initial}</div>
                     )}
                   </div>
                   <div className="min-w-0">
@@ -158,25 +193,46 @@ export function Navigation() {
                 </div>
               )}
 
-              {/* Timer */}
-              <div className="flex justify-center py-2 bg-white/5 rounded-xl mb-3 md:hidden">
+              {/* Timer (mobile) */}
+              <Link href="/order" onClick={() => setIsOpen(false)} className="flex justify-center py-2 bg-white/5 rounded-xl mb-3 md:hidden">
                 <CountdownTimer />
-              </div>
+              </Link>
 
-              {/* Nav Links */}
+              {/* Main nav */}
               <Link href="/portfolio" onClick={() => setIsOpen(false)}
                 className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors">
                 Portfolio
               </Link>
+
+              {/* Tools section */}
+              <div className="h-[1px] bg-white/10 my-2" />
+              <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">Tools</p>
               <Link href="/resources/photography-guide" onClick={() => setIsOpen(false)}
-                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors">
+                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <BookOpen className="h-4 w-4 text-primary-foreground/60" />
                 Free Photography Guide
+              </Link>
+              <Link href="/directory" onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Camera className="h-4 w-4 text-primary-foreground/60" />
+                Photographer Directory
+              </Link>
+              <Link href="/support" onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <HelpCircle className="h-4 w-4 text-primary-foreground/60" />
+                Support
+              </Link>
+              <Link href="/partners" onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Users className="h-4 w-4 text-primary-foreground/60" />
+                Partners
               </Link>
 
               {/* Account links (if logged in) */}
               {user && (
                 <>
                   <div className="h-[1px] bg-white/10 my-2" />
+                  <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">Account</p>
                   <Link href="/dashboard" onClick={() => setIsOpen(false)}
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                     <LayoutDashboard className="h-4 w-4 text-primary-foreground/60" />
@@ -191,6 +247,11 @@ export function Navigation() {
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                     <FileText className="h-4 w-4 text-primary-foreground/60" />
                     Saved Drafts
+                  </Link>
+                  <Link href="/directory/edit" onClick={() => setIsOpen(false)}
+                    className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                    <Camera className="h-4 w-4 text-primary-foreground/60" />
+                    My Directory Listing
                   </Link>
                   <button onClick={handleSignOut}
                     className="text-red-300 font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3 w-full text-left">
