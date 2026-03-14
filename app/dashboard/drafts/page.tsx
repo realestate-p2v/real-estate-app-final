@@ -54,9 +54,17 @@ export default function DraftsPage() {
   };
 
   const getPhotoCount = (draft: Draft) => {
-    const photos = draft.form_data?.photos;
+    const photos = draft.form_data?.savedPhotos;
     if (Array.isArray(photos)) return photos.length;
     return 0;
+  };
+
+  const getThumbnail = (draft: Draft): string | null => {
+    const photos = draft.form_data?.savedPhotos;
+    if (Array.isArray(photos) && photos.length > 0 && photos[0]?.secure_url) {
+      return photos[0].secure_url;
+    }
+    return null;
   };
 
   const getOrientation = (draft: Draft) => {
@@ -105,9 +113,19 @@ export default function DraftsPage() {
             {drafts.map((draft) => (
               <div key={draft.id} className="bg-card rounded-xl border border-border p-6 flex items-center justify-between gap-4">
                 <div className="flex items-start gap-4 flex-1 min-w-0">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <FileText className="h-6 w-6 text-primary" />
-                  </div>
+                  {getThumbnail(draft) ? (
+                    <div className="h-14 w-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                      <img
+                        src={getThumbnail(draft)!}
+                        alt={draft.draft_name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-14 w-20 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <h3 className="font-semibold text-foreground truncate">{draft.draft_name}</h3>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
