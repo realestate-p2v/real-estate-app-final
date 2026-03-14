@@ -23,7 +23,8 @@ const FEATURES = [
     icon: Video,
     title: "Your Videos",
     description: "Watch, download, and share all your completed listing videos in one place.",
-    status: "coming",
+    status: "live",
+    href: "/dashboard/videos",
   },
   {
     icon: FileText,
@@ -78,16 +79,12 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16">
         {/* Hero */}
         <div className="text-center space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold">
-            <Sparkles className="h-4 w-4" />
-            Coming Soon
-          </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-            Your Client Dashboard
+            Your Dashboard
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            One place to manage your videos, track orders, request revisions, and earn rewards. 
-            We're building something special — here's a preview of what's coming.
+            Manage your videos, track orders, and access your account.
+            More features are coming soon.
           </p>
         </div>
 
@@ -104,7 +101,7 @@ export default function DashboardPage() {
             >
               {status === "live" && (
                 <span className="absolute top-4 right-4 text-xs font-semibold text-green-600 bg-green-100 px-2.5 py-1 rounded-full">
-                  Live Now
+                  Live
                 </span>
               )}
               {status === "coming" && (
@@ -115,7 +112,7 @@ export default function DashboardPage() {
               <div className={`h-11 w-11 rounded-lg flex items-center justify-center ${
                 status === "live" ? "bg-primary/10" : "bg-muted"
               }`}>
-                <Icon className={`h-5.5 w-5.5 ${
+                <Icon className={`h-5 w-5 ${
                   status === "live" ? "text-primary" : "text-muted-foreground"
                 }`} />
               </div>
@@ -154,7 +151,7 @@ export default function DashboardPage() {
 
         {/* Resources */}
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-foreground text-center">While you wait...</h3>
+          <h3 className="text-lg font-bold text-foreground text-center">Resources</h3>
           <div className="grid sm:grid-cols-2 gap-4">
             <Link href="/resources/photography-guide" className="group bg-card rounded-xl border border-border p-5 flex items-start gap-4 hover:border-primary/30 hover:shadow-sm transition-all">
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -165,24 +162,28 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground mt-1">23-page guide with camera settings, lighting tips, staging, drone photography, and printable checklists.</p>
               </div>
             </Link>
-            <Link href="/dashboard/drafts" className="group bg-card rounded-xl border border-border p-5 flex items-start gap-4 hover:border-primary/30 hover:shadow-sm transition-all">
+            <Link href="/support" className="group bg-card rounded-xl border border-border p-5 flex items-start gap-4 hover:border-primary/30 hover:shadow-sm transition-all">
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <FileText className="h-5 w-5 text-primary" />
+                <Sparkles className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors">Your Saved Drafts</h4>
-                <p className="text-sm text-muted-foreground mt-1">Resume an unfinished order. Your photos, camera settings, and preferences are all saved.</p>
+                <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors">Support & FAQ</h4>
+                <p className="text-sm text-muted-foreground mt-1">Find answers to common questions, contact us, or chat on WhatsApp.</p>
               </div>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="bg-muted/50 border-t py-8 mt-12">
         <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <p className="mt-1">realestatephoto2video.com</p>
+          <div className="flex justify-center gap-6 mt-2">
+            <Link href="/portfolio" className="hover:text-foreground transition-colors">Portfolio</Link>
+            <Link href="/resources/photography-guide" className="hover:text-foreground transition-colors">Free Guide</Link>
+            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
+            <Link href="/partners" className="hover:text-foreground transition-colors">Partners</Link>
+          </div>
         </div>
       </footer>
     </div>
