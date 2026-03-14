@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Script from "next/script";
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
+import { useOrderDraft } from "@/hooks/use-order-draft";
+import { DraftSaveBar } from "@/components/draft-save-bar";
 
 type OrderStep = "upload" | "details" | "payment";
 type PhotoInputMode = "upload" | "url";
@@ -65,6 +67,101 @@ export function OrderForm() {
   const [propertyBedrooms, setPropertyBedrooms] = useState("");
   const [propertyBathrooms, setPropertyBathrooms] = useState("");
   const [includeAddressOnCard, setIncludeAddressOnCard] = useState(true);
+
+  // ── Draft save/load ──
+  const draft = useOrderDraft({
+    getFormData: () => ({
+      photoInputMode,
+      savedPhotos: photos.map(p => ({
+        id: p.id,
+        secure_url: p.secure_url,
+        description: p.description,
+        camera_direction: p.camera_direction,
+        camera_speed: p.camera_speed,
+        custom_motion: p.custom_motion,
+        crop_offset_landscape: p.crop_offset_landscape,
+        crop_offset_vertical: p.crop_offset_vertical,
+        original_width: p.original_width,
+        original_height: p.original_height,
+      })),
+      listingUrl,
+      listingPackage,
+      listingPermission,
+      listingInstructions,
+      musicSelection,
+      resolution,
+      orientation,
+      brandingSelection,
+      brandingData: { ...brandingData, logoFile: undefined },
+      voiceoverSelection,
+      voiceoverScript,
+      selectedVoice,
+      includeEditedPhotos,
+      propertyAddress,
+      propertyCity,
+      propertyState,
+      propertyBedrooms,
+      propertyBathrooms,
+      includeAddressOnCard,
+      formData,
+    }),
+    setFormData: (data) => {
+      if (data.photoInputMode) setPhotoInputMode(data.photoInputMode);
+      if (data.savedPhotos && Array.isArray(data.savedPhotos) && data.savedPhotos.length > 0) {
+        const restoredPhotos = data.savedPhotos
+          .filter((p: any) => p.secure_url)
+          .map((p: any) => ({
+            id: p.id || `restored-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            preview: p.secure_url,
+            description: p.description || "",
+            secure_url: p.secure_url,
+            uploadStatus: 'complete' as const,
+            camera_direction: p.camera_direction || null,
+            camera_speed: p.camera_speed || null,
+            custom_motion: p.custom_motion || "",
+            crop_offset_landscape: p.crop_offset_landscape ?? 50,
+            crop_offset_vertical: p.crop_offset_vertical ?? 50,
+            original_width: p.original_width || null,
+            original_height: p.original_height || null,
+          }));
+        setPhotos(restoredPhotos);
+      }
+      if (data.listingUrl) setListingUrl(data.listingUrl);
+      if (data.listingPackage) setListingPackage(data.listingPackage);
+      if (data.listingPermission !== undefined) setListingPermission(data.listingPermission);
+      if (data.listingInstructions) setListingInstructions(data.listingInstructions);
+      if (data.musicSelection) setMusicSelection(data.musicSelection);
+      if (data.resolution) setResolution(data.resolution);
+      if (data.orientation) setOrientation(data.orientation);
+      if (data.brandingSelection) setBrandingSelection(data.brandingSelection);
+      if (data.brandingData) setBrandingData(data.brandingData);
+      if (data.voiceoverSelection) setVoiceoverSelection(data.voiceoverSelection);
+      if (data.voiceoverScript) setVoiceoverScript(data.voiceoverScript);
+      if (data.selectedVoice) setSelectedVoice(data.selectedVoice);
+      if (data.includeEditedPhotos !== undefined) setIncludeEditedPhotos(data.includeEditedPhotos);
+      if (data.propertyAddress) setPropertyAddress(data.propertyAddress);
+      if (data.propertyCity) setPropertyCity(data.propertyCity);
+      if (data.propertyState) setPropertyState(data.propertyState);
+      if (data.propertyBedrooms) setPropertyBedrooms(data.propertyBedrooms);
+      if (data.propertyBathrooms) setPropertyBathrooms(data.propertyBathrooms);
+      if (data.includeAddressOnCard !== undefined) setIncludeAddressOnCard(data.includeAddressOnCard);
+      if (data.formData) setFormData(data.formData);
+    },
+  });
+
+  // Mark draft as changed when any form value changes
+  useEffect(() => {
+    draft.markChanged();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    photoInputMode, listingUrl, listingPackage, listingInstructions,
+    musicSelection, resolution, orientation, brandingSelection,
+    voiceoverSelection, voiceoverScript, selectedVoice,
+    includeEditedPhotos, propertyAddress, propertyCity, propertyState,
+    propertyBedrooms, propertyBathrooms, includeAddressOnCard,
+    photos.length, formData.name, formData.email,
+  ]);
+
   const photoCount = photos.length;
 
   const isUrlMode = photoInputMode === "url";
@@ -225,6 +322,9 @@ export function OrderForm() {
       if (!checkoutResponse.ok || !session.url) {
         throw new Error(session.error || "Checkout failed");
       }
+      if (draft.draftId) {
+        draft.deleteDraft();
+      }
       window.location.href = session.url;
     } catch (error: any) {
       alert("Error processing order: " + error.message);
@@ -258,6 +358,17 @@ export function OrderForm() {
       <div className="lg:col-span-2 space-y-6">
         {step === "upload" && (
           <div className="space-y-6">
+            {/* Draft save bar */}
+            <DraftSaveBar
+              isLoggedIn={draft.isLoggedIn}
+              draftId={draft.draftId}
+              draftName={draft.draftName}
+              isSaving={draft.isSaving}
+              lastSaved={draft.lastSaved}
+              hasUnsavedChanges={draft.hasUnsavedChanges}
+              onSave={() => draft.saveDraft()}
+            />
+
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
