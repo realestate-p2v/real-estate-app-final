@@ -153,8 +153,8 @@ function PhotographerCard({ p }: { p: Photographer }) {
         <div className="flex items-center gap-3 pt-1">
           {p.portfolio && (
             <a href={p.portfolio.startsWith("http") ? p.portfolio : `https://${p.portfolio}`} target="_blank" rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-primary transition-colors" title="Portfolio">
-              <ImageIcon className="h-4 w-4" />
+              className="text-sm font-semibold text-primary hover:underline">
+              View Portfolio
             </a>
           )}
           {p.website && (
