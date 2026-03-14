@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import {
   Camera,
   CheckCircle,
   Loader2,
   Upload,
-  Gift,
-  DollarSign,
   Users,
+  DollarSign,
+  LogIn,
 } from "lucide-react";
 
 const SPECIALTIES = [
@@ -32,6 +34,10 @@ const SPECIALTIES = [
 ];
 
 export default function JoinDirectoryPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -48,6 +54,28 @@ export default function JoinDirectoryPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+    if (user) {
+      // Pre-fill email from account
+      setForm(prev => ({ ...prev, email: user.email || "" }));
+      // Check if already has a listing
+      const res = await fetch("/api/directory/me");
+      const data = await res.json();
+      if (data.success && data.photographer) {
+        // Already has listing — redirect to edit
+        router.push("/directory/edit");
+        return;
+      }
+    }
+    setAuthLoading(false);
+  };
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -57,10 +85,10 @@ export default function JoinDirectoryPage() {
   };
 
   const toggleSpecialty = (specialty: string) => {
-    setForm((prev) => ({
+    setForm(prev => ({
       ...prev,
       specialties: prev.specialties.includes(specialty)
-        ? prev.specialties.filter((s) => s !== specialty)
+        ? prev.specialties.filter(s => s !== specialty)
         : [...prev.specialties, specialty],
     }));
   };
@@ -69,8 +97,8 @@ export default function JoinDirectoryPage() {
     e.preventDefault();
     setError("");
 
-    if (!form.name || !form.email || !form.market) {
-      setError("Name, email, and market are required.");
+    if (!form.name || !form.market) {
+      setError("Name and market are required.");
       return;
     }
 
@@ -78,7 +106,6 @@ export default function JoinDirectoryPage() {
     try {
       let photoUrl = "";
       if (photoFile) {
-        // Upload photo to Cloudinary via our signature endpoint
         const sigRes = await fetch("/api/cloudinary-signature", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -105,10 +132,7 @@ export default function JoinDirectoryPage() {
       const res = await fetch("/api/directory/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          photo_url: photoUrl,
-        }),
+        body: JSON.stringify({ ...form, photo_url: photoUrl }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -122,6 +146,48 @@ export default function JoinDirectoryPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in — show login prompt
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="mx-auto max-w-2xl px-4 py-20 text-center space-y-6">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Camera className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-foreground">Join the Photographer Directory</h1>
+          <p className="text-lg text-muted-foreground max-w-md mx-auto">
+            Create a free account to list yourself in our directory. Realtors use it to find photographers in their market.
+          </p>
+          <div className="bg-card rounded-2xl border border-border p-8 space-y-4">
+            <p className="font-semibold text-foreground">Sign in or create an account to get started</p>
+            <p className="text-sm text-muted-foreground">
+              Your account also lets you order listing videos, save drafts, earn referral commissions, and manage your directory listing.
+            </p>
+            <Button asChild className="w-full py-6 text-lg bg-primary">
+              <Link href="/login?redirect=/directory/join">
+                <LogIn className="mr-2 h-5 w-5" />
+                Sign In to Continue
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Submitted successfully
   if (submitted) {
     return (
       <div className="min-h-screen bg-background">
@@ -130,36 +196,41 @@ export default function JoinDirectoryPage() {
           <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-3xl font-extrabold text-foreground">You're In!</h1>
+          <h1 className="text-3xl font-extrabold text-foreground">Your Listing is Live!</h1>
           <p className="text-lg text-muted-foreground">
-            Your listing is being reviewed and will go live within 24 hours. Your free 30-day trial starts now.
+            Your profile is now visible to realtors searching for photographers in {form.market}.
           </p>
-          <p className="text-muted-foreground">
-            We'll email you at <strong className="text-foreground">{form.email}</strong> when your profile is live.
-          </p>
-          <div className="bg-card rounded-xl border border-border p-6 text-left space-y-2">
-            <h3 className="font-bold text-foreground">While you wait — earn 20% on referrals</h3>
-            <p className="text-sm text-muted-foreground">
-              Refer your agent clients to Real Estate Photo 2 Video and earn 20% commission on every order they place. No cap, no contract.
-            </p>
-            <Button asChild variant="outline" size="sm" className="mt-2">
-              <Link href="/partners">Learn About the Referral Program</Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild className="bg-accent hover:bg-accent/90">
+              <Link href="/directory">View the Directory</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/directory/edit">Edit My Listing</Link>
             </Button>
           </div>
-          <Button asChild className="bg-accent hover:bg-accent/90">
-            <Link href="/directory">View the Directory</Link>
-          </Button>
+          <div className="bg-card rounded-xl border border-border p-6 text-left space-y-2 mt-6">
+            <h3 className="font-bold text-foreground flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              Earn 20% on Referrals
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              When your agent clients order listing videos through P2V, you earn 20% commission on every order. No cap, no contract.
+            </p>
+            <Button asChild variant="outline" size="sm" className="mt-2">
+              <Link href="/partners">Learn More</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Join form
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12">
-        {/* Hero */}
         <div className="text-center space-y-4 mb-10">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold">
             <Camera className="h-4 w-4" />
@@ -169,26 +240,26 @@ export default function JoinDirectoryPage() {
             Get Discovered by Realtors
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            List your photography business in our directory. Realtors use it to find photographers in their market.
+            List your photography business for free. Realtors use our directory to find photographers in their market.
           </p>
         </div>
 
         {/* Benefits */}
         <div className="grid sm:grid-cols-3 gap-4 mb-10">
           <div className="bg-card rounded-xl border border-border p-5 text-center space-y-2">
-            <Gift className="h-6 w-6 text-green-600 mx-auto" />
-            <h3 className="font-bold text-foreground">Free for 30 Days</h3>
-            <p className="text-xs text-muted-foreground">No credit card required. Try it risk-free.</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-5 text-center space-y-2">
-            <DollarSign className="h-6 w-6 text-primary mx-auto" />
-            <h3 className="font-bold text-foreground">Then $4.99/month</h3>
-            <p className="text-xs text-muted-foreground">Cancel anytime. No contracts.</p>
+            <Camera className="h-6 w-6 text-primary mx-auto" />
+            <h3 className="font-bold text-foreground">100% Free</h3>
+            <p className="text-xs text-muted-foreground">No fees, no catch. List yourself for free.</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-5 text-center space-y-2">
             <Users className="h-6 w-6 text-accent mx-auto" />
-            <h3 className="font-bold text-foreground">+ 20% Referral</h3>
-            <p className="text-xs text-muted-foreground">Earn commission on every video order your agents place.</p>
+            <h3 className="font-bold text-foreground">Realtor Traffic</h3>
+            <p className="text-xs text-muted-foreground">Realtors browse our site daily. Get in front of them.</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5 text-center space-y-2">
+            <DollarSign className="h-6 w-6 text-green-600 mx-auto" />
+            <h3 className="font-bold text-foreground">20% Referral</h3>
+            <p className="text-xs text-muted-foreground">Earn commission when your agents order videos.</p>
           </div>
         </div>
 
@@ -207,14 +278,14 @@ export default function JoinDirectoryPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email *</Label>
+              <Label>Email</Label>
               <Input
                 type="email"
-                placeholder="jane@example.com"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">From your account</p>
             </div>
           </div>
 
@@ -284,12 +355,7 @@ export default function JoinDirectoryPage() {
                   <span className="text-sm font-semibold text-primary hover:underline">
                     {photoPreview ? "Change photo" : "Upload photo"}
                   </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    className="hidden"
-                  />
+                  <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
                 </label>
                 <p className="text-xs text-muted-foreground mt-1">Square image recommended. JPG or PNG.</p>
               </div>
@@ -331,14 +397,14 @@ export default function JoinDirectoryPage() {
             className="w-full py-6 text-lg font-bold bg-accent hover:bg-accent/90"
           >
             {isSubmitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Submitting...</>
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Listing...</>
             ) : (
-              <><Camera className="mr-2 h-5 w-5" /> Join the Directory — Free for 30 Days</>
+              <><Camera className="mr-2 h-5 w-5" /> Create My Free Listing</>
             )}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Your listing will be reviewed and go live within 24 hours. Free for 30 days, then $4.99/month. Cancel anytime.
+            Your listing goes live immediately. You can edit or remove it anytime.
           </p>
         </form>
       </div>
@@ -346,12 +412,6 @@ export default function JoinDirectoryPage() {
       <footer className="bg-muted/50 border-t py-8 mt-12">
         <div className="mx-auto max-w-3xl px-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/portfolio" className="hover:text-foreground transition-colors">Portfolio</Link>
-            <Link href="/resources/photography-guide" className="hover:text-foreground transition-colors">Free Guide</Link>
-            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-            <Link href="/partners" className="hover:text-foreground transition-colors">Partners</Link>
-          </div>
         </div>
       </footer>
     </div>
