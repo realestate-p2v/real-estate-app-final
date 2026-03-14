@@ -83,7 +83,7 @@ export default function DirectoryPage() {
             Find a Real Estate Photographer
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Browse verified real estate photographers in your market. Great listing photos 
+            Browse real estate photographers in your market. Great listing photos 
             are the first step to a great listing video.
           </p>
         </div>
@@ -123,18 +123,18 @@ export default function DirectoryPage() {
             <Users className="h-12 w-12 text-muted-foreground/40 mx-auto" />
             <h2 className="text-xl font-semibold text-foreground">
               {photographers.length === 0
-                ? "Directory launching soon"
+                ? "Be the first photographer listed"
                 : "No photographers match your search"}
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
               {photographers.length === 0
-                ? "We're building our photographer network. Are you a real estate photographer? Join the directory for free."
+                ? "Our directory is brand new. Join for free and get discovered by realtors in your market."
                 : "Try a different search term or remove the specialty filter."}
             </p>
             <Button asChild className="bg-accent hover:bg-accent/90 mt-2">
               <Link href="/directory/join">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Join the Directory — Free for 30 Days
+                Join the Directory — Free
               </Link>
             </Button>
           </div>
@@ -146,19 +146,13 @@ export default function DirectoryPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filtered.map((p) => (
                 <div key={p.id} className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow">
-                  {/* Photo/Logo */}
                   <div className="h-48 bg-muted flex items-center justify-center">
                     {p.photo_url ? (
-                      <img
-                        src={p.photo_url}
-                        alt={p.name}
-                        className="h-full w-full object-cover"
-                      />
+                      <img src={p.photo_url} alt={p.name} className="h-full w-full object-cover" />
                     ) : (
                       <Camera className="h-12 w-12 text-muted-foreground/30" />
                     )}
                   </div>
-                  
                   <div className="p-5 space-y-3">
                     <div>
                       <h3 className="font-bold text-lg text-foreground">{p.name}</h3>
@@ -167,39 +161,29 @@ export default function DirectoryPage() {
                         {p.market}
                       </div>
                     </div>
-
                     {p.bio && (
                       <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>
                     )}
-
-                    {/* Specialties */}
                     {p.specialties && p.specialties.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {p.specialties.map((s) => (
-                          <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                            {s}
-                          </span>
+                          <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{s}</span>
                         ))}
                       </div>
                     )}
-
-                    {/* Links */}
                     <div className="flex items-center gap-3 pt-1">
                       {p.website && (
-                        <a href={p.website.startsWith("http") ? p.website : `https://${p.website}`} target="_blank" rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary transition-colors">
+                        <a href={p.website.startsWith("http") ? p.website : `https://${p.website}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                           <Globe className="h-4 w-4" />
                         </a>
                       )}
                       {p.instagram && (
-                        <a href={`https://instagram.com/${p.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-pink-500 transition-colors">
+                        <a href={`https://instagram.com/${p.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-pink-500 transition-colors">
                           <Instagram className="h-4 w-4" />
                         </a>
                       )}
                       {p.linkedin && (
-                        <a href={p.linkedin.startsWith("http") ? p.linkedin : `https://linkedin.com/in/${p.linkedin}`} target="_blank" rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-blue-600 transition-colors">
+                        <a href={p.linkedin.startsWith("http") ? p.linkedin : `https://linkedin.com/in/${p.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-blue-600 transition-colors">
                           <Linkedin className="h-4 w-4" />
                         </a>
                       )}
@@ -217,14 +201,14 @@ export default function DirectoryPage() {
             Are You a Real Estate Photographer?
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Join our directory and get discovered by realtors looking for photographers in your market. 
-            Free for your first 30 days, then just $4.99/month.
+            Join our directory for free and get discovered by realtors looking for photographers in your market. 
+            Plus, earn 20% commission when your agents order listing videos.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild className="bg-accent hover:bg-accent/90 px-8 py-6 text-lg font-bold">
               <Link href="/directory/join">
                 <UserPlus className="mr-2 h-5 w-5" />
-                Join the Directory — Free
+                Join for Free
               </Link>
             </Button>
             <Button asChild variant="outline" className="px-8 py-6 text-lg">
