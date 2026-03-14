@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, FileText, LayoutDashboard } from "lucide-react";
+import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -107,6 +107,10 @@ export function Navigation() {
                       className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       My Dashboard
                     </Link>
+                    <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
+                      className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                      My Videos
+                    </Link>
                     <Link href="/dashboard/drafts" onClick={() => setShowDropdown(false)}
                       className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       Saved Drafts
@@ -177,6 +181,11 @@ export function Navigation() {
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                     <LayoutDashboard className="h-4 w-4 text-primary-foreground/60" />
                     My Dashboard
+                  </Link>
+                  <Link href="/dashboard/videos" onClick={() => setIsOpen(false)}
+                    className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                    <Video className="h-4 w-4 text-primary-foreground/60" />
+                    My Videos
                   </Link>
                   <Link href="/dashboard/drafts" onClick={() => setIsOpen(false)}
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
