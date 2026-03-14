@@ -22,6 +22,7 @@ import {
   CheckCircle,
   ChevronDown,
   X,
+  LogIn,
 } from "lucide-react";
 
 interface Photographer {
@@ -42,6 +43,20 @@ function ContactForm({ photographer, onClose }: { photographer: Photographer; on
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
+      if (user) {
+        const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "";
+        setForm(prev => ({ ...prev, name: displayName, email: user.email || "" }));
+      }
+    };
+    checkAuth();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +82,29 @@ function ContactForm({ photographer, onClose }: { photographer: Photographer; on
     }
   };
 
+  if (isLoggedIn === null) {
+    return (
+      <div className="border-t border-border bg-muted/30 p-4 flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="border-t border-border bg-muted/30 p-4 space-y-3 text-center">
+        <p className="text-sm text-muted-foreground">Sign in to contact {photographer.name}</p>
+        <a
+          href="/login?redirect=/directory"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+        >
+          <LogIn className="h-4 w-4" />
+          Sign In to Continue
+        </a>
+      </div>
+    );
+  }
+
   if (sent) {
     return (
       <div className="p-4 bg-green-50 border-t border-green-200 text-center space-y-2">
@@ -86,21 +124,7 @@ function ContactForm({ photographer, onClose }: { photographer: Photographer; on
         </button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-2">
-        <Input
-          placeholder="Your name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="h-9 text-sm"
-          required
-        />
-        <Input
-          type="email"
-          placeholder="Your email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          className="h-9 text-sm"
-          required
-        />
+        <div className="text-xs text-muted-foreground mb-1">Sending as <strong className="text-foreground">{form.name}</strong> ({form.email})</div>
         <Textarea
           placeholder="Hi, I'm looking for a real estate photographer for my listing..."
           value={form.message}
