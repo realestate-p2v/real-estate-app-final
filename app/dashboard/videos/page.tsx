@@ -239,24 +239,22 @@ export default function MyVideosPage() {
                             )}
                           </div>
                           <div className="flex gap-2 flex-wrap">
-                            <div className="flex gap-2 mt-3">
-  {order.delivery_url && (
-    <Button asChild size="sm" variant="outline">
-      <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
-        <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-        Open in Drive
-      </a>
-    </Button>
-  )}
-  {order.delivery_url && getFileIdFromUrl(order.delivery_url) && (
-    <Button asChild size="sm" variant="outline">
-      <a href={`https://drive.google.com/uc?export=download&id=${getFileIdFromUrl(order.delivery_url)}`}>
-        <Download className="mr-1.5 h-3.5 w-3.5" />
-        Download Video
-      </a>
-    </Button>
-  )}
-</div>
+                            {order.delivery_url && (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                  Open in Drive
+                                </a>
+                              </Button>
+                            )}
+                            {fileId && (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
+                                  <Download className="mr-1.5 h-3.5 w-3.5" />
+                                  Download Video
+                                </a>
+                              </Button>
+                            )}
                             {order.edited_photos_url && (
                               <Button asChild size="sm" variant="outline">
                                 <a href={order.edited_photos_url} target="_blank" rel="noopener noreferrer">
@@ -341,13 +339,24 @@ export default function MyVideosPage() {
                             <span className="text-muted-foreground/30">|</span>
                             <span className="text-green-600 font-medium">Accepted & Closed</span>
                           </div>
-                          {order.delivery_url && (
-                            <Button asChild size="sm" variant="outline" className="mt-3">
-                              <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                                Open in Drive
-                              </a>
-                            </Button>
+                          <div className="flex gap-2 mt-3 flex-wrap">
+                            {order.delivery_url && (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                  Open in Drive
+                                </a>
+                              </Button>
+                            )}
+                            {fileId && (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
+                                  <Download className="mr-1.5 h-3.5 w-3.5" />
+                                  Download Video
+                                </a>
+                              </Button>
+                            )}
+                          </div>
                           )}
                         </div>
                       </div>
