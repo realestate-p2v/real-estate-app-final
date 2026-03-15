@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 
@@ -61,6 +62,18 @@ export async function POST(request: Request) {
       )
     }
 
+    // Try to get authenticated user's ID
+    let userId = null;
+    try {
+      const authSupabase = await createClient();
+      const { data: { user } } = await authSupabase.auth.getUser();
+      if (user) {
+        userId = user.id;
+      }
+    } catch {
+      // Not logged in — that's fine, order still works
+    }
+
     const orderId = randomUUID()
     const photoCount = uploadedPhotos?.length || 0
 
@@ -70,6 +83,7 @@ export async function POST(request: Request) {
       .from("orders")
       .insert({
         order_id: orderId,
+        user_id: userId,
         status: "pending_payment",
         customer_name: customer.name,
         customer_email: customer.email,
@@ -109,7 +123,7 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("[Orders] Created order:", orderId)
+    console.log("[Orders] Created order:", orderId, userId ? `(user: ${userId.slice(0, 8)})` : "(no user)")
 
     return NextResponse.json({
       success: true,
