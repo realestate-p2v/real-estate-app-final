@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -83,6 +82,7 @@ export default function AdminBlogPage() {
 
   // AI generation state
   const [aiSubject, setAiSubject] = useState("");
+  const [aiSubTopics, setAiSubTopics] = useState("");
   const [aiKeywords, setAiKeywords] = useState("");
   const [generating, setGenerating] = useState(false);
   const [suggestedImages, setSuggestedImages] = useState<SuggestedImage[]>([]);
@@ -209,6 +209,7 @@ export default function AdminBlogPage() {
         body: JSON.stringify({
           title: aiSubject,
           subject: aiSubject,
+          subtopics: aiSubTopics,
           keywords: aiKeywords,
         }),
       });
@@ -621,6 +622,15 @@ Write compelling content here. Drag images from the toolbox on the right to inse
                       onChange={(e) => setAiSubject(e.target.value)}
                       placeholder="e.g., 5 Listing Photo Mistakes That Cost You Showings"
                       className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Sub-Topics to Cover (optional)</Label>
+                    <Textarea
+                      value={aiSubTopics}
+                      onChange={(e) => setAiSubTopics(e.target.value)}
+                      placeholder={"e.g., dark photos without HDR\nbad angles that make rooms look small\nforgetting exterior shots\nwhy vertical video matters for social"}
+                      className="text-sm resize-none h-24"
                     />
                   </div>
                   <div>
