@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const { isAdmin: admin } = await isAdmin();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    const { title, subject, keywords, tone } = await request.json();
+    const { title, subject, subtopics, keywords, tone } = await request.json();
     if (!title && !subject) {
       return NextResponse.json({ success: false, error: "Title or subject required" }, { status: 400 });
     }
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
 
     const topicText = title || subject;
     const keywordList = keywords ? `Target keywords: ${keywords}` : "";
+    const subtopicList = subtopics ? `\nSub-topics to include (each should be a section or key point in the post):\n${subtopics}` : "";
     const toneText = tone || "professional yet conversational — like a knowledgeable friend in real estate";
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
             content: `You are an elite SEO content writer specializing in real estate marketing. You write for Real Estate Photo 2 Video (realestatephoto2video.com) — a service that turns listing photos into professional cinematic walkthrough videos ($79-$179/listing, 24-hour delivery).
 
 Write a blog post on this topic: "${topicText}"
+${subtopicList}
 ${keywordList}
 Tone: ${toneText}
 
