@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -19,6 +20,8 @@ import {
   Loader2,
   Copy,
   Check,
+  Star,
+  ExternalLink,
 } from "lucide-react";
 
 interface Order {
@@ -46,6 +49,30 @@ function getFileIdFromUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
+const REVIEW_PLATFORMS = [
+  {
+    key: "google",
+    label: "Google",
+    icon: "⭐",
+    color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
+    textColor: "text-blue-700",
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    icon: "👍",
+    color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
+    textColor: "text-indigo-700",
+  },
+  {
+    key: "zillow",
+    label: "Zillow",
+    icon: "🏠",
+    color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
+    textColor: "text-emerald-700",
+  },
+];
+
 export default function VideoDeliveryPage() {
   const params = useParams();
   const orderId = params.orderId as string;
@@ -53,6 +80,7 @@ export default function VideoDeliveryPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [reviewDismissed, setReviewDismissed] = useState(false);
 
   useEffect(() => {
     if (orderId) loadOrder();
@@ -137,6 +165,7 @@ export default function VideoDeliveryPage() {
   }
 
   const fileId = getFileIdFromUrl(order.delivery_url);
+  const isDelivered = order.status === "delivered" || order.status === "complete" || !!order.delivery_url;
 
   return (
     <div className="min-h-screen bg-background">
@@ -154,6 +183,56 @@ export default function VideoDeliveryPage() {
             Delivered
           </span>
         </div>
+
+        {/* ═══ REVIEW PROMPT BANNER ═══ */}
+        {isDelivered && !reviewDismissed && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Star className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground mb-1">Love your video? Share the love!</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  A quick review helps other agents find us. Pick any platform — each review unlocks a discount on your next order.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {REVIEW_PLATFORMS.map((platform) => (
+                    <button
+                      key={platform.key}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${platform.color} ${platform.textColor}`}
+                      onClick={() => {
+                        // For now, open the review page (will be built later)
+                        // Google Business, Facebook page, Zillow profile
+                        const urls: Record<string, string> = {
+                          google: "https://g.page/r/realestatephoto2video/review",
+                          facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
+                          zillow: "https://www.zillow.com",
+                        };
+                        window.open(urls[platform.key], "_blank");
+                      }}
+                    >
+                      <span>{platform.icon}</span>
+                      {platform.label}
+                      <ExternalLink className="h-3 w-3" />
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className="text-xs text-muted-foreground">
+                    🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = mystery spin!</strong>
+                  </p>
+                  <button
+                    onClick={() => setReviewDismissed(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                  >
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Video Player */}
         {fileId ? (
@@ -318,17 +397,7 @@ export default function VideoDeliveryPage() {
         </div>
       </div>
 
-      <footer className="bg-muted/50 border-t py-8 mt-12">
-        <div className="mx-auto max-w-4xl px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/portfolio" className="hover:text-foreground transition-colors">Portfolio</Link>
-            <Link href="/resources/photography-guide" className="hover:text-foreground transition-colors">Free Guide</Link>
-            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-            <Link href="/partners" className="hover:text-foreground transition-colors">Partners</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
