@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Video, Download, RefreshCw, Clock, CheckCircle, Loader2, AlertCircle, Play, ExternalLink } from "lucide-react";
+import { Video, Download, RefreshCw, Clock, CheckCircle, Loader2, AlertCircle, Play, ExternalLink, Check, ThumbsUp } from "lucide-react";
 
 interface Order {
   id: string;
@@ -23,6 +24,9 @@ interface Order {
   total_price: number;
   created_at: string;
   include_edited_photos: boolean;
+  clip_urls: any[];
+  revision_count: number;
+  revisions_allowed: number;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -30,9 +34,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   pending_payment: { label: "Awaiting Payment", color: "bg-amber-100 text-amber-700", icon: AlertCircle },
   processing: { label: "In Production", color: "bg-purple-100 text-purple-700", icon: Loader2 },
   awaiting_approval: { label: "In Review", color: "bg-indigo-100 text-indigo-700", icon: Clock },
-  approved: { label: "Approved", color: "bg-green-100 text-green-700", icon: CheckCircle },
-  complete: { label: "Delivered", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  approved: { label: "Delivered", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  complete: { label: "Complete", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  delivered: { label: "Delivered", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  closed: { label: "Closed", color: "bg-gray-100 text-gray-700", icon: Check },
   revision_requested: { label: "Revision In Progress", color: "bg-amber-100 text-amber-700", icon: RefreshCw },
+  client_revision_requested: { label: "Revision Submitted", color: "bg-amber-100 text-amber-700", icon: RefreshCw },
   error: { label: "Issue — Contact Support", color: "bg-red-100 text-red-700", icon: AlertCircle },
 };
 
@@ -44,6 +51,7 @@ function getFileIdFromUrl(url: string): string | null {
 export default function MyVideosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [closingOrder, setClosingOrder] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -71,8 +79,25 @@ export default function MyVideosPage() {
     }
   };
 
-  const deliveredOrders = orders.filter(o => o.status === "complete" || o.status === "approved");
-  const activeOrders = orders.filter(o => !["complete", "approved", "pending_payment"].includes(o.status) && o.status !== "error");
+  const handleAcceptClose = async (orderId: string) => {
+    if (!confirm("Accept this video and close the order? You can still contact support after closing.")) return;
+    setClosingOrder(orderId);
+    try {
+      await supabase
+        .from("orders")
+        .update({ status: "closed" })
+        .eq("id", orderId);
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: "closed" } : o));
+    } catch (err) {
+      console.error("Failed to close order:", err);
+    } finally {
+      setClosingOrder(null);
+    }
+  };
+
+  const deliveredOrders = orders.filter(o => ["complete", "approved", "delivered"].includes(o.status));
+  const closedOrders = orders.filter(o => o.status === "closed");
+  const activeOrders = orders.filter(o => !["complete", "approved", "delivered", "closed", "pending_payment"].includes(o.status) && o.status !== "error");
   const pendingOrders = orders.filter(o => o.status === "pending_payment");
 
   const formatDate = (dateStr: string) => {
@@ -83,6 +108,10 @@ export default function MyVideosPage() {
     if (order.property_address) return order.property_address;
     if (order.property_city && order.property_state) return `${order.property_city}, ${order.property_state}`;
     return `Order ${(order.order_id || order.id).slice(0, 8)}`;
+  };
+
+  const canRevise = (order: Order) => {
+    return ["complete", "approved", "delivered"].includes(order.status);
   };
 
   return (
@@ -169,6 +198,11 @@ export default function MyVideosPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   {deliveredOrders.map((order) => {
                     const fileId = getFileIdFromUrl(order.delivery_url);
+                    const hasClips = order.clip_urls && order.clip_urls.length > 0;
+                    const revCount = order.revision_count || 0;
+                    const revAllowed = order.revisions_allowed || 1;
+                    const freeRevisionsLeft = Math.max(0, revAllowed - revCount);
+
                     return (
                       <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden">
                         {fileId ? (
@@ -198,6 +232,11 @@ export default function MyVideosPage() {
                               <span className="text-muted-foreground/30">|</span>
                               <span>{formatDate(order.created_at)}</span>
                             </div>
+                            {freeRevisionsLeft > 0 && (
+                              <p className="text-xs text-green-600 font-medium mt-1">
+                                {freeRevisionsLeft} free revision{freeRevisionsLeft !== 1 ? "s" : ""} remaining
+                              </p>
+                            )}
                           </div>
                           <div className="flex gap-2 flex-wrap">
                             {order.delivery_url && (
@@ -217,6 +256,89 @@ export default function MyVideosPage() {
                               </Button>
                             )}
                           </div>
+                          {/* Revision + Accept buttons */}
+                          {canRevise(order) && (
+                            <div className="flex gap-2 pt-2 border-t border-border">
+                              {hasClips ? (
+                                <Button asChild size="sm" variant="outline" className="flex-1">
+                                  <Link href={`/dashboard/video/${order.id}/revise`}>
+                                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                                    Request Revision
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button asChild size="sm" variant="outline" className="flex-1">
+                                  <Link href="/support">
+                                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                                    Request Revision (via Support)
+                                  </Link>
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                onClick={() => handleAcceptClose(order.id)}
+                                disabled={closingOrder === order.id}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                {closingOrder === order.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                                ) : (
+                                  <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                Accept & Close
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Closed Orders */}
+            {closedOrders.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Check className="h-5 w-5 text-gray-500" />
+                  Closed ({closedOrders.length})
+                </h2>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {closedOrders.map((order) => {
+                    const fileId = getFileIdFromUrl(order.delivery_url);
+                    return (
+                      <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden opacity-75">
+                        {fileId ? (
+                          <div className="aspect-video bg-black">
+                            <iframe
+                              src={`https://drive.google.com/file/d/${fileId}/preview`}
+                              className="w-full h-full border-0"
+                              allow="autoplay; encrypted-media"
+                              allowFullScreen
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-muted flex items-center justify-center">
+                            <Video className="h-10 w-10 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="p-5">
+                          <h3 className="font-bold text-lg text-foreground">{getOrderName(order)}</h3>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
+                            <span>{formatDate(order.created_at)}</span>
+                            <span className="text-muted-foreground/30">|</span>
+                            <span className="text-green-600 font-medium">Accepted & Closed</span>
+                          </div>
+                          {order.delivery_url && (
+                            <Button asChild size="sm" variant="outline" className="mt-3">
+                              <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                Open in Drive
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
@@ -252,17 +374,7 @@ export default function MyVideosPage() {
         )}
       </div>
 
-      <footer className="bg-muted/50 border-t py-8 mt-12">
-        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/portfolio" className="hover:text-foreground transition-colors">Portfolio</Link>
-            <Link href="/resources/photography-guide" className="hover:text-foreground transition-colors">Free Guide</Link>
-            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-            <Link href="/partners" className="hover:text-foreground transition-colors">Partners</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
