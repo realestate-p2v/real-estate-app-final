@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     await supabase
       .from("orders")
       .update({
-        status: "client_revision_requested",
+        status: "revision_requested",
         revision_count: revisionNumber,
         client_revision_notes: clips,
         revision_notes: revisionNotes,
