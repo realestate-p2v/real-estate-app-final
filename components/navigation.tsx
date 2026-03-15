@@ -2,10 +2,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users } from "lucide-react";
+import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
+
+const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,6 +50,7 @@ export function Navigation() {
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Account";
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
   const initial = (displayName.charAt(0) || "U").toUpperCase();
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
 
   return (
     <nav className="bg-primary border-b border-primary/80 sticky top-0 z-40">
@@ -140,6 +143,13 @@ export function Navigation() {
                       <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
+                    {isAdmin && (
+                      <Link href="/admin" onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-accent font-semibold hover:bg-accent/5 transition-colors">
+                        <Shield className="h-3.5 w-3.5" />
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <Link href="/dashboard" onClick={() => setShowDropdown(false)}
                       className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       My Dashboard
@@ -241,6 +251,13 @@ export function Navigation() {
                 <>
                   <div className="h-[1px] bg-white/10 my-2" />
                   <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">Account</p>
+                  {isAdmin && (
+                    <Link href="/admin" onClick={() => setIsOpen(false)}
+                      className="text-accent font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                      <Shield className="h-4 w-4 text-accent/60" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <Link href="/dashboard" onClick={() => setIsOpen(false)}
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                     <LayoutDashboard className="h-4 w-4 text-primary-foreground/60" />
