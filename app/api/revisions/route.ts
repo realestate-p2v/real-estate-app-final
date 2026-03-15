@@ -131,6 +131,25 @@ export async function POST(request: Request) {
       })
       .eq("id", orderId);
 
+    // Send Telegram notification to admin
+    try {
+      const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+      const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+        const clipSummary = clips.map((c: any) => 
+          `  [${c.position}] ${c.action === "remove" ? "REMOVE" : c.camera_direction || "change"} — ${c.problem_description || "no notes"}`
+        ).join("\n");
+        const telegramMsg = `🔄 *Client Revision Request*\n\n📍 *${order.property_address || orderId.slice(0, 8)}*\nRevision #${revisionNumber} ${isFree ? "(free)" : `($${paymentAmount})`}\n${clips.length} clip(s) affected\n\n${clipSummary}\n\n${notes ? `📝 Notes: ${notes}\n\n` : ""}Go to admin dashboard to review.`;
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: telegramMsg, parse_mode: "Markdown" }),
+        });
+      }
+    } catch (telegramErr) {
+      console.error("[Revisions API] Telegram notification failed:", telegramErr);
+    }
+
     return NextResponse.json({
       success: true,
       revision,
