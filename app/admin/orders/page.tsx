@@ -315,15 +315,20 @@ export default function AdminOrdersPage() {
                         </a>
                       )}
 
-                      {/* Revision Details */}
-                      {isRevisionRequest && latestRevision && (
+                      {/* Revision Details — show on any order with revision data */}
+                      {latestRevision && (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                           <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
                             <RefreshCw className="h-4 w-4" />
                             Revision #{latestRevision.revision_number} — {latestRevision.clips?.length || 0} clip(s)
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                              latestRevision.status === "complete" ? "bg-green-100 text-green-700" :
+                              latestRevision.status === "processing" ? "bg-purple-100 text-purple-700" :
+                              "bg-amber-100 text-amber-700"
+                            }`}>{latestRevision.status}</span>
                           </h4>
                           {latestRevision.notes && (
-                            <p className="text-sm text-amber-700 mb-2">Notes: {latestRevision.notes}</p>
+                            <p className="text-sm text-amber-700 mb-2">Customer notes: "{latestRevision.notes}"</p>
                           )}
                           <div className="space-y-2">
                             {(latestRevision.clips || []).map((clip: any, i: number) => (
@@ -383,15 +388,9 @@ export default function AdminOrdersPage() {
 
                         {isRevisionRequest && (
                           <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(order.id, "revision_requested")}
-                              disabled={isProcessing}
-                              className="bg-amber-600 hover:bg-amber-700 text-white"
-                            >
-                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-                              Process Revision
-                            </Button>
+                            <span className="text-xs text-amber-600 flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Pipeline will process revision automatically
+                            </span>
                             <Button
                               size="sm"
                               variant="outline"
