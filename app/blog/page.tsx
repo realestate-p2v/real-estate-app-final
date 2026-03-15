@@ -1,10 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Calendar, Tag } from "lucide-react";
+import { ArrowRight, Clock, Calendar, FileText } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 export const metadata: Metadata = {
@@ -46,121 +45,117 @@ export default async function BlogPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      {/* Hero */}
-      <section className="bg-primary py-16 sm:py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-primary-foreground mb-4">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="text-center space-y-3 mb-12">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground">
             The P2V Blog
           </h1>
-          <p className="text-lg text-primary-foreground/70 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Real estate marketing tips, listing photography guides, and strategies to sell listings faster with professional video content.
           </p>
         </div>
-      </section>
 
-      {/* Posts */}
-      <section className="py-16">
-        <div className="mx-auto max-w-6xl px-4">
-          {posts.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-muted-foreground text-lg mb-4">No blog posts yet. Check back soon!</p>
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Link href="/order">Create Your Listing Video</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map((post, index) => (
-                <Link
-                  key={post.id}
-                  href={`/blog/${post.slug}`}
-                  className={`group bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/40 hover:shadow-lg transition-all duration-300 ${
-                    index === 0 && posts.length > 2 ? "md:col-span-2 lg:col-span-2" : ""
-                  }`}
-                >
-                  {/* Image */}
-                  {post.featured_image ? (
-                    <div className={`overflow-hidden ${index === 0 && posts.length > 2 ? "h-64" : "h-48"}`}>
-                      <img
-                        src={post.featured_image}
-                        alt={post.featured_image_alt || post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                  ) : (
-                    <div className={`bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center ${index === 0 && posts.length > 2 ? "h-64" : "h-48"}`}>
-                      <span className="text-4xl">📸</span>
+        {/* Posts */}
+        {posts.length === 0 ? (
+          <div className="text-center py-20 bg-card rounded-2xl border border-border">
+            <FileText className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+            <h3 className="text-xl font-semibold text-foreground mb-2">No blog posts yet</h3>
+            <p className="text-muted-foreground mb-6">Check back soon for real estate marketing tips and guides.</p>
+            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Link href="/order">Create Your Listing Video</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {posts.map((post, index) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className={`group bg-card rounded-xl border border-border overflow-hidden hover:border-accent/40 hover:shadow-md transition-all ${
+                  index === 0 && posts.length > 2 ? "md:col-span-2 lg:col-span-2" : ""
+                }`}
+              >
+                {/* Image */}
+                {post.featured_image ? (
+                  <div className={`overflow-hidden ${index === 0 && posts.length > 2 ? "h-56" : "h-44"}`}>
+                    <img
+                      src={post.featured_image}
+                      alt={post.featured_image_alt || post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                ) : (
+                  <div className={`bg-muted flex items-center justify-center ${index === 0 && posts.length > 2 ? "h-56" : "h-44"}`}>
+                    <FileText className="h-10 w-10 text-muted-foreground/30" />
+                  </div>
+                )}
+
+                {/* Content */}
+                <div className="p-5">
+                  {/* Tags */}
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {post.tags.slice(0, 3).map((tag: string, i: number) => (
+                        <span key={i} className="text-[10px] font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   )}
 
-                  {/* Content */}
-                  <div className="p-6">
-                    {/* Tags */}
-                    {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {post.tags.slice(0, 3).map((tag: string, i: number) => (
-                          <span key={i} className="text-xs font-medium text-accent bg-accent/10 px-2.5 py-0.5 rounded-full">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                  <h2 className={`font-bold text-foreground group-hover:text-accent transition-colors mb-2 ${
+                    index === 0 && posts.length > 2 ? "text-xl" : "text-base"
+                  }`}>
+                    {post.title}
+                  </h2>
 
-                    <h2 className={`font-bold text-foreground group-hover:text-accent transition-colors mb-2 ${
-                      index === 0 && posts.length > 2 ? "text-2xl" : "text-lg"
-                    }`}>
-                      {post.title}
-                    </h2>
+                  {post.excerpt && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 leading-relaxed">
+                      {post.excerpt}
+                    </p>
+                  )}
 
-                    {post.excerpt && (
-                      <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
-                        {post.excerpt}
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-3">
-                        {post.published_at && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(post.published_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </span>
-                        )}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3">
+                      {post.published_at && (
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {post.read_time_minutes} min read
+                          <Calendar className="h-3 w-3" />
+                          {new Date(post.published_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                         </span>
-                      </div>
-                      <span className="text-accent font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-                        Read <ArrowRight className="h-3 w-3" />
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {post.read_time_minutes} min read
                       </span>
                     </div>
+                    <span className="text-accent font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                      Read <ArrowRight className="h-3 w-3" />
+                    </span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
-      {/* CTA */}
-      <section className="py-16 bg-primary">
-        <div className="mx-auto max-w-3xl px-4 text-center">
-          <h2 className="text-3xl font-bold text-primary-foreground mb-4">
+        {/* CTA */}
+        <div className="bg-card rounded-2xl border border-border p-8 sm:p-10 text-center space-y-5 mt-14">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
             Ready to Turn Your Photos Into Videos?
           </h2>
-          <p className="text-primary-foreground/70 mb-8">
+          <p className="text-muted-foreground max-w-lg mx-auto">
             Professional listing videos from $79. Upload your photos, get your video in 24 hours.
           </p>
-          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-10 py-6 font-bold">
+          <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-10 py-6 font-bold">
             <Link href="/order">Create My Listing Video</Link>
           </Button>
         </div>
-      </section>
+      </div>
 
       <Footer />
     </div>
