@@ -1,441 +1,94 @@
-"use client";
+import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin";
+import { createClient } from "@supabase/supabase-js";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Navigation } from "@/components/navigation";
-import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  ArrowLeft,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Clock,
-  AlertCircle,
-  ExternalLink,
-  RefreshCw,
-  Play,
-  Video,
-  Eye,
-  Send,
-  ChevronDown,
-  ChevronUp,
-  Package,
-  Truck,
-} from "lucide-react";
+export async function GET(request: Request) {
+  try {
+    const { isAdmin: admin } = await isAdmin();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-interface Order {
-  id: string;
-  order_id: string;
-  status: string;
-  customer_name: string;
-  customer_email: string;
-  property_address: string;
-  property_city: string;
-  property_state: string;
-  photo_count: number;
-  resolution: string;
-  orientation: string;
-  delivery_url: string;
-  total_price: number;
-  created_at: string;
-  revision_count: number;
-  revisions_allowed: number;
-  revision_notes: string;
-  client_revision_notes: any[];
-  clip_urls: any[];
-  telegram_message_id: number;
-}
-
-interface RevisionRequest {
-  id: string;
-  order_id: string;
-  revision_number: number;
-  is_paid: boolean;
-  payment_amount: number;
-  status: string;
-  clips: any[];
-  notes: string;
-  created_at: string;
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  new: "bg-blue-100 text-blue-700",
-  pending: "bg-blue-100 text-blue-700",
-  pending_payment: "bg-gray-100 text-gray-600",
-  processing: "bg-purple-100 text-purple-700",
-  awaiting_approval: "bg-indigo-100 text-indigo-700",
-  approved: "bg-green-100 text-green-700",
-  complete: "bg-green-100 text-green-700",
-  delivered: "bg-green-100 text-green-700",
-  closed: "bg-gray-100 text-gray-600",
-  client_revision_requested: "bg-amber-100 text-amber-700",
-  revision_requested: "bg-orange-100 text-orange-700",
-  error: "bg-red-100 text-red-700",
-};
-
-function getFileIdFromUrl(url: string): string | null {
-  const match = url?.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
-}
-
-export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [revisions, setRevisions] = useState<RevisionRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>("action_needed");
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [ordersRes, revisionsRes] = await Promise.all([
-        fetch("/api/admin/orders"),
-        fetch("/api/admin/orders?type=revisions"),
-      ]);
-      const ordersData = await ordersRes.json();
-      const revisionsData = await revisionsRes.json();
-      if (ordersData.orders) setOrders(ordersData.orders);
-      if (revisionsData.revisions) setRevisions(revisionsData.revisions);
-    } catch (err) {
-      console.error("Failed to fetch:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
-    setActionLoading(orderId);
-    try {
-      const res = await fetch("/api/admin/orders", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, status: newStatus }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      }
-    } catch (err) {
-      console.error("Failed to update:", err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-
-  const getAddress = (o: Order) =>
-    o.property_address || (o.property_city && o.property_state ? `${o.property_city}, ${o.property_state}` : `Order ${o.id.slice(0, 8)}`);
-
-  // Group orders by action needed
-  const revisionRequests = orders.filter(o => o.status === "client_revision_requested");
-  const awaitingApproval = orders.filter(o => o.status === "awaiting_approval");
-  const newOrders = orders.filter(o => ["new", "pending"].includes(o.status));
-  const inProduction = orders.filter(o => o.status === "processing");
-  const delivered = orders.filter(o => ["approved", "complete", "delivered"].includes(o.status));
-  const closed = orders.filter(o => o.status === "closed");
-  const errors = orders.filter(o => o.status === "error");
-
-  const actionNeededCount = revisionRequests.length + awaitingApproval.length + newOrders.length + errors.length;
-
-  const getFilteredOrders = () => {
-    switch (filter) {
-      case "action_needed": return [...revisionRequests, ...awaitingApproval, ...newOrders, ...errors];
-      case "in_production": return inProduction;
-      case "delivered": return delivered;
-      case "closed": return closed;
-      case "all": return orders;
-      default: return orders;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
+
+    const url = new URL(request.url);
+    const type = url.searchParams.get("type");
+
+    if (type === "revisions") {
+      const { data: revisions, error } = await supabase
+        .from("revision_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, revisions: revisions || [] });
+    }
+
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, orders: orders || [] });
+  } catch (error) {
+    console.error("[Admin Orders] GET error:", error);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
+}
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+export async function PATCH(request: Request) {
+  try {
+    const { isAdmin: admin } = await isAdmin();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Link href="/admin" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Order Management</h1>
-            <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
-          </div>
-        </div>
+    const { orderId, status, revisionNotes } = await request.json();
+    if (!orderId || !status) {
+      return NextResponse.json({ success: false, error: "orderId and status required" }, { status: 400 });
+    }
 
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { key: "action_needed", label: "Action Needed", count: actionNeededCount, color: "text-red-600" },
-            { key: "in_production", label: "In Production", count: inProduction.length, color: "text-purple-600" },
-            { key: "delivered", label: "Delivered", count: delivered.length, color: "text-green-600" },
-            { key: "closed", label: "Closed", count: closed.length, color: "text-gray-500" },
-            { key: "all", label: "All", count: orders.length, color: "text-foreground" },
-          ].map(({ key, label, count, color }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                filter === key
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:border-primary/30"
-              }`}
-            >
-              {label} <span className={`ml-1 ${filter === key ? "text-primary" : color}`}>({count})</span>
-            </button>
-          ))}
-        </div>
+    const validStatuses = [
+      "new", "pending", "processing", "awaiting_approval",
+      "approved", "complete", "delivered", "closed",
+      "revision_requested", "client_revision_requested", "error"
+    ];
 
-        {/* Orders List */}
-        <div className="space-y-3">
-          {getFilteredOrders().length === 0 ? (
-            <div className="bg-card rounded-xl border border-border p-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground">No orders in this category</p>
-            </div>
-          ) : (
-            getFilteredOrders().map((order) => {
-              const isExpanded = expandedOrder === order.id;
-              const fileId = getFileIdFromUrl(order.delivery_url);
-              const isRevisionRequest = order.status === "client_revision_requested";
-              const isAwaitingApproval = order.status === "awaiting_approval";
-              const isError = order.status === "error";
-              const isProcessing = actionLoading === order.id;
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ success: false, error: `Invalid status: ${status}` }, { status: 400 });
+    }
 
-              // Get revision details for this order
-              const orderRevisions = revisions.filter(r => r.order_id === order.id);
-              const latestRevision = orderRevisions[0];
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-              return (
-                <div key={order.id} className="bg-card rounded-xl border border-border overflow-hidden">
-                  {/* Order Header */}
-                  <button
-                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Status indicator */}
-                    <div className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                      isRevisionRequest ? "bg-amber-500" :
-                      isAwaitingApproval ? "bg-indigo-500" :
-                      isError ? "bg-red-500" :
-                      order.status === "processing" ? "bg-purple-500 animate-pulse" :
-                      ["approved", "complete", "delivered"].includes(order.status) ? "bg-green-500" :
-                      "bg-blue-500"
-                    }`} />
+    const updateData: any = { status };
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground truncate">{getAddress(order)}</h3>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}>
-                          {order.status.replace(/_/g, " ")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span>{order.customer_name}</span>
-                        <span>·</span>
-                        <span>{order.photo_count} photos</span>
-                        <span>·</span>
-                        <span>{order.resolution}</span>
-                        <span>·</span>
-                        <span>${order.total_price}</span>
-                        <span>·</span>
-                        <span>{formatDate(order.created_at)}</span>
-                      </div>
-                    </div>
+    // If approving, set approved_at
+    if (status === "approved") {
+      updateData.approved_at = new Date().toISOString();
+    }
 
-                    {/* Quick action badges */}
-                    {isRevisionRequest && (
-                      <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-1 rounded-lg flex items-center gap-1">
-                        <RefreshCw className="h-3 w-3" /> Revision
-                      </span>
-                    )}
-                    {isAwaitingApproval && (
-                      <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg flex items-center gap-1">
-                        <Eye className="h-3 w-3" /> Review
-                      </span>
-                    )}
+    // If requesting revision with notes
+    if (revisionNotes) {
+      updateData.revision_notes = revisionNotes;
+    }
 
-                    {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                  </button>
+    const { data, error } = await supabase
+      .from("orders")
+      .update(updateData)
+      .eq("id", orderId)
+      .select()
+      .single();
 
-                  {/* Expanded Details */}
-                  {isExpanded && (
-                    <div className="border-t border-border p-4 space-y-4">
-                      {/* Customer info */}
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Customer</p>
-                          <p className="font-medium">{order.customer_name}</p>
-                          <p className="text-muted-foreground">{order.customer_email}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Order Details</p>
-                          <p className="font-medium">{order.photo_count} photos · {order.resolution} · {order.orientation}</p>
-                          <p className="text-muted-foreground">Revisions: {order.revision_count || 0}/{order.revisions_allowed || 1} free used</p>
-                        </div>
-                      </div>
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
-                      {/* Video Preview */}
-                      {fileId && (
-                        <div className="aspect-video bg-black rounded-lg overflow-hidden max-w-xl">
-                          <iframe
-                            src={`https://drive.google.com/file/d/${fileId}/preview`}
-                            className="w-full h-full border-0"
-                            allow="autoplay; encrypted-media"
-                            allowFullScreen
-                          />
-                        </div>
-                      )}
-
-                      {/* Drive link */}
-                      {order.delivery_url && (
-                        <a href={order.delivery_url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                          <ExternalLink className="h-3.5 w-3.5" /> Open in Google Drive
-                        </a>
-                      )}
-
-                      {/* Revision Details */}
-                      {isRevisionRequest && latestRevision && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                          <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-                            <RefreshCw className="h-4 w-4" />
-                            Revision #{latestRevision.revision_number} — {latestRevision.clips?.length || 0} clip(s)
-                          </h4>
-                          {latestRevision.notes && (
-                            <p className="text-sm text-amber-700 mb-2">Notes: {latestRevision.notes}</p>
-                          )}
-                          <div className="space-y-2">
-                            {(latestRevision.clips || []).map((clip: any, i: number) => (
-                              <div key={i} className="bg-white rounded-lg p-3 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold">Clip {clip.position}</span>
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                                    clip.action === "remove" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                                  }`}>
-                                    {clip.action}
-                                  </span>
-                                </div>
-                                {clip.camera_direction && (
-                                  <p className="text-muted-foreground">Direction: {clip.camera_direction} {clip.camera_speed ? `· ${clip.camera_speed}` : ""}</p>
-                                )}
-                                {clip.problem_description && (
-                                  <p className="text-muted-foreground mt-1">"{clip.problem_description}"</p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Error info */}
-                      {isError && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                          <p className="text-sm text-red-700 font-semibold">This order errored during processing.</p>
-                          <p className="text-xs text-red-600 mt-1">Check the pipeline logs for details. You can retry by setting status back to "new".</p>
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                        {isAwaitingApproval && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(order.id, "approved")}
-                              disabled={isProcessing}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-                              Approve & Deliver
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusUpdate(order.id, "revision_requested")}
-                              disabled={isProcessing}
-                              className="text-amber-600 border-amber-200"
-                            >
-                              <RefreshCw className="h-4 w-4 mr-1" /> Request My Revision
-                            </Button>
-                          </>
-                        )}
-
-                        {isRevisionRequest && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(order.id, "revision_requested")}
-                              disabled={isProcessing}
-                              className="bg-amber-600 hover:bg-amber-700 text-white"
-                            >
-                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-                              Process Revision
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(`mailto:${order.customer_email}?subject=Re: Revision for ${getAddress(order)}`)}
-                            >
-                              <Send className="h-4 w-4 mr-1" /> Email Customer
-                            </Button>
-                          </>
-                        )}
-
-                        {isError && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleStatusUpdate(order.id, "new")}
-                            disabled={isProcessing}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-                            Retry Order
-                          </Button>
-                        )}
-
-                        {["new", "pending"].includes(order.status) && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> Queued — pipeline will pick up automatically
-                          </span>
-                        )}
-
-                        {order.status === "processing" && (
-                          <span className="text-xs text-purple-600 flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" /> Pipeline processing...
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      <Footer />
-    </div>
-  );
+    return NextResponse.json({ success: true, order: data });
+  } catch (error) {
+    console.error("[Admin Orders] PATCH error:", error);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+  }
 }
