@@ -62,13 +62,27 @@ GOOD: "Dark cramped bedroom with harsh overhead fluorescent light, cluttered sur
 BAD: "kitchen" (too vague)
 BAD: "nice room" (not descriptive enough)
 
-RULE 3 — For "before/after" or "bad vs good" comparisons:
-- Bad scenes: describe dark, cluttered, poorly lit, harsh shadows, messy, cramped
-- Good scenes: describe bright, warm, naturally lit, staged, spacious, inviting, professional
+RULE 3 — Segment 1 should show a professional realtor inside a luxury home, looking inquisitive or pondering while demonstrating the action described in the narration. For example, if the video is about phone photography, show a realtor holding up their smartphone in a beautiful room. If it is about staging, show a realtor examining furniture placement.
 
-RULE 4 — Segment 1 should show a professional realtor inside a luxury home, looking inquisitive or pondering while demonstrating the action described in the narration. For example, if the video is about phone photography, show a realtor holding up their smartphone in a beautiful room. If it is about staging, show a realtor examining furniture placement.
+RULE 4 — Keep descriptions under 30 words. Focus on the most visually important elements.
 
-RULE 5 — Keep descriptions under 30 words. Focus on the most visually important elements.
+═══ COMPARISON SHOTS (CRITICAL) ═══
+
+When the script has "before/after" or "bad vs good" comparisons (e.g., "this dark photo" then "now look at this bright photo"), you MUST use comparison groups so both shots show THE SAME ROOM.
+
+How it works:
+- Give both segments the same "comparison_group" number (1, 2, 3, etc.)
+- Mark one as "comparison_role": "good" and the other as "comparison_role": "bad"
+- The "good" segment's image_prompt describes the room looking BRIGHT, WARM, PROFESSIONAL
+- The "bad" segment does NOT need its own image_prompt — the pipeline will automatically take the "good" clip and apply filters to make it look dark, desaturated, and amateur
+
+This ensures both shots show the EXACT same room — the "bad" version is just the "good" version degraded with video filters.
+
+Example:
+Segment 3: {"comparison_group": 1, "comparison_role": "bad", "narration": "This is what your listing looks like now"}
+Segment 4: {"comparison_group": 1, "comparison_role": "good", "narration": "This is what it could look like", "image_prompt": "Bright spacious master bedroom with king bed, white linens, warm natural light..."}
+
+You can have multiple comparison groups in one script (group 1, group 2, etc.). Segments WITHOUT comparisons should NOT have comparison_group or comparison_role fields.
 
 ═══ CAMERA DIRECTIONS ═══
 Vary these — don't repeat same direction more than twice:
@@ -79,8 +93,10 @@ Vary these — don't repeat same direction more than twice:
 Return a JSON array. Each object:
 - "segment": number (1, 2, 3...)
 - "narration": voiceover text (max 12 words)
-- "image_prompt": detailed scene description for AI video generation (10-30 words, unique per segment, visually specific)
+- "image_prompt": detailed scene description for AI video generation (10-30 words, unique per segment, visually specific). OMIT for "bad" comparison segments — the pipeline generates it from the "good" pair.
 - "camera_direction": one of the directions above
+- "comparison_group": (optional) integer grouping paired comparison segments together
+- "comparison_role": (optional) "good" or "bad" — only used with comparison_group
 
 Return ONLY the JSON array. No other text. No markdown backticks.`,
           },
