@@ -40,7 +40,7 @@ The video is for Real Estate Photo 2 Video (realestatephoto2video.com) — a res
 ═══ CRITICAL RULES ═══
 
 SEGMENTS:
-- Create 10-14 segments. Each is 3-4 seconds of video. Fast pace.
+- Create 8-10 segments. Each is 3-4 seconds of video. Fast pace. Keep it tight — every segment must earn its place.
 - Segment 1: direct hook to realtors — "Hey realtors!" + provocative question. Under 10 words.
 - Segment 2: immediately deliver on the hook with a bold statement.
 - Last segment CTA: narration must be ONLY "For more DIY real estate photo tips, visit realestatephoto2video dot com" — this drives traffic with value, not a sales pitch.
