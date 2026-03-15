@@ -71,6 +71,10 @@ export function Navigation() {
               Portfolio
             </Link>
 
+            <Link href="/blog" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
+              Blog
+            </Link>
+
             {/* Tools Dropdown */}
             <div className="relative" ref={toolsRef}>
               <button
@@ -202,6 +206,10 @@ export function Navigation() {
               <Link href="/portfolio" onClick={() => setIsOpen(false)}
                 className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors">
                 Portfolio
+              </Link>
+              <Link href="/blog" onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors">
+                Blog
               </Link>
 
               {/* Tools section */}
