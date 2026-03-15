@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield } from "lucide-react";
+import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -89,6 +89,11 @@ export function Navigation() {
               </button>
               {showTools && (
                 <div className="absolute left-0 top-full mt-2 w-56 bg-card rounded-xl border border-border shadow-lg py-2 z-50">
+                  <Link href="/tips" onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Play className="h-4 w-4 text-muted-foreground" />
+                    DIY Photo Tips
+                  </Link>
                   <Link href="/resources/photography-guide" onClick={() => setShowTools(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                     <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -225,6 +230,11 @@ export function Navigation() {
               {/* Tools section */}
               <div className="h-[1px] bg-white/10 my-2" />
               <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">Tools</p>
+              <Link href="/tips" onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Play className="h-4 w-4 text-primary-foreground/60" />
+                DIY Photo Tips
+              </Link>
               <Link href="/resources/photography-guide" onClick={() => setIsOpen(false)}
                 className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                 <BookOpen className="h-4 w-4 text-primary-foreground/60" />
