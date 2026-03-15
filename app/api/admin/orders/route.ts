@@ -43,7 +43,7 @@ export async function PATCH(request: Request) {
     const { isAdmin: admin } = await isAdmin();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    const { orderId, status, revisionNotes } = await request.json();
+    const { orderId, status, revisionNotes, clientRevisionNotes } = await request.json();
     if (!orderId || !status) {
       return NextResponse.json({ success: false, error: "orderId and status required" }, { status: 400 });
     }
@@ -73,6 +73,16 @@ export async function PATCH(request: Request) {
     // If requesting revision with notes
     if (revisionNotes) {
       updateData.revision_notes = revisionNotes;
+    }
+
+    // If admin overrode client revision clip settings
+    if (clientRevisionNotes) {
+      updateData.client_revision_notes = clientRevisionNotes;
+      // Also rebuild the pipeline revision_notes string
+      const clipNotes = clientRevisionNotes.map((c: any) =>
+        `[${c.position}] ${c.camera_direction || ""} ${c.camera_speed || ""} ${c.problem_description || ""} ${c.action === "remove" ? "REMOVE" : ""}`.trim()
+      ).join(", ");
+      updateData.revision_notes = clipNotes;
     }
 
     const { data, error } = await supabase
