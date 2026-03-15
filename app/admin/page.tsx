@@ -66,12 +66,12 @@ export default function AdminPage() {
     },
     {
       title: "Order Management",
-      description: "View all orders, update statuses, manage the pipeline, handle revisions",
-      href: "#",
+      description: "View all orders, approve videos, review revision requests, manage the pipeline",
+      href: "/admin/orders",
       icon: <FileText className="h-6 w-6" />,
       color: "bg-emerald-500/10 text-emerald-600",
       stat: null,
-      status: "coming" as const,
+      status: "live" as const,
     },
     {
       title: "Analytics Dashboard",
