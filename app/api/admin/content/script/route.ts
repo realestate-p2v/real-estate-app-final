@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "user",
-            content: `You are an expert at creating viral real estate short-form video scripts AND an expert at searching stock photo sites like Pexels.
+            content: `You are an expert at creating viral real estate short-form video scripts for AI-generated video content.
 
 Write a script for a 30-45 second vertical video (9:16).
 
@@ -35,7 +35,7 @@ Title: "${title}"
 Hook: "${hook}"
 Description: "${description}"
 
-The video is for Real Estate Photo 2 Video (realestatephoto2video.com) — turns listing photos into professional walkthrough videos for $79-$179.
+The video is for Real Estate Photo 2 Video (realestatephoto2video.com) — a resource for DIY real estate photography tips and a service that turns listing photos into professional walkthrough videos.
 
 ═══ CRITICAL RULES ═══
 
@@ -43,56 +43,32 @@ SEGMENTS:
 - Create 10-14 segments. Each is 3-4 seconds of video. Fast pace.
 - Segment 1: direct hook to realtors — "Hey realtors!" + provocative question. Under 10 words.
 - Segment 2: immediately deliver on the hook with a bold statement.
-- Last segment CTA: narration must be ONLY "realestatephoto2video dot com" (short enough to not get cut off).
+- Last segment CTA: narration must be ONLY "For more DIY real estate photo tips, visit realestatephoto2video dot com" — this drives traffic with value, not a sales pitch.
 
 NARRATION:
 - 1 SHORT sentence per segment, max 12 words. Punchy, conversational.
 - No filler words. No "um," "so," "well."
+- Write the full script as a naturally flowing conversation. Each segment should connect to the next — not feel like separate disconnected sentences. Think of it as one smooth monologue broken into visual beats.
 
-TEXT OVERLAYS:
-- 3-6 words max. Bold, impactful, readable at a glance.
+═══ SCENE DESCRIPTION RULES (MOST IMPORTANT) ═══
 
-═══ IMAGE PROMPT RULES (MOST IMPORTANT) ═══
+The image_prompt is a SCENE DESCRIPTION for AI video generation (Minimax). The AI will generate a hyper-realistic image from this description, then animate it with camera motion. Write vivid, specific, visual descriptions.
 
-You are searching Pexels.com — a stock photo site. Your image_prompt is a SEARCH QUERY, not a creative brief.
+RULE 1 — EVERY image_prompt MUST be completely unique. NEVER repeat the same room, scene, or concept. If you have 12 segments, you need 12 DIFFERENT visual subjects.
 
-RULE 1 — EVERY image_prompt MUST be completely unique. NEVER repeat the same room, scene, or concept. If you have 12 segments, you need 12 DIFFERENT visual subjects. NOT five variations of "kitchen" or three variations of "living room."
+RULE 2 — Describe EXACTLY what should be visible in the scene. Be specific about lighting, materials, colors, and composition.
+GOOD: "Bright modern kitchen with white marble countertops, stainless steel appliances, warm sunlight through large windows, fresh flowers on island"
+GOOD: "Dark cramped bedroom with harsh overhead fluorescent light, cluttered surfaces, unmade bed, poor composition"
+BAD: "kitchen" (too vague)
+BAD: "nice room" (not descriptive enough)
 
-Good variety example for a "listing mistakes" video:
-- "smartphone blurry photo dark room"
-- "bright modern kitchen marble countertop"  
-- "luxury bathroom freestanding tub"
-- "curb appeal front porch landscaping"
-- "aerial view suburban neighborhood homes"
-- "open floor plan living dining room"
-- "real estate for sale sign front yard"
-- "home office modern desk natural light"
-- "backyard patio outdoor dining set"
-- "master bedroom king bed neutral decor"
-- "professional camera tripod living room"
-- "happy couple new home keys" (with_people mode)
+RULE 3 — For "before/after" or "bad vs good" comparisons:
+- Bad scenes: describe dark, cluttered, poorly lit, harsh shadows, messy, cramped
+- Good scenes: describe bright, warm, naturally lit, staged, spacious, inviting, professional
 
-RULE 2 — Search queries must describe WHAT IS VISIBLE in the photo, not abstract concepts. Pexels finds photos by matching visual descriptions.
-BAD: "distorted wide angle lens effect" (Pexels can't find this)
-GOOD: "smartphone blurry dark room photo" (Pexels CAN find this)
-BAD: "overpriced listing that won't sell" (abstract concept)
-GOOD: "empty house for sale sign price reduced" (visual description)
+RULE 4 — Segment 1 should show a professional realtor inside a luxury home, looking inquisitive or pondering while demonstrating the action described in the narration. For example, if the video is about phone photography, show a realtor holding up their smartphone in a beautiful room. If it is about staging, show a realtor examining furniture placement.
 
-RULE 3 — Keep queries 3-6 words. Simpler queries get better Pexels results.
-BAD: "beautiful luxury modern open concept kitchen with granite countertops and stainless steel appliances"
-GOOD: "luxury modern kitchen granite countertop"
-
-RULE 4 — For "before/after" or "bad vs good" comparisons:
-- Bad photo: "dark cluttered messy room," "smartphone blurry photo," "poorly lit bedroom"
-- Good photo: "bright professional real estate photo," "luxury staged living room," "professional kitchen photography"
-
-═══ PEOPLE IN IMAGES ═══
-
-For each segment, set "people_mode" to one of:
-- "no_people" — DEFAULT. Most segments should use this. Pexels will filter out photos with people.
-- "with_people" — Use ONLY when showing happy clients, agents celebrating, or lifestyle scenes. When using this mode, you MUST also set "people_action" describing what the people should be doing naturally: "couple smiling walking through doorway," "woman pointing excitedly at house," "family laughing in backyard." This tells the video AI how to animate them naturally instead of freezing them.
-
-Most segments (8-10 out of 12) should be "no_people." Only use "with_people" for 2-3 high-impact moments.
+RULE 5 — Keep descriptions under 30 words. Focus on the most visually important elements.
 
 ═══ CAMERA DIRECTIONS ═══
 Vary these — don't repeat same direction more than twice:
@@ -103,11 +79,8 @@ Vary these — don't repeat same direction more than twice:
 Return a JSON array. Each object:
 - "segment": number (1, 2, 3...)
 - "narration": voiceover text (max 12 words)
-- "text_overlay": on-screen text (3-6 words)
-- "image_prompt": Pexels search query (3-6 words, unique per segment, visually descriptive)
+- "image_prompt": detailed scene description for AI video generation (10-30 words, unique per segment, visually specific)
 - "camera_direction": one of the directions above
-- "people_mode": "no_people" or "with_people"
-- "people_action": (only when people_mode is "with_people") natural action description for animation
 
 Return ONLY the JSON array. No other text. No markdown backticks.`,
           },
