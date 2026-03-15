@@ -403,6 +403,23 @@ export default function AdminOrdersPage() {
                                             <option value="fast">Fast</option>
                                           </select>
                                         </div>
+                                        <div>
+                                          <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">
+                                            {clip.camera_direction === "bring_to_life" ? "Action Prompt" : "Custom Motion"}
+                                          </p>
+                                          <input
+                                            type="text"
+                                            value={clip.custom_motion || ""}
+                                            onChange={(e) => {
+                                              const source = order.client_revision_notes || latestRevision.clips || [];
+                                              const updated = source.map((c: any, idx: number) => idx === i ? { ...c, custom_motion: e.target.value } : c);
+                                              setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
+                                            }}
+                                            placeholder={clip.camera_direction === "bring_to_life" ? "e.g. Dog jumps excitedly" : "e.g. Slow zoom into fireplace"}
+                                            maxLength={80}
+                                            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                          />
+                                        </div>
                                       </div>
                                     )}
                                   </div>
