@@ -44,6 +44,7 @@ interface RevisionClip {
   action: "keep" | "revise" | "remove";
   camera_direction: string;
   camera_speed: string;
+  custom_motion: string;
   problem_description: string;
 }
 
@@ -52,12 +53,14 @@ const DIRECTIONS = [
   { key: "pull_back", label: "Back" },
   { key: "diagonal_top_left", label: "Fwd + L" },
   { key: "diagonal_top_right", label: "Fwd + R" },
+  { key: "diagonal_bottom_left", label: "Back + L" },
+  { key: "diagonal_bottom_right", label: "Back + R" },
   { key: "tilt_up", label: "Look Up" },
   { key: "tilt_down", label: "Look Down" },
   { key: "orbit_left", label: "Orbit L" },
   { key: "orbit_right", label: "Orbit R" },
   { key: "rise", label: "Rise" },
-  { key: "bring_to_life", label: "✨ Life" },
+  { key: "bring_to_life", label: "✨ Bring to Life" },
 ];
 
 const SPEEDS = [
@@ -116,6 +119,7 @@ export default function RevisionPage() {
               action: "keep" as const,
               camera_direction: clip.camera_direction || "",
               camera_speed: clip.camera_speed || "",
+              custom_motion: "",
               problem_description: "",
             }))
           );
@@ -436,11 +440,23 @@ export default function RevisionPage() {
                     <div>
                       <p className="text-xs font-semibold text-foreground mb-2">New camera direction:</p>
                       <div className="flex flex-wrap gap-1.5">
+                        <button
+                          onClick={() =>
+                            setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: "", custom_motion: "" } : c))
+                          }
+                          className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
+                            !clip.camera_direction && !clip.custom_motion
+                              ? "bg-primary/10 border-primary text-primary font-semibold"
+                              : "border-border hover:bg-muted"
+                          }`}
+                        >
+                          🤖 Auto
+                        </button>
                         {DIRECTIONS.map((d) => (
                           <button
                             key={d.key}
                             onClick={() =>
-                              setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: d.key } : c))
+                              setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: d.key, custom_motion: "" } : c))
                             }
                             className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
                               clip.camera_direction === d.key
@@ -453,6 +469,7 @@ export default function RevisionPage() {
                         ))}
                       </div>
                     </div>
+                    {clip.camera_direction !== "bring_to_life" && (
                     <div>
                       <p className="text-xs font-semibold text-foreground mb-2">Speed:</p>
                       <div className="flex gap-1.5">
@@ -472,6 +489,25 @@ export default function RevisionPage() {
                           </button>
                         ))}
                       </div>
+                    </div>
+                    )}
+                    <div>
+                      <p className="text-xs font-semibold text-foreground mb-1">
+                        {clip.camera_direction === "bring_to_life"
+                          ? "Describe the action (warm, friendly actions work best):"
+                          : "Or describe your own camera movement:"}
+                      </p>
+                      <Input
+                        value={clip.custom_motion || ""}
+                        onChange={(e) =>
+                          setClips(clips.map((c, i) => i === index ? { ...c, custom_motion: e.target.value, camera_direction: e.target.value ? "" : c.camera_direction } : c))
+                        }
+                        placeholder={clip.camera_direction === "bring_to_life"
+                          ? "e.g. Agent waves warmly at camera and smiles"
+                          : "e.g. Slowly zoom into the fireplace then pan right"}
+                        maxLength={80}
+                        className="text-sm h-9"
+                      />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-foreground mb-1">Describe the problem & what you want:</p>
