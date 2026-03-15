@@ -187,7 +187,7 @@ export function Navigation() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="xl:hidden py-5 border-t border-white/10 bg-primary">
+          <div className="xl:hidden py-5 border-t border-white/10 bg-primary max-h-[calc(100vh-5rem)] overflow-y-auto">
             <div className="flex flex-col gap-1 px-4">
 
               {/* User info (if logged in) */}
