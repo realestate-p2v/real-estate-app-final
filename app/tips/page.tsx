@@ -100,42 +100,6 @@ export default function TipsPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      {/* Hero Section */}
-      <div className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 mb-6">
-            <Camera className="h-4 w-4" />
-            <span className="text-sm font-medium">Free Real Estate Photo Tips</span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">
-            DIY Photo Tips
-          </h1>
-          <p className="text-lg text-primary-foreground/70 max-w-2xl mx-auto mb-8">
-            Short, actionable video tips to help you take better listing photos with your phone.
-            New tips every week — follow us for more.
-          </p>
-
-          {/* Social Follow Buttons */}
-          <div className="flex flex-wrap justify-center gap-3">
-            {SOCIALS.map((social) => {
-              const Icon = social.icon;
-              return (
-                <a
-                  key={social.key}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors"
-                >
-                  <Icon className="h-4 w-4" />
-                  {social.label}
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Follow Banner */}
