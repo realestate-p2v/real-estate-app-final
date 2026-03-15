@@ -221,25 +221,33 @@ export default function TipsPage() {
                     ) : (
                       <button
                         onClick={() => setPlayingVideo(video.id)}
-                        className="w-full h-full flex items-center justify-center bg-gradient-to-b from-primary/80 to-primary hover:from-primary/90 hover:to-primary transition-colors"
+                        className="w-full h-full relative"
                       >
-                        <div className="text-center px-6">
-                          <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        {/* Thumbnail from Google Drive */}
+                        {fileId && (
+                          <img
+                            src={`https://drive.google.com/thumbnail?id=${fileId}&sz=w800`}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        )}
+                        {/* Play button overlay */}
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
+                          <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Play className="h-7 w-7 text-white ml-1" />
                           </div>
-                          <h3 className="text-white font-bold text-lg leading-snug mb-2">
-                            {video.title}
-                          </h3>
-                          <p className="text-white/60 text-sm">
-                            {video.hook}
-                          </p>
                         </div>
                       </button>
                     )}
                   </div>
 
-                  {/* Card Footer */}
+                  {/* Card Footer — Title, Hook, Meta */}
                   <div className="p-4">
+                    <h3 className="font-bold text-foreground leading-snug mb-1">{video.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3">{video.hook}</p>
                     <p className="text-xs text-muted-foreground mb-3">{formatDate(video.created_at)}</p>
 
                     {/* Platform Links */}
