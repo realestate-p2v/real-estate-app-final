@@ -328,28 +328,132 @@ export default function AdminOrdersPage() {
                             }`}>{latestRevision.status}</span>
                           </h4>
                           {latestRevision.notes && (
-                            <p className="text-sm text-amber-700 mb-2">Customer notes: "{latestRevision.notes}"</p>
+                            <p className="text-sm text-amber-700 mb-2">Customer notes: &ldquo;{latestRevision.notes}&rdquo;</p>
                           )}
-                          <div className="space-y-2">
-                            {(latestRevision.clips || []).map((clip: any, i: number) => (
-                              <div key={i} className="bg-white rounded-lg p-3 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold">Clip {clip.position}</span>
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                                    clip.action === "remove" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                                  }`}>
-                                    {clip.action}
-                                  </span>
+                          <div className="space-y-3">
+                            {(order.client_revision_notes || latestRevision.clips || []).map((clip: any, i: number) => {
+                              const clipKey = `${order.id}-clip-${i}`;
+                              return (
+                                <div key={i} className="bg-white rounded-lg p-3 text-sm">
+                                  <div className="flex items-start gap-4">
+                                    {/* Left: clip info + customer request */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-bold text-foreground">Clip {clip.position}</span>
+                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                          clip.action === "remove" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                                        }`}>
+                                          {clip.action}
+                                        </span>
+                                      </div>
+                                      {clip.problem_description && (
+                                        <p className="text-muted-foreground italic">&ldquo;{clip.problem_description}&rdquo;</p>
+                                      )}
+                                      {clip.custom_motion && (
+                                        <p className="text-muted-foreground text-xs mt-1">Custom motion: {clip.custom_motion}</p>
+                                      )}
+                                    </div>
+
+                                    {/* Right: editable camera controls */}
+                                    {clip.action !== "remove" && (
+                                      <div className="flex-shrink-0 w-64 space-y-2">
+                                        <div>
+                                          <p className="text-[10px] font-semibold text-muted-foreground mb-1">DIRECTION</p>
+                                          <select
+                                            value={clip.camera_direction || ""}
+                                            onChange={(e) => {
+                                              const updated = [...(order.client_revision_notes || [])];
+                                              updated[i] = { ...updated[i], camera_direction: e.target.value };
+                                              setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
+                                            }}
+                                            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                          >
+                                            <option value="">Auto</option>
+                                            <option value="push_in">Fwd</option>
+                                            <option value="pull_back">Back</option>
+                                            <option value="diagonal_top_left">Fwd + L</option>
+                                            <option value="diagonal_top_right">Fwd + R</option>
+                                            <option value="diagonal_bottom_left">Back + L</option>
+                                            <option value="diagonal_bottom_right">Back + R</option>
+                                            <option value="tilt_up">Look Up</option>
+                                            <option value="tilt_down">Look Down</option>
+                                            <option value="orbit_left">Orbit L</option>
+                                            <option value="orbit_right">Orbit R</option>
+                                            <option value="rise">Rise</option>
+                                            <option value="bring_to_life">Bring to Life</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <p className="text-[10px] font-semibold text-muted-foreground mb-1">SPEED</p>
+                                          <select
+                                            value={clip.camera_speed || ""}
+                                            onChange={(e) => {
+                                              const updated = [...(order.client_revision_notes || [])];
+                                              updated[i] = { ...updated[i], camera_speed: e.target.value };
+                                              setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
+                                            }}
+                                            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                          >
+                                            <option value="">Default</option>
+                                            <option value="slow">Slow</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="fast">Fast</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                                {clip.camera_direction && (
-                                  <p className="text-muted-foreground">Direction: {clip.camera_direction} {clip.camera_speed ? `· ${clip.camera_speed}` : ""}</p>
-                                )}
-                                {clip.problem_description && (
-                                  <p className="text-muted-foreground mt-1">"{clip.problem_description}"</p>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
+                          {/* Save overrides & reprocess button */}
+                          {(isRevisionRequest || isAwaitingApproval) && (
+                            <div className="mt-3 pt-3 border-t border-amber-200 flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  setActionLoading(order.id);
+                                  try {
+                                    // Save updated revision notes and reprocess
+                                    const res = await fetch("/api/admin/orders", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        orderId: order.id,
+                                        status: "revision_requested",
+                                        clientRevisionNotes: order.client_revision_notes,
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      setOrders(orders.map(o => o.id === order.id ? { ...o, status: "revision_requested" } : o));
+                                    }
+                                  } catch (err) {
+                                    console.error("Failed to save:", err);
+                                  } finally {
+                                    setActionLoading(null);
+                                  }
+                                }}
+                                disabled={actionLoading === order.id}
+                                className="bg-amber-600 hover:bg-amber-700 text-white"
+                              >
+                                {actionLoading === order.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 mr-1" />
+                                )}
+                                Save & Reprocess
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(`mailto:${order.customer_email}?subject=Re: Revision for ${getAddress(order)}`)}
+                              >
+                                <Send className="h-4 w-4 mr-1" /> Email Customer
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
 
