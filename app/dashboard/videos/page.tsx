@@ -357,7 +357,6 @@ export default function MyVideosPage() {
                               </Button>
                             )}
                           </div>
-                          )}
                         </div>
                       </div>
                     );
