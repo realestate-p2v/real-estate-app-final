@@ -53,8 +53,9 @@ const REALTOR_FEATURES = [
   {
     icon: Star,
     title: "Leave Reviews",
-    description: "Share your experience and unlock exclusive discounts.",
-    status: "coming",
+    description: "Share your experience and unlock exclusive discounts up to 25% off.",
+    status: "live",
+    href: "/dashboard/reviews",
   },
   {
     icon: Bell,
