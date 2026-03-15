@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Calendar, FileText } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Blog | Real Estate Photo 2 Video — Tips, Guides & Industry Insights",
   description: "Expert real estate marketing tips, listing photography guides, and video marketing strategies. Learn how to sell listings faster with professional video content.",
