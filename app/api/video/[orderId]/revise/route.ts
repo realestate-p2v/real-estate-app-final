@@ -16,21 +16,34 @@ export async function GET(
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const { data: order, error } = await supabase
+    // Try by id first, then by order_id
+    let { data: order, error } = await supabase
       .from("orders")
       .select("id, revision_count, revisions_allowed, clip_urls, resolution, property_address, status")
       .eq("id", orderId)
       .single();
 
     if (error || !order) {
+      const result = await supabase
+        .from("orders")
+        .select("id, revision_count, revisions_allowed, clip_urls, resolution, property_address, status")
+        .eq("order_id", orderId)
+        .single();
+      order = result.data;
+      error = result.error;
+    }
+
+    if (error || !order) {
       return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
     }
+
+    const realOrderId = order.id;
 
     // Get revision history
     const { data: revisions } = await supabase
       .from("revision_requests")
       .select("*")
-      .eq("order_id", orderId)
+      .eq("order_id", realOrderId)
       .order("created_at", { ascending: false });
 
     return NextResponse.json({
@@ -67,15 +80,33 @@ export async function POST(
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const { data: order, error: orderError } = await supabase
+    // Try by id first, then by order_id
+    let order = null;
+    let orderError = null;
+
+    const result1 = await supabase
       .from("orders")
       .select("id, revision_count, revisions_allowed, resolution, property_address, customer_email")
       .eq("id", orderId)
       .single();
+    
+    if (result1.data) {
+      order = result1.data;
+    } else {
+      const result2 = await supabase
+        .from("orders")
+        .select("id, revision_count, revisions_allowed, resolution, property_address, customer_email")
+        .eq("order_id", orderId)
+        .single();
+      order = result2.data;
+      orderError = result2.error;
+    }
 
     if (orderError || !order) {
       return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
     }
+
+    const realOrderId = order.id;
 
     const revisionNumber = (order.revision_count || 0) + 1;
     const isFree = revisionNumber <= (order.revisions_allowed || 1);
@@ -108,7 +139,7 @@ export async function POST(
     const { data: revision, error } = await supabase
       .from("revision_requests")
       .insert({
-        order_id: orderId,
+        order_id: realOrderId,
         revision_number: revisionNumber,
         is_paid: !isFree,
         payment_amount: paymentAmount,
@@ -135,7 +166,7 @@ export async function POST(
         client_revision_notes: clips,
         revision_notes: revisionNotes,
       })
-      .eq("id", orderId);
+      .eq("id", realOrderId);
 
     // Telegram notification
     try {
