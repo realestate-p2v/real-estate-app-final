@@ -280,12 +280,11 @@ export default function VideoDeliveryPage() {
             </Button>
           )}
           <Button asChild variant="outline">
-            <Link href="/support">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Request Revision
-            </Link>
-          </Button>
-        </div>
+  <Link href={`/video/${orderId}/revise`}>
+    <RefreshCw className="mr-2 h-4 w-4" />
+    Request Revision
+  </Link>
+</Button>
 
         {/* Order Details + Revisions */}
         <div className="grid sm:grid-cols-2 gap-6 mb-8">
@@ -322,17 +321,17 @@ export default function VideoDeliveryPage() {
           <div className="bg-card rounded-xl border border-border p-6 space-y-3">
             <h3 className="font-bold text-foreground">Revisions</h3>
             <p className="text-sm text-muted-foreground">
-              Every order includes <strong className="text-foreground">2 free revisions</strong>. To request changes, email us or use the support page with your shot numbers and what you'd like different.
+              Every order includes <strong className="text-foreground">1 free revision</strong>.. To request changes, email us or use the support page with your shot numbers and what you'd like different.
             </p>
             <p className="text-sm text-muted-foreground">
               We only regenerate the clips you flag — everything else stays the same.
             </p>
             <Button asChild variant="outline" size="sm">
-              <Link href="/support">
-                <Mail className="mr-2 h-3.5 w-3.5" />
-                Contact Support
-              </Link>
-            </Button>
+  <Link href={`/video/${orderId}/revise`}>
+    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+    Request Revision
+  </Link>
+</Button>
           </div>
         </div>
 
