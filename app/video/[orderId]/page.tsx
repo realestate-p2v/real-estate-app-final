@@ -70,9 +70,9 @@ const REVIEW_PLATFORMS = [
     textColor: "text-indigo-700",
   },
   {
-    key: "zillow",
-    label: "Zillow",
-    icon: "🏠",
+    key: "trustpilot",
+    label: "Trustpilot",
+    icon: "⭐",
     color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
     textColor: "text-emerald-700",
   },
@@ -419,9 +419,9 @@ export default function VideoDeliveryPage() {
                       className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${platform.color} ${platform.textColor}`}
                       onClick={() => {
                         const urls: Record<string, string> = {
-                          google: "https://g.page/r/realestatephoto2video/review",
-                          facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
-                          zillow: "https://www.zillow.com",
+                          google: "https://g.page/r/CX6ne0m0RmqtEBM/review",
+facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
+trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
                         };
                         window.open(urls[platform.key], "_blank");
                       }}
