@@ -87,6 +87,7 @@ export default function AdminOrdersPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("action_needed");
+  const [manualDeliveryUrl, setManualDeliveryUrl] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchData();
@@ -548,6 +549,60 @@ export default function AdminOrdersPage() {
                             <Loader2 className="h-3 w-3 animate-spin" /> Pipeline processing...
                           </span>
                         )}
+                      </div>
+
+                      {/* Manual Delivery Override */}
+                      <div className="pt-3 border-t border-border">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">MANUAL DELIVERY</p>
+                        <p className="text-xs text-muted-foreground mb-2">Paste a Google Drive link to deliver manually (bypasses pipeline).</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={manualDeliveryUrl[order.id] || ""}
+                            onChange={(e) => setManualDeliveryUrl({ ...manualDeliveryUrl, [order.id]: e.target.value })}
+                            placeholder="https://drive.google.com/file/d/... or folder link"
+                            className="flex-1 text-xs border rounded-lg px-3 py-2 bg-white"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              const url = manualDeliveryUrl[order.id];
+                              if (!url || !url.includes("drive.google.com")) {
+                                alert("Please paste a valid Google Drive link");
+                                return;
+                              }
+                              setActionLoading(order.id);
+                              try {
+                                const res = await fetch("/api/admin/orders", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    orderId: order.id,
+                                    status: "approved",
+                                    deliveryUrl: url,
+                                  }),
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  setOrders(orders.map(o => o.id === order.id ? { ...o, status: "approved", delivery_url: url } : o));
+                                  setManualDeliveryUrl({ ...manualDeliveryUrl, [order.id]: "" });
+                                }
+                              } catch (err) {
+                                console.error("Failed to deliver:", err);
+                              } finally {
+                                setActionLoading(null);
+                              }
+                            }}
+                            disabled={actionLoading === order.id || !manualDeliveryUrl[order.id]}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            {actionLoading === order.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <><Truck className="h-4 w-4 mr-1" /> Deliver</>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
