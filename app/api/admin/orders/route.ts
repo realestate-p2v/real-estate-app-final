@@ -43,7 +43,7 @@ export async function PATCH(request: Request) {
     const { isAdmin: admin } = await isAdmin();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    const { orderId, status, revisionNotes, clientRevisionNotes } = await request.json();
+    const { orderId, status, revisionNotes, clientRevisionNotes, deliveryUrl } = await request.json();
     if (!orderId || !status) {
       return NextResponse.json({ success: false, error: "orderId and status required" }, { status: 400 });
     }
@@ -68,6 +68,11 @@ export async function PATCH(request: Request) {
     // If approving, set approved_at
     if (status === "approved") {
       updateData.approved_at = new Date().toISOString();
+    }
+
+    // If manual delivery URL provided
+    if (deliveryUrl) {
+      updateData.delivery_url = deliveryUrl;
     }
 
     // If requesting revision with notes
