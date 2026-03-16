@@ -280,11 +280,14 @@ export default function VideoDeliveryPage() {
             </Button>
           )}
           <Button asChild variant="outline">
-  <Link href={`/video/${orderId}/revise`}>
-    <RefreshCw className="mr-2 h-4 w-4" />
-    Request Revision
-  </Link>
-</Button>
+            <Link href={`/video/${orderId}/revise`}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Request Revision
+            </Link>
+          </Button>
+        </div>
+
+        {/* Order Details + Revisions */}
 
         {/* Order Details + Revisions */}
         <div className="grid sm:grid-cols-2 gap-6 mb-8">
