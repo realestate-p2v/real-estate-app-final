@@ -52,19 +52,28 @@ NARRATION:
 
 ═══ SCENE DESCRIPTION RULES (MOST IMPORTANT) ═══
 
-The image_prompt is a SCENE DESCRIPTION for AI video generation (Minimax). The AI will generate a hyper-realistic image from this description, then animate it with camera motion. Write vivid, specific, visual descriptions.
+The image_prompt is a SCENE DESCRIPTION that will be fed to an AI image generator (Minimax image-01) to create a photorealistic first-frame image, which then gets animated with camera motion. The quality of this description DIRECTLY determines video quality.
 
-RULE 1 — EVERY image_prompt MUST be completely unique. NEVER repeat the same room, scene, or concept. If you have 12 segments, you need 12 DIFFERENT visual subjects.
+RULE 1 — EVERY image_prompt MUST be completely unique. NEVER repeat the same room, scene, or concept. If you have 10 segments, you need 10 DIFFERENT visual subjects.
 
-RULE 2 — Describe EXACTLY what should be visible in the scene. Be specific about lighting, materials, colors, and composition.
+RULE 2 — Describe a STATIC SCENE, not an action. The AI generates a photograph, not a movie. Describe what the camera SEES — furniture, materials, lighting, colors, architecture. Do NOT describe people moving, doors opening, or actions happening.
 GOOD: "Bright modern kitchen with white marble countertops, stainless steel appliances, warm sunlight through large windows, fresh flowers on island"
-GOOD: "Dark cramped bedroom with harsh overhead fluorescent light, cluttered surfaces, unmade bed, poor composition"
-BAD: "kitchen" (too vague)
-BAD: "nice room" (not descriptive enough)
+GOOD: "Dark cramped bedroom with harsh overhead fluorescent light, cluttered surfaces, unmade bed, yellowed walls"
+BAD: "A realtor walking through a kitchen" (AI can't animate actions well)
+BAD: "Someone opening the front door" (describes motion, not a scene)
+BAD: "kitchen" (too vague — no details for the AI to work with)
 
-RULE 3 — Segment 1 should show a professional realtor inside a luxury home, looking inquisitive or pondering while demonstrating the action described in the narration. For example, if the video is about phone photography, show a realtor holding up their smartphone in a beautiful room. If it is about staging, show a realtor examining furniture placement.
+RULE 3 — Segment 1 should show a professional realtor standing confidently inside a luxury home, looking directly at camera. Describe the person AND the room: "Professional female realtor in navy blazer standing in bright modern living room with floor-to-ceiling windows, hardwood floors, neutral furniture, warm natural light"
 
-RULE 4 — Keep descriptions under 30 words. Focus on the most visually important elements.
+RULE 4 — Keep descriptions 15-30 words. Include: the room/space type, 2-3 specific materials or objects, the lighting quality, and the overall mood.
+
+RULE 5 — For EVERY scene, specify the lighting:
+- Good scenes: "warm natural sunlight," "bright window light," "golden hour glow," "soft diffused daylight"
+- Bad scenes: "harsh overhead fluorescent," "dim single bulb," "flat unflattering light," "dark shadows"
+
+RULE 6 — NEVER describe text, logos, graphics, UI elements, or split screens. These are photorealistic scenes only — rooms, spaces, properties, and occasionally a person in a room.
+
+RULE 7 — Avoid describing things the AI struggles with: hands holding objects, screens showing content, multiple people interacting, text on surfaces, mirrors, or reflections.
 
 ═══ COMPARISON SHOTS (CRITICAL) ═══
 
@@ -80,20 +89,27 @@ This ensures both shots show the EXACT same room — the "bad" version is just t
 
 Example:
 Segment 3: {"comparison_group": 1, "comparison_role": "bad", "narration": "This is what your listing looks like now"}
-Segment 4: {"comparison_group": 1, "comparison_role": "good", "narration": "This is what it could look like", "image_prompt": "Bright spacious master bedroom with king bed, white linens, warm natural light..."}
+Segment 4: {"comparison_group": 1, "comparison_role": "good", "narration": "This is what it could look like", "image_prompt": "Bright spacious master bedroom with king bed, white linens, warm natural light streaming through sheer curtains, hardwood floors, neutral decor"}
 
 You can have multiple comparison groups in one script (group 1, group 2, etc.). Segments WITHOUT comparisons should NOT have comparison_group or comparison_role fields.
 
 ═══ CAMERA DIRECTIONS ═══
 Vary these — don't repeat same direction more than twice:
-"push_in", "pull_back", "orbit_left", "orbit_right", "tilt_up", "rise", "pan_left", "pan_right"
+- "push_in" — best for hero shots, dramatic reveals, kitchens and living rooms
+- "pull_back" — great for wide reveals, showing full room scope
+- "orbit_left" / "orbit_right" — works well for furniture, fixtures, focal points
+- "tilt_up" — ideal for tall ceilings, chandeliers, two-story spaces
+- "rise" — aerial/elevated perspective, great for exteriors and pools
+- "pan_left" / "pan_right" — landscape views, panoramic rooms
+
+Prefer "push_in" and "orbit" for interiors. Use "rise" and "pull_back" sparingly (1-2 times max).
 
 ═══ OUTPUT FORMAT ═══
 
 Return a JSON array. Each object:
 - "segment": number (1, 2, 3...)
 - "narration": voiceover text (max 12 words)
-- "image_prompt": detailed scene description for AI video generation (10-30 words, unique per segment, visually specific). OMIT for "bad" comparison segments — the pipeline generates it from the "good" pair.
+- "image_prompt": detailed scene description for AI image generation (15-30 words, unique per segment, describes a STATIC SCENE not an action). OMIT for "bad" comparison segments.
 - "camera_direction": one of the directions above
 - "comparison_group": (optional) integer grouping paired comparison segments together
 - "comparison_role": (optional) "good" or "bad" — only used with comparison_group
