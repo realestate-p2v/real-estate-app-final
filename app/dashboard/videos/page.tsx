@@ -205,24 +205,25 @@ export default function MyVideosPage() {
 
                     return (
                       <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden">
-                        {fileId ? (
-                          <div className="aspect-video bg-black">
-                            <iframe
-                              src={`https://drive.google.com/file/d/${fileId}/preview`}
-                              className="w-full h-full border-0"
-                              allow="autoplay; encrypted-media"
-                              allowFullScreen
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : (
-                          <div className="aspect-video bg-muted flex items-center justify-center">
-                            <Video className="h-10 w-10 text-muted-foreground/40" />
-                          </div>
-                        )}
+                        <Link href={`/video/${order.order_id || order.id}`} className="block">
+                          {fileId ? (
+                            <div className="aspect-video bg-black">
+                              <iframe
+                                src={`https://drive.google.com/file/d/${fileId}/preview`}
+                                className="w-full h-full border-0 pointer-events-none"
+                                allow="autoplay; encrypted-media"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-video bg-muted flex items-center justify-center">
+                              <Video className="h-10 w-10 text-muted-foreground/40" />
+                            </div>
+                          )}
+                        </Link>
                         <div className="p-5 space-y-3">
-                          <div>
-                            <h3 className="font-bold text-lg text-foreground">{getOrderName(order)}</h3>
+                          <Link href={`/video/${order.order_id || order.id}`} className="block">
+                            <h3 className="font-bold text-lg text-foreground hover:text-accent transition-colors">{getOrderName(order)}</h3>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
                               <span>{order.photo_count || 0} photos</span>
                               <span className="text-muted-foreground/30">|</span>
@@ -237,7 +238,7 @@ export default function MyVideosPage() {
                                 {freeRevisionsLeft} free revision{freeRevisionsLeft !== 1 ? "s" : ""} remaining
                               </p>
                             )}
-                          </div>
+                          </Link>
                           <div className="flex gap-2 flex-wrap">
                             {order.delivery_url && (
                               <Button asChild size="sm" variant="outline">
@@ -316,53 +317,54 @@ export default function MyVideosPage() {
                   {closedOrders.map((order) => {
                     const fileId = getFileIdFromUrl(order.delivery_url);
                     return (
-                      <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden opacity-75">
-                        {fileId ? (
-                          <div className="aspect-video bg-black">
-                            <iframe
-                              src={`https://drive.google.com/file/d/${fileId}/preview`}
-                              className="w-full h-full border-0"
-                              allow="autoplay; encrypted-media"
-                              allowFullScreen
-                              loading="lazy"
-                            />
+                      <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/40 hover:opacity-100 transition-all opacity-75">
+                        <Link href={`/video/${order.order_id || order.id}`} className="block">
+                          {fileId ? (
+                            <div className="aspect-video bg-black">
+                              <iframe
+                                src={`https://drive.google.com/file/d/${fileId}/preview`}
+                                className="w-full h-full border-0 pointer-events-none"
+                                allow="autoplay; encrypted-media"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-video bg-muted flex items-center justify-center">
+                              <Video className="h-10 w-10 text-muted-foreground/40" />
+                            </div>
+                          )}
+                          <div className="p-5 pb-3">
+                            <h3 className="font-bold text-lg text-foreground hover:text-accent transition-colors">{getOrderName(order)}</h3>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
+                              <span>{formatDate(order.created_at)}</span>
+                              <span className="text-muted-foreground/30">|</span>
+                              <span className="text-green-600 font-medium">Accepted & Closed</span>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="aspect-video bg-muted flex items-center justify-center">
-                            <Video className="h-10 w-10 text-muted-foreground/40" />
-                          </div>
-                        )}
-                        <div className="p-5">
-                          <h3 className="font-bold text-lg text-foreground">{getOrderName(order)}</h3>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
-                            <span>{formatDate(order.created_at)}</span>
-                            <span className="text-muted-foreground/30">|</span>
-                            <span className="text-green-600 font-medium">Accepted & Closed</span>
-                          </div>
-                          <div className="flex gap-2 mt-3 flex-wrap">
-                            {order.delivery_url && (
-                              <Button asChild size="sm" variant="outline">
-                                <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                                  Open in Drive
-                                </a>
-                              </Button>
-                            )}
-                            {fileId && (
-                              <Button asChild size="sm" variant="outline">
-                                <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
-                                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                                  Download Video
-                                </a>
-                              </Button>
-                            )}
-                          <Button asChild size="sm" variant="outline">
-                              <Link href={`/video/${order.order_id || order.id}/revise`}>
-                                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                                Request Paid Revision
-                              </Link>
+                        </Link>
+                        <div className="flex gap-2 px-5 pb-5 flex-wrap">
+                          {order.delivery_url && (
+                            <Button asChild size="sm" variant="outline">
+                              <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                Open in Drive
+                              </a>
                             </Button>
-                          </div>
+                          )}
+                          {fileId && (
+                            <Button asChild size="sm" variant="outline">
+                              <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
+                                <Download className="mr-1.5 h-3.5 w-3.5" />
+                                Download
+                              </a>
+                            </Button>
+                          )}
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/video/${order.order_id || order.id}/revise`}>
+                              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                              Paid Revision
+                            </Link>
+                          </Button>
                         </div>
                       </div>
                     );
