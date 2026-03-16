@@ -65,17 +65,34 @@ Your goal is to rank on Google AND get cited by AI assistants (ChatGPT, Gemini, 
    - First paragraph must contain the primary keyword naturally
    - Use H2 for main sections, H3 for subsections — clear hierarchy
    - Bold key phrases and definitions (not random words)
-   - Internal link opportunities: mention "walkthrough video," "listing video," "photo-to-video" (we'll link these to /order)
-   - External authority references: mention NAR statistics, MLS data, Zillow studies
 
-4. READABILITY:
+4. INTERNAL LINKS — MANDATORY (at least 5 per post):
+   You MUST include at least 5 internal links woven naturally into the post content using markdown link syntax. Use these pages and link them where they fit contextually — don't force them:
+   - [create a listing video](/order) or [turn your photos into a video](/order) — link to the order page when mentioning creating videos, getting started, or photo-to-video conversion
+   - [see examples in our portfolio](/portfolio) — link when referencing video quality, examples, or sample work
+   - [free photography guide](/resources/photography-guide) — link when discussing photo quality, camera settings, lighting, or staging tips
+   - [our blog](/blog) — link when referencing related articles or further reading
+   - [contact our support team](/support) — link when mentioning help, questions, or customer service
+   - [photographer referral program](/partners) — link when discussing photographer partnerships or referrals
+   - [find a photographer near you](/directory) — link when discussing hiring photographers or photo quality
+   - [DIY photo tips](/tips) — link when discussing photography techniques, improvement tips, or video content
+   - [browse pricing](/order) — link when discussing costs, packages, or value
+   
+   RULES FOR INTERNAL LINKS:
+   - Minimum 5 links per post, aim for 6-8
+   - Use descriptive anchor text (NOT "click here" — use natural phrases like "explore our portfolio" or "check out our free photography guide")
+   - Spread links throughout the post — don't cluster them all in one section
+   - The /order page link should appear at least twice (once in body, once near the end as CTA)
+   - Links should feel helpful to the reader, not promotional
+
+5. READABILITY:
    - Short paragraphs (2-4 sentences max)
    - Conversational but authoritative tone
    - Use "you" to address realtors/agents directly
    - Include concrete examples and scenarios
    - 1,200-1,800 words target length
 
-5. CALL TO ACTION (subtle, not salesy):
+6. CALL TO ACTION (subtle, not salesy):
    - Naturally mention that turning photos into video is now affordable ($79-$179)
    - Reference 24-hour delivery as a benefit in context
    - Don't hard-sell — position P2V as the obvious solution when discussing photo-to-video conversion
@@ -88,7 +105,7 @@ Return a JSON object with these fields:
   "slug": "url-friendly-slug",
   "meta_description": "155 character meta description with primary keyword",
   "excerpt": "2-3 sentence excerpt for blog listing cards",
-  "content": "Full blog post in Markdown format with ## headers, **bold**, lists, etc.",
+  "content": "Full blog post in Markdown format with ## headers, **bold**, lists, [internal links](/path), etc. Must contain at least 5 internal links.",
   "tags": ["tag1", "tag2", "tag3"],
   "suggested_images": [
     {
