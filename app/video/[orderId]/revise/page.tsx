@@ -534,7 +534,7 @@ export default function RevisionPage() {
           <Textarea
             value={generalNotes}
             onChange={(e) => setGeneralNotes(e.target.value)}
-            placeholder="Any general feedback or requests for the overall video..."
+            placeholder="Any general direction or requests..."
             rows={3}
             className="text-sm"
           />
