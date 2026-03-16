@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   Play,
   Send,
   DollarSign,
+  CreditCard,
 } from "lucide-react";
 
 interface ClipData {
@@ -72,6 +73,7 @@ const SPEEDS = [
 export default function RevisionPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const orderId = params.orderId as string;
 
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,13 @@ export default function RevisionPage() {
   const [expandedClip, setExpandedClip] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Check for cancelled Stripe session
+  useEffect(() => {
+    if (searchParams.get("cancelled") === "true") {
+      setError("Payment was cancelled. You can try submitting your revision again.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (orderId) fetchRevisionData();
@@ -164,7 +173,6 @@ export default function RevisionPage() {
       const newClips = [...clips];
       const [moved] = newClips.splice(draggedIndex, 1);
       newClips.splice(dragOverIndex, 0, moved);
-      // Update positions
       setClips(newClips.map((c, i) => ({ ...c, position: i + 1 })));
     }
     setDraggedIndex(null);
@@ -207,18 +215,52 @@ export default function RevisionPage() {
 
     setSubmitting(true);
     setError(null);
+
+    const clipPayload = changedClips.map((c) => ({
+      position: c.original_position,
+      camera_direction: c.camera_direction,
+      camera_speed: c.camera_speed,
+      custom_motion: c.custom_motion,
+      problem_description: c.problem_description,
+      action: c.action,
+    }));
+
+    // For PAID revisions: redirect to Stripe checkout
+    if (!isFree && revisedClips.filter((c) => c.action === "revise").length > 0) {
+      try {
+        const res = await fetch("/api/revisions/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId,
+            clips: clipPayload,
+            notes: generalNotes,
+          }),
+        });
+        const data = await res.json();
+
+        if (data.success && data.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+          return; // Don't setSubmitting(false) — we're navigating away
+        } else {
+          setError(data.error || "Failed to create payment session. Please try again.");
+          setSubmitting(false);
+        }
+      } catch (err) {
+        setError("Failed to connect to payment service. Please try again.");
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // For FREE revisions: submit directly (existing flow)
     try {
       const res = await fetch(`/api/video/${orderId}/revise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clips: changedClips.map((c) => ({
-            position: c.original_position,
-            camera_direction: c.camera_direction,
-            camera_speed: c.camera_speed,
-            problem_description: c.problem_description,
-            action: c.action,
-          })),
+          clips: clipPayload,
           notes: generalNotes,
         }),
       });
@@ -226,7 +268,27 @@ export default function RevisionPage() {
       if (data.success) {
         setSubmitted(true);
       } else if (data.requiresPayment) {
-        setError(data.message);
+        // Fallback: if somehow the free check was wrong, redirect to checkout
+        setError(data.message + " Redirecting to payment...");
+        setTimeout(async () => {
+          try {
+            const checkoutRes = await fetch("/api/revisions/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId,
+                clips: clipPayload,
+                notes: generalNotes,
+              }),
+            });
+            const checkoutData = await checkoutRes.json();
+            if (checkoutData.success && checkoutData.url) {
+              window.location.href = checkoutData.url;
+            }
+          } catch {
+            // Keep the error message visible
+          }
+        }, 1500);
       } else {
         setError(data.error || "Failed to submit revision");
       }
@@ -560,29 +622,47 @@ export default function RevisionPage() {
 
           {!isFree && revisedClips.filter(c => c.action === "revise").length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-amber-600" />
                 <p className="font-semibold text-amber-800">Paid Revision — ${getRevisionCost().toFixed(2)}</p>
               </div>
-              <p className="text-xs text-amber-700">
-                Your 1 free revision has been used. This revision costs{" "}
+              <p className="text-xs text-amber-700 mb-2">
+                Your {revisionsAllowed} free revision{revisionsAllowed !== 1 ? "s have" : " has"} been used. This revision costs{" "}
                 ${getRevisionCost().toFixed(2)} for {revisedClips.filter(c => c.action === "revise").length} clip(s).
                 Removals and reordering are always free.
               </p>
+              <div className="flex items-center gap-1.5 text-xs text-amber-700">
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>You'll be redirected to a secure Stripe checkout to complete payment.</span>
+              </div>
             </div>
           )}
 
           <Button
             onClick={handleSubmit}
             disabled={submitting || revisedClips.length === 0}
-            className="w-full py-5 text-lg bg-accent hover:bg-accent/90"
+            className={`w-full py-5 text-lg ${
+              !isFree && revisedClips.filter(c => c.action === "revise").length > 0
+                ? "bg-amber-600 hover:bg-amber-700"
+                : "bg-accent hover:bg-accent/90"
+            }`}
           >
             {submitting ? (
-              <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Submitting...</>
+              <><Loader2 className="h-5 w-5 animate-spin mr-2" /> {!isFree ? "Redirecting to payment..." : "Submitting..."}</>
+            ) : isFree ? (
+              <>
+                <Send className="h-5 w-5 mr-2" />
+                Submit Revision (Free)
+              </>
+            ) : revisedClips.filter(c => c.action === "revise").length > 0 ? (
+              <>
+                <CreditCard className="h-5 w-5 mr-2" />
+                Pay ${getRevisionCost().toFixed(2)} & Submit Revision
+              </>
             ) : (
               <>
                 <Send className="h-5 w-5 mr-2" />
-                Submit Revision {isFree ? "(Free)" : `— $${getRevisionCost().toFixed(2)}`}
+                Submit Changes (Free — removals/reorder only)
               </>
             )}
           </Button>
