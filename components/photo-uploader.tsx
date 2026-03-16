@@ -676,6 +676,8 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Slow or Med</span> speed looks most professional</p>
                   <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Auto</span> works great — our AI picks the best movement for each photo</p>
                   <p className="text-xs text-muted-foreground">• Use <span className="font-medium text-foreground">Bring to Life</span> for photos with people, pets, or nature</p>
+                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Text on signs or walls</span> may appear distorted — crop out any text that isn't fully legible in the photo</p>
+                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">If some text is partially blocked</span> use simple movements like FWD or BACK + SLOW for best results</p>
                 </div>
                 
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(null); }}
