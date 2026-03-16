@@ -36,7 +36,6 @@ const DIRECTIONS = [
 const SPEEDS = [
   { key: 'slow', label: 'Slow' },
   { key: 'medium', label: 'Med' },
-  { key: 'fast', label: 'Fast' },
 ];
 
 export interface PhotoItem {
