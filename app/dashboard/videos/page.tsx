@@ -356,6 +356,12 @@ export default function MyVideosPage() {
                                 </a>
                               </Button>
                             )}
+                          <Button asChild size="sm" variant="outline">
+                              <Link href={`/video/${order.order_id || order.id}/revise`}>
+                                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                                Request Paid Revision
+                              </Link>
+                            </Button>
                           </div>
                         </div>
                       </div>
