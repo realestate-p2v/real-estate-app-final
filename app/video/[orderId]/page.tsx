@@ -22,6 +22,7 @@ import {
   Check,
   Star,
   ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 
 interface Order {
@@ -72,6 +73,51 @@ const REVIEW_PLATFORMS = [
     textColor: "text-emerald-700",
   },
 ];
+
+// Statuses where a revision is being processed
+const REVISION_IN_PROGRESS_STATUSES = [
+  "revision_requested",
+  "client_revision_requested",
+  "processing",
+  "awaiting_approval",
+];
+
+// Statuses where the video has been delivered (customer can watch/download)
+const DELIVERED_STATUSES = ["delivered", "complete", "approved", "closed"];
+
+// Status display config
+const STATUS_DISPLAY: Record<string, { label: string; color: string; bgColor: string; description: string }> = {
+  revision_requested: {
+    label: "Revision In Progress",
+    color: "text-amber-700",
+    bgColor: "bg-amber-100",
+    description: "Your revision is being processed. We're regenerating the clips you requested. You'll receive an email when your updated video is ready — typically within 24 hours.",
+  },
+  client_revision_requested: {
+    label: "Revision Submitted",
+    color: "text-amber-700",
+    bgColor: "bg-amber-100",
+    description: "Your revision has been submitted and is queued for processing. You'll receive an email when your updated video is ready — typically within 24 hours.",
+  },
+  processing: {
+    label: "In Production",
+    color: "text-purple-700",
+    bgColor: "bg-purple-100",
+    description: "Your video is currently being produced. You'll receive an email when it's ready — typically within 24 hours.",
+  },
+  awaiting_approval: {
+    label: "In Review",
+    color: "text-indigo-700",
+    bgColor: "bg-indigo-100",
+    description: "Your video is being reviewed for quality before delivery. This usually takes just a few hours.",
+  },
+  new: {
+    label: "Queued",
+    color: "text-blue-700",
+    bgColor: "bg-blue-100",
+    description: "Your order is in the queue and will begin processing shortly.",
+  },
+};
 
 export default function VideoDeliveryPage() {
   const params = useParams();
@@ -165,7 +211,10 @@ export default function VideoDeliveryPage() {
   }
 
   const fileId = getFileIdFromUrl(order.delivery_url);
-  const isDelivered = order.status === "delivered" || order.status === "complete" || !!order.delivery_url;
+  const isDelivered = DELIVERED_STATUSES.includes(order.status);
+  const isClosed = order.status === "closed";
+  const isRevisionInProgress = REVISION_IN_PROGRESS_STATUSES.includes(order.status);
+  const statusInfo = STATUS_DISPLAY[order.status];
 
   return (
     <div className="min-h-screen bg-background">
@@ -176,16 +225,47 @@ export default function VideoDeliveryPage() {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">{getOrderName()}</h1>
-            <p className="text-muted-foreground mt-1">Delivered {formatDate(order.created_at)}</p>
+            <p className="text-muted-foreground mt-1">
+              {isDelivered ? `Delivered ${formatDate(order.created_at)}` : `Ordered ${formatDate(order.created_at)}`}
+            </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex-shrink-0">
-            <CheckCircle className="h-3.5 w-3.5" />
-            Delivered
-          </span>
+          {isRevisionInProgress && statusInfo ? (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusInfo.bgColor} ${statusInfo.color} flex-shrink-0`}>
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              {statusInfo.label}
+            </span>
+          ) : isDelivered ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex-shrink-0">
+              <CheckCircle className="h-3.5 w-3.5" />
+              {isClosed ? "Complete" : "Delivered"}
+            </span>
+          ) : (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusInfo?.bgColor || "bg-blue-100"} ${statusInfo?.color || "text-blue-700"} flex-shrink-0`}>
+              <Clock className="h-3.5 w-3.5" />
+              {statusInfo?.label || "Processing"}
+            </span>
+          )}
         </div>
 
-        {/* ═══ REVIEW PROMPT BANNER ═══ */}
-        {isDelivered && !reviewDismissed && (
+        {/* ═══ REVISION IN PROGRESS BANNER ═══ */}
+        {isRevisionInProgress && statusInfo && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <RefreshCw className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground mb-1">{statusInfo.label}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {statusInfo.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ REVIEW PROMPT BANNER — only after customer has closed/accepted ═══ */}
+        {isClosed && !reviewDismissed && (
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -202,8 +282,6 @@ export default function VideoDeliveryPage() {
                       key={platform.key}
                       className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${platform.color} ${platform.textColor}`}
                       onClick={() => {
-                        // For now, open the review page (will be built later)
-                        // Google Business, Facebook page, Zillow profile
                         const urls: Record<string, string> = {
                           google: "https://g.page/r/realestatephoto2video/review",
                           facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
@@ -279,15 +357,15 @@ export default function VideoDeliveryPage() {
               </a>
             </Button>
           )}
-          <Button asChild variant="outline">
-            <Link href={`/video/${orderId}/revise`}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Request Revision
-            </Link>
-          </Button>
+          {!isRevisionInProgress && (
+            <Button asChild variant="outline">
+              <Link href={`/video/${orderId}/revise`}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Request Revision
+              </Link>
+            </Button>
+          )}
         </div>
-
-        {/* Order Details + Revisions */}
 
         {/* Order Details + Revisions */}
         <div className="grid sm:grid-cols-2 gap-6 mb-8">
@@ -323,18 +401,32 @@ export default function VideoDeliveryPage() {
 
           <div className="bg-card rounded-xl border border-border p-6 space-y-3">
             <h3 className="font-bold text-foreground">Revisions</h3>
-            <p className="text-sm text-muted-foreground">
-              Every order includes <strong className="text-foreground">1 free revision</strong>.. To request changes, email us or use the support page with your shot numbers and what you'd like different.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              We only regenerate the clips you flag — everything else stays the same.
-            </p>
-            <Button asChild variant="outline" size="sm">
-  <Link href={`/video/${orderId}/revise`}>
-    <RefreshCw className="mr-2 h-3.5 w-3.5" />
-    Request Revision
-  </Link>
-</Button>
+            {isRevisionInProgress ? (
+              <>
+                <div className="flex items-center gap-2 text-amber-600">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <p className="text-sm font-semibold">Revision in progress</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Your revision is being processed. You'll receive an email when the updated video is ready.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Every order includes <strong className="text-foreground">1 free revision</strong>. To request changes, use the revision tool to pick which clips you want redone.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  We only regenerate the clips you flag — everything else stays the same.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/video/${orderId}/revise`}>
+                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                    Request Revision
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
