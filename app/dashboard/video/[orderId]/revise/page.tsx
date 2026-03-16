@@ -377,7 +377,7 @@ export default function RevisionPage() {
                   </div>
 
                   {/* Clip preview */}
-                  <div className="w-48 h-32 sm:w-64 sm:h-44 rounded-lg overflow-hidden flex-shrink-0 bg-black relative">
+                 <div className="w-56 h-[126px] sm:w-72 sm:h-[162px] rounded-lg overflow-hidden flex-shrink-0 bg-black relative">
                     {clip.file_id ? (
                       <iframe
                         src={`https://drive.google.com/file/d/${clip.file_id}/preview`}
