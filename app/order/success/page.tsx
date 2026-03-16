@@ -9,14 +9,22 @@ export default async function SuccessPage({
 }: {
   searchParams: Promise<{ session_id?: string; orderId?: string }>;
 }) {
-  const { session_id, orderId } = await searchParams;
-
   let sessionData = null;
-  if (session_id) {
-    sessionData = await getCheckoutSession(session_id);
-  }
+  let customerEmail = null;
+  let orderId = null;
 
-  const customerEmail = sessionData?.customer_details?.email ?? (sessionData as any)?.customer_email;
+  try {
+    const params = await searchParams;
+    orderId = params?.orderId;
+    
+    if (params?.session_id) {
+      sessionData = await getCheckoutSession(params.session_id);
+      customerEmail = sessionData?.customer_details?.email ?? (sessionData as any)?.customer_email;
+    }
+  } catch (error) {
+    console.error("[Success Page] Error loading session:", error);
+    // Continue rendering the page even if session lookup fails
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,7 +105,7 @@ export default async function SuccessPage({
               <div>
                 <h3 className="font-bold text-foreground">Delivery Within 24 Hours</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  You'll receive an email with a Google Drive link to watch and download your video. 2 free revisions are included if you want any changes.
+                  You'll receive an email with a link to watch, download, and share your video. 1 free revision is included if you want any changes.
                 </p>
               </div>
             </div>
@@ -138,13 +146,7 @@ export default async function SuccessPage({
                 Share via Email
               </a>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {}}
-              className="cursor-pointer"
-              asChild
-            >
+            <Button asChild variant="outline" size="sm">
               <a
                 href={`https://wa.me/?text=I just ordered a professional listing video at realestatephoto2video.com — they turn your photos into a cinematic walkthrough video in 24 hours, starting at $79. Check it out!`}
                 target="_blank"
