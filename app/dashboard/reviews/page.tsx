@@ -61,14 +61,11 @@ const PLATFORMS = [
     instructions: "1. Click the button below to open Facebook\n2. Click 'Yes' to recommend us\n3. Write your review\n4. Take a screenshot showing your review\n5. Upload the screenshot here",
   },
   {
-    key: "zillow",
-    label: "Zillow",
-    icon: "🏠",
-    reviewUrl: "https://www.zillow.com",
-    color: "border-emerald-200 bg-emerald-50",
-    activeColor: "border-emerald-500 bg-emerald-100",
+    key: "trustpilot",
+    label: "Trustpilot",
+    icon: "⭐",
+    color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
     textColor: "text-emerald-700",
-    instructions: "1. Click the button below to open Zillow\n2. Search for our profile\n3. Leave your review\n4. Take a screenshot showing your review\n5. Upload the screenshot here",
   },
 ];
 
@@ -251,7 +248,7 @@ export default function ReviewsPage() {
           <Star className="h-10 w-10 text-amber-400 mx-auto mb-3" />
           <h1 className="text-3xl font-extrabold text-foreground mb-2">Leave a Review, Earn Discounts</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Share your experience on Google, Facebook, or Zillow. Each review unlocks bigger discounts on your next order.
+            Share your experience on Google, Facebook, or TrustPilot. Each review unlocks bigger discounts on your next order.
           </p>
         </div>
 
