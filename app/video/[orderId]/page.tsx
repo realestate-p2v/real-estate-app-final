@@ -22,7 +22,8 @@ import {
   Check,
   Star,
   ExternalLink,
-  AlertCircle,
+  ThumbsUp,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Order {
@@ -41,7 +42,10 @@ interface Order {
   delivery_url: string;
   edited_photos_url: string;
   created_at: string;
+  delivered_at: string;
   include_edited_photos: boolean;
+  revision_count: number;
+  revisions_allowed: number;
 }
 
 function getFileIdFromUrl(url: string): string | null {
@@ -74,7 +78,6 @@ const REVIEW_PLATFORMS = [
   },
 ];
 
-// Statuses where a revision is being processed
 const REVISION_IN_PROGRESS_STATUSES = [
   "revision_requested",
   "client_revision_requested",
@@ -82,10 +85,8 @@ const REVISION_IN_PROGRESS_STATUSES = [
   "awaiting_approval",
 ];
 
-// Statuses where the video has been delivered (customer can watch/download)
 const DELIVERED_STATUSES = ["delivered", "complete", "approved", "closed"];
 
-// Status display config
 const STATUS_DISPLAY: Record<string, { label: string; color: string; bgColor: string; description: string }> = {
   revision_requested: {
     label: "Revision In Progress",
@@ -119,6 +120,25 @@ const STATUS_DISPLAY: Record<string, { label: string; color: string; bgColor: st
   },
 };
 
+const REVIEW_WINDOW_DAYS = 5;
+
+function getTimeRemaining(deliveredAt: string): { days: number; hours: number; minutes: number; expired: boolean; totalMs: number } {
+  const deliveredDate = new Date(deliveredAt);
+  const expiryDate = new Date(deliveredDate.getTime() + REVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const diff = expiryDate.getTime() - now.getTime();
+
+  if (diff <= 0) {
+    return { days: 0, hours: 0, minutes: 0, expired: true, totalMs: 0 };
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  return { days, hours, minutes, expired: false, totalMs: diff };
+}
+
 export default function VideoDeliveryPage() {
   const params = useParams();
   const orderId = params.orderId as string;
@@ -127,10 +147,23 @@ export default function VideoDeliveryPage() {
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
   const [reviewDismissed, setReviewDismissed] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<ReturnType<typeof getTimeRemaining> | null>(null);
 
   useEffect(() => {
     if (orderId) loadOrder();
   }, [orderId]);
+
+  // Live countdown timer
+  useEffect(() => {
+    if (!order?.delivered_at) return;
+    if (order.status === "closed") return;
+
+    const update = () => setTimeRemaining(getTimeRemaining(order.delivered_at));
+    update();
+    const interval = setInterval(update, 60000); // update every minute
+    return () => clearInterval(interval);
+  }, [order?.delivered_at, order?.status]);
 
   const loadOrder = async () => {
     try {
@@ -154,6 +187,27 @@ export default function VideoDeliveryPage() {
       navigator.clipboard.writeText(order.delivery_url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleAcceptClose = async () => {
+    if (!order) return;
+    if (!confirm("Accept this video and close the order? You'll be able to download the video and we'll save it in your account. You can still request paid revisions after closing.")) return;
+    setAccepting(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "closed" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrder({ ...order, status: "closed" });
+      }
+    } catch (err) {
+      console.error("Failed to close order:", err);
+    } finally {
+      setAccepting(false);
     }
   };
 
@@ -216,6 +270,13 @@ export default function VideoDeliveryPage() {
   const isRevisionInProgress = REVISION_IN_PROGRESS_STATUSES.includes(order.status);
   const statusInfo = STATUS_DISPLAY[order.status];
 
+  // 5-day review window logic
+  const hasDeliveredAt = !!order.delivered_at;
+  const reviewWindowExpired = timeRemaining?.expired ?? false;
+  const freeRevisionUsed = (order.revision_count || 0) >= (order.revisions_allowed || 1);
+  const canRequestFreeRevision = isDelivered && !isClosed && !isRevisionInProgress && !freeRevisionUsed && !reviewWindowExpired;
+  const canRequestPaidRevision = (isClosed || reviewWindowExpired) && !isRevisionInProgress;
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -226,7 +287,7 @@ export default function VideoDeliveryPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">{getOrderName()}</h1>
             <p className="text-muted-foreground mt-1">
-              {isDelivered ? `Delivered ${formatDate(order.created_at)}` : `Ordered ${formatDate(order.created_at)}`}
+              {isDelivered ? `Delivered ${formatDate(order.delivered_at || order.created_at)}` : `Ordered ${formatDate(order.created_at)}`}
             </p>
           </div>
           {isRevisionInProgress && statusInfo ? (
@@ -234,10 +295,15 @@ export default function VideoDeliveryPage() {
               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
               {statusInfo.label}
             </span>
+          ) : isClosed ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex-shrink-0">
+              <CheckCircle className="h-3.5 w-3.5" />
+              Complete
+            </span>
           ) : isDelivered ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex-shrink-0">
               <CheckCircle className="h-3.5 w-3.5" />
-              {isClosed ? "Complete" : "Delivered"}
+              Delivered
             </span>
           ) : (
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusInfo?.bgColor || "bg-blue-100"} ${statusInfo?.color || "text-blue-700"} flex-shrink-0`}>
@@ -256,9 +322,79 @@ export default function VideoDeliveryPage() {
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-foreground mb-1">{statusInfo.label}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {statusInfo.description}
-                </p>
+                <p className="text-sm text-muted-foreground">{statusInfo.description}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ 5-DAY REVIEW WINDOW COUNTDOWN ═══ */}
+        {isDelivered && !isClosed && !isRevisionInProgress && hasDeliveredAt && timeRemaining && (
+          <div className={`rounded-2xl p-5 mb-6 border ${
+            reviewWindowExpired
+              ? "bg-red-50 border-red-200"
+              : timeRemaining.days <= 1
+              ? "bg-amber-50 border-amber-200"
+              : "bg-blue-50 border-blue-200"
+          }`}>
+            <div className="flex items-start gap-4">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                reviewWindowExpired ? "bg-red-100" : timeRemaining.days <= 1 ? "bg-amber-100" : "bg-blue-100"
+              }`}>
+                {reviewWindowExpired ? (
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                ) : (
+                  <Clock className="h-5 w-5 text-blue-600" />
+                )}
+              </div>
+              <div className="flex-1">
+                {reviewWindowExpired ? (
+                  <>
+                    <h3 className="font-bold text-red-800 mb-1">Review window has expired</h3>
+                    <p className="text-sm text-red-700">
+                      The 5-day review period has ended. Your order will be closed automatically.
+                      You can still request paid revisions after closure.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-foreground">Review your video</h3>
+                      <span className={`text-sm font-bold ${timeRemaining.days <= 1 ? "text-amber-700" : "text-blue-700"}`}>
+                        {timeRemaining.days > 0 && `${timeRemaining.days}d `}
+                        {timeRemaining.hours}h {timeRemaining.minutes}m remaining
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      You have <strong className="text-foreground">{REVIEW_WINDOW_DAYS} days</strong> from delivery to review your video and request your free revision.
+                      After the review window closes, the order will be finalized automatically.
+                      {!freeRevisionUsed && " Your 1 free revision is still available."}
+                    </p>
+                  </>
+                )}
+                <div className="flex gap-2 mt-3">
+                  {!reviewWindowExpired && !freeRevisionUsed && (
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/video/${orderId}/revise`}>
+                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                        Request Free Revision
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleAcceptClose}
+                    disabled={accepting}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {accepting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Accept & Download
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -335,7 +471,8 @@ export default function VideoDeliveryPage() {
 
         {/* Action Buttons */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          {order.delivery_url && (
+          {/* Download + Copy only after accepting/closing */}
+          {isClosed && order.delivery_url && (
             <Button asChild className="bg-primary hover:bg-primary/90">
               <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
                 <Download className="mr-2 h-4 w-4" />
@@ -343,13 +480,14 @@ export default function VideoDeliveryPage() {
               </a>
             </Button>
           )}
-          {order.delivery_url && (
+          {isClosed && order.delivery_url && (
             <Button variant="outline" onClick={handleCopyLink}>
               {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
               {copied ? "Copied!" : "Copy Drive Link"}
             </Button>
           )}
-          {order.edited_photos_url && (
+          {/* Edited photos available after closing */}
+          {isClosed && order.edited_photos_url && (
             <Button asChild variant="outline">
               <a href={order.edited_photos_url} target="_blank" rel="noopener noreferrer">
                 <Camera className="mr-2 h-4 w-4" />
@@ -357,11 +495,36 @@ export default function VideoDeliveryPage() {
               </a>
             </Button>
           )}
-          {!isRevisionInProgress && (
+          {/* Accept button in action bar (delivered but not closed) */}
+          {isDelivered && !isClosed && !isRevisionInProgress && (
+            <Button
+              onClick={handleAcceptClose}
+              disabled={accepting}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {accepting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <ThumbsUp className="h-4 w-4 mr-2" />
+              )}
+              Accept & Download
+            </Button>
+          )}
+          {/* Revision button — not during revision processing */}
+          {!isRevisionInProgress && !isClosed && isDelivered && (
             <Button asChild variant="outline">
               <Link href={`/video/${orderId}/revise`}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Request Revision
+              </Link>
+            </Button>
+          )}
+          {/* Paid revision after closing */}
+          {isClosed && (
+            <Button asChild variant="outline">
+              <Link href={`/video/${orderId}/revise`}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Request Paid Revision
               </Link>
             </Button>
           )}
@@ -411,20 +574,34 @@ export default function VideoDeliveryPage() {
                   Your revision is being processed. You'll receive an email when the updated video is ready.
                 </p>
               </>
-            ) : (
+            ) : isClosed ? (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Every order includes <strong className="text-foreground">1 free revision</strong>. To request changes, use the revision tool to pick which clips you want redone.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  We only regenerate the clips you flag — everything else stays the same.
+                  This order has been accepted and closed. You can still request <strong className="text-foreground">paid revisions</strong> if you need changes.
                 </p>
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/video/${orderId}/revise`}>
                     <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                    Request Revision
+                    Request Paid Revision
                   </Link>
                 </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Every order includes <strong className="text-foreground">1 free revision</strong> within {REVIEW_WINDOW_DAYS} days of delivery. Use the revision tool to pick which clips you want redone.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  We only regenerate the clips you flag — everything else stays the same.
+                </p>
+                {!freeRevisionUsed && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/video/${orderId}/revise`}>
+                      <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                      Request Revision
+                    </Link>
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -437,7 +614,9 @@ export default function VideoDeliveryPage() {
             <h3 className="font-bold text-foreground">Share Your Video</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Download your video and upload it to these platforms for maximum exposure:
+            {isClosed
+              ? "Download your video and upload it to these platforms for maximum exposure:"
+              : "Once you accept your video, download and share it on these platforms:"}
           </p>
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             {["Instagram Reels", "TikTok", "Facebook / MLS Listing", "YouTube Shorts", "Zillow / Realtor.com", "Email Campaigns"].map((platform) => (
