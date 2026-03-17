@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play } from "lucide-react";
+import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +14,7 @@ export function Navigation() {
   const [user, setUser] = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTools, setShowTools] = useState(false);
+  const [brokerageInfo, setBrokerageInfo] = useState<{ company: string } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -31,6 +32,14 @@ export function Navigation() {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
+    fetch("/api/brokerage/status")
+      .then(r => r.json())
+      .then(d => { if (d.isBrokerage) setBrokerageInfo(d.brokerage); })
+      .catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowDropdown(false);
       if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setShowTools(false);
@@ -42,6 +51,7 @@ export function Navigation() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setBrokerageInfo(null);
     setShowDropdown(false);
     setIsOpen(false);
     window.location.href = "/";
@@ -147,6 +157,12 @@ export function Navigation() {
                     <div className="px-4 py-2 border-b border-border">
                       <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      {brokerageInfo && (
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <Building2 className="h-3 w-3 text-green-600" />
+                          <span className="text-xs font-semibold text-green-700">{brokerageInfo.company}</span>
+                        </div>
+                      )}
                     </div>
                     {isAdmin && (
                       <Link href="/admin" onClick={() => setShowDropdown(false)}
@@ -208,6 +224,12 @@ export function Navigation() {
                   <div className="min-w-0">
                     <p className="text-primary-foreground font-semibold text-sm truncate">{displayName}</p>
                     <p className="text-primary-foreground/50 text-xs truncate">{user.email}</p>
+                    {brokerageInfo && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Building2 className="h-3 w-3 text-green-300" />
+                        <span className="text-xs font-semibold text-green-300">{brokerageInfo.company}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
