@@ -1,0 +1,566 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Building2, Plus, Trash2, Users, Video, Film, DollarSign,
+  ChevronDown, ChevronUp, ExternalLink, ArrowLeft, Loader2,
+  CheckCircle, XCircle, UserPlus, Receipt, ToggleLeft, ToggleRight,
+} from "lucide-react";
+
+interface BrokerageMember {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  created_at: string;
+}
+
+interface BrokerageOrder {
+  id: string;
+  order_id: string;
+  status: string;
+  property_address: string | null;
+  customer_email: string;
+  photos: any[] | null;
+  created_at: string;
+  delivery_url: string | null;
+}
+
+interface Brokerage {
+  id: string;
+  company: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  tier: string;
+  per_clip_rate: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  members: BrokerageMember[];
+  orders: BrokerageOrder[];
+  stats: {
+    totalVideos: number;
+    completedVideos: number;
+    totalClips: number;
+    estimatedCost: number;
+  };
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    active: "bg-green-100 text-green-700",
+    paused: "bg-amber-100 text-amber-700",
+    inactive: "bg-red-100 text-red-700",
+    new: "bg-blue-100 text-blue-700",
+    processing: "bg-amber-100 text-amber-700",
+    complete: "bg-green-100 text-green-700",
+    delivered: "bg-green-100 text-green-700",
+    closed: "bg-muted text-muted-foreground",
+    error: "bg-red-100 text-red-700",
+    awaiting_approval: "bg-purple-100 text-purple-700",
+    approved: "bg-green-100 text-green-700",
+  };
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${styles[status] || "bg-muted text-muted-foreground"}`}>
+      {status}
+    </span>
+  );
+}
+
+function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    company: "",
+    contact_name: "",
+    contact_email: "",
+    contact_phone: "",
+    tier: "growth",
+    per_clip_rate: "3.29",
+    notes: "",
+  });
+
+  const handleCreate = async () => {
+    if (!form.company || !form.contact_email) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/brokerages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_brokerage",
+          ...form,
+          per_clip_rate: parseFloat(form.per_clip_rate),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setForm({ company: "", contact_name: "", contact_email: "", contact_phone: "", tier: "growth", per_clip_rate: "3.29", notes: "" });
+        setOpen(false);
+        onCreated();
+      } else {
+        alert("Error: " + (data.error || "Failed to create"));
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <Button onClick={() => setOpen(true)} className="bg-accent hover:bg-accent/90">
+        <Plus className="h-4 w-4 mr-2" /> Add Brokerage
+      </Button>
+    );
+  }
+
+  return (
+    <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
+      <h3 className="font-bold text-foreground">New Brokerage</h3>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Company Name *</label>
+          <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Keller Williams Realty" />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Contact Name</label>
+          <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} placeholder="Jane Smith" />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Contact Email *</label>
+          <Input value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} placeholder="jane@kwrealty.com" />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Contact Phone</label>
+          <Input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} placeholder="(555) 000-0000" />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Tier</label>
+          <select
+            value={form.tier}
+            onChange={(e) => {
+              const tier = e.target.value;
+              const rate = tier === "enterprise" ? "2.99" : "3.29";
+              setForm({ ...form, tier, per_clip_rate: rate });
+            }}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="growth">Growth ($3.29/clip)</option>
+            <option value="enterprise">Enterprise ($2.99/clip)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Per Clip Rate ($)</label>
+          <Input type="number" step="0.01" value={form.per_clip_rate} onChange={(e) => setForm({ ...form, per_clip_rate: e.target.value })} />
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-medium text-foreground block mb-1">Notes</label>
+        <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Special terms, billing notes, etc." rows={2} />
+      </div>
+      <div className="flex gap-3">
+        <Button onClick={handleCreate} disabled={saving || !form.company || !form.contact_email} className="bg-accent hover:bg-accent/90">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+          Create Brokerage
+        </Button>
+        <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
+function BrokerageCard({ brokerage, onRefresh }: { brokerage: Brokerage; onRefresh: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberName, setMemberName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleAddMember = async () => {
+    if (!memberEmail) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/brokerages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_member",
+          brokerage_id: brokerage.id,
+          email: memberEmail,
+          name: memberName || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMemberEmail("");
+        setMemberName("");
+        setAddingMember(false);
+        onRefresh();
+      } else {
+        alert("Error: " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!confirm("Remove this member?")) return;
+    try {
+      const res = await fetch("/api/admin/brokerages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove_member", member_id: memberId }),
+      });
+      const data = await res.json();
+      if (data.success) onRefresh();
+    } catch {}
+  };
+
+  const handleToggleStatus = async () => {
+    const newStatus = brokerage.status === "active" ? "paused" : "active";
+    try {
+      const res = await fetch("/api/admin/brokerages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_brokerage", brokerage_id: brokerage.id, status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) onRefresh();
+    } catch {}
+  };
+
+  const handleGenerateInvoice = () => {
+    const clipBreakdown = brokerage.orders
+      .filter((o) => ["complete", "delivered", "closed", "approved", "awaiting_approval"].includes(o.status))
+      .map((o) => `${o.property_address || o.order_id.slice(0, 8)} — ${o.photos?.length || 0} clips`)
+      .join("\n");
+
+    const invoiceText = `INVOICE — ${brokerage.company}
+Tier: ${brokerage.tier} ($${brokerage.per_clip_rate}/clip)
+Period: ${new Date().toLocaleString("en-US", { month: "long", year: "numeric" })}
+
+Videos: ${brokerage.stats.completedVideos}
+Total Clips: ${brokerage.stats.totalClips}
+Rate: $${brokerage.per_clip_rate}/clip
+Total Due: $${brokerage.stats.estimatedCost.toFixed(2)}
+
+Breakdown:
+${clipBreakdown || "No completed orders"}
+
+Contact: ${brokerage.contact_email}`;
+
+    navigator.clipboard.writeText(invoiceText);
+    alert("Invoice summary copied to clipboard! Paste into Stripe Invoice or email.");
+  };
+
+  return (
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      {/* Header */}
+      <div
+        className="p-6 cursor-pointer hover:bg-muted/30 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground">{brokerage.company}</h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                <StatusBadge status={brokerage.status} />
+                <span className="text-xs text-muted-foreground capitalize">{brokerage.tier} — ${brokerage.per_clip_rate}/clip</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Stats pills */}
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{brokerage.stats.totalVideos}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Videos</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{brokerage.stats.totalClips}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Clips</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-primary">${brokerage.stats.estimatedCost.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Owed</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{brokerage.members.length}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Members</p>
+              </div>
+            </div>
+            {expanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+          </div>
+        </div>
+
+        {/* Mobile stats */}
+        <div className="grid grid-cols-4 gap-3 mt-4 sm:hidden">
+          <div className="bg-muted/50 rounded-lg p-2 text-center">
+            <p className="text-sm font-bold text-foreground">{brokerage.stats.totalVideos}</p>
+            <p className="text-[10px] text-muted-foreground">Videos</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-2 text-center">
+            <p className="text-sm font-bold text-foreground">{brokerage.stats.totalClips}</p>
+            <p className="text-[10px] text-muted-foreground">Clips</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-2 text-center">
+            <p className="text-sm font-bold text-primary">${brokerage.stats.estimatedCost.toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground">Owed</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-2 text-center">
+            <p className="text-sm font-bold text-foreground">{brokerage.members.length}</p>
+            <p className="text-[10px] text-muted-foreground">Members</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="border-t border-border">
+          {/* Action Buttons */}
+          <div className="p-4 bg-muted/20 flex flex-wrap gap-3">
+            <Button variant="outline" size="sm" onClick={handleToggleStatus}>
+              {brokerage.status === "active" ? (
+                <><ToggleRight className="h-4 w-4 mr-1.5 text-green-600" /> Active</>
+              ) : (
+                <><ToggleLeft className="h-4 w-4 mr-1.5 text-amber-600" /> Paused</>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleGenerateInvoice}>
+              <Receipt className="h-4 w-4 mr-1.5" /> Copy Invoice Summary
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAddingMember(!addingMember)}>
+              <UserPlus className="h-4 w-4 mr-1.5" /> Add Member
+            </Button>
+          </div>
+
+          {/* Add Member Form */}
+          {addingMember && (
+            <div className="p-4 border-t border-border bg-muted/10">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  placeholder="agent@email.com"
+                  value={memberEmail}
+                  onChange={(e) => setMemberEmail(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Name (optional)"
+                  value={memberName}
+                  onChange={(e) => setMemberName(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddMember} disabled={saving || !memberEmail} size="sm" className="bg-accent hover:bg-accent/90">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Members */}
+          <div className="p-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-foreground mb-3">Members ({brokerage.members.length})</h4>
+            {brokerage.members.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No members yet. Add agent emails to enable brokerage ordering.</p>
+            ) : (
+              <div className="space-y-2">
+                {brokerage.members.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2">
+                    <div>
+                      <span className="text-sm font-medium text-foreground">{m.email}</span>
+                      {m.name && <span className="text-sm text-muted-foreground ml-2">({m.name})</span>}
+                      <span className="text-xs text-muted-foreground ml-2 capitalize">{m.role}</span>
+                    </div>
+                    <button onClick={() => handleRemoveMember(m.id)} className="text-red-400 hover:text-red-600 transition-colors p-1">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Orders */}
+          <div className="p-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-foreground mb-3">Orders ({brokerage.orders.length})</h4>
+            {brokerage.orders.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No orders yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {brokerage.orders.map((o) => (
+                  <div key={o.id} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground truncate">
+                          {o.property_address || o.order_id.slice(0, 8)}
+                        </span>
+                        <StatusBadge status={o.status} />
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-xs text-muted-foreground">{o.photos?.length || 0} clips</span>
+                        <span className="text-xs text-muted-foreground">
+                          ${((o.photos?.length || 0) * brokerage.per_clip_rate).toFixed(2)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{o.customer_email}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      {o.delivery_url && (
+                        <a href={o.delivery_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Link href={`/video/${o.order_id}`} className="text-muted-foreground hover:text-foreground">
+                        <Video className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Contact & Notes */}
+          {(brokerage.contact_name || brokerage.contact_email || brokerage.notes) && (
+            <div className="p-4 border-t border-border bg-muted/10">
+              <div className="flex flex-wrap gap-4 text-sm">
+                {brokerage.contact_name && (
+                  <div>
+                    <span className="text-muted-foreground">Contact:</span>{" "}
+                    <span className="font-medium text-foreground">{brokerage.contact_name}</span>
+                  </div>
+                )}
+                {brokerage.contact_email && (
+                  <div>
+                    <span className="text-muted-foreground">Email:</span>{" "}
+                    <a href={`mailto:${brokerage.contact_email}`} className="font-medium text-primary hover:underline">{brokerage.contact_email}</a>
+                  </div>
+                )}
+                {brokerage.contact_phone && (
+                  <div>
+                    <span className="text-muted-foreground">Phone:</span>{" "}
+                    <span className="font-medium text-foreground">{brokerage.contact_phone}</span>
+                  </div>
+                )}
+              </div>
+              {brokerage.notes && (
+                <p className="text-sm text-muted-foreground mt-2 italic">{brokerage.notes}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AdminBrokeragesPage() {
+  const [brokerages, setBrokerages] = useState<Brokerage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchBrokerages = async () => {
+    try {
+      const res = await fetch("/api/admin/brokerages");
+      const data = await res.json();
+      if (data.success) setBrokerages(data.brokerages);
+    } catch (err) {
+      console.error("Failed to fetch brokerages:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBrokerages();
+  }, []);
+
+  const totalVideos = brokerages.reduce((s, b) => s + b.stats.totalVideos, 0);
+  const totalClips = brokerages.reduce((s, b) => s + b.stats.totalClips, 0);
+  const totalOwed = brokerages.reduce((s, b) => s + b.stats.estimatedCost, 0);
+  const activeBrokerages = brokerages.filter((b) => b.status === "active").length;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+
+      <div className="mx-auto max-w-5xl px-4 py-10">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-1">
+          <Link href="/admin" className="text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Brokerage Management</h1>
+            <p className="text-sm text-muted-foreground">Manage accounts, members, usage, and billing</p>
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 mb-8">
+          <div className="bg-card rounded-xl border border-border p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{activeBrokerages}</p>
+            <p className="text-xs text-muted-foreground">Active Brokerages</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{totalVideos}</p>
+            <p className="text-xs text-muted-foreground">Total Videos</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{totalClips}</p>
+            <p className="text-xs text-muted-foreground">Total Clips</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4 text-center">
+            <p className="text-2xl font-bold text-primary">${totalOwed.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Total Owed</p>
+          </div>
+        </div>
+
+        {/* Add Brokerage */}
+        <div className="mb-8">
+          <AddBrokerageForm onCreated={fetchBrokerages} />
+        </div>
+
+        {/* Brokerage List */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : brokerages.length === 0 ? (
+          <div className="bg-card rounded-2xl border border-border p-12 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-foreground mb-2">No Brokerages Yet</h3>
+            <p className="text-muted-foreground">Add your first brokerage to get started with bulk pricing.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {brokerages.map((b) => (
+              <BrokerageCard key={b.id} brokerage={b} onRefresh={fetchBrokerages} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Footer />
+    </div>
+  );
+}
