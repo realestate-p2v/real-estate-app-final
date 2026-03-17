@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
+import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft, Building2 } from "lucide-react";
 import { useOrderDraft } from "@/hooks/use-order-draft";
 import { DraftSaveBar } from "@/components/draft-save-bar";
 
@@ -722,6 +722,17 @@ export function OrderForm() {
               <ChevronLeft className="mr-2 h-4 w-4" /> Back to Customization
             </Button>
             <h2 className="text-2xl font-bold">Your Details</h2>
+            {brokerageInfo.isBrokerage && brokerageInfo.brokerage && (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                  <Building2 className="h-4 w-4 text-green-700" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-green-800">{brokerageInfo.brokerage.company} — Brokerage Account</p>
+                  <p className="text-xs text-green-600">No payment required. Order will be invoiced to your brokerage.</p>
+                </div>
+              </div>
+            )}
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>
