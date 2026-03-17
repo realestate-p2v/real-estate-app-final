@@ -5,7 +5,63 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // Support both form payload (items, customerDetails, orderData) and legacy (amount, customerName, ...)
+
+    // ─── Brokerage bypass ───
+    // If brokerageId is passed, skip Stripe entirely
+    if (body.brokerageId) {
+      const orderId = body.orderData?.orderId;
+      if (!orderId) {
+        return NextResponse.json(
+          { success: false, error: "Order ID required for brokerage checkout" },
+          { status: 400 }
+        );
+      }
+
+      const supabase = createAdminClient();
+
+      // Verify brokerage is active
+      const { data: brokerage } = await supabase
+        .from("brokerages")
+        .select("id, company, status, per_clip_rate")
+        .eq("id", body.brokerageId)
+        .eq("status", "active")
+        .single();
+
+      if (!brokerage) {
+        return NextResponse.json(
+          { success: false, error: "Invalid or inactive brokerage account" },
+          { status: 403 }
+        );
+      }
+
+      // Update order: set to new, attach brokerage_id
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          status: "new",
+          brokerage_id: brokerage.id,
+        })
+        .eq("order_id", orderId);
+
+      if (updateError) {
+        console.error("[Checkout] Brokerage order update failed:", updateError);
+        return NextResponse.json(
+          { success: false, error: "Failed to activate brokerage order" },
+          { status: 500 }
+        );
+      }
+
+      console.log(`[Checkout] Brokerage order ${orderId} activated for ${brokerage.company} (${brokerage.id})`);
+
+      const origin = request.headers.get("origin") || "https://realestatephoto2video.com";
+      return NextResponse.json({
+        success: true,
+        brokerage: true,
+        url: `${origin}/order/success?orderId=${orderId}&brokerage=true`,
+      });
+    }
+
+    // ─── Standard Stripe checkout ───
     const orderId = body.orderData?.orderId ?? body.orderId;
     const amountCents = body.items?.[0]?.amount ?? (body.amount != null ? Math.round(Number(body.amount) * 100) : null);
     const customerName = body.customerDetails?.name ?? body.customerName;
