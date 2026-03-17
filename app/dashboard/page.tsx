@@ -124,7 +124,8 @@ const PHOTOGRAPHER_FEATURES_HAS_LISTING = [
     icon: BarChart3,
     title: "Directory Analytics",
     description: "See how many realtors viewed your listing and sent you inquiries.",
-    status: "coming",
+    status: "live",
+    href: "/dashboard/directory-analytics",
   },
   {
     icon: Gift,
