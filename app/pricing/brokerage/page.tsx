@@ -377,7 +377,7 @@ export default function BrokeragePricingPage() {
           <div className="bg-card rounded-2xl border border-border p-6 text-center">
             <div className="aspect-video max-w-2xl mx-auto rounded-xl overflow-hidden bg-muted/50 flex items-center justify-center">
               <iframe
-                src="https://drive.google.com/file/d/1WDfZhWSXVzJrSE1tOEE6OAHcf07TQbOc/preview"
+                src="https://drive.google.com/file/d/1ikcUGNefikzELQhJ44MaFvauoLdssFyv/preview"
                 className="w-full h-full"
                 allow="autoplay"
                 allowFullScreen
