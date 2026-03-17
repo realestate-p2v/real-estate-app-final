@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, Video, PenLine, BarChart3, Users, Mail,
   Settings, Shield, Sparkles, ExternalLink, Clock,
-  CheckCircle2, AlertCircle, Loader2, Star
+  CheckCircle2, AlertCircle, Loader2, Star, Building2
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -106,13 +106,13 @@ export default function AdminPage() {
       alert: 0,
     },
     {
-      title: "Customer Management",
-      description: "Customer list, order history, brokerage accounts, photographer partners",
-      href: "#",
-      icon: <Users className="h-6 w-6" />,
+      title: "Brokerage Management",
+      description: "Manage brokerage accounts, add members, track usage, generate invoices",
+      href: "/admin/brokerages",
+      icon: <Building2 className="h-6 w-6" />,
       color: "bg-pink-500/10 text-pink-600",
       stat: null,
-      status: "coming" as const,
+      status: "live" as const,
       alert: 0,
     },
     {
