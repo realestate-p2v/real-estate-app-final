@@ -1,29 +1,30 @@
 import { getCheckoutSession } from "@/app/actions/stripe";
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircle, ArrowRight, BookOpen, Clock, Eye, Mail, Share2 } from "lucide-react";
+import { CheckCircle, ArrowRight, BookOpen, Clock, Eye, Mail, Share2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string; orderId?: string }>;
+  searchParams: Promise<{ session_id?: string; orderId?: string; brokerage?: string }>;
 }) {
   let sessionData = null;
   let customerEmail = null;
   let orderId = null;
+  let isBrokerage = false;
 
   try {
     const params = await searchParams;
     orderId = params?.orderId;
+    isBrokerage = params?.brokerage === "true";
     
-    if (params?.session_id) {
+    if (!isBrokerage && params?.session_id) {
       sessionData = await getCheckoutSession(params.session_id);
       customerEmail = sessionData?.customer_details?.email ?? (sessionData as any)?.customer_email;
     }
   } catch (error) {
     console.error("[Success Page] Error loading session:", error);
-    // Continue rendering the page even if session lookup fails
   }
 
   return (
@@ -43,23 +44,37 @@ export default async function SuccessPage({
         {/* Success Header */}
         <div className="text-center mb-10">
           <div className="flex justify-center mb-5">
-            <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className={`h-20 w-20 rounded-full flex items-center justify-center ${isBrokerage ? "bg-green-100" : "bg-green-100"}`}>
+              {isBrokerage ? (
+                <Building2 className="h-10 w-10 text-green-600" />
+              ) : (
+                <CheckCircle className="h-10 w-10 text-green-600" />
+              )}
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold text-foreground mb-2">You're All Set!</h1>
+          <h1 className="text-3xl font-extrabold text-foreground mb-2">
+            {isBrokerage ? "Brokerage Order Submitted!" : "You're All Set!"}
+          </h1>
           <p className="text-lg text-muted-foreground">
-            Your order has been received and payment confirmed.
+            {isBrokerage
+              ? "Your order has been submitted and is now in the production queue."
+              : "Your order has been received and payment confirmed."}
           </p>
           {orderId && (
             <p className="text-sm text-muted-foreground mt-2">
               Order ID: <span className="font-mono font-medium text-foreground">{orderId}</span>
             </p>
           )}
-          {customerEmail && (
+          {customerEmail && !isBrokerage && (
             <p className="text-sm text-muted-foreground mt-1">
               Confirmation sent to <span className="font-medium text-foreground">{customerEmail}</span>
             </p>
+          )}
+          {isBrokerage && (
+            <div className="mt-4 inline-flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+              <Building2 className="h-4 w-4" />
+              Brokerage Account — No payment required
+            </div>
           )}
         </div>
 
@@ -77,7 +92,9 @@ export default async function SuccessPage({
               <div className="pb-6">
                 <h3 className="font-bold text-foreground">Order Confirmed</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Your photos are uploaded and your payment is processed. We're on it.
+                  {isBrokerage
+                    ? "Your photos are uploaded and your order is queued for production. This order will be invoiced to your brokerage."
+                    : "Your photos are uploaded and your payment is processed. We're on it."}
                 </p>
               </div>
             </div>
