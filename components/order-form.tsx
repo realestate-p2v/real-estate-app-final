@@ -61,6 +61,22 @@ export function OrderForm() {
     notes: "",
   });
 
+  const [brokerageInfo, setBrokerageInfo] = useState<{
+    isBrokerage: boolean;
+    brokerage?: { id: string; company: string; tier: string; perClipRate: number };
+  }>({ isBrokerage: false });
+
+  useEffect(() => {
+    const checkBrokerage = async () => {
+      try {
+        const res = await fetch("/api/brokerage/status");
+        const data = await res.json();
+        if (data.isBrokerage) setBrokerageInfo(data);
+      } catch {}
+    };
+    checkBrokerage();
+  }, []);
+
   const [propertyAddress, setPropertyAddress] = useState("");
   const [propertyCity, setPropertyCity] = useState("");
   const [propertyState, setPropertyState] = useState("");
@@ -298,26 +314,32 @@ export function OrderForm() {
 
       const createdOrderId = dbResult.data.orderId;
 
+      const checkoutBody: any = {
+        items: [
+          {
+            name: isUrlMode && listingPackage
+              ? `${listingPackage.label} — Listing URL Order`
+              : `${photoCount} Photo Video Package`,
+            amount: getTotalPrice() * 100,
+          },
+        ],
+        customerDetails: formData,
+        orderData: {
+          orderId: createdOrderId,
+          photoCount: isUrlMode && listingPackage ? listingPackage.photoCount : photoCount,
+        },
+      };
+
+      // Brokerage bypass — skip Stripe
+      if (brokerageInfo.isBrokerage && brokerageInfo.brokerage) {
+        checkoutBody.brokerageId = brokerageInfo.brokerage.id;
+      }
+
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: [
-            {
-              name: isUrlMode && listingPackage
-                ? `${listingPackage.label} — Listing URL Order`
-                : `${photoCount} Photo Video Package`,
-              amount: getTotalPrice() * 100,
-            },
-          ],
-          customerDetails: formData,
-          orderData: {
-            orderId: createdOrderId,
-            photoCount: isUrlMode && listingPackage ? listingPackage.photoCount : photoCount,
-          },
-        }),
+        body: JSON.stringify(checkoutBody),
       });
-
       const session = await checkoutResponse.json();
       if (!checkoutResponse.ok || !session.url) {
         throw new Error(session.error || "Checkout failed");
@@ -749,7 +771,7 @@ export function OrderForm() {
               {isSubmitting ? (
                 <><Loader2 className="mr-2 animate-spin" /> Processing Order...</>
               ) : (
-                <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>
+                <>{brokerageInfo.isBrokerage ? "Submit Brokerage Order" : "Pay & Complete Order"} <ArrowRight className="ml-2 h-5 w-5" /></>
               )}
             </Button>
           </div>
