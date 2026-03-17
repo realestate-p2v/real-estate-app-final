@@ -42,13 +42,15 @@ const REALTOR_FEATURES = [
     icon: RefreshCw,
     title: "Request Revisions",
     description: "Select clips, choose new directions, and submit revision requests from your browser.",
-    status: "coming",
+    status: "live",
+    href: "/dashboard/videos",
   },
   {
     icon: BarChart3,
     title: "Order History",
     description: "Track every order with status updates, delivery dates, and receipts.",
-    status: "coming",
+    status: "live",
+    href: "/dashboard/videos",
   },
   {
     icon: Star,
