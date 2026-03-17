@@ -40,6 +40,7 @@ interface Brokerage {
   contact_phone: string | null;
   tier: string;
   per_clip_rate: number;
+  min_monthly_spend: number;
   status: string;
   notes: string | null;
   created_at: string;
@@ -50,6 +51,7 @@ interface Brokerage {
     completedVideos: number;
     totalClips: number;
     estimatedCost: number;
+    totalDue: number;
   };
 }
 
@@ -84,6 +86,7 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
     contact_phone: "",
     tier: "growth",
     per_clip_rate: "3.29",
+    min_monthly_spend: "0",
     notes: "",
   });
 
@@ -98,11 +101,12 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
           action: "create_brokerage",
           ...form,
           per_clip_rate: parseFloat(form.per_clip_rate),
+          min_monthly_spend: parseFloat(form.min_monthly_spend) || 0,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        setForm({ company: "", contact_name: "", contact_email: "", contact_phone: "", tier: "growth", per_clip_rate: "3.29", notes: "" });
+        setForm({ company: "", contact_name: "", contact_email: "", contact_phone: "", tier: "growth", per_clip_rate: "3.29", min_monthly_spend: "0", notes: "" });
         setOpen(false);
         onCreated();
       } else {
@@ -163,6 +167,10 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
           <label className="text-sm font-medium text-foreground block mb-1">Per Clip Rate ($)</label>
           <Input type="number" step="0.01" value={form.per_clip_rate} onChange={(e) => setForm({ ...form, per_clip_rate: e.target.value })} />
         </div>
+        <div>
+          <label className="text-sm font-medium text-foreground block mb-1">Min Monthly Spend ($)</label>
+          <Input type="number" step="1" value={form.min_monthly_spend} onChange={(e) => setForm({ ...form, min_monthly_spend: e.target.value })} placeholder="0" />
+        </div>
       </div>
       <div>
         <label className="text-sm font-medium text-foreground block mb-1">Notes</label>
@@ -185,6 +193,8 @@ function BrokerageCard({ brokerage, onRefresh }: { brokerage: Brokerage; onRefre
   const [memberEmail, setMemberEmail] = useState("");
   const [memberName, setMemberName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const totalDue = brokerage.stats.totalDue;
 
   const handleAddMember = async () => {
     if (!memberEmail) return;
@@ -245,17 +255,23 @@ function BrokerageCard({ brokerage, onRefresh }: { brokerage: Brokerage; onRefre
   const handleGenerateInvoice = () => {
     const clipBreakdown = brokerage.orders
       .filter((o) => ["complete", "delivered", "closed", "approved", "awaiting_approval"].includes(o.status))
-      .map((o) => `${o.property_address || o.order_id.slice(0, 8)} — ${o.photos?.length || 0} clips`)
+      .map((o) => `${o.property_address || o.order_id.slice(0, 8)} — ${o.photos?.length || 0} clips — $${((o.photos?.length || 0) * brokerage.per_clip_rate).toFixed(2)}`)
       .join("\n");
+
+    const usageCost = brokerage.stats.estimatedCost;
+    const minSpend = brokerage.min_monthly_spend || 0;
+    const invoiceTotal = Math.max(usageCost, minSpend);
 
     const invoiceText = `INVOICE — ${brokerage.company}
 Tier: ${brokerage.tier} ($${brokerage.per_clip_rate}/clip)
+Min Monthly Spend: $${minSpend.toFixed(2)}
 Period: ${new Date().toLocaleString("en-US", { month: "long", year: "numeric" })}
 
 Videos: ${brokerage.stats.completedVideos}
 Total Clips: ${brokerage.stats.totalClips}
 Rate: $${brokerage.per_clip_rate}/clip
-Total Due: $${brokerage.stats.estimatedCost.toFixed(2)}
+Usage Cost: $${usageCost.toFixed(2)}${minSpend > usageCost ? `\nMinimum Applies: $${minSpend.toFixed(2)}` : ""}
+Total Due: $${invoiceTotal.toFixed(2)}
 
 Breakdown:
 ${clipBreakdown || "No completed orders"}
@@ -283,11 +299,13 @@ Contact: ${brokerage.contact_email}`;
               <div className="flex items-center gap-2 mt-0.5">
                 <StatusBadge status={brokerage.status} />
                 <span className="text-xs text-muted-foreground capitalize">{brokerage.tier} — ${brokerage.per_clip_rate}/clip</span>
+                {brokerage.min_monthly_spend > 0 && (
+                  <span className="text-xs text-muted-foreground">• min ${brokerage.min_monthly_spend}/mo</span>
+                )}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* Stats pills */}
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-center">
                 <p className="text-lg font-bold text-foreground">{brokerage.stats.totalVideos}</p>
@@ -298,7 +316,7 @@ Contact: ${brokerage.contact_email}`;
                 <p className="text-[10px] text-muted-foreground uppercase">Clips</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-primary">${brokerage.stats.estimatedCost.toFixed(2)}</p>
+                <p className="text-lg font-bold text-primary">${totalDue.toFixed(2)}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">Owed</p>
               </div>
               <div className="text-center">
@@ -321,7 +339,7 @@ Contact: ${brokerage.contact_email}`;
             <p className="text-[10px] text-muted-foreground">Clips</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-2 text-center">
-            <p className="text-sm font-bold text-primary">${brokerage.stats.estimatedCost.toFixed(2)}</p>
+            <p className="text-sm font-bold text-primary">${totalDue.toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">Owed</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-2 text-center">
@@ -493,7 +511,7 @@ export default function AdminBrokeragesPage() {
 
   const totalVideos = brokerages.reduce((s, b) => s + b.stats.totalVideos, 0);
   const totalClips = brokerages.reduce((s, b) => s + b.stats.totalClips, 0);
-  const totalOwed = brokerages.reduce((s, b) => s + b.stats.estimatedCost, 0);
+  const totalOwed = brokerages.reduce((s, b) => s + b.stats.totalDue, 0);
   const activeBrokerages = brokerages.filter((b) => b.status === "active").length;
 
   return (
