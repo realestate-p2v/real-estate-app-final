@@ -405,7 +405,7 @@ export function OrderForm() {
                 <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
                   1
                 </div>
-                <h2 className="text-xl font-bold">Start by Uploading Your Photos</h2>
+                <h2 className="text-xl font-bold">Submit Photos</h2>
               </div>
 
               {/* Mode Toggle Buttons */}
@@ -420,7 +420,7 @@ export function OrderForm() {
                   }`}
                 >
                   <Upload className="h-4 w-4" />
-                  Upload My Photos
+                  Use My Photos
                 </button>
                 <button
                   type="button"
