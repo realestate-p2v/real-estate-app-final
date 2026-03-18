@@ -3,18 +3,18 @@
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Camera, DollarSign, Users, ArrowRight, Mail, CheckCircle } from "lucide-react";
+import { Camera, DollarSign, Users, ArrowRight, Mail, CheckCircle, Gift } from "lucide-react";
 
 const STEPS = [
   { num: "1", title: "Sign Up", desc: "Create your account and get your unique referral link. Takes 30 seconds." },
-  { num: "2", title: "Refer Agents", desc: "Share your link with agents you work with. When they order, you earn." },
+  { num: "2", title: "Share Your Link", desc: "Share your link with anyone who needs listing videos. When they order, you earn." },
   { num: "3", title: "Get Paid", desc: "Earn 20% commission on every order placed through your link. Paid monthly." },
 ];
 
 const BENEFITS = [
   { icon: DollarSign, title: "20% Commission", desc: "Earn 20% on every order. A single 25-photo order at $129 earns you $25.80." },
   { icon: Users, title: "Recurring Revenue", desc: "Agents reorder for every new listing. One referral can pay out for months." },
-  { icon: Camera, title: "Complement Your Work", desc: "Your photos become cinematic videos. Agents get more value, you get more bookings." },
+  { icon: Gift, title: "No Cost to Join", desc: "No contracts, no minimums, no fees. Just share your link and earn." },
 ];
 
 export default function PartnersPage() {
@@ -26,15 +26,15 @@ export default function PartnersPage() {
         {/* Hero */}
         <div className="text-center space-y-4 mb-14">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold">
-            <Camera className="h-4 w-4" />
-            Photographer Partner Program
+            <DollarSign className="h-4 w-4" />
+            Referral Partner Program
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground">
             Earn 20% on Every Referral
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            You shoot the photos. We turn them into videos. Your agents get more value 
-            and you earn a commission on every order they place.
+            Know someone who could use listing videos? Share your referral link 
+            and earn 20% commission on every order they place.
           </p>
         </div>
 
@@ -93,10 +93,10 @@ export default function PartnersPage() {
           <h2 className="text-xl font-bold text-foreground mb-4">Perfect For</h2>
           <div className="space-y-2">
             {[
-              "Real estate photographers looking to add a revenue stream",
-              "Photographers who already deliver listing photos to agents",
-              "Videographers who want to offer video without the editing work",
-              "Anyone connected to real estate agents in their market",
+              "Real estate photographers who work with agents",
+              "Realtors who want to share with colleagues",
+              "Brokerages looking for an extra revenue stream",
+              "Anyone connected to people who sell real estate",
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
