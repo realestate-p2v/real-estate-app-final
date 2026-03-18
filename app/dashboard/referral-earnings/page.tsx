@@ -312,7 +312,7 @@ export default function ReferralEarningsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground italic">No payout info added yet. Add your PayPal, Venmo, or Zelle to receive monthly payouts.</p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">Payouts are sent on the 1st of each month for the previous month's earnings.</p>
+              <p className="text-xs text-muted-foreground mt-2">Payouts are sent the 1st week of each month for the previous month's earnings.</p>
             </div>
           )}
         </div>
