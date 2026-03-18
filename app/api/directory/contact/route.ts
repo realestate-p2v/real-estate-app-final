@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/create-notification";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     // Get photographer details
     const { data: photographer, error: fetchErr } = await supabase
       .from("photographers")
-      .select("id, name, email, market")
+      .select("id, name, email, market, user_id")
       .eq("id", photographerId)
       .eq("status", "approved")
       .single();
@@ -37,6 +38,17 @@ export async function POST(request: Request) {
       from_email: email.trim().toLowerCase(),
       message: message.trim(),
     });
+
+    // Notify the photographer in-app
+    if (photographer.user_id) {
+      await createNotification({
+        userId: photographer.user_id,
+        type: "directory_inquiry",
+        title: "Someone contacted you about photography",
+        message: `${name.trim()} sent you a message through the P2V directory.`,
+        link: "/directory/edit",
+      });
+    }
 
     // Send email to photographer
     const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
