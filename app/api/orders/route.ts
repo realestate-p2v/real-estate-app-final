@@ -111,6 +111,7 @@ export async function POST(request: Request) {
         include_address_on_card: body.includeAddressOnCard ?? true,
         total_price: totalPrice || 0,
         special_instructions: specialInstructions || null,
+        referral_code: body.referral_code || null,
       })
       .select()
       .single()
