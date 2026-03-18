@@ -26,7 +26,11 @@ export default function AdminPage() {
           fetch("/api/admin/content").then(r => r.json()),
           fetch("/api/admin/reviews").then(r => r.json()),
           fetch("/api/admin/orders").then(r => r.json()),
+          fetch("/api/admin/referrals").then(r => r.json()),
         ]);
+        if (results[4]?.status === "fulfilled" && results[4].value.success) {
+          setPendingPayouts(results[4].value.summary?.partnersWithPending || 0);
+        }
         if (blogRes.status === "fulfilled" && blogRes.value.success) {
           setBlogCount(blogRes.value.posts?.length || 0);
         }
@@ -45,6 +49,9 @@ export default function AdminPage() {
             ).length
           );
         }
+        
+        const [pendingPayouts, setPendingPayouts] = useState<number>(0);
+        
       } catch (err) {
         console.error("Failed to fetch admin stats:", err);
       } finally {
