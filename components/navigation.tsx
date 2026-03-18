@@ -6,6 +6,7 @@ import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, W
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationBell } from "@/components/notification-bell";
 
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
@@ -138,6 +139,8 @@ export function Navigation() {
               </Link>
             )}
 
+            {user && <NotificationBell userId={user.id} />}
+            
             {user && (
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -238,6 +241,14 @@ export function Navigation() {
               <Link href="/order" onClick={() => setIsOpen(false)} className="flex justify-center py-2 bg-white/5 rounded-xl mb-3 md:hidden">
                 <CountdownTimer />
               </Link>
+
+              {user && (
+                <Link href="/dashboard/notifications" onClick={() => setIsOpen(false)}
+                  className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                  <Bell className="h-4 w-4 text-primary-foreground/60" />
+                  Notifications
+                </Link>
+              )}
 
               {/* Main nav */}
               <Link href="/portfolio" onClick={() => setIsOpen(false)}
