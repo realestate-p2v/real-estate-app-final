@@ -1,5 +1,6 @@
 "use client";
 
+import { LazyVideo, LazyIframe } from "@/components/lazy-media";
 import { useState, useRef, MouseEvent, TouchEvent } from "react";
 import Image from "next/image";
 import { Upload, Paintbrush, Film, CheckCircle, MoveHorizontal } from "lucide-react";
@@ -10,18 +11,9 @@ function VideoPlayer({ src, label, isYouTube }: { src: string; label: string; is
   return (
     <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-black">
       {isYouTube ? (
-        <iframe
-          src={src}
-          title={label}
-          className="w-full h-full"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
+        <LazyIframe src={src} title={label} />
       ) : (
-        <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-          <source src={src} type="video/mp4" />
-        </video>
+        <LazyVideo src={src} />
       )}
       <div className="absolute top-4 left-6 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest pointer-events-none">
         {label}
