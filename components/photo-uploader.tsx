@@ -432,9 +432,10 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Upload className="h-8 w-8 text-primary" />
           </div>
-          <p className="text-lg font-semibold">Use My Photos</p>
-          <p className="text-muted-foreground">Drag and drop or click to select your listing photos</p>
-          <p className="text-xs text-muted-foreground mt-3">The higher quality your photos, the better your video will look.</p>
+          <p className="text-lg font-semibold">Upload your listing photos</p>
+          <p className="text-muted-foreground">Drag and drop or click to select</p>
+          <p className="text-xs text-muted-foreground mt-2">💡 Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
+          <p className="text-xs text-muted-foreground mt-1">📐 You can adjust the crop position after uploading.</p>
         </label>
       </div>
       
@@ -482,24 +483,13 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
       )}
 
       {photos.length > 0 && (
-        <>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <ImageIcon className="h-5 w-5" />
-              <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</span>
-            </div>
-            <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ImageIcon className="h-5 w-5" />
+            <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</span>
           </div>
-
-          {/* Optional controls notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3">
-            <Camera className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-800">
-              <span className="font-semibold">Camera movement and crop are optional.</span>{" "}
-              If you don't change anything, our AI will automatically choose the best camera movement and crop for each photo. Most customers leave it on auto.
-            </p>
-          </div>
-        </>
+          <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
+        </div>
       )}
 
       <div className="flex flex-col gap-3">
@@ -552,31 +542,32 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   className="text-sm h-9"
                   onClick={(e) => e.stopPropagation()}
                 />
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   {photo.uploadStatus === 'complete' && <span className="text-green-500 text-sm font-semibold">✓ Ready</span>}
                   {photo.uploadStatus === 'uploading' && <span className="text-amber-500 text-sm font-semibold animate-pulse">Uploading...</span>}
                   {photo.uploadStatus === 'failed' && <span className="text-red-500 text-sm font-semibold">✕ Failed</span>}
 
                   <button type="button"
                     onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(openDirectionIndex === index ? null : index); setOpenCropIndex(null); }}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                    className={`text-xs py-1.5 px-3 rounded-lg border flex items-center gap-1.5 transition-colors ${
+                      openDirectionIndex === index ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+                    }`}>
                     <Camera className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-[180px]">{getCameraDisplayText(photo)}</span>
-                    <span className="text-muted-foreground text-xs ml-0.5">optional</span>
+                    <span>Camera Control</span>
                     <span className="text-muted-foreground">▾</span>
                   </button>
 
-                  {needsCropForOrientation(photo, orientation) && (
-                    <button type="button"
-                      onClick={(e) => { e.stopPropagation(); setOpenCropIndex(openCropIndex === index ? null : index); setOpenDirectionIndex(null); }}
-                      className="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1">
-                      <Crop className="h-3.5 w-3.5" />
-                      <span>Adjust Crop</span>
-                      <span className="text-muted-foreground text-xs ml-0.5">optional</span>
-                      <span className="text-muted-foreground">▾</span>
-                    </button>
-                  )}
+                  <button type="button"
+                    onClick={(e) => { e.stopPropagation(); setOpenCropIndex(openCropIndex === index ? null : index); setOpenDirectionIndex(null); }}
+                    className={`text-xs py-1.5 px-3 rounded-lg border flex items-center gap-1.5 transition-colors ${
+                      openCropIndex === index ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+                    }`}>
+                    <Crop className="h-3.5 w-3.5" />
+                    <span>Crop Image</span>
+                    <span className="text-muted-foreground">▾</span>
+                  </button>
                 </div>
+                <p className="text-xs text-muted-foreground">These controls are optional — if left blank, AI will take care of it.</p>
                 {photo.original_width && (
                   <p className="text-xs text-muted-foreground">{photo.original_width} × {photo.original_height}px</p>
                 )}
@@ -594,26 +585,36 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we'll auto-center the crop. Drag the slider to adjust which part of your photo is visible in the video.
                 </p>
                 
-                {(orientation === 'landscape' || orientation === 'both') && (
-                  <CropPreview photo={photo} targetAspect="16:9"
-                    offset={photo.crop_offset_landscape ?? 50}
-                    onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'landscape', val)}
-                    label="Landscape (16:9)" />
-                )}
-                {(orientation === 'vertical' || orientation === 'both') && (
-                  <CropPreview photo={photo} targetAspect="9:16"
-                    offset={photo.crop_offset_vertical ?? 50}
-                    onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'vertical', val)}
-                    label="Vertical (9:16)" />
-                )}
+                {!needsCropForOrientation(photo, orientation) ? (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                    <Crop className="h-5 w-5 text-green-600 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-green-800">No crop needed!</p>
+                    <p className="text-xs text-green-700 mt-1">This photo already matches your selected video format.</p>
+                  </div>
+                ) : (
+                  <>
+                    {(orientation === 'landscape' || orientation === 'both') && (
+                      <CropPreview photo={photo} targetAspect="16:9"
+                        offset={photo.crop_offset_landscape ?? 50}
+                        onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'landscape', val)}
+                        label="Landscape (16:9)" />
+                    )}
+                    {(orientation === 'vertical' || orientation === 'both') && (
+                      <CropPreview photo={photo} targetAspect="9:16"
+                        offset={photo.crop_offset_vertical ?? 50}
+                        onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'vertical', val)}
+                        label="Vertical (9:16)" />
+                    )}
 
-                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-left">
-                  <p className="text-xs font-semibold text-foreground">Cropping tips:</p>
-                  <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don't crop too tight on the roofline</p>
-                  <p className="text-xs text-muted-foreground">• Front doors and entryways look best <span className="font-medium text-foreground">slightly below center</span></p>
-                  <p className="text-xs text-muted-foreground">• Keep <span className="font-medium text-foreground">key features visible</span> — landscaping, pools, and driveways add context</p>
-                  <p className="text-xs text-muted-foreground">• For interiors, keep <span className="font-medium text-foreground">floors and ceilings balanced</span> — avoid cutting off either completely</p>
-                </div>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-left">
+                      <p className="text-xs font-semibold text-foreground">Cropping tips:</p>
+                      <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don't crop too tight on the roofline</p>
+                      <p className="text-xs text-muted-foreground">• Front doors and entryways look best <span className="font-medium text-foreground">slightly below center</span></p>
+                      <p className="text-xs text-muted-foreground">• Keep <span className="font-medium text-foreground">key features visible</span> — landscaping, pools, and driveways add context</p>
+                      <p className="text-xs text-muted-foreground">• For interiors, keep <span className="font-medium text-foreground">floors and ceilings balanced</span> — avoid cutting off either completely</p>
+                    </div>
+                  </>
+                )}
 
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenCropIndex(null); }}
                   className="text-sm text-primary font-semibold hover:underline">
