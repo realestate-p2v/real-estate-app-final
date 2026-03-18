@@ -131,7 +131,8 @@ const PHOTOGRAPHER_FEATURES_HAS_LISTING = [
     icon: Gift,
     title: "Referral Earnings",
     description: "Track your commissions, payouts, and referred orders.",
-    status: "coming",
+    status: "live",
+    href: "/dashboard/referral-earnings",
   },
 ];
 
