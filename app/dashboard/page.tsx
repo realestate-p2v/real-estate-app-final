@@ -65,6 +65,13 @@ const REALTOR_FEATURES = [
     description: "Get notified when your video is ready or a revision is complete.",
     status: "coming",
   },
+  {
+    icon: DollarSign,
+    title: "Referral Program",
+    description: "Earn 20% commission when people you refer order listing videos.",
+    status: "live",
+    href: "/dashboard/referral-earnings",
+  },
 ];
 
 const PHOTOGRAPHER_FEATURES_NO_LISTING = [
