@@ -389,13 +389,13 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   const showTooManyPhotosWarning = photos.length > 35;
 
   const getCameraDisplayText = (photo: PhotoItem) => {
-    if (photo.custom_motion) return `"${photo.custom_motion}"`;
+    if (photo.custom_motion) return `Custom: "${photo.custom_motion}"`;
     if (photo.camera_direction) {
       const dir = DIRECTIONS.find(d => d.key === photo.camera_direction);
       const speed = SPEEDS.find(s => s.key === photo.camera_speed);
       return `${dir?.label || photo.camera_direction}${speed ? ` · ${speed.label}` : ''}`;
     }
-    return 'Select Camera Movement';
+    return 'AI Auto (recommended)';
   };
 
   const needsCropForOrientation = (photo: PhotoItem, orient: string) => {
@@ -432,10 +432,9 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Upload className="h-8 w-8 text-primary" />
           </div>
-          <p className="text-lg font-semibold">Upload your listing photos</p>
-          <p className="text-muted-foreground">Drag and drop or click to select</p>
-          <p className="text-xs text-muted-foreground mt-2">💡 Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
-          <p className="text-xs text-muted-foreground mt-1">📐 You can adjust the crop position after uploading.</p>
+          <p className="text-lg font-semibold">Use My Photos</p>
+          <p className="text-muted-foreground">Drag and drop or click to select your listing photos</p>
+          <p className="text-xs text-muted-foreground mt-3">The higher quality your photos, the better your video will look.</p>
         </label>
       </div>
       
@@ -483,13 +482,24 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
       )}
 
       {photos.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ImageIcon className="h-5 w-5" />
-            <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</span>
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <ImageIcon className="h-5 w-5" />
+              <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
           </div>
-          <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
-        </div>
+
+          {/* Optional controls notice */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3">
+            <Camera className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-800">
+              <span className="font-semibold">Camera movement and crop are optional.</span>{" "}
+              If you don't change anything, our AI will automatically choose the best camera movement and crop for each photo. Most customers leave it on auto.
+            </p>
+          </div>
+        </>
       )}
 
       <div className="flex flex-col gap-3">
@@ -535,7 +545,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
               <div className="flex-1 min-w-0 space-y-1">
                 <Input
-                  placeholder="Label (e.g. Kitchen)"
+                  placeholder="Label (optional, e.g. Kitchen)"
                   value={photo.description}
                   onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
                   maxLength={30}
@@ -552,6 +562,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                     className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
                     <Camera className="h-3.5 w-3.5" />
                     <span className="truncate max-w-[180px]">{getCameraDisplayText(photo)}</span>
+                    <span className="text-muted-foreground text-xs ml-0.5">optional</span>
                     <span className="text-muted-foreground">▾</span>
                   </button>
 
@@ -561,6 +572,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                       className="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1">
                       <Crop className="h-3.5 w-3.5" />
                       <span>Adjust Crop</span>
+                      <span className="text-muted-foreground text-xs ml-0.5">optional</span>
                       <span className="text-muted-foreground">▾</span>
                     </button>
                   )}
@@ -579,7 +591,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
             {openCropIndex === index && (
               <div className="mt-3 pt-3 border-t border-border space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Drag the slider to adjust which part of your photo is visible in the video. The bright area shows what will appear on screen.
+                  <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we'll auto-center the crop. Drag the slider to adjust which part of your photo is visible in the video.
                 </p>
                 
                 {(orientation === 'landscape' || orientation === 'both') && (
@@ -612,6 +624,9 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
             {openDirectionIndex === index && (
               <div className="mt-3 pt-3 border-t border-border space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">This is optional.</span> Leave on "AI Auto" and we'll pick the best movement for this photo. Or choose your own below.
+                </p>
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Direction:</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -619,7 +634,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                       className={`text-xs py-2 px-3 rounded-lg border text-center transition-all ${
                         !photo.camera_direction && !photo.custom_motion ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
                       }`}>
-                      🤖 Auto
+                      🤖 AI Auto (recommended)
                     </button>
                     {DIRECTIONS.map(d => (
                       <button key={d.key} type="button" onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); }}
@@ -653,7 +668,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   <p className="text-xs text-muted-foreground mb-2">
                     {photo.camera_direction === 'bring_to_life'
                       ? 'Describe the action (warm, friendly actions work best):'
-                      : 'Or describe your own camera movement:'}
+                      : 'Or describe your own camera movement (optional):'}
                   </p>
                   <Input
                     placeholder={photo.camera_direction === 'bring_to_life'
@@ -672,9 +687,9 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
                 <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
                   <p className="text-xs font-semibold text-foreground">Tips for best results:</p>
+                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">AI Auto works great</span> for most photos — our AI picks the best movement</p>
                   <p className="text-xs text-muted-foreground">• Move <span className="font-medium text-foreground">toward</span> the focal point of the photo (Fwd is most popular)</p>
                   <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Slow or Med</span> speed looks most professional</p>
-                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Auto</span> works great — our AI picks the best movement for each photo</p>
                   <p className="text-xs text-muted-foreground">• Use <span className="font-medium text-foreground">Bring to Life</span> for photos with people, pets, or nature</p>
                   <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Text on signs or walls</span> may appear distorted — crop out any text that isn't fully legible in the photo</p>
                   <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">If some text is partially blocked</span> use simple movements like FWD or BACK + SLOW for best results</p>
