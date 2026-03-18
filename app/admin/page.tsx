@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, Video, PenLine, BarChart3, Users, Mail,
   Settings, Shield, Sparkles, ExternalLink, Clock,
-  CheckCircle2, AlertCircle, Loader2, Star, Building2
+  CheckCircle2, AlertCircle, Loader2, Star, Building2, DollarSign
 } from "lucide-react";
 
 export default function AdminPage() {
