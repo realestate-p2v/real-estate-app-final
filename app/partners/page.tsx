@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Camera, DollarSign, Users, ArrowRight, Mail, CheckCircle } from "lucide-react";
 
 const STEPS = [
-  { num: "1", title: "Sign Up", desc: "Email us to get your unique referral link. Takes 2 minutes." },
+  { num: "1", title: "Sign Up", desc: "Create your account and get your unique referral link. Takes 30 seconds." },
   { num: "2", title: "Refer Agents", desc: "Share your link with agents you work with. When they order, you earn." },
   { num: "3", title: "Get Paid", desc: "Earn 20% commission on every order placed through your link. Paid monthly." },
 ];
@@ -112,16 +112,16 @@ export default function PartnersPage() {
             Ready to Start Earning?
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Email us to get your unique referral link and start earning 20% on every order. 
-            No contracts, no minimums, no cost to join.
+            Create your referral link in seconds. No contracts, no minimums, no cost to join.
+            Enter your payout info and start earning 20% on every order.
           </p>
           <Button asChild className="bg-accent hover:bg-accent/90 px-8 py-6 text-lg font-bold">
-            <a href="mailto:matt@realestatephoto2video.com?subject=Partner Program Inquiry&body=Hi Matt, I'm interested in the photographer partner program. My name is [your name] and I'm a real estate photographer in [your city].">
-              <Mail className="mr-2 h-5 w-5" />
-              Email Us to Get Started
-            </a>
+            <Link href="/dashboard/referral-earnings">
+              <DollarSign className="mr-2 h-5 w-5" />
+              Get My Referral Link
+            </Link>
           </Button>
-          <p className="text-sm text-muted-foreground">matt@realestatephoto2video.com</p>
+          <p className="text-sm text-muted-foreground">Takes 30 seconds. No email required.</p>
         </div>
       </div>
 
