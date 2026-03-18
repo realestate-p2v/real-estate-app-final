@@ -133,11 +133,11 @@ export default function AdminPage() {
     {
       title: "Marketing Mission Control",
       description: "Cold email dashboard, social tracker, ad performance, SEO rankings, lead pipeline",
-      href: "#",
+      href: "/admin/marketing",
       icon: <Mail className="h-6 w-6" />,
       color: "bg-indigo-500/10 text-indigo-600",
       stat: null,
-      status: "coming" as const,
+      status: "live" as const,
       alert: 0,
     },
   ];
