@@ -132,6 +132,16 @@ export default function AdminPage() {
       status: "coming" as const,
       alert: 0,
     },
+    {
+      title: "Referral Management",
+      description: "Track referral partners, earnings, pending payouts, and mark payments as complete",
+      href: "/admin/referrals",
+      icon: <DollarSign className="h-6 w-6" />,
+      color: "bg-green-500/10 text-green-600",
+      stat: null,
+      status: "live" as const,
+      alert: pendingPayouts,
+    },
   ];
 
   const quickLinks = [
