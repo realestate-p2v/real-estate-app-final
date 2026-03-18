@@ -66,12 +66,6 @@ const REALTOR_FEATURES = [
     status: "live",
     href: "/dashboard/referral-earnings",
   },
-  {
-    icon: Bell,
-    title: "Notifications",
-    description: "Get notified when your video is ready or a revision is complete.",
-    status: "coming",
-  },
 ];
 
 const PHOTOGRAPHER_FEATURES_NO_LISTING = [
