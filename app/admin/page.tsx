@@ -11,11 +11,12 @@ import {
   CheckCircle2, AlertCircle, Loader2, Star, Building2, DollarSign
 } from "lucide-react";
 
-export default function AdminPage() {
+export default function AdminPage() { 
   const [blogCount, setBlogCount] = useState<number | null>(null);
   const [contentCount, setContentCount] = useState<number | null>(null);
   const [pendingReviews, setPendingReviews] = useState<number>(0);
   const [ordersNeedingAction, setOrdersNeedingAction] = useState<number>(0);
+  const [pendingPayouts, setPendingPayouts] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function AdminPage() {
           fetch("/api/admin/content").then(r => r.json()),
           fetch("/api/admin/reviews").then(r => r.json()),
           fetch("/api/admin/orders").then(r => r.json()),
+          fetch("/api/admin/referrals").then(r => r.json()),
           fetch("/api/admin/referrals").then(r => r.json()),
         ]);
         if (results[4]?.status === "fulfilled" && results[4].value.success) {
@@ -48,6 +50,10 @@ export default function AdminPage() {
               ["awaiting_approval", "client_revision_requested", "new", "error"].includes(o.status)
             ).length
           );
+        }
+        const referralsRes = results[4];
+        if (referralsRes?.status === "fulfilled" && referralsRes.value.success) {
+          setPendingPayouts(referralsRes.value.summary?.partnersWithPending || 0);
         }
         
         const [pendingPayouts, setPendingPayouts] = useState<number>(0);
