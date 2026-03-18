@@ -186,33 +186,40 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold text-foreground">For Realtors</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {REALTOR_FEATURES.map(({ icon: Icon, title, description, status, href }, i) => (
-              <div
-                key={i}
-                className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
-                  status === "live"
-                    ? "border-primary/20 hover:border-accent/40 hover:shadow-lg transition-all duration-300 group"
-                    : "border-border"
-                }`}
-              >
-                {status === "live" && (
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Live</span>
-                )}
-                {status === "coming" && (
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Soon</span>
-                )}
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${status === "live" ? "bg-accent/10" : "bg-muted"}`}>
-                  <Icon className={`h-5 w-5 ${status === "live" ? "text-accent" : "text-muted-foreground"}`} />
+            {REALTOR_FEATURES.map(({ icon: Icon, title, description, status, href }, i) => {
+              const cardContent = (
+                <>
+                  {status === "live" && (
+                    <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Live</span>
+                  )}
+                  {status === "coming" && (
+                    <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Soon</span>
+                  )}
+                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${status === "live" ? "bg-accent/10" : "bg-muted"}`}>
+                    <Icon className={`h-5 w-5 ${status === "live" ? "text-accent" : "text-muted-foreground"}`} />
+                  </div>
+                  <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                </>
+              );
+
+              return status === "live" && href ? (
+                <Link
+                  key={i}
+                  href={href}
+                  className="relative bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg transition-all duration-300 group block"
+                >
+                  {cardContent}
+                </Link>
+              ) : (
+                <div
+                  key={i}
+                  className="relative bg-card rounded-xl border border-border p-5 space-y-2.5"
+                >
+                  {cardContent}
                 </div>
-                <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-                {status === "live" && href && (
-                  <Link href={href} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                    Open <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -230,33 +237,40 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {photographerFeatures.map(({ icon: Icon, title, description, status, href }, i) => (
-                <div
-                  key={i}
-                  className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
-                    status === "live"
-                      ? "border-primary/20 hover:border-accent/40 hover:shadow-lg transition-all duration-300 group"
-                      : "border-border"
-                  }`}
-                >
-                  {status === "live" && (
-                    <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Live</span>
-                  )}
-                  {status === "coming" && (
-                    <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Soon</span>
-                  )}
-                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${status === "live" ? "bg-primary/10" : "bg-muted"}`}>
-                    <Icon className={`h-5 w-5 ${status === "live" ? "text-primary" : "text-muted-foreground"}`} />
+              {photographerFeatures.map(({ icon: Icon, title, description, status, href }, i) => {
+                const cardContent = (
+                  <>
+                    {status === "live" && (
+                      <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Live</span>
+                    )}
+                    {status === "coming" && (
+                      <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Soon</span>
+                    )}
+                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${status === "live" ? "bg-primary/10" : "bg-muted"}`}>
+                      <Icon className={`h-5 w-5 ${status === "live" ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                  </>
+                );
+
+                return status === "live" && href ? (
+                  <Link
+                    key={i}
+                    href={href}
+                    className="relative bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg transition-all duration-300 group block"
+                  >
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <div
+                    key={i}
+                    className="relative bg-card rounded-xl border border-border p-5 space-y-2.5"
+                  >
+                    {cardContent}
                   </div>
-                  <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-                  {status === "live" && href && (
-                    <Link href={href} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                      Open <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
