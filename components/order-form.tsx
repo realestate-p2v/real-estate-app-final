@@ -77,6 +77,12 @@ export function OrderForm() {
     checkBrokerage();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) setRefCode(ref);
+  }, []);
+
   const [propertyAddress, setPropertyAddress] = useState("");
   const [propertyCity, setPropertyCity] = useState("");
   const [propertyState, setPropertyState] = useState("");
@@ -306,6 +312,7 @@ export function OrderForm() {
           includeAddressOnCard,
           totalPrice: getTotalPrice(),
           specialInstructions: formData.notes,
+          referral_code: refCode,
         }),
       });
 
@@ -354,6 +361,8 @@ export function OrderForm() {
       setIsSubmitting(false);
     }
   };
+
+  const [refCode, setRefCode] = useState<string | null>(null);
 
   const handleModeSwitch = (mode: PhotoInputMode) => {
     setPhotoInputMode(mode);
