@@ -24,7 +24,7 @@ export function HeroSection() {
       {/* 2. Content Layer */}
       <div className="max-w-5xl mx-auto relative z-10 text-center">
         {/* Mosaic/Attention-Grabbing Headline */}
-        <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mb-4 text-white leading-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-7xl font-extrabold tracking-tight mb-4 text-white leading-tight px-2">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-yellow-300 to-cyan-400">
             Turn your Listing Photos into
           </span>
