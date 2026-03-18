@@ -1,3 +1,4 @@
+import { LazyIframe } from "@/components/lazy-media";
 import Image from "next/image";
 import Link from "next/link";
 import { 
@@ -77,13 +78,10 @@ export function DemoSection() {
                 <span className="font-semibold text-foreground">Your HD Walkthrough Video</span>
               </div>
               <div className="aspect-video rounded-lg overflow-hidden bg-foreground/5">
-                <iframe 
-                  width="100%" height="100%" 
-                  src="https://www.youtube.com/embed/OuzDikc2M7I?si=9nF9DEq5GxUUkEvO" 
-                  title="YouTube video player" frameBorder="0" 
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                  referrerPolicy="strict-origin-when-cross-origin" allowFullScreen
-                ></iframe>
+                <LazyIframe
+                  src="https://www.youtube.com/embed/OuzDikc2M7I?si=9nF9DEq5GxUUkEvO"
+                  title="YouTube video player"
+                />
               </div>
             </div>
           </div>
