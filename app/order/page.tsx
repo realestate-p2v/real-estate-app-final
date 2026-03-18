@@ -21,7 +21,7 @@ export default function OrderPage() {
       {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-20 items-center justify-between">
             <Link href="/" className="flex items-center gap-2 text-foreground hover:text-primary">
               <ArrowLeft className="h-5 w-5" />
               <span className="hidden sm:inline">Back to Home</span>
