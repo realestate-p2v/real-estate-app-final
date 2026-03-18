@@ -16,7 +16,7 @@ export function SaleBanner() {
   };
 
   return (
-    <div className="px-2 py-4 md:px-4 md:py-6">
+    <div className="px-4 py-6 md:px-4 md:py-6">
       <div className="w-full max-w-7xl mx-auto relative overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] border-2 border-blue-400/30 shadow-2xl bg-slate-900">
         
         {/* 1. Background Video Layer */}
