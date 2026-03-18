@@ -480,12 +480,7 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
               </a>
             </Button>
           )}
-          {isClosed && order.delivery_url && (
-            <Button variant="outline" onClick={handleCopyLink}>
-              {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-              {copied ? "Copied!" : "Copy Drive Link"}
-            </Button>
-          )}
+          
           {/* Edited photos available after closing */}
           {isClosed && order.edited_photos_url && (
             <Button asChild variant="outline">
