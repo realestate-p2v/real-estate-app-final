@@ -34,20 +34,26 @@ export async function GET() {
     const completedStatuses = ["complete", "delivered", "closed", "approved", "awaiting_approval"];
     const pipelineStatuses = ["new", "processing", "awaiting_approval", "revision_requested", "client_revision_requested"];
 
-    // Revenue
-    const totalRevenue = allOrders.reduce((s: number, o: any) => s + (o.total_price || 0), 0);
+    // Revenue — only count orders that were actually completed/delivered
+    const revenueStatuses = ["complete", "delivered", "closed", "approved", "awaiting_approval"];
+    const revenueOrders = allOrders.filter((o: any) => revenueStatuses.includes(o.status));
+    const totalRevenue = revenueOrders.reduce((s: number, o: any) => s + (o.total_price || 0), 0);
 
     const thisMonthOrders = allOrders.filter((o: any) => new Date(o.created_at) >= thisMonthStart);
-    const thisMonthRevenue = thisMonthOrders.reduce((s: number, o: any) => s + (o.total_price || 0), 0);
+    const thisMonthRevenueOrders = revenueOrders.filter((o: any) => new Date(o.created_at) >= thisMonthStart);
+    const thisMonthRevenue = thisMonthRevenueOrders.reduce((s: number, o: any) => s + (o.total_price || 0), 0);
 
     const lastMonthOrders = allOrders.filter((o: any) => {
       const d = new Date(o.created_at);
       return d >= lastMonthStart && d <= lastMonthEnd;
     });
-    const lastMonthRevenue = lastMonthOrders.reduce((s: number, o: any) => s + (o.total_price || 0), 0);
+    const lastMonthRevenueOrders = revenueOrders.filter((o: any) => {
+      const d = new Date(o.created_at);
+      return d >= lastMonthStart && d <= lastMonthEnd;
+    });
+    const lastMonthRevenue = lastMonthRevenueOrders.reduce((s: number, o: any) => s + (o.total_price || 0), 0);
 
-    const avgOrderValue = allOrders.length > 0 ? totalRevenue / allOrders.length : 0;
-
+    const avgOrderValue = revenueOrders.length > 0 ? totalRevenue / revenueOrders.length : 0;
     // Orders by status
     const statusCounts: Record<string, number> = {};
     allOrders.forEach((o: any) => {
@@ -94,7 +100,7 @@ export async function GET() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
       const label = d.toLocaleString("en-US", { month: "short", year: "2-digit" });
-      const monthOrders = allOrders.filter((o: any) => {
+      const monthOrders = revenueOrders.filter((o: any) => {
         const c = new Date(o.created_at);
         return c >= d && c <= end;
       });
