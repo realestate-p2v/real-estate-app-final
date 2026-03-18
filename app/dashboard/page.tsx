@@ -60,17 +60,17 @@ const REALTOR_FEATURES = [
     href: "/dashboard/reviews",
   },
   {
-    icon: Bell,
-    title: "Notifications",
-    description: "Get notified when your video is ready or a revision is complete.",
-    status: "coming",
-  },
-  {
     icon: DollarSign,
     title: "Referral Program",
     description: "Earn 20% commission when people you refer order listing videos.",
     status: "live",
     href: "/dashboard/referral-earnings",
+  },
+  {
+    icon: Bell,
+    title: "Notifications",
+    description: "Get notified when your video is ready or a revision is complete.",
+    status: "coming",
   },
 ];
 
@@ -189,8 +189,10 @@ export default function DashboardPage() {
             {REALTOR_FEATURES.map(({ icon: Icon, title, description, status, href }, i) => (
               <div
                 key={i}
-                className={`relative bg-card rounded-xl border p-5 space-y-2.5 transition-all ${
-                  status === "live" ? "border-primary/20 hover:shadow-md" : "border-border"
+                className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
+                  status === "live"
+                    ? "border-primary/20 hover:border-accent/40 hover:shadow-lg transition-all duration-300 group"
+                    : "border-border"
                 }`}
               >
                 {status === "live" && (
@@ -202,7 +204,7 @@ export default function DashboardPage() {
                 <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${status === "live" ? "bg-accent/10" : "bg-muted"}`}>
                   <Icon className={`h-5 w-5 ${status === "live" ? "text-accent" : "text-muted-foreground"}`} />
                 </div>
-                <h3 className="font-bold text-foreground">{title}</h3>
+                <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
                 {status === "live" && href && (
                   <Link href={href} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
@@ -231,8 +233,10 @@ export default function DashboardPage() {
               {photographerFeatures.map(({ icon: Icon, title, description, status, href }, i) => (
                 <div
                   key={i}
-                  className={`relative bg-card rounded-xl border p-5 space-y-2.5 transition-all ${
-                    status === "live" ? "border-primary/20 hover:shadow-md" : "border-border"
+                  className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
+                    status === "live"
+                      ? "border-primary/20 hover:border-accent/40 hover:shadow-lg transition-all duration-300 group"
+                      : "border-border"
                   }`}
                 >
                   {status === "live" && (
@@ -244,7 +248,7 @@ export default function DashboardPage() {
                   <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${status === "live" ? "bg-primary/10" : "bg-muted"}`}>
                     <Icon className={`h-5 w-5 ${status === "live" ? "text-primary" : "text-muted-foreground"}`} />
                   </div>
-                  <h3 className="font-bold text-foreground">{title}</h3>
+                  <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
                   {status === "live" && href && (
                     <Link href={href} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
