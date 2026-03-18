@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2 } from "lucide-react";
+import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
