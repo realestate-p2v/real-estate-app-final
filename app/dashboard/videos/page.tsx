@@ -240,14 +240,7 @@ export default function MyVideosPage() {
                             )}
                           </Link>
                           <div className="flex gap-2 flex-wrap">
-                            {order.delivery_url && (
-                              <Button asChild size="sm" variant="outline">
-                                <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                                  Open in Drive
-                                </a>
-                              </Button>
-                            )}
+                        
                             {fileId && (
                               <Button asChild size="sm" variant="outline">
                                 <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
@@ -343,14 +336,12 @@ export default function MyVideosPage() {
                           </div>
                         </Link>
                         <div className="flex gap-2 px-5 pb-5 flex-wrap">
-                          {order.delivery_url && (
-                            <Button asChild size="sm" variant="outline">
-                              <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                                Open in Drive
-                              </a>
-                            </Button>
-                          )}
+                          <Button asChild size="sm" className="bg-primary hover:bg-primary/90">
+                            <Link href={`/video/${order.order_id || order.id}`}>
+                              <Play className="mr-1.5 h-3.5 w-3.5" />
+                              View Video
+                            </Link>
+                          </Button>
                           {fileId && (
                             <Button asChild size="sm" variant="outline">
                               <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
