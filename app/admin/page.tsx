@@ -22,42 +22,34 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [blogRes, contentRes, reviewsRes, ordersRes] = await Promise.allSettled([
+        const results = await Promise.allSettled([
           fetch("/api/admin/blog").then(r => r.json()),
           fetch("/api/admin/content").then(r => r.json()),
           fetch("/api/admin/reviews").then(r => r.json()),
           fetch("/api/admin/orders").then(r => r.json()),
           fetch("/api/admin/referrals").then(r => r.json()),
-          fetch("/api/admin/referrals").then(r => r.json()),
         ]);
-        if (results[4]?.status === "fulfilled" && results[4].value.success) {
-          setPendingPayouts(results[4].value.summary?.partnersWithPending || 0);
+        if (results[0].status === "fulfilled" && results[0].value.success) {
+          setBlogCount(results[0].value.posts?.length || 0);
         }
-        if (blogRes.status === "fulfilled" && blogRes.value.success) {
-          setBlogCount(blogRes.value.posts?.length || 0);
+        if (results[1].status === "fulfilled" && results[1].value.success) {
+          setContentCount(results[1].value.videos?.length || 0);
         }
-        if (contentRes.status === "fulfilled" && contentRes.value.success) {
-          setContentCount(contentRes.value.videos?.length || 0);
-        }
-        if (reviewsRes.status === "fulfilled") {
-          const reviews = reviewsRes.value.reviews || [];
+        if (results[2].status === "fulfilled") {
+          const reviews = results[2].value.reviews || [];
           setPendingReviews(reviews.filter((r: any) => r.verification_status === "pending").length);
         }
-        if (ordersRes.status === "fulfilled") {
-          const orders = ordersRes.value.orders || [];
+        if (results[3].status === "fulfilled") {
+          const orders = results[3].value.orders || [];
           setOrdersNeedingAction(
             orders.filter((o: any) =>
               ["awaiting_approval", "client_revision_requested", "new", "error"].includes(o.status)
             ).length
           );
         }
-        const referralsRes = results[4];
-        if (referralsRes?.status === "fulfilled" && referralsRes.value.success) {
-          setPendingPayouts(referralsRes.value.summary?.partnersWithPending || 0);
+        if (results[4].status === "fulfilled" && results[4].value.success) {
+          setPendingPayouts(results[4].value.summary?.partnersWithPending || 0);
         }
-        
-        const [pendingPayouts, setPendingPayouts] = useState<number>(0);
-        
       } catch (err) {
         console.error("Failed to fetch admin stats:", err);
       } finally {
@@ -129,16 +121,6 @@ export default function AdminPage() {
       alert: 0,
     },
     {
-      title: "Marketing Mission Control",
-      description: "Cold email dashboard, social tracker, ad performance, SEO rankings, lead pipeline",
-      href: "#",
-      icon: <Mail className="h-6 w-6" />,
-      color: "bg-indigo-500/10 text-indigo-600",
-      stat: null,
-      status: "coming" as const,
-      alert: 0,
-    },
-    {
       title: "Referral Management",
       description: "Track referral partners, earnings, pending payouts, and mark payments as complete",
       href: "/admin/referrals",
@@ -147,6 +129,16 @@ export default function AdminPage() {
       stat: null,
       status: "live" as const,
       alert: pendingPayouts,
+    },
+    {
+      title: "Marketing Mission Control",
+      description: "Cold email dashboard, social tracker, ad performance, SEO rankings, lead pipeline",
+      href: "#",
+      icon: <Mail className="h-6 w-6" />,
+      color: "bg-indigo-500/10 text-indigo-600",
+      stat: null,
+      status: "coming" as const,
+      alert: 0,
     },
   ];
 
@@ -212,7 +204,6 @@ export default function AdminPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${tool.color} relative`}>
                       {tool.icon}
-                      {/* Pulsing red alert badge */}
                       {tool.alert > 0 && !loading && (
                         <span className="pulse-badge absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-card">
                           {tool.alert}
