@@ -1,5 +1,6 @@
 "use client"
 
+import { LazyVideo } from "@/components/lazy-media";
 import React from "react"
 import { Sparkles, Tag } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -20,15 +21,7 @@ export function SaleBanner() {
         
         {/* 1. Background Video Layer */}
         <div className="absolute inset-0 z-0">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-          >
-            <source src="/p2v-website-her-vid.mp4" type="video/mp4" />
-          </video>
+          <LazyVideo src="/p2v-website-her-vid.mp4" />
           {/* Tint Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-slate-800/90 via-slate-900/70 to-slate-800/90" />
         </div>
