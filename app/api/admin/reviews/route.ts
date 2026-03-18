@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { createClient } from "@supabase/supabase-js";
+import { createNotification } from "@/lib/create-notification";
 
 export async function GET() {
   try {
@@ -34,6 +35,7 @@ export async function PATCH(request: Request) {
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     const { reviewId, status } = await request.json();
+
     if (!reviewId || !["approved", "rejected"].includes(status)) {
       return NextResponse.json({ success: false, error: "Invalid parameters" }, { status: 400 });
     }
@@ -105,6 +107,15 @@ export async function PATCH(request: Request) {
           .from("review_rewards")
           .update({ discount_code: code, discount_percent: discountPercent })
           .eq("id", reviewId);
+
+        // Notify the user their review was approved with discount code
+        await createNotification({
+          userId: review.user_id,
+          type: "review_approved",
+          title: `Your review was approved! Here's your ${discountPercent}% discount code: ${code}`,
+          message: `Thanks for leaving a review! Use code ${code} on your next order for ${discountPercent}% off.`,
+          link: "/dashboard/reviews",
+        });
       }
     }
 
