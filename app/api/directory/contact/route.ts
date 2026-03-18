@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         type: "directory_inquiry",
         title: "Someone contacted you about photography",
         message: `${name.trim()} sent you a message through the P2V directory.`,
-        link: "/directory/edit",
+        link: "/dashboard/directory-analytics",
       });
     }
 
