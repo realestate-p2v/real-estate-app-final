@@ -110,12 +110,12 @@ export default function AdminPage() {
     },
     {
       title: "Analytics Dashboard",
-      description: "Revenue, orders, pipeline health, customer metrics, traffic sources",
-      href: "#",
+      description: "Revenue, orders, pipeline health, customer metrics, blog performance",
+      href: "/admin/analytics",
       icon: <BarChart3 className="h-6 w-6" />,
       color: "bg-amber-500/10 text-amber-600",
       stat: null,
-      status: "coming" as const,
+      status: "live" as const,
       alert: 0,
     },
     {
