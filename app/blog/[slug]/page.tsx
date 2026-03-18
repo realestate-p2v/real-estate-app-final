@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Calendar, ArrowLeft, Share2, Tag } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { BlogContent } from "@/components/blog-content";
+import { BlogViewTracker } from "@/components/blog-view-tracker";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -120,7 +121,7 @@ export default async function BlogPostPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-
+      <BlogViewTracker slug={slug} />
       {/* JSON-LD */}
       <script
         type="application/ld+json"
