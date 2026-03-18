@@ -71,8 +71,24 @@ export function MusicSelector({
     setPlayingTrackId(trackId);
   };
 
+  const getPlayingTrackName = () => {
+    if (!playingTrackId) return "";
+    const track = libraryTracks.find(t => t.id === playingTrackId);
+    return track?.display_name || "";
+  };
+
   return (
     <div className="space-y-4">
+      <style jsx>{`
+        @keyframes scroll-text {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .scroll-text {
+          animation: scroll-text 8s linear infinite;
+        }
+      `}</style>
+
       <div className="flex items-center gap-3 mb-2">
         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
           <Music className="h-5 w-5 text-primary" />
@@ -154,14 +170,16 @@ export function MusicSelector({
                     selected.includes(track.id) ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handlePlayTrack(track.id, track.file_url); }}
-                      className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                      className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                        playingTrackId === track.id ? "bg-primary text-white" : "bg-primary/10 hover:bg-primary/20"
+                      }`}
                     >
                       {playingTrackId === track.id ? (
-                        <span className="text-primary text-xs font-bold">■</span>
+                        <span className="text-xs font-bold">■</span>
                       ) : (
                         <span className="text-primary text-xs font-bold ml-0.5">▶</span>
                       )}
@@ -171,9 +189,18 @@ export function MusicSelector({
                       <span className="text-xs text-muted-foreground ml-2">{track.duration_seconds}s</span>
                     </div>
                   </div>
-                  {selected.includes(track.id) && (
-                    <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                  )}
+                  <div className="flex items-center gap-2 flex-1 justify-end min-w-0 ml-3">
+                    {playingTrackId === track.id && (
+                      <div className="overflow-hidden flex-1 max-w-[200px]">
+                        <div className="scroll-text whitespace-nowrap text-xs font-semibold text-primary flex items-center gap-1.5">
+                          <span>♪</span> Now Playing — {track.display_name}
+                        </div>
+                      </div>
+                    )}
+                    {selected.includes(track.id) && (
+                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
