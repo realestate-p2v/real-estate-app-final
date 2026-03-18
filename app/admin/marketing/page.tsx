@@ -28,6 +28,24 @@ type Lead = {
   notes?: string | null;
 };
 
+type AisoTarget = {
+  id: string;
+  site_name: string;
+  site_url: string | null;
+  article_url: string | null;
+  citation_query: string | null;
+  ai_platform: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_url: string | null;
+  outreach_type: string;
+  outreach_status: string;
+  notes: string | null;
+  priority: string;
+  times_cited: number;
+  created_at: string;
+};
+
 type SocialStat = {
   platform: string;
   icon: any;
@@ -45,6 +63,16 @@ export default function MarketingPage() {
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState("");
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  // AISO state
+  const [aisoTargets, setAisoTargets] = useState<AisoTarget[]>([]);
+  const [aisoLoading, setAisoLoading] = useState(true);
+  const [showAddAiso, setShowAddAiso] = useState(false);
+  const [aisoForm, setAisoForm] = useState({
+    site_name: "", site_url: "", article_url: "", citation_query: "",
+    ai_platform: "chatgpt", contact_name: "", contact_email: "", contact_url: "",
+    outreach_type: "guest_post", priority: "medium", notes: "", times_cited: 1,
+  });
 
   // Cold email stats (manual for now — Instantly.ai integration later)
   const coldEmailStats = {
@@ -69,7 +97,77 @@ export default function MarketingPage() {
 
   useEffect(() => {
     fetchLeads();
+    fetchAisoTargets();
   }, []);
+
+  const fetchAisoTargets = async () => {
+    setAisoLoading(true);
+    try {
+      const res = await fetch("/api/admin/aiso");
+      const data = await res.json();
+      if (data.success) setAisoTargets(data.targets || []);
+    } catch (err) {
+      console.error("Failed to fetch AISO targets:", err);
+    } finally {
+      setAisoLoading(false);
+    }
+  };
+
+  const addAisoTarget = async () => {
+    if (!aisoForm.site_name.trim()) return;
+    try {
+      const res = await fetch("/api/admin/aiso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(aisoForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAisoTargets(prev => [data.target, ...prev]);
+        setShowAddAiso(false);
+        setAisoForm({
+          site_name: "", site_url: "", article_url: "", citation_query: "",
+          ai_platform: "chatgpt", contact_name: "", contact_email: "", contact_url: "",
+          outreach_type: "guest_post", priority: "medium", notes: "", times_cited: 1,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to add AISO target:", err);
+    }
+  };
+
+  const updateAisoStatus = async (id: string, outreach_status: string) => {
+    try {
+      const res = await fetch("/api/admin/aiso", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, outreach_status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAisoTargets(prev => prev.map(t => t.id === id ? { ...t, outreach_status } : t));
+      }
+    } catch (err) {
+      console.error("Failed to update AISO target:", err);
+    }
+  };
+
+  const deleteAisoTarget = async (id: string) => {
+    if (!confirm("Delete this target?")) return;
+    try {
+      const res = await fetch("/api/admin/aiso", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAisoTargets(prev => prev.filter(t => t.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete AISO target:", err);
+    }
+  };
 
   const fetchLeads = async () => {
     setLeadsLoading(true);
@@ -450,6 +548,304 @@ export default function MarketingPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══ AISO BACKLINK CAMPAIGN ═══ */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-1.5 bg-amber-500 rounded-full" />
+              <h2 className="text-xl font-bold text-foreground">AISO Backlink Campaign</h2>
+              <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {aisoTargets.length} targets
+              </span>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setShowAddAiso(!showAddAiso)}
+              className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Target
+            </Button>
+          </div>
+
+          <div className="bg-card rounded-2xl border border-border p-6">
+            {/* Info Banner */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <TrendingUp className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-blue-800 text-sm">AI Search Optimization</p>
+                <p className="text-blue-700 text-sm mt-0.5">
+                  Search ChatGPT, Gemini, and Perplexity for real estate video queries. Note which sites they cite. 
+                  Get P2V mentioned on those sites through guest posts, resource page inclusion, or article updates.
+                </p>
+              </div>
+            </div>
+
+            {/* Add Target Form */}
+            {showAddAiso && (
+              <div className="bg-muted/30 rounded-xl border border-border p-5 mb-6">
+                <h4 className="font-semibold text-foreground mb-4">Add New Target Site</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Site Name *</label>
+                    <Input
+                      placeholder="e.g. HousingWire"
+                      value={aisoForm.site_name}
+                      onChange={(e) => setAisoForm(p => ({ ...p, site_name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Site URL</label>
+                    <Input
+                      placeholder="https://housingwire.com"
+                      value={aisoForm.site_url}
+                      onChange={(e) => setAisoForm(p => ({ ...p, site_url: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Cited Article URL</label>
+                    <Input
+                      placeholder="https://housingwire.com/article..."
+                      value={aisoForm.article_url}
+                      onChange={(e) => setAisoForm(p => ({ ...p, article_url: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Citation Query</label>
+                    <Input
+                      placeholder="e.g. cheap real estate listing video"
+                      value={aisoForm.citation_query}
+                      onChange={(e) => setAisoForm(p => ({ ...p, citation_query: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">AI Platform</label>
+                    <select
+                      value={aisoForm.ai_platform}
+                      onChange={(e) => setAisoForm(p => ({ ...p, ai_platform: e.target.value }))}
+                      className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+                    >
+                      <option value="chatgpt">ChatGPT</option>
+                      <option value="gemini">Gemini</option>
+                      <option value="perplexity">Perplexity</option>
+                      <option value="multiple">Multiple</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Outreach Type</label>
+                    <select
+                      value={aisoForm.outreach_type}
+                      onChange={(e) => setAisoForm(p => ({ ...p, outreach_type: e.target.value }))}
+                      className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+                    >
+                      <option value="guest_post">Guest Post</option>
+                      <option value="resource_page">Resource Page</option>
+                      <option value="article_update">Article Update</option>
+                      <option value="mention">Mention/Quote</option>
+                      <option value="partnership">Partnership</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Priority</label>
+                    <select
+                      value={aisoForm.priority}
+                      onChange={(e) => setAisoForm(p => ({ ...p, priority: e.target.value }))}
+                      className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+                    >
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Times Cited</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={aisoForm.times_cited}
+                      onChange={(e) => setAisoForm(p => ({ ...p, times_cited: parseInt(e.target.value) || 1 }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Contact Name</label>
+                    <Input
+                      placeholder="Author or editor name"
+                      value={aisoForm.contact_name}
+                      onChange={(e) => setAisoForm(p => ({ ...p, contact_name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Contact Email</label>
+                    <Input
+                      placeholder="editor@site.com"
+                      value={aisoForm.contact_email}
+                      onChange={(e) => setAisoForm(p => ({ ...p, contact_email: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
+                  <Textarea
+                    placeholder="Write for us page URL, pitch angle, etc."
+                    value={aisoForm.notes}
+                    onChange={(e) => setAisoForm(p => ({ ...p, notes: e.target.value }))}
+                    className="h-16"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={addAisoTarget} className="bg-amber-600 hover:bg-amber-700 text-white">
+                    Add Target
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowAddAiso(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Stats Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+              {[
+                { label: "Total", count: aisoTargets.length, color: "text-foreground" },
+                { label: "New", count: aisoTargets.filter(t => t.outreach_status === "new").length, color: "text-blue-600" },
+                { label: "Contacted", count: aisoTargets.filter(t => t.outreach_status === "contacted").length, color: "text-amber-600" },
+                { label: "In Progress", count: aisoTargets.filter(t => t.outreach_status === "in_progress").length, color: "text-purple-600" },
+                { label: "Published", count: aisoTargets.filter(t => t.outreach_status === "published").length, color: "text-green-600" },
+              ].map((s, i) => (
+                <div key={i} className="bg-muted/30 rounded-lg border border-border p-3 text-center">
+                  <p className={`text-xl font-bold ${s.color}`}>{s.count}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Targets List */}
+            {aisoLoading ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Loading targets...
+              </div>
+            ) : aisoTargets.length === 0 ? (
+              <div className="text-center py-8">
+                <Globe className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">No AISO targets yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Search AI platforms for your keywords and add the sites they cite
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {aisoTargets.map((target) => {
+                  const priorityColors: Record<string, string> = {
+                    high: "bg-red-100 text-red-700",
+                    medium: "bg-amber-100 text-amber-700",
+                    low: "bg-gray-100 text-gray-600",
+                  };
+                  const statusColors: Record<string, string> = {
+                    new: "bg-blue-100 text-blue-700",
+                    contacted: "bg-amber-100 text-amber-700",
+                    in_progress: "bg-purple-100 text-purple-700",
+                    published: "bg-green-100 text-green-700",
+                    rejected: "bg-red-100 text-red-700",
+                  };
+                  return (
+                    <div key={target.id} className="bg-muted/30 rounded-xl border border-border p-4 hover:border-accent/30 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground">{target.site_name}</p>
+                            {target.times_cited > 1 && (
+                              <span className="text-[10px] font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded">
+                                Cited {target.times_cited}x
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${priorityColors[target.priority] || "bg-gray-100 text-gray-600"}`}>
+                              {target.priority}
+                            </span>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[target.outreach_status] || "bg-gray-100 text-gray-600"}`}>
+                              {target.outreach_status.replace("_", " ")}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm text-muted-foreground">
+                            {target.site_url && (
+                              <a href={target.site_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-foreground">
+                                <Globe className="h-3 w-3" />
+                                {target.site_url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
+                              </a>
+                            )}
+                            {target.citation_query && (
+                              <span className="flex items-center gap-1">
+                                <Search className="h-3 w-3" />
+                                "{target.citation_query}"
+                              </span>
+                            )}
+                            {target.ai_platform && (
+                              <span className="flex items-center gap-1 capitalize">
+                                <MessageSquare className="h-3 w-3" />
+                                {target.ai_platform}
+                              </span>
+                            )}
+                            {target.contact_email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {target.contact_email}
+                              </span>
+                            )}
+                            {target.outreach_type && (
+                              <span className="flex items-center gap-1 capitalize">
+                                <Send className="h-3 w-3" />
+                                {target.outreach_type.replace("_", " ")}
+                              </span>
+                            )}
+                          </div>
+                          {target.notes && (
+                            <p className="mt-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                              {target.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {target.outreach_status === "new" && (
+                            <Button size="sm" variant="outline" onClick={() => updateAisoStatus(target.id, "contacted")} className="text-xs h-8">
+                              Contacted
+                            </Button>
+                          )}
+                          {target.outreach_status === "contacted" && (
+                            <Button size="sm" variant="outline" onClick={() => updateAisoStatus(target.id, "in_progress")} className="text-xs h-8">
+                              In Progress
+                            </Button>
+                          )}
+                          {target.outreach_status === "in_progress" && (
+                            <Button size="sm" className="text-xs h-8 bg-green-600 hover:bg-green-700 text-white" onClick={() => updateAisoStatus(target.id, "published")}>
+                              Published
+                            </Button>
+                          )}
+                          {target.article_url && (
+                            <a
+                              href={target.article_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                              title="View article"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => deleteAisoTarget(target.id)}
+                            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
