@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       voiceoverScript,
       voiceoverVoice,
       includeEditedPhotos,
+      includeUnbranded,
       totalPrice,
       specialInstructions,
     } = body
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
         voiceover_script: voiceoverScript || null,
         voiceover_voice: voiceoverVoice || null,
         include_edited_photos: includeEditedPhotos || false,
+        include_unbranded: includeUnbranded || false,
         include_address_on_card: body.includeAddressOnCard ?? true,
         total_price: totalPrice || 0,
         special_instructions: specialInstructions || null,
@@ -124,7 +126,7 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("[Orders] Created order:", orderId, userId ? `(user: ${userId.slice(0, 8)})` : "(no user)")
+    console.log("[Orders] Created order:", orderId, userId ? `(user: ${userId.slice(0, 8)})` : "(no user)", includeUnbranded ? "(+unbranded copy)" : "")
 
     return NextResponse.json({
       success: true,
