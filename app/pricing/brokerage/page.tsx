@@ -19,36 +19,53 @@ import {
   ChevronUp,
   Star,
   Camera,
+  ArrowRight,
 } from "lucide-react";
 
 const TIERS = [
   {
+    name: "Standard",
+    volume: "10+ listings/mo",
+    perClip: 3.79,
+    highlight: false,
+    features: [
+      "768P video quality",
+      "Landscape or vertical",
+      "24-hour delivery",
+      "1 free revision per listing",
+      "Google Drive delivery",
+      "Email support",
+    ],
+  },
+  {
     name: "Growth",
-    volume: "Up to 24 videos/mo",
+    volume: "25+ listings/mo",
     perClip: 3.29,
     highlight: true,
     features: [
       "768P video quality",
       "Landscape or vertical",
       "24-hour delivery",
-      "1 free revision per video",
+      "1 free revision per listing",
       "Google Drive delivery",
       "Dedicated account support",
+      "Tier upgrades automatically",
     ],
   },
   {
     name: "Enterprise",
-    volume: "25+ videos/mo",
+    volume: "50+ listings/mo",
     perClip: 2.99,
     highlight: false,
     features: [
       "768P video quality",
       "Landscape or vertical",
       "Priority delivery",
-      "1 free revision per video",
+      "1 free revision per listing",
       "Google Drive delivery",
       "Dedicated account support",
       "Custom branding templates",
+      "Tier upgrades automatically",
     ],
   },
 ];
@@ -63,36 +80,46 @@ const ADDONS = [
 const FAQS = [
   {
     q: "How does billing work?",
-    a: "You're invoiced monthly based on actual usage. No upfront commitment — your per-clip rate is based on your monthly volume. Up to 24 videos per month is Growth rate ($3.29/clip), 25+ is Enterprise rate ($2.99/clip).",
+    a: "You're invoiced monthly based on actual usage. At the end of each month, we count your total listings — if you've hit a higher tier, the better rate applies retroactively to all clips that month. You always get the best rate you've earned.",
   },
   {
     q: "What counts as a clip?",
     a: "Each photo you upload becomes one video clip. A listing with 15 photos = 15 clips. The clips are assembled into a single cinematic walkthrough video with music, branding, and transitions.",
   },
   {
+    q: "How do tier upgrades work?",
+    a: "Your tier is based on total listings per month across all agents. Start at Standard (10+), and if your team hits 25 listings in a month, every clip that month is billed at the Growth rate. Hit 50 and you get Enterprise pricing on everything. A progress bar in your brokerage dashboard shows how close you are to the next tier.",
+  },
+  {
     q: "Can different agents in our brokerage use the account?",
     a: "Yes. We set up a single brokerage account and all orders from your agents count toward your monthly volume tier. Each agent can customize branding per listing.",
   },
   {
+    q: "How do revisions work?",
+    a: "The first revision on every listing is free. Additional revisions are available at a 10% discount off standard revision rates. Most revisions are completed within 24 hours.",
+  },
+  {
     q: "What if we need custom terms?",
-    a: "For 50+ videos per month or special requirements (white-label, API integration, custom branding), contact us directly and we'll build a custom plan.",
+    a: "For 100+ listings per month or special requirements (white-label, API integration, custom branding), contact us directly and we'll build a custom plan.",
   },
   {
     q: "Is there a minimum commitment?",
-    a: "No contracts and no minimums. Use it for one listing or one hundred. Your rate is simply based on how many videos you order that month.",
+    a: "The minimum is 10 listings per month to qualify for brokerage pricing. No long-term contracts — your rate is simply based on how many listings your team processes that month.",
   },
 ];
 
 function ROICalculator() {
-  const [listings, setListings] = useState(10);
+  const [listings, setListings] = useState(15);
   const [photosPerListing, setPhotosPerListing] = useState(15);
   const [avgSalePrice, setAvgSalePrice] = useState(450000);
 
   const totalClips = listings * photosPerListing;
   const tier =
-    listings >= 25
+    listings >= 50
       ? { name: "Enterprise", rate: 2.99 }
-      : { name: "Growth", rate: 3.29 };
+      : listings >= 25
+      ? { name: "Growth", rate: 3.29 }
+      : { name: "Standard", rate: 3.79 };
 
   const monthlyCost = totalClips * tier.rate;
   const retailCost = listings * 79;
@@ -100,6 +127,18 @@ function ROICalculator() {
   const savingsPercent = retailCost > 0 ? Math.round((savings / retailCost) * 100) : 0;
   const costPerListing = listings > 0 ? monthlyCost / listings : 0;
   const videoROI = avgSalePrice * 0.03;
+
+  // Next tier info
+  const nextTier =
+    listings < 25
+      ? { name: "Growth", threshold: 25, rate: 3.29 }
+      : listings < 50
+      ? { name: "Enterprise", threshold: 50, rate: 2.99 }
+      : null;
+
+  const nextTierSavings = nextTier
+    ? (tier.rate - nextTier.rate) * totalClips
+    : 0;
 
   return (
     <div className="bg-card rounded-2xl border border-border p-6 sm:p-8">
@@ -118,7 +157,7 @@ function ROICalculator() {
           <Input
             type="number"
             min={1}
-            max={200}
+            max={500}
             value={listings}
             onChange={(e) => setListings(Math.max(1, parseInt(e.target.value) || 1))}
           />
@@ -187,6 +226,18 @@ function ROICalculator() {
           </p>
         </div>
       </div>
+
+      {/* Next tier nudge */}
+      {nextTier && listings >= 10 && (
+        <div className="mt-4 bg-accent/5 border border-accent/20 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">{nextTier.threshold - listings} more listings</span> to unlock {nextTier.name} pricing at ${nextTier.rate}/clip
+          </p>
+          <p className="text-sm font-semibold text-accent">
+            Save ${nextTierSavings.toFixed(2)}/mo
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -237,7 +288,7 @@ export default function BrokeragePricingPage() {
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Give every agent in your brokerage cinematic listing videos at bulk rates.
-            Pay per clip, scale with your team, no contracts.
+            Pay per clip, scale with your team, no long-term contracts.
           </p>
         </div>
 
@@ -281,10 +332,14 @@ export default function BrokeragePricingPage() {
           <h2 className="text-2xl font-bold text-foreground text-center mb-2">
             Simple Per-Clip Pricing
           </h2>
-          <p className="text-muted-foreground text-center mb-8">
-            Each photo becomes one video clip. Pay only for what you use. Max 35 clips per video.
+          <p className="text-muted-foreground text-center mb-3">
+            Each photo becomes one video clip. Your rate is based on total listings per month across all agents.
           </p>
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <p className="text-sm text-center text-muted-foreground mb-8">
+            Hit a higher tier mid-month? The better rate applies retroactively to all clips that month.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {TIERS.map((tier, i) => (
               <div
                 key={i}
@@ -301,12 +356,15 @@ export default function BrokeragePricingPage() {
                 )}
                 <h3 className="text-xl font-bold text-foreground">{tier.name}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{tier.volume}</p>
-                <div className="mt-4 mb-6">
+                <div className="mt-4 mb-2">
                   <span className="text-4xl font-extrabold text-foreground">
                     ${tier.perClip.toFixed(2)}
                   </span>
                   <span className="text-muted-foreground ml-1">/clip</span>
                 </div>
+                <p className="text-xs text-muted-foreground mb-6">
+                  15 clips from ${(tier.perClip * 15).toFixed(2)} · 25 clips from ${(tier.perClip * 25).toFixed(2)}
+                </p>
                 <div className="space-y-2.5 flex-1">
                   {tier.features.map((f, j) => (
                     <div key={j} className="flex items-center gap-2.5">
@@ -334,15 +392,15 @@ export default function BrokeragePricingPage() {
           </div>
 
           {/* Custom tier */}
-          <div className="mt-6 bg-muted/50 rounded-2xl border border-border p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 bg-muted/50 rounded-2xl border border-border p-6 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl mx-auto">
             <div>
-              <h3 className="text-lg font-bold text-foreground">Custom Plan</h3>
+              <h3 className="text-lg font-bold text-foreground">Custom Plan — 100+ listings/mo</h3>
               <p className="text-muted-foreground text-sm">
-                50+ videos/month? Need white-label, API access, or custom branding? Let&apos;s talk.
+                Need white-label, API access, custom branding, or dedicated support? Let&apos;s build a custom plan.
               </p>
             </div>
             <Button asChild className="bg-primary hover:bg-primary/90 px-6 py-5 font-bold flex-shrink-0">
-              <a href="mailto:matt@realestatephoto2video.com?subject=Custom Brokerage Plan&body=Hi Matt, we're interested in a custom brokerage plan. Our brokerage is [company name] and we handle approximately [X] listings per month.">
+              <a href="mailto:matt@realestatephoto2video.com?subject=Custom Brokerage Plan&body=Hi Matt, we're interested in a custom brokerage plan for 100+ listings per month. Our brokerage is [company name] and we have approximately [X] agents.">
                 Contact Us
               </a>
             </Button>
@@ -382,12 +440,12 @@ export default function BrokeragePricingPage() {
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3 mb-5">
                   {[
-                    "AI Photo Coach — instant feedback on every shot",
+                    "AI Photo Coach — snap, analyze, perfect",
                     "Free photo editing on all video orders",
                     "Priority 12-hour video delivery",
-                    "10% off all Photo 2 Video orders",
+                    "Exclusive bulk video pricing included",
                     "AI Suggest — auto camera directions",
-                    "Coming soon: real-time guidance & virtual staging",
+                    "Coming soon: Marketing Design Studio, AI Listing Descriptions & Virtual Staging",
                   ].map((f, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-cyan-600 flex-shrink-0" />
@@ -476,24 +534,6 @@ export default function BrokeragePricingPage() {
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Social proof placeholder */}
-        <div className="mb-14">
-          <div className="bg-muted/30 rounded-2xl border border-border p-8 text-center">
-            <div className="flex justify-center gap-1 mb-3">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-5 w-5 text-amber-400 fill-amber-400" />
-              ))}
-            </div>
-            <blockquote className="text-lg text-foreground italic max-w-2xl mx-auto">
-              &ldquo;We rolled this out to our entire team of 30 agents. The videos practically sell themselves — 
-              and at a fraction of what we were paying our videographer.&rdquo;
-            </blockquote>
-            <p className="text-sm text-muted-foreground mt-3">
-              — Coming soon: real brokerage testimonials
-            </p>
           </div>
         </div>
 
