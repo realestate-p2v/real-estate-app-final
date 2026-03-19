@@ -66,6 +66,13 @@ const REALTOR_FEATURES = [
     status: "live",
     href: "/dashboard/referral-earnings",
   },
+  {
+    icon: Sparkles,
+    title: "P2V Lens",
+    description: "AI photography coaching, free photo editing, priority delivery, and 10% off all video orders.",
+    status: "live",
+    href: "/dashboard/lens",
+  },
 ];
 
 const PHOTOGRAPHER_FEATURES_NO_LISTING = [
