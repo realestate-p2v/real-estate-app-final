@@ -113,8 +113,8 @@ function TierProgressBar({ listings, clips }: { listings: number; clips: number 
   const earned = getEarnedTier(listings);
   const next = getNextTier(listings);
   const pct = Math.min((listings / 100) * 100, 100);
-  const earnedRate = earned?.rate || 3.79;
-  const monthlyEst = clips * earnedRate;
+  const hasEarnedTier = earned !== null;
+  const earnedRate = earned?.rate || null;
 
   return (
     <div className="bg-card rounded-2xl border border-border p-6 sm:p-8">
@@ -139,7 +139,7 @@ function TierProgressBar({ listings, clips }: { listings: number; clips: number 
           </span>
         ) : (
           <span className="text-sm text-muted-foreground px-3 py-1.5 bg-muted rounded-full">
-            Need 10+ listings for Standard
+            Individual pricing · 10+ for brokerage rates
           </span>
         )}
       </div>
@@ -180,24 +180,51 @@ function TierProgressBar({ listings, clips }: { listings: number; clips: number 
       <div className="grid grid-cols-3 gap-3 mt-5">
         <div className="bg-muted/50 rounded-xl p-4 text-center">
           <p className="text-xs text-muted-foreground">Current rate</p>
-          <p className="text-2xl font-extrabold text-foreground">${earnedRate.toFixed(2)}</p>
-          <p className="text-[10px] text-muted-foreground">per clip</p>
+          {hasEarnedTier && earnedRate ? (
+            <>
+              <p className="text-2xl font-extrabold text-foreground">${earnedRate.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">per clip</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-extrabold text-foreground mt-1">Individual</p>
+              <p className="text-[10px] text-muted-foreground">pricing</p>
+            </>
+          )}
         </div>
         <div className="bg-muted/50 rounded-xl p-4 text-center">
           <p className="text-xs text-muted-foreground">Est. monthly cost</p>
-          <p className="text-2xl font-extrabold text-foreground">
-            ${monthlyEst.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-          <p className="text-[10px] text-muted-foreground">{clips} clips × ${earnedRate.toFixed(2)}</p>
+          {hasEarnedTier && earnedRate ? (
+            <>
+              <p className="text-2xl font-extrabold text-foreground">
+                ${(clips * earnedRate).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{clips} clips × ${earnedRate.toFixed(2)}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-extrabold text-foreground mt-1">Standard rates</p>
+              <p className="text-[10px] text-muted-foreground">until 10+ listings</p>
+            </>
+          )}
         </div>
-        <div className="bg-green-50 rounded-xl p-4 text-center">
-          <p className="text-xs text-green-700">Savings vs retail</p>
-          <p className="text-2xl font-extrabold text-green-700">
-            {listings > 0 ? `${Math.round(((listings * 79 - monthlyEst) / (listings * 79)) * 100)}%` : "—"}
-          </p>
-          <p className="text-[10px] text-green-600">
-            {listings > 0 ? `$${(listings * 79 - monthlyEst).toFixed(2)} saved` : ""}
-          </p>
+        <div className="bg-muted/50 rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground">Savings vs retail</p>
+          {hasEarnedTier && earnedRate && listings > 0 ? (
+            <>
+              <p className="text-2xl font-extrabold text-green-700">
+                {Math.round(((listings * 79 - clips * earnedRate) / (listings * 79)) * 100)}%
+              </p>
+              <p className="text-[10px] text-green-600">
+                ${(listings * 79 - clips * earnedRate).toFixed(2)} saved
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-extrabold text-foreground mt-1">—</p>
+              <p className="text-[10px] text-muted-foreground">unlock at 10+</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -211,11 +238,6 @@ function TierProgressBar({ listings, clips }: { listings: number; clips: number 
               {next.rate && <span> at ${next.rate}/clip</span>}
             </p>
           </div>
-          {next.rate && earned?.rate && (
-            <p className="text-sm font-bold text-accent">
-              Save ${(clips * (earned.rate - next.rate)).toFixed(2)}/mo
-            </p>
-          )}
         </div>
       )}
 
