@@ -133,8 +133,8 @@ export default function LensPage() {
     },
     {
       step: "2",
-      title: "Get AI Feedback",
-      description: "Upload it and get instant, specific coaching — \"Too dark, open the blinds and retake from the doorway.\"",
+      title: "Hit Analyze",
+      description: "Think a photo looks good? Upload it and tap Analyze. AI spots what your eye missed — \"Too dark, open the blinds and reshoot from the doorway.\"",
       icon: <MessageSquare className="h-8 w-8" />,
     },
     {
