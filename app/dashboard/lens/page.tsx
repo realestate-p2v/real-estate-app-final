@@ -20,6 +20,7 @@ import {
   Lock,
   Crown,
   BarChart3,
+  DollarSign,
 } from "lucide-react";
 
 interface LensSubscription {
@@ -62,6 +63,14 @@ export default function DashboardLensPage() {
       icon: Sparkles,
       title: "AI Suggest",
       description: "When ordering a video, AI auto-fills optimal camera directions for each photo based on room type and composition. Skip the guesswork.",
+      status: "live" as const,
+      actionLabel: "Order a Video",
+      actionHref: "/order",
+    },
+     {
+      icon: DollarSign,
+      title: "10% Off Video Orders",
+      description: "P2V Lens subscribers save 10% on every Photo 2 Video order, automatically applied at checkout. Stacks with brokerage pricing.",
       status: "live" as const,
       actionLabel: "Order a Video",
       actionHref: "/order",
