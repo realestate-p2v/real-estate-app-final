@@ -11,7 +11,6 @@ import {
   Sparkles,
   Zap,
   Clock,
-  Eye,
   Sofa,
   CheckCircle,
   ArrowRight,
@@ -69,7 +68,7 @@ export default function LensPage() {
     {
       icon: <Camera className="h-6 w-6" />,
       title: "AI Photo Coach",
-      description: "Upload a listing photo and get instant feedback on lighting, angles, composition, and staging issues. Use it during your shoot — take, analyze, reshoot, perfect.",
+      description: "Snap a listing photo and hit Analyze. AI tells you exactly what to fix — \"Turn on the overhead lights, move two feet left, and reshoot from chest height.\" Fix it on the spot, re-analyze, and leave every room with a perfect shot.",
       color: "bg-blue-500/10 text-blue-600",
       status: "live" as const,
     },
@@ -106,13 +105,6 @@ export default function LensPage() {
       title: "AI Listing Description Writer",
       description: "AI analyzes your approved listing photos, notes room details and finishes, then combines them with your property data to write a polished, MLS-ready listing description. Multiple styles available.",
       color: "bg-teal-500/10 text-teal-600",
-      status: "coming" as const,
-    },
-    {
-      icon: <Eye className="h-6 w-6" />,
-      title: "Real-Time Camera Guidance",
-      description: "Point your phone camera at a room and get live on-screen feedback — \"Move left\", \"Turn on those lights\", \"Shoot from the corner.\"",
-      color: "bg-pink-500/10 text-pink-600",
       status: "coming" as const,
     },
     {
@@ -167,8 +159,8 @@ export default function LensPage() {
       a: "Brokerage plans are $19.95 per agent per month with a minimum of 10 agents. Each agent gets their own login and 200 analyses per month. Seats are tied to email addresses to prevent sharing. Contact us to set up your brokerage account.",
     },
     {
-      q: "When are Real-Time Guidance and Virtual Staging launching?",
-      a: "Both features are in active development. Real-Time Camera Guidance (live on-screen coaching while you shoot) is expected in Q2 2026. Virtual Staging (AI-furnished empty rooms) is expected in Q3 2026. P2V Lens subscribers will get access to both at no additional cost.",
+      q: "When are the other features launching?",
+      a: "Marketing Design Studio, AI Listing Description Writer, and Virtual Staging are all in active development and expected to roll out through 2026. P2V Lens subscribers will get access to each at no additional cost as they launch.",
     },
   ];
 
@@ -277,7 +269,7 @@ export default function LensPage() {
               Everything You Need to Shoot Like a Pro
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Four powerful features available now, plus four game-changers coming soon — all included in your subscription.
+              Four powerful features available now, plus three game-changers coming soon — all included in your subscription.
             </p>
           </div>
 
