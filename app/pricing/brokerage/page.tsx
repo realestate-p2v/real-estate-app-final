@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   Star,
+  Camera,
 } from "lucide-react";
 
 const TIERS = [
@@ -337,7 +338,7 @@ export default function BrokeragePricingPage() {
             <div>
               <h3 className="text-lg font-bold text-foreground">Custom Plan</h3>
               <p className="text-muted-foreground text-sm">
-                50+ videos/month? Need white-label, API access, or custom branding? Let's talk.
+                50+ videos/month? Need white-label, API access, or custom branding? Let&apos;s talk.
               </p>
             </div>
             <Button asChild className="bg-primary hover:bg-primary/90 px-6 py-5 font-bold flex-shrink-0">
@@ -361,6 +362,58 @@ export default function BrokeragePricingPage() {
                 <span className="text-sm font-bold text-primary">{a.price}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* P2V Lens for Brokerages */}
+        <div className="mb-14">
+          <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl border border-cyan-200 p-6 sm:p-8">
+            <div className="flex items-start gap-4 flex-wrap">
+              <div className="h-12 w-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                <Camera className="h-6 w-6 text-cyan-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-bold text-foreground">P2V Lens for Your Team</h2>
+                  <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">NEW</span>
+                </div>
+                <p className="text-muted-foreground mb-4">
+                  Equip every agent with AI photography coaching. Better photos in = better videos out.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3 mb-5">
+                  {[
+                    "AI Photo Coach — instant feedback on every shot",
+                    "Free photo editing on all video orders",
+                    "Priority 12-hour video delivery",
+                    "10% off all Photo 2 Video orders",
+                    "AI Suggest — auto camera directions",
+                    "Coming soon: real-time guidance & virtual staging",
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-cyan-600 flex-shrink-0" />
+                      <span className="text-sm text-foreground">{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-3xl font-extrabold text-foreground">$19.95</span>
+                  <span className="text-muted-foreground">/agent/month</span>
+                  <span className="text-sm text-muted-foreground ml-2">(min 10 agents)</span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black">
+                    <Link href="/lens">
+                      Learn More
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <a href="mailto:matt@realestatephoto2video.com?subject=P2V Lens Brokerage Inquiry&body=Hi Matt, I'm interested in P2V Lens for our brokerage. We have approximately [X] agents.">
+                      Contact for Brokerage Setup
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -435,8 +488,8 @@ export default function BrokeragePricingPage() {
               ))}
             </div>
             <blockquote className="text-lg text-foreground italic max-w-2xl mx-auto">
-              "We rolled this out to our entire team of 30 agents. The videos practically sell themselves — 
-              and at a fraction of what we were paying our videographer."
+              &ldquo;We rolled this out to our entire team of 30 agents. The videos practically sell themselves — 
+              and at a fraction of what we were paying our videographer.&rdquo;
             </blockquote>
             <p className="text-sm text-muted-foreground mt-3">
               — Coming soon: real brokerage testimonials
@@ -458,7 +511,7 @@ export default function BrokeragePricingPage() {
             Ready to Equip Your Brokerage?
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Email us with your brokerage name and team size. We'll set up your account 
+            Email us with your brokerage name and team size. We&apos;ll set up your account 
             and have your first video ready within 24 hours.
           </p>
           <Button
