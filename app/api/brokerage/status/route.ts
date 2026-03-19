@@ -10,7 +10,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (!user?.email) {
-      return NextResponse.json({ isBrokerage: false });
+      return NextResponse.json({ isBrokerage: false, success: false });
     }
 
     const adminSupabase = createAdminClient();
@@ -23,7 +23,7 @@ export async function GET() {
       .single();
 
     if (memberErr || !member) {
-      return NextResponse.json({ isBrokerage: false });
+      return NextResponse.json({ isBrokerage: false, success: false });
     }
 
     // Step 2: Get the brokerage
@@ -35,21 +35,39 @@ export async function GET() {
       .single();
 
     if (brokerageErr || !brokerage) {
-      return NextResponse.json({ isBrokerage: false });
+      return NextResponse.json({ isBrokerage: false, success: false });
     }
+
+    // Step 3: Get member count for this brokerage
+    const { count: memberCount } = await adminSupabase
+      .from("brokerage_members")
+      .select("id", { count: "exact", head: true })
+      .eq("brokerage_id", brokerage.id);
+
+    // Step 4: Get all orders for this brokerage
+    const { data: orders } = await adminSupabase
+      .from("orders")
+      .select("id, order_id, status, property_address, customer_email, photos, created_at, delivery_url")
+      .eq("brokerage_id", brokerage.id)
+      .order("created_at", { ascending: false });
 
     return NextResponse.json({
       isBrokerage: true,
+      success: true,
       brokerage: {
         id: brokerage.id,
         company: brokerage.company,
         tier: brokerage.tier,
+        per_clip_rate: brokerage.per_clip_rate,
         perClipRate: brokerage.per_clip_rate,
+        status: brokerage.status,
       },
       role: member.role,
+      orders: orders || [],
+      memberCount: memberCount || 0,
     });
   } catch (error) {
     console.error("Brokerage status error:", error);
-    return NextResponse.json({ isBrokerage: false });
+    return NextResponse.json({ isBrokerage: false, success: false });
   }
 }
