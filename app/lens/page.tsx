@@ -430,6 +430,7 @@ export default function LensPage() {
                   "Free photo editing on all video orders",
                   "AI Suggest camera directions",
                   "Priority 12-hour video delivery",
+                  "10% off all Photo 2 Video orders",
                   "Early access to new features",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
@@ -471,6 +472,7 @@ export default function LensPage() {
                   "Centralized brokerage dashboard",
                   "Bulk video pricing (from $2.99/clip)",
                   "Branded videos for every agent",
+                  "10% off all Photo 2 Video orders",
                   "Dedicated account support",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
