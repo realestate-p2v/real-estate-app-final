@@ -128,7 +128,7 @@ function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]
               {earned.name}{earned.rate ? ` $${earned.rate}/clip` : ""}
             </span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">Need 10+ for Standard</span>
+            <span className="text-[10px] text-muted-foreground">Individual pricing · need 10+ for brokerage rates</span>
           )}
         </div>
         <div className="relative h-2 bg-muted rounded-full overflow-visible">
@@ -156,8 +156,8 @@ function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]
         </div>
         {next && listings >= 1 && (
           <p className="text-[10px] text-muted-foreground mt-1">
-            <span className="font-semibold text-foreground">{next.min - listings}</span> more to {next.name}
-            {next.rate && <span> (${next.rate}/clip — save ${((earned?.rate || 3.79) - next.rate).toFixed(2)}/clip)</span>}
+            <span className="font-semibold text-foreground">{next.min - listings}</span> more to unlock {next.name}
+            {next.rate && <span> at ${next.rate}/clip</span>}
           </p>
         )}
       </div>
@@ -165,8 +165,8 @@ function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]
   }
 
   // Full-size version
-  const earnedRate = earned?.rate || 3.79;
-  const monthlyEst = clips * earnedRate;
+  const hasEarnedTier = earned !== null;
+  const earnedRate = earned?.rate || null;
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
@@ -191,7 +191,7 @@ function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]
           </span>
         ) : (
           <span className="text-xs text-muted-foreground px-2.5 py-1 bg-muted rounded-full">
-            Below Standard (need 10+)
+            Individual pricing · need 10+ for brokerage rates
           </span>
         )}
       </div>
@@ -226,22 +226,49 @@ function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]
       <div className="grid grid-cols-3 gap-3 mt-4">
         <div className="bg-muted/50 rounded-lg p-3 text-center">
           <p className="text-xs text-muted-foreground">Current rate</p>
-          <p className="text-lg font-bold text-foreground">${earnedRate.toFixed(2)}</p>
-          <p className="text-[10px] text-muted-foreground">per clip</p>
+          {hasEarnedTier && earnedRate ? (
+            <>
+              <p className="text-lg font-bold text-foreground">${earnedRate.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">per clip</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold text-foreground mt-1">Individual</p>
+              <p className="text-[10px] text-muted-foreground">pricing</p>
+            </>
+          )}
         </div>
         <div className="bg-muted/50 rounded-lg p-3 text-center">
           <p className="text-xs text-muted-foreground">Est. monthly</p>
-          <p className="text-lg font-bold text-foreground">${monthlyEst.toFixed(2)}</p>
-          <p className="text-[10px] text-muted-foreground">{clips} clips × ${earnedRate.toFixed(2)}</p>
+          {hasEarnedTier && earnedRate ? (
+            <>
+              <p className="text-lg font-bold text-foreground">${(clips * earnedRate).toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">{clips} clips × ${earnedRate.toFixed(2)}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold text-foreground mt-1">Standard rates</p>
+              <p className="text-[10px] text-muted-foreground">until 10+ listings</p>
+            </>
+          )}
         </div>
         <div className="bg-muted/50 rounded-lg p-3 text-center">
           <p className="text-xs text-muted-foreground">vs retail</p>
-          <p className="text-lg font-bold text-green-600">
-            {listings > 0 ? `${Math.round(((listings * 79 - monthlyEst) / (listings * 79)) * 100)}% off` : "—"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {listings > 0 ? `saving $${(listings * 79 - monthlyEst).toFixed(2)}` : ""}
-          </p>
+          {hasEarnedTier && earnedRate && listings > 0 ? (
+            <>
+              <p className="text-lg font-bold text-green-600">
+                {Math.round(((listings * 79 - clips * earnedRate) / (listings * 79)) * 100)}% off
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                saving ${(listings * 79 - clips * earnedRate).toFixed(2)}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold text-foreground mt-1">—</p>
+              <p className="text-[10px] text-muted-foreground">unlock at 10+</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -255,11 +282,6 @@ function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]
               {next.rate && <span> at ${next.rate}/clip</span>}
             </p>
           </div>
-          {next.rate && (
-            <p className="text-xs font-bold text-accent">
-              Save ${(clips * ((earned?.rate || 3.79) - next.rate)).toFixed(2)}/mo
-            </p>
-          )}
         </div>
       )}
     </div>
