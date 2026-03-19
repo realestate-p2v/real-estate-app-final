@@ -95,6 +95,20 @@ export default function LensPage() {
       status: "live" as const,
     },
     {
+      icon: <ImageIcon className="h-6 w-6" />,
+      title: "Marketing Design Studio",
+      description: "Premade templates for Just Listed, Just Sold, Open House, Price Reduced, Market Reports, and more. Upload your headshot + home photo — AI assembles a polished, print-ready flyer in seconds.",
+      color: "bg-orange-500/10 text-orange-600",
+      status: "coming" as const,
+    },
+    {
+      icon: <MessageSquare className="h-6 w-6" />,
+      title: "AI Listing Description Writer",
+      description: "AI analyzes your approved listing photos, notes room details and finishes, then combines them with your property data to write a polished, MLS-ready listing description. Multiple styles available.",
+      color: "bg-teal-500/10 text-teal-600",
+      status: "coming" as const,
+    },
+    {
       icon: <Eye className="h-6 w-6" />,
       title: "Real-Time Camera Guidance",
       description: "Point your phone camera at a room and get live on-screen feedback — \"Move left\", \"Turn on those lights\", \"Shoot from the corner.\"",
@@ -263,7 +277,7 @@ export default function LensPage() {
               Everything You Need to Shoot Like a Pro
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Four powerful features available now, plus two game-changers coming soon — all included in your subscription.
+              Four powerful features available now, plus four game-changers coming soon — all included in your subscription.
             </p>
           </div>
 
@@ -470,9 +484,8 @@ export default function LensPage() {
                   "Everything in Individual",
                   "200 analyses per agent / month",
                   "Centralized brokerage dashboard",
-                  "Bulk video pricing (from $2.99/clip)",
+                  "Exclusive bulk video pricing (from $2.99/clip)",
                   "Branded videos for every agent",
-                  "10% off all Photo 2 Video orders",
                   "Dedicated account support",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
