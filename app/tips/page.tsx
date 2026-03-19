@@ -100,7 +100,7 @@ export default function TipsPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Follow Banner */}
         <div className="bg-gradient-to-r from-accent/10 to-primary/10 rounded-2xl border border-accent/20 p-6 mb-12 text-center">
@@ -158,7 +158,7 @@ export default function TipsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {videos.map((video) => {
               const fileId = getFileIdFromUrl(video.drive_url);
               const isPlaying = playingVideo === video.id;
@@ -171,10 +171,10 @@ export default function TipsPage() {
               return (
                 <div
                   key={video.id}
-                  className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-lg transition-shadow"
+                  className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-lg transition-shadow max-w-[320px] mx-auto w-full"
                 >
                   {/* Video Preview / Player */}
-                  <div className="aspect-[9/16] bg-black relative">
+                  <div className="aspect-[9/14] bg-black relative">
                     {isPlaying && fileId ? (
                       <iframe
                         src={`https://drive.google.com/file/d/${fileId}/preview`}
@@ -200,8 +200,8 @@ export default function TipsPage() {
                         )}
                         {/* Play button overlay */}
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
-                          <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Play className="h-7 w-7 text-white ml-1" />
+                          <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Play className="h-6 w-6 text-white ml-1" />
                           </div>
                         </div>
                       </button>
@@ -210,13 +210,13 @@ export default function TipsPage() {
 
                   {/* Card Footer — Title, Hook, Meta */}
                   <div className="p-4">
-                    <h3 className="font-bold text-foreground leading-snug mb-1">{video.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3">{video.hook}</p>
-                    <p className="text-xs text-muted-foreground mb-3">{formatDate(video.created_at)}</p>
+                    <h3 className="font-bold text-foreground leading-snug mb-1 text-sm">{video.title}</h3>
+                    <p className="text-xs text-muted-foreground mb-2">{video.hook}</p>
+                    <p className="text-[10px] text-muted-foreground mb-2">{formatDate(video.created_at)}</p>
 
                     {/* Platform Links */}
                     {platformLinks.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex flex-wrap gap-1.5 mb-2">
                         {platformLinks.map(({ key, url }) => {
                           const social = SOCIALS.find(s => s.key === key);
                           const Icon = social?.icon || Globe;
@@ -226,7 +226,7 @@ export default function TipsPage() {
                               href={url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-muted text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
                             >
                               <Icon className="h-3 w-3" />
                               {social?.label || key}
@@ -242,7 +242,7 @@ export default function TipsPage() {
                         href={video.drive_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                        className="text-[10px] text-primary hover:underline flex items-center gap-1"
                       >
                         <ExternalLink className="h-3 w-3" />
                         Watch full video
