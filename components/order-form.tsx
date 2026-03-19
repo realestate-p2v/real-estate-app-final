@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft, Building2 } from "lucide-react";
+import { ArrowRight, Upload, Link, User, Mail, Phone, Loader2, ChevronLeft } from "lucide-react";
 import { useOrderDraft } from "@/hooks/use-order-draft";
 import { DraftSaveBar } from "@/components/draft-save-bar";
 
@@ -50,6 +50,7 @@ export function OrderForm() {
   const [voiceoverScript, setVoiceoverScript] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("");
   const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
+  const [includeUnbranded, setIncludeUnbranded] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
   const [photoPermission, setPhotoPermission] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,28 +61,6 @@ export function OrderForm() {
     phone: "",
     notes: "",
   });
-
-  const [brokerageInfo, setBrokerageInfo] = useState<{
-    isBrokerage: boolean;
-    brokerage?: { id: string; company: string; tier: string; perClipRate: number };
-  }>({ isBrokerage: false });
-
-  useEffect(() => {
-    const checkBrokerage = async () => {
-      try {
-        const res = await fetch("/api/brokerage/status");
-        const data = await res.json();
-        if (data.isBrokerage) setBrokerageInfo(data);
-      } catch {}
-    };
-    checkBrokerage();
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("ref");
-    if (ref) setRefCode(ref);
-  }, []);
 
   const [propertyAddress, setPropertyAddress] = useState("");
   const [propertyCity, setPropertyCity] = useState("");
@@ -309,10 +288,10 @@ export function OrderForm() {
           voiceoverScript,
           voiceoverVoice: selectedVoice,
           includeEditedPhotos,
+          includeUnbranded: brandingSelection !== "unbranded" && includeUnbranded,
           includeAddressOnCard,
           totalPrice: getTotalPrice(),
           specialInstructions: formData.notes,
-          referral_code: refCode,
         }),
       });
 
@@ -321,32 +300,26 @@ export function OrderForm() {
 
       const createdOrderId = dbResult.data.orderId;
 
-      const checkoutBody: any = {
-        items: [
-          {
-            name: isUrlMode && listingPackage
-              ? `${listingPackage.label} — Listing URL Order`
-              : `${photoCount} Photo Video Package`,
-            amount: getTotalPrice() * 100,
-          },
-        ],
-        customerDetails: formData,
-        orderData: {
-          orderId: createdOrderId,
-          photoCount: isUrlMode && listingPackage ? listingPackage.photoCount : photoCount,
-        },
-      };
-
-      // Brokerage bypass — skip Stripe
-      if (brokerageInfo.isBrokerage && brokerageInfo.brokerage) {
-        checkoutBody.brokerageId = brokerageInfo.brokerage.id;
-      }
-
       const checkoutResponse = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(checkoutBody),
+        body: JSON.stringify({
+          items: [
+            {
+              name: isUrlMode && listingPackage
+                ? `${listingPackage.label} — Listing URL Order`
+                : `${photoCount} Photo Video Package`,
+              amount: getTotalPrice() * 100,
+            },
+          ],
+          customerDetails: formData,
+          orderData: {
+            orderId: createdOrderId,
+            photoCount: isUrlMode && listingPackage ? listingPackage.photoCount : photoCount,
+          },
+        }),
       });
+
       const session = await checkoutResponse.json();
       if (!checkoutResponse.ok || !session.url) {
         throw new Error(session.error || "Checkout failed");
@@ -361,8 +334,6 @@ export function OrderForm() {
       setIsSubmitting(false);
     }
   };
-
-  const [refCode, setRefCode] = useState<string | null>(null);
 
   const handleModeSwitch = (mode: PhotoInputMode) => {
     setPhotoInputMode(mode);
@@ -405,7 +376,7 @@ export function OrderForm() {
                 <div id="order-form" className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
                   1
                 </div>
-                <h2 className="text-xl font-bold">Submit Photos</h2>
+                <h2 className="text-xl font-bold">Start by Uploading Your Photos</h2>
               </div>
 
               {/* Mode Toggle Buttons */}
@@ -420,7 +391,7 @@ export function OrderForm() {
                   }`}
                 >
                   <Upload className="h-4 w-4" />
-                  Use My Photos
+                  Upload My Photos
                 </button>
                 <button
                   type="button"
@@ -686,6 +657,24 @@ export function OrderForm() {
                     includeAddressOnCard={includeAddressOnCard}
                     onIncludeAddressChange={setIncludeAddressOnCard}
                   />
+                  {brandingSelection !== "unbranded" && (
+                    <div className="mt-4 flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
+                      <Checkbox
+                        id="include-unbranded"
+                        checked={includeUnbranded}
+                        onCheckedChange={(checked) => setIncludeUnbranded(checked === true)}
+                        className="h-5 w-5 mt-0.5"
+                      />
+                      <div>
+                        <label htmlFor="include-unbranded" className="text-sm font-semibold text-foreground cursor-pointer">
+                          Deliver both branded and unbranded copies
+                        </label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Get two versions — branded with intro/outro cards for social media, unbranded for MLS and websites.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="border-t pt-6">
                   <VoiceoverSelector
@@ -731,17 +720,6 @@ export function OrderForm() {
               <ChevronLeft className="mr-2 h-4 w-4" /> Back to Customization
             </Button>
             <h2 className="text-2xl font-bold">Your Details</h2>
-            {brokerageInfo.isBrokerage && brokerageInfo.brokerage && (
-              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <Building2 className="h-4 w-4 text-green-700" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-green-800">{brokerageInfo.brokerage.company} — Brokerage Account</p>
-                  <p className="text-xs text-green-600">No payment required. Order will be invoiced to your brokerage.</p>
-                </div>
-              </div>
-            )}
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>
@@ -791,7 +769,7 @@ export function OrderForm() {
               {isSubmitting ? (
                 <><Loader2 className="mr-2 animate-spin" /> Processing Order...</>
               ) : (
-                <>{brokerageInfo.isBrokerage ? "Submit Brokerage Order" : "Pay & Complete Order"} <ArrowRight className="ml-2 h-5 w-5" /></>
+                <>Pay & Complete Order <ArrowRight className="ml-2 h-5 w-5" /></>
               )}
             </Button>
           </div>
