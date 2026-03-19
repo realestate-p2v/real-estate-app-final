@@ -20,6 +20,7 @@ import {
   DollarSign,
   UserPlus,
   Edit,
+  Building2,
   Image as ImageIcon,
 } from "lucide-react";
 
@@ -69,9 +70,16 @@ const REALTOR_FEATURES = [
   {
     icon: Sparkles,
     title: "P2V Lens",
-    description: "AI photography coaching, free photo editing, priority delivery, and 10% off all video orders.",
+    description: "AI photography coaching, free photo editing, and priority 12-hour delivery on every order.",
     status: "live",
     href: "/dashboard/lens",
+  },
+  {
+    icon: Building2,
+    title: "Brokerage Dashboard",
+    description: "View your team's tier progress, monthly usage, per-clip rate, and recent orders.",
+    status: "live",
+    href: "/dashboard/brokerage",
   },
 ];
 
