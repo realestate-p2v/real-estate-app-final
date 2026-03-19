@@ -12,6 +12,7 @@ import { Footer } from "@/components/footer";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { TrustSection } from "@/components/trust-section";
 import { FAQ } from "@/components/faq";
+import { BrokerageCTA } from "@/components/brokerage-cta";
 
 export default function HomePage() {
   return (
@@ -21,6 +22,7 @@ export default function HomePage() {
       <Testimonials />
       <DemoSection />
       <SaleBanner />
+      <BrokerageCTA />
        <ProcessSection />
       <TrustSection />
       <CTASection />
