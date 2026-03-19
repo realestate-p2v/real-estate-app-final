@@ -522,7 +522,7 @@ export default function LensPage() {
               Get Brokerage Pricing
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button asChild variant="outline" className="border-white/30 text-primary-foreground hover:bg-white/10 px-8 py-6 text-lg font-bold">
+            <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white px-8 py-6 text-lg font-bold">
               <Link href="/pricing/brokerage">
                 View Video Pricing
               </Link>
