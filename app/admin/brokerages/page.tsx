@@ -11,7 +11,12 @@ import {
   Building2, Plus, Trash2, Users, Video, Film, DollarSign,
   ChevronDown, ChevronUp, ExternalLink, ArrowLeft, Loader2,
   CheckCircle, XCircle, UserPlus, Receipt, ToggleLeft, ToggleRight,
+  TrendingUp, Zap,
 } from "lucide-react";
+
+/* ═══════════════════════════════════════════ */
+/* TYPES                                      */
+/* ═══════════════════════════════════════════ */
 
 interface BrokerageMember {
   id: string;
@@ -55,6 +60,216 @@ interface Brokerage {
   };
 }
 
+/* ═══════════════════════════════════════════ */
+/* TIER SYSTEM                                */
+/* ═══════════════════════════════════════════ */
+
+const TIERS = [
+  { key: "standard", name: "Standard", min: 10, rate: 3.79, color: "bg-blue-500", badge: "bg-blue-100 text-blue-700" },
+  { key: "growth", name: "Growth", min: 25, rate: 3.29, color: "bg-amber-500", badge: "bg-amber-100 text-amber-700" },
+  { key: "enterprise", name: "Enterprise", min: 50, rate: 2.99, color: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-700" },
+  { key: "custom", name: "Custom", min: 100, rate: null, color: "bg-purple-500", badge: "bg-purple-100 text-purple-700" },
+];
+
+function getEarnedTier(listingCount: number) {
+  for (let i = TIERS.length - 1; i >= 0; i--) {
+    if (listingCount >= TIERS[i].min) return TIERS[i];
+  }
+  return null;
+}
+
+function getNextTier(listingCount: number) {
+  for (const tier of TIERS) {
+    if (listingCount < tier.min) return tier;
+  }
+  return null;
+}
+
+function getMonthlyListings(orders: BrokerageOrder[]) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return orders.filter((o) => new Date(o.created_at) >= start && o.status !== "error").length;
+}
+
+function getMonthlyClips(orders: BrokerageOrder[]) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return orders
+    .filter((o) => new Date(o.created_at) >= start && o.status !== "error")
+    .reduce((sum, o) => sum + (o.photos?.length || 0), 0);
+}
+
+/* ═══════════════════════════════════════════ */
+/* TIER PROGRESS BAR                          */
+/* ═══════════════════════════════════════════ */
+
+function TierProgressBar({ orders, compact = false }: { orders: BrokerageOrder[]; compact?: boolean }) {
+  const listings = getMonthlyListings(orders);
+  const clips = getMonthlyClips(orders);
+  const earned = getEarnedTier(listings);
+  const next = getNextTier(listings);
+
+  // Bar fills to 100 listings max
+  const pct = Math.min((listings / 100) * 100, 100);
+
+  // Marker positions (percentage of 100-listing scale)
+  const markers = TIERS.map((t) => ({ ...t, pos: t.min }));
+
+  if (compact) {
+    return (
+      <div className="w-full mt-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-semibold text-foreground">
+            {listings} listing{listings !== 1 ? "s" : ""} this month
+            <span className="text-muted-foreground font-normal ml-1">({clips} clips)</span>
+          </span>
+          {earned ? (
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${earned.badge}`}>
+              {earned.name}{earned.rate ? ` $${earned.rate}/clip` : ""}
+            </span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">Need 10+ for Standard</span>
+          )}
+        </div>
+        <div className="relative h-2 bg-muted rounded-full overflow-visible">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${earned?.color || "bg-muted-foreground/20"}`}
+            style={{ width: `${pct}%` }}
+          />
+          {markers.map((m) => (
+            <div
+              key={m.key}
+              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3.5 bg-foreground/20 rounded-full"
+              style={{ left: `${m.pos}%` }}
+              title={`${m.name}: ${m.min}+ listings`}
+            />
+          ))}
+        </div>
+        <div className="flex justify-between mt-0.5">
+          <span className="text-[9px] text-muted-foreground">0</span>
+          <div className="flex gap-3">
+            {markers.slice(0, 3).map((m) => (
+              <span key={m.key} className="text-[9px] text-muted-foreground">{m.min}</span>
+            ))}
+          </div>
+          <span className="text-[9px] text-muted-foreground">100+</span>
+        </div>
+        {next && listings >= 1 && (
+          <p className="text-[10px] text-muted-foreground mt-1">
+            <span className="font-semibold text-foreground">{next.min - listings}</span> more to {next.name}
+            {next.rate && <span> (${next.rate}/clip — save ${((earned?.rate || 3.79) - next.rate).toFixed(2)}/clip)</span>}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Full-size version
+  const earnedRate = earned?.rate || 3.79;
+  const monthlyEst = clips * earnedRate;
+
+  return (
+    <div className="bg-card rounded-xl border border-border p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-accent" />
+          <h4 className="text-sm font-bold text-foreground">Monthly Tier Progress</h4>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {new Date().toLocaleString("en-US", { month: "long", year: "numeric" })}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <span className="text-3xl font-extrabold text-foreground">{listings}</span>
+          <span className="text-sm text-muted-foreground ml-2">listings · {clips} clips</span>
+        </div>
+        {earned ? (
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${earned.badge}`}>
+            {earned.name}{earned.rate ? ` — $${earned.rate}/clip` : ""}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground px-2.5 py-1 bg-muted rounded-full">
+            Below Standard (need 10+)
+          </span>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="relative h-5 bg-muted rounded-full overflow-visible">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${earned?.color || "bg-muted-foreground/20"}`}
+          style={{ width: `${pct}%` }}
+        />
+        {markers.map((m) => (
+          <div key={m.key} className="absolute top-0 h-full flex flex-col items-center" style={{ left: `${m.pos}%` }}>
+            <div className="w-0.5 h-full bg-background/60 rounded-full" />
+          </div>
+        ))}
+      </div>
+
+      {/* Tier labels under bar */}
+      <div className="relative h-5 mt-1">
+        {markers.map((m) => (
+          <span
+            key={m.key}
+            className="absolute text-[10px] text-muted-foreground -translate-x-1/2 whitespace-nowrap"
+            style={{ left: `${m.pos}%` }}
+          >
+            {m.min} · {m.name}
+          </span>
+        ))}
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground">Current rate</p>
+          <p className="text-lg font-bold text-foreground">${earnedRate.toFixed(2)}</p>
+          <p className="text-[10px] text-muted-foreground">per clip</p>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground">Est. monthly</p>
+          <p className="text-lg font-bold text-foreground">${monthlyEst.toFixed(2)}</p>
+          <p className="text-[10px] text-muted-foreground">{clips} clips × ${earnedRate.toFixed(2)}</p>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground">vs retail</p>
+          <p className="text-lg font-bold text-green-600">
+            {listings > 0 ? `${Math.round(((listings * 79 - monthlyEst) / (listings * 79)) * 100)}% off` : "—"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {listings > 0 ? `saving $${(listings * 79 - monthlyEst).toFixed(2)}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Next tier nudge */}
+      {next && listings >= 1 && (
+        <div className="mt-3 bg-accent/5 border border-accent/20 rounded-lg p-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-accent" />
+            <p className="text-xs text-foreground">
+              <span className="font-bold">{next.min - listings} more listing{next.min - listings !== 1 ? "s" : ""}</span> to unlock {next.name}
+              {next.rate && <span> at ${next.rate}/clip</span>}
+            </p>
+          </div>
+          {next.rate && (
+            <p className="text-xs font-bold text-accent">
+              Save ${(clips * ((earned?.rate || 3.79) - next.rate)).toFixed(2)}/mo
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════ */
+/* HELPERS                                    */
+/* ═══════════════════════════════════════════ */
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     active: "bg-green-100 text-green-700",
@@ -76,6 +291,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/* ═══════════════════════════════════════════ */
+/* ADD BROKERAGE FORM                         */
+/* ═══════════════════════════════════════════ */
+
 function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -84,8 +303,8 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
     contact_name: "",
     contact_email: "",
     contact_phone: "",
-    tier: "growth",
-    per_clip_rate: "3.29",
+    tier: "standard",
+    per_clip_rate: "3.79",
     min_monthly_spend: "0",
     notes: "",
   });
@@ -106,7 +325,7 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
       });
       const data = await res.json();
       if (data.success) {
-        setForm({ company: "", contact_name: "", contact_email: "", contact_phone: "", tier: "growth", per_clip_rate: "3.29", min_monthly_spend: "0", notes: "" });
+        setForm({ company: "", contact_name: "", contact_email: "", contact_phone: "", tier: "standard", per_clip_rate: "3.79", min_monthly_spend: "0", notes: "" });
         setOpen(false);
         onCreated();
       } else {
@@ -153,14 +372,15 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
             value={form.tier}
             onChange={(e) => {
               const tier = e.target.value;
-              const rate = tier === "enterprise" ? "2.99" : "3.29";
-              setForm({ ...form, tier, per_clip_rate: rate });
+              const rates: Record<string, string> = { standard: "3.79", growth: "3.29", enterprise: "2.99", custom: "2.99" };
+              setForm({ ...form, tier, per_clip_rate: rates[tier] || "3.79" });
             }}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
-            <option value="growth">Growth ($3.29/clip)</option>
-            <option value="enterprise">Enterprise ($2.99/clip)</option>
-            <option value="custom">Custom</option>
+            <option value="standard">Standard — 10+ listings ($3.79/clip)</option>
+            <option value="growth">Growth — 25+ listings ($3.29/clip)</option>
+            <option value="enterprise">Enterprise — 50+ listings ($2.99/clip)</option>
+            <option value="custom">Custom — 100+ listings (contact)</option>
           </select>
         </div>
         <div>
@@ -187,6 +407,10 @@ function AddBrokerageForm({ onCreated }: { onCreated: () => void }) {
   );
 }
 
+/* ═══════════════════════════════════════════ */
+/* BROKERAGE CARD                             */
+/* ═══════════════════════════════════════════ */
+
 function BrokerageCard({ brokerage, onRefresh }: { brokerage: Brokerage; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
@@ -195,6 +419,8 @@ function BrokerageCard({ brokerage, onRefresh }: { brokerage: Brokerage; onRefre
   const [saving, setSaving] = useState(false);
 
   const totalDue = brokerage.stats.totalDue;
+  const monthlyListings = getMonthlyListings(brokerage.orders);
+  const earnedTier = getEarnedTier(monthlyListings);
 
   const handleAddMember = async () => {
     if (!memberEmail) return;
@@ -262,14 +488,19 @@ function BrokerageCard({ brokerage, onRefresh }: { brokerage: Brokerage; onRefre
     const minSpend = brokerage.min_monthly_spend || 0;
     const invoiceTotal = Math.max(usageCost, minSpend);
 
+    // Show earned tier rate if better
+    const earnedRate = earnedTier?.rate || brokerage.per_clip_rate;
+    const effectiveRate = Math.min(earnedRate, brokerage.per_clip_rate);
+
     const invoiceText = `INVOICE — ${brokerage.company}
-Tier: ${brokerage.tier} ($${brokerage.per_clip_rate}/clip)
+Assigned Tier: ${brokerage.tier} ($${brokerage.per_clip_rate}/clip)
+Earned Tier: ${earnedTier?.name || "Below Standard"} (${monthlyListings} listings this month)
+Effective Rate: $${effectiveRate.toFixed(2)}/clip
 Min Monthly Spend: $${minSpend.toFixed(2)}
 Period: ${new Date().toLocaleString("en-US", { month: "long", year: "numeric" })}
 
 Videos: ${brokerage.stats.completedVideos}
 Total Clips: ${brokerage.stats.totalClips}
-Rate: $${brokerage.per_clip_rate}/clip
 Usage Cost: $${usageCost.toFixed(2)}${minSpend > usageCost ? `\nMinimum Applies: $${minSpend.toFixed(2)}` : ""}
 Total Due: $${invoiceTotal.toFixed(2)}
 
@@ -279,7 +510,7 @@ ${clipBreakdown || "No completed orders"}
 Contact: ${brokerage.contact_email}`;
 
     navigator.clipboard.writeText(invoiceText);
-    alert("Invoice summary copied to clipboard! Paste into Stripe Invoice or email.");
+    alert("Invoice summary copied to clipboard!");
   };
 
   return (
@@ -347,13 +578,23 @@ Contact: ${brokerage.contact_email}`;
             <p className="text-[10px] text-muted-foreground">Members</p>
           </div>
         </div>
+
+        {/* Compact tier progress — always visible */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <TierProgressBar orders={brokerage.orders} compact />
+        </div>
       </div>
 
       {/* Expanded Content */}
       {expanded && (
         <div className="border-t border-border">
+          {/* Full Tier Progress */}
+          <div className="p-4">
+            <TierProgressBar orders={brokerage.orders} />
+          </div>
+
           {/* Action Buttons */}
-          <div className="p-4 bg-muted/20 flex flex-wrap gap-3">
+          <div className="p-4 bg-muted/20 flex flex-wrap gap-3 border-t border-border">
             <Button variant="outline" size="sm" onClick={handleToggleStatus}>
               {brokerage.status === "active" ? (
                 <><ToggleRight className="h-4 w-4 mr-1.5 text-green-600" /> Active</>
@@ -488,6 +729,10 @@ Contact: ${brokerage.contact_email}`;
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════ */
+/* MAIN PAGE                                  */
+/* ═══════════════════════════════════════════ */
 
 export default function AdminBrokeragesPage() {
   const [brokerages, setBrokerages] = useState<Brokerage[]>([]);
