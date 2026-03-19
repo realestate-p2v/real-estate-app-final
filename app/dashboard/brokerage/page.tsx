@@ -245,7 +245,13 @@ export default function DashboardBrokeragePage() {
       const result = await res.json();
       if (result.success && result.brokerage) {
         setData({
-          brokerage: result.brokerage,
+          brokerage: {
+            id: result.brokerage.id,
+            company: result.brokerage.company,
+            tier: result.brokerage.tier,
+            per_clip_rate: result.brokerage.per_clip_rate || result.brokerage.perClipRate,
+            status: result.brokerage.status || "active",
+          },
           orders: result.orders || [],
           memberCount: result.memberCount || 0,
         });
