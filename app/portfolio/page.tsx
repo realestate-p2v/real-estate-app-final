@@ -7,9 +7,10 @@ import { Play, Camera } from "lucide-react";
 
 const SAMPLES = [
   { title: "The Hamlets Community", location: "Nanuet, NY", photos: 28, music: "Afternoon", fileId: "1w-LNUv8lMtMXFLsyMTpNBGoJVLC71vVT", vertical: false },
-  { title: "P2V Demo Walkthrough", location: "Sample Listing", photos: 15, music: "Upbeat Modern", fileId: "1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3", vertical: false },
-  { title: "Lisa Green Mystery Listing", location: "Featured Property", photos: 12, music: "Elegant Classical", fileId: "1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5", vertical: false },
-  { title: "Wolfe P2V Dionnes 19", location: "Featured Property", photos: 10, music: "Warm Acoustic", fileId: "1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO", vertical: true },
+  { title: "P2V Demo Walkthrough", location: "Rockland County, NY", photos: 15, music: "Upbeat Modern", fileId: "1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3", vertical: false },
+  { title: "46 Nursery Rd", location: "Tuxedo Park, NY", photos: 12, music: "Energetic", fileId: "1l5L-qJuhDLeojJmFRltgiZmh5qFUs9RY", vertical: false },
+  { title: "Home in Costa Rica", location: "Playas del Coco, Guanacaste", photos: 12, music: "Elegant Classical", fileId: "1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5", vertical: false },
+  { title: "Dionnes 19, For Time Wolfe", location: "Pearl River, NY", photos: 10, music: "Warm Acoustic", fileId: "1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO", vertical: true },
   { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", fileId: "1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU", vertical: true },
   { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", fileId: "1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw", vertical: true },
 ];
