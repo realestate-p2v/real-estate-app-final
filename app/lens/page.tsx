@@ -530,8 +530,8 @@ export default function LensPage() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button asChild className="bg-transparent border border-white/30 text-white hover:bg-white/10 hover:text-white px-8 py-6 text-lg font-bold">
-              <Link href="/pricing/brokerage">
-                View Video Pricing
+              <Link href="/P2V_Brokerage_Presentation.pdf" target="_blank">
+                Download Brokerage PDF
               </Link>
             </Button>
           </div>
