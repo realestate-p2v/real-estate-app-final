@@ -35,13 +35,30 @@ interface LensSubscription {
 export default function DashboardLensPage() {
   // For Friday demo: hardcoded as no active subscription
   // Will wire to real subscription data post-launch
-  const [subscription] = useState<LensSubscription>({
-    active: false,
-    plan: null,
-    analysesUsed: 0,
-    analysesLimit: 200,
-    renewsAt: null,
-  });
+  cconst [subscription, setSubscription] = useState<LensSubscription>({
+  active: false,
+  plan: null,
+  analysesUsed: 0,
+  analysesLimit: 200,
+  renewsAt: null,
+});
+
+useEffect(() => {
+  const checkAdmin = async () => {
+    const supabase = (await import("@/lib/supabase/client")).createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email === "realestatephoto2video@gmail.com") {
+      setSubscription({
+        active: true,
+        plan: "Admin",
+        analysesUsed: 0,
+        analysesLimit: 200,
+        renewsAt: null,
+      });
+    }
+  };
+  checkAdmin();
+}, []);
 
   const features = [
     {
