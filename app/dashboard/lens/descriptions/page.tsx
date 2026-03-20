@@ -114,7 +114,7 @@ export default function DescriptionWriterPage() {
 
         try {
           // Get Cloudinary signature
-          const sigRes = await fetch("/api/cloudinary-signature");
+          const sigRes = await fetch("/api/cloudinary-signature", { method: "POST" });
           const sigData = await sigRes.json();
 
           const formData = new FormData();
