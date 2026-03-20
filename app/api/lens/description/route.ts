@@ -56,7 +56,14 @@ async function analyzePhoto(photoUrl: string): Promise<string | null> {
             },
             {
               type: "text",
-              text: "You are a professional real estate photographer and listing agent. Describe this real estate photo in 2-3 sentences. Focus on: room type, notable features, condition, materials, finishes, lighting quality, and key selling points. If the photo is too dark, blurry, or unidentifiable as a real estate photo, respond with exactly: SKIP",
+              text: `You are a professional real estate photographer reviewing a listing photo. Describe ONLY what you can definitively see in this photo in 2-3 sentences.
+
+Rules:
+- State the room type and visible features
+- Describe colors, textures, and finishes as they APPEAR — do not guess the specific material. Say "dark wood-toned cabinetry" not "mahogany cabinetry." Say "tile flooring" not "travertine tile" unless you are 100% certain.
+- Do not invent features that are not clearly visible (e.g. do not say "exposed beams" unless beams are clearly visible, do not say "vaulted ceilings" unless the ceiling height is clearly visible)
+- Note lighting quality and condition
+- If the photo is too dark, blurry, or unidentifiable as a real estate photo, respond with exactly: SKIP`,
             },
           ],
         },
@@ -73,7 +80,6 @@ async function analyzePhoto(photoUrl: string): Promise<string | null> {
 }
 
 // Extract Cloudinary public_id from a secure_url
-// e.g. https://res.cloudinary.com/CLOUD/image/upload/v123/folder/filename.jpg → folder/filename
 function extractPublicId(url: string): string | null {
   try {
     const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
@@ -115,8 +121,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { photoUrls, propertyData, style, userId, fromCoach } = body;
-    // fromCoach: array of booleans matching photoUrls — true means photo is from Photo Coach (don't delete)
-    // If not provided, assume all are freshly uploaded (delete all)
 
     if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length === 0) {
       return NextResponse.json({ error: "At least one photo URL is required" }, { status: 400 });
@@ -138,7 +142,7 @@ export async function POST(req: NextRequest) {
       .select("id")
       .eq("user_id", userId);
 
-    // TODO: Check actual subscription status once Stripe is wired
+    // Admin god mode — always treated as subscriber
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
     const isSubscriber = ADMIN_EMAILS.includes(userData?.user?.email || "");
@@ -195,17 +199,19 @@ ${roomDescriptions}
 
 Style Guide: ${styleGuide[style] || styleGuide.professional}
 
-Requirements:
+CRITICAL Requirements:
 - 150-250 words
 - Highlight the strongest selling points from the photos
-- Mention specific materials, finishes, and features you can see in the photos
-- Do NOT fabricate features that aren't visible in the photos or listed in the property data
+- ONLY mention materials, finishes, and features that are explicitly described in the photo analyses above. If the analysis says "dark wood-toned cabinetry," write "dark wood-toned cabinetry" — do NOT upgrade it to "mahogany" or "cherry" or any specific wood species unless the analysis explicitly names it.
+- Do NOT invent or embellish features. If the photo analyses do not mention exposed beams, vaulted ceilings, granite countertops, or any other feature, do NOT include it in the description. Stick strictly to what was observed.
+- Do NOT guess at materials. Say "tile flooring" not "marble tile" unless the analysis specifically says marble. Say "wood cabinetry" not "oak cabinetry" unless oak is explicitly stated.
+- You may use the property details (beds, baths, sqft, price, etc.) freely — those are facts provided by the agent.
 - Include a compelling opening line
 - End with a call to action`;
 
     const description = await callClaude(
       [{ role: "user", content: descriptionPrompt }],
-      "You are a top-producing real estate listing agent known for writing compelling property descriptions that sell homes fast.",
+      "You are a top-producing real estate listing agent known for writing accurate, compelling property descriptions. You never fabricate or embellish features — you only describe what has been verified in the photos and property data. Accuracy builds trust with buyers.",
       600
     );
 
@@ -240,7 +246,6 @@ Requirements:
       }
     });
 
-    // Fire and forget — don't block the response
     if (deletePromises.length > 0) {
       Promise.all(deletePromises).catch((err) =>
         console.error("Cloudinary cleanup error:", err)
