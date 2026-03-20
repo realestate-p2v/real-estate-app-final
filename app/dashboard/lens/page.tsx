@@ -21,6 +21,7 @@ import {
   Crown,
   BarChart3,
   DollarSign,
+  PenTool,
 } from "lucide-react";
 
 interface LensSubscription {
@@ -46,16 +47,16 @@ export default function DashboardLensPage() {
     {
       icon: Camera,
       title: "AI Photo Coach",
-      description: "Snap a listing photo and hit Analyze. AI tells you exactly what to fix — lighting, angles, staging, where to stand. Fix it on the spot, re-analyze, and leave every room with a perfect shot.",
-      status: "live" as const,
-      actionLabel: "Analyze a Photo",
-      actionHref: "#",
+      description: "Open a shoot session for any property. Snap a photo, get instant AI scoring — green means approved, yellow means almost there, red means reshoot. Use the room checklist so you never miss a shot. All approved photos save to your session gallery.",
+      status: "coming" as const,
+      actionLabel: "Start a Shoot",
+      actionHref: "/dashboard/lens/coach",
     },
     {
       icon: ImageIcon,
       title: "Free Photo Editing",
-      description: "All video orders include professional AI color correction, brightness, and white balance at no extra charge. Normally $2.99/photo.",
-      status: "live" as const,
+      description: "All video orders include professional AI corrections — brightness, color, white balance, and vertical line straightening at no extra charge. Lens subscribers can also AI-edit photos on the spot during a shoot session.",
+      status: "coming" as const,
       actionLabel: "Order a Video",
       actionHref: "/order",
     },
@@ -71,7 +72,7 @@ export default function DashboardLensPage() {
       icon: DollarSign,
       title: "10% Off Video Orders",
       description: "Save 10% on every Photo 2 Video order, automatically applied at checkout. Brokerage members enjoy even deeper bulk pricing.",
-      status: "live" as const,
+      status: "coming" as const,
       actionLabel: "Order a Video",
       actionHref: "/order",
     },
@@ -79,33 +80,33 @@ export default function DashboardLensPage() {
       icon: Zap,
       title: "Priority Delivery",
       description: "Get your listing videos in 12 hours instead of the standard 24-hour turnaround. Subscribers always go first in the queue.",
-      status: "live" as const,
+      status: "coming" as const,
       actionLabel: "Order a Video",
       actionHref: "/order",
     },
     {
-      icon: ImageIcon,
+      icon: PenTool,
       title: "Marketing Design Studio",
-      description: "Just Listed, Just Sold, Open House, Price Reduced, Market Reports, and agent intro flyers. Upload your headshot + home photo, AI assembles a polished flyer. Print-ready PDF and screen formats.",
+      description: "Create Just Listed, Open House, Price Reduced, and Just Sold graphics in under a minute. Upload your headshot, listing photo, and logo — download print-ready and social-ready formats. Includes a branding card builder for your video intros and outros.",
       status: "coming" as const,
-      actionLabel: null,
-      actionHref: null,
+      actionLabel: "Open Design Studio",
+      actionHref: "/dashboard/lens/design-studio",
     },
     {
       icon: MessageSquare,
       title: "AI Listing Description Writer",
-      description: "AI analyzes your approved listing photos, notes room details and finishes, combines with property data to write a polished MLS-ready description. Professional, luxury, and casual styles.",
+      description: "Upload your listing photos and enter property details. AI analyzes each room — features, finishes, condition — then writes a polished MLS-ready description. Choose from Professional, Luxury, Conversational, or Concise styles.",
       status: "coming" as const,
-      actionLabel: null,
-      actionHref: null,
+      actionLabel: "Write a Description",
+      actionHref: "/dashboard/lens/descriptions",
     },
     {
       icon: Sofa,
       title: "Virtual Staging",
-      description: "Upload photos of empty rooms and AI generates beautifully furnished versions in multiple styles — modern, traditional, minimalist.",
+      description: "Upload a photo of an empty room and see it furnished in seconds. Choose from Modern, Traditional, Minimalist, Scandinavian, Coastal, or Farmhouse styles. Before/after comparison included.",
       status: "coming" as const,
-      actionLabel: null,
-      actionHref: null,
+      actionLabel: "Stage a Room",
+      actionHref: "/dashboard/lens/staging",
     },
   ];
 
@@ -127,7 +128,7 @@ export default function DashboardLensPage() {
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
               P2V Lens
             </h1>
-            <p className="text-muted-foreground mt-1">Your AI photography coaching subscription</p>
+            <p className="text-muted-foreground mt-1">Your AI-powered real estate marketing suite</p>
           </div>
         </div>
 
@@ -180,7 +181,7 @@ export default function DashboardLensPage() {
                 <div className="flex-1 min-w-0">
                   <h2 className="text-lg font-bold text-foreground">No Active Subscription</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Subscribe to P2V Lens to unlock AI photo coaching, free photo editing on all video orders, priority 12-hour delivery, and more.
+                    Subscribe to P2V Lens to unlock AI photo coaching, design studio, listing descriptions, virtual staging, free photo editing, and priority 12-hour delivery.
                   </p>
                   <div className="flex flex-wrap gap-3 mt-4">
                     <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black">
@@ -311,11 +312,11 @@ export default function DashboardLensPage() {
         {!subscription.active && (
           <div className="bg-card rounded-2xl border border-border p-8 sm:p-10 text-center space-y-5">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Take Better Listing Photos — Starting Today
+              Your Complete Listing Marketing Suite
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              P2V Lens gives you AI photography coaching, free photo editing on every video order,
-              priority 12-hour delivery, and more. Plans start at $27.95/month.
+              P2V Lens gives you AI photo coaching, a marketing design studio, listing description writer,
+              virtual staging, free photo editing, and priority delivery. Plans start at $27.95/month.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild className="bg-accent hover:bg-accent/90 px-8 py-6 text-lg font-bold">
