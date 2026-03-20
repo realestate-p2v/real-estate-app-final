@@ -78,12 +78,28 @@ export default function DescriptionWriterPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [trialUsed, setTrialUsed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSubscriber, setIsSubscriber] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setAuthLoading(false);
+      if (user?.email === "realestatephoto2video@gmail.com") {
+        setIsAdmin(true);
+        setIsSubscriber(true);
+      } else if (user) {
+        // Check lens_usage for subscriber status
+        const { data: usage } = await supabase
+          .from("lens_usage")
+          .select("is_subscriber")
+          .eq("user_id", user.id)
+          .single();
+        if (usage?.is_subscriber) {
+          setIsSubscriber(true);
+        }
+      }
     };
     getUser();
   }, [supabase.auth]);
@@ -346,13 +362,27 @@ export default function DescriptionWriterPage() {
           </div>
         </div>
 
-        {/* Free trial badge */}
-        <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-accent flex-shrink-0" />
-          <p className="text-sm text-foreground">
-            <span className="font-bold">Free trial:</span> Generate your first listing description free. Subscribe to P2V Lens for unlimited access.
-          </p>
-        </div>
+        {/* Subscription / trial badge */}
+        {isAdmin ? (
+          <div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" />
+            <p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p>
+          </div>
+        ) : isSubscriber ? (
+          <div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
+            <p className="text-sm text-foreground">
+              <span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited descriptions
+            </p>
+          </div>
+        ) : (
+          <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-accent flex-shrink-0" />
+            <p className="text-sm text-foreground">
+              <span className="font-bold">Free trial:</span> Generate your first listing description free. Subscribe to P2V Lens for unlimited access.
+            </p>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left Column: Inputs */}
