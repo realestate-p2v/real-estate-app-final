@@ -33,34 +33,51 @@ interface LensSubscription {
 }
 
 export default function DashboardLensPage() {
-  // For Friday demo: hardcoded as no active subscription
-  // Will wire to real subscription data post-launch
   const [subscription, setSubscription] = useState<LensSubscription>({
-  active: false,
-  plan: null,
-  analysesUsed: 0,
-  analysesLimit: 200,
-  renewsAt: null,
-});
+    active: false,
+    plan: null,
+    analysesUsed: 0,
+    analysesLimit: 200,
+    renewsAt: null,
+  });
 
-const [coachSessionCount, setCoachSessionCount] = useState(0);
-const [descriptionCount, setDescriptionCount] = useState(0);
+  const [coachSessionCount, setCoachSessionCount] = useState(0);
+  const [descriptionCount, setDescriptionCount] = useState(0);
 
-useEffect(() => {
-  const checkAdmin = async () => {
-    const supabase = (await import("@/lib/supabase/client")).createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email === "realestatephoto2video@gmail.com") {
-      setSubscription({
-        active: true,
-        plan: "Admin",
-        analysesUsed: 0,
-        analysesLimit: 200,
-        renewsAt: null,
-      });
-    }
-    // Load counts for live tools
-    if (user) {
+  useEffect(() => {
+    const init = async () => {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const isAdmin = user.email === "realestatephoto2video@gmail.com";
+
+      // Load usage data (real analyses count)
+      const { data: usage } = await supabase
+        .from("lens_usage")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (isAdmin) {
+        setSubscription({
+          active: true,
+          plan: "Admin",
+          analysesUsed: usage?.total_analyses || 0,
+          analysesLimit: 200,
+          renewsAt: null,
+        });
+      } else if (usage?.is_subscriber) {
+        setSubscription({
+          active: true,
+          plan: usage.subscription_tier || "Individual",
+          analysesUsed: usage.total_analyses || 0,
+          analysesLimit: 200,
+          renewsAt: null,
+        });
+      }
+
+      // Load counts for live tools
       const { count: sessionCount } = await supabase
         .from("lens_sessions")
         .select("*", { count: "exact", head: true })
@@ -72,10 +89,9 @@ useEffect(() => {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
       setDescriptionCount(descCount || 0);
-    }
-  };
-  checkAdmin();
-}, []);
+    };
+    init();
+  }, []);
 
   const features = [
     {
@@ -198,13 +214,13 @@ useEffect(() => {
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      usagePercent > 80 ? "bg-amber-500" : usagePercent > 95 ? "bg-red-500" : "bg-green-500"
+                      usagePercent > 95 ? "bg-red-500" : usagePercent > 80 ? "bg-amber-500" : "bg-green-500"
                     }`}
-                    style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                    style={{ width: `${Math.max(Math.min(usagePercent, 100), 1)}%` }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  ~{Math.floor((subscription.analysesLimit - subscription.analysesUsed) / 100)} full listing shoots remaining
+                  {subscription.analysesLimit - subscription.analysesUsed} analyses remaining this month
                 </p>
               </div>
             </div>
@@ -256,48 +272,55 @@ useEffect(() => {
             <h2 className="text-2xl font-bold text-foreground">Your Features</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map(({ icon: Icon, title, description, status, actionLabel, actionHref, count }, i) => (
-              <div
-                key={i}
-                className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
-                  status === "coming"
-                    ? "border-border opacity-70"
-                    : subscription.active
-                    ? "border-primary/20 hover:border-accent/40 hover:shadow-lg transition-all duration-300"
-                    : "border-border"
-                }`}
-              >
-                {status === "live" && (
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
-                    {subscription.active ? "Active" : "With Subscription"}
-                  </span>
-                )}
-                {status === "coming" && (
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    Coming Soon
-                  </span>
-                )}
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                  status === "live" ? "bg-accent/10" : "bg-muted"
-                }`}>
-                  <Icon className={`h-5 w-5 ${status === "live" ? "text-accent" : "text-muted-foreground"}`} />
+            {features.map(({ icon: Icon, title, description, status, actionLabel, actionHref, count }, i) => {
+              const isClickable = status === "live" && actionHref;
+              const cardClasses = `relative bg-card rounded-xl border p-5 space-y-2.5 block ${
+                status === "coming"
+                  ? "border-border opacity-70"
+                  : "border-primary/20 hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
+              }`;
+
+              const cardContent = (
+                <>
+                  {status === "live" && (
+                    <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                      {subscription.active ? "Active" : "With Subscription"}
+                    </span>
+                  )}
+                  {status === "coming" && (
+                    <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                      Coming Soon
+                    </span>
+                  )}
+                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                    status === "live" ? "bg-accent/10" : "bg-muted"
+                  }`}>
+                    <Icon className={`h-5 w-5 ${status === "live" ? "text-accent" : "text-muted-foreground"}`} />
+                  </div>
+                  <h3 className={`font-bold ${status === "live" ? "text-foreground group-hover:text-accent transition-colors" : "text-foreground"}`}>{title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                  {count && (
+                    <p className="text-xs text-muted-foreground font-medium">{count}</p>
+                  )}
+                  {status === "live" && actionLabel && (
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:text-accent/80 transition-colors pt-1">
+                      {actionLabel}
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  )}
+                </>
+              );
+
+              return isClickable ? (
+                <Link key={i} href={actionHref} className={cardClasses}>
+                  {cardContent}
+                </Link>
+              ) : (
+                <div key={i} className={cardClasses}>
+                  {cardContent}
                 </div>
-                <h3 className="font-bold text-foreground">{title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-                {count && (
-                  <p className="text-xs text-muted-foreground font-medium">{count}</p>
-                )}
-                {status === "live" && actionLabel && actionHref && subscription.active && (
-                  <Link
-                    href={actionHref}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent/80 transition-colors pt-1"
-                  >
-                    {actionLabel}
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
