@@ -131,6 +131,9 @@ export default function PhotoCoachPage() {
   const [lastPhotoUrl, setLastPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showRoomPicker, setShowRoomPicker] = useState(false);
+  const [shootingRoom, setShootingRoom] = useState<string>(""); // room key for the current photo
+  const [addOtherRoom, setAddOtherRoom] = useState("");
 
   // Gallery view
   const [showGallery, setShowGallery] = useState(false);
@@ -311,12 +314,14 @@ export default function PhotoCoachPage() {
 
   /* ─── Get current "next" room label ─── */
   const getCurrentRoomLabel = () => {
-    const nextKey = Object.entries(selectedRooms).find(([, v]) => v === "next")?.[0];
-    if (!nextKey) return "";
-    const room = DEFAULT_ROOMS.find((r) => r.key === nextKey);
+    if (!shootingRoom) return "";
+    const room = DEFAULT_ROOMS.find((r) => r.key === shootingRoom);
     if (room) return room.label;
+    // Dynamic rooms (extra bedrooms/bathrooms)
+    if (shootingRoom.startsWith("bedroom_")) return `Bedroom ${shootingRoom.split("_")[1]}`;
+    if (shootingRoom.startsWith("bathroom_")) return `Bathroom ${shootingRoom.split("_")[1]}`;
     // Custom room
-    return nextKey.replace("custom_", "").replace(/_/g, " ");
+    return shootingRoom.replace("custom_", "").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   /* ─── Photo Capture & Upload ─── */
@@ -326,7 +331,40 @@ export default function PhotoCoachPage() {
       setPaywallHit(true);
       return;
     }
+    // If checklist exists and has rooms, show room picker first
+    const hasChecklist = checklistSetup && Object.keys(selectedRooms).length > 0;
+    if (hasChecklist) {
+      setShowRoomPicker(true);
+      return;
+    }
+    // No checklist — go straight to camera
+    setShootingRoom("");
     fileInputRef.current?.click();
+  };
+
+  const proceedWithRoom = (roomKey: string) => {
+    setShootingRoom(roomKey);
+    setShowRoomPicker(false);
+    // Small delay so state updates before file input triggers
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 50);
+  };
+
+  const addOtherAndShoot = async () => {
+    if (!addOtherRoom.trim()) return;
+    const key = `custom_${addOtherRoom.trim().toLowerCase().replace(/\s+/g, "_")}`;
+    const updated = { ...selectedRooms, [key]: "pending" };
+    setSelectedRooms(updated);
+    setAddOtherRoom("");
+    if (activeSession) {
+      await supabase
+        .from("lens_sessions")
+        .update({ checklist: updated })
+        .eq("id", activeSession.id);
+      setActiveSession((prev) => prev ? { ...prev, checklist: updated } : prev);
+    }
+    proceedWithRoom(key);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -428,6 +466,17 @@ export default function PhotoCoachPage() {
             ? { ...prev, photos: updatedPhotos, approved_count: updatedCount, total_analyses: updatedTotal }
             : prev
         );
+
+        // Mark the room as done in checklist
+        if (shootingRoom && selectedRooms[shootingRoom]) {
+          const updatedChecklist = { ...selectedRooms, [shootingRoom]: "done" };
+          setSelectedRooms(updatedChecklist);
+          await supabase
+            .from("lens_sessions")
+            .update({ checklist: updatedChecklist })
+            .eq("id", activeSession.id);
+          setActiveSession((prev) => prev ? { ...prev, checklist: updatedChecklist } : prev);
+        }
 
         // Update free trial usage
         if (!isSubscriber && !isAdmin) {
@@ -1037,17 +1086,79 @@ export default function PhotoCoachPage() {
         ) : (
           /* ─── Shooting View ─── */
           <div className="space-y-6">
-            {/* Current room indicator */}
-            {nextRoom && (
-              <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 flex items-center gap-2">
-                <Camera className="h-4 w-4 text-accent" />
-                <p className="text-sm font-semibold text-accent">
-                  Shooting: {roomLabel(nextRoom[0])}
-                </p>
+            {/* ─── Room Picker (shown before each photo when checklist exists) ─── */}
+            {showRoomPicker && (
+              <div className="bg-card rounded-2xl border border-accent/30 p-6 space-y-4">
+                <h3 className="text-lg font-bold text-foreground">Which room are we shooting?</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(selectedRooms)
+                    .filter(([, status]) => status !== "done")
+                    .map(([key, status]) => (
+                    <button
+                      key={key}
+                      onClick={() => proceedWithRoom(key)}
+                      className="text-left px-3 py-2.5 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition-all text-sm"
+                    >
+                      <span className="font-semibold text-foreground">{roomLabel(key)}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Done rooms (collapsed, show as reference) */}
+                {Object.entries(selectedRooms).some(([, status]) => status === "done") && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-1.5">Completed:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(selectedRooms)
+                        .filter(([, status]) => status === "done")
+                        .map(([key]) => (
+                        <button
+                          key={key}
+                          onClick={() => proceedWithRoom(key)}
+                          className="text-xs px-2 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors flex items-center gap-1"
+                        >
+                          <CheckCircle className="h-3 w-3" /> {roomLabel(key)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Other */}
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-2">Not on the list?</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. Wine Cellar, Pantry..."
+                      value={addOtherRoom}
+                      onChange={(e) => setAddOtherRoom(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addOtherAndShoot()}
+                      className="flex-1 text-sm h-9"
+                    />
+                    <Button
+                      onClick={addOtherAndShoot}
+                      disabled={!addOtherRoom.trim()}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add & Shoot
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Skip / no label */}
+                <button
+                  onClick={() => proceedWithRoom("")}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+                >
+                  Skip — take photo without a room label
+                </button>
               </div>
             )}
 
-            {/* Take Photo Button */}
+            {/* Take Photo Button — hidden when room picker or result is showing */}
+            {!showRoomPicker && !lastResult && (
             <div className="text-center">
               <button
                 onClick={handleCapture}
@@ -1083,6 +1194,16 @@ export default function PhotoCoachPage() {
                 </button>
               )}
             </div>
+            )}
+
+            {/* Uploading / Analyzing indicator when camera was triggered from room picker */}
+            {!showRoomPicker && !lastResult && (uploading || analyzing) && shootingRoom && (
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  Shooting: <span className="font-semibold text-foreground">{getCurrentRoomLabel()}</span>
+                </p>
+              </div>
+            )}
 
             {/* ─── Scoring Result ─── */}
             {lastResult && lastResult.score > 0 && (
@@ -1218,7 +1339,8 @@ export default function PhotoCoachPage() {
                           }
                           setLastResult(null);
                           setLastPhotoUrl(null);
-                          handleCapture();
+                          // Reshoot same room — skip room picker, go straight to camera
+                          fileInputRef.current?.click();
                         }}
                         className={`flex-1 font-bold text-white ${
                           lastResult.score >= 5
@@ -1269,6 +1391,16 @@ export default function PhotoCoachPage() {
                                 free_analyses_used: newUsed,
                                 total_analyses: (activeSession.total_analyses || 0),
                               }, { onConflict: "user_id" });
+                          }
+                          // Mark room done in checklist
+                          if (shootingRoom && selectedRooms[shootingRoom]) {
+                            const updatedChecklist = { ...selectedRooms, [shootingRoom]: "done" };
+                            setSelectedRooms(updatedChecklist);
+                            await supabase
+                              .from("lens_sessions")
+                              .update({ checklist: updatedChecklist })
+                              .eq("id", activeSession.id);
+                            setActiveSession((prev) => prev ? { ...prev, checklist: updatedChecklist } : prev);
                           }
                           setLastResult(null);
                           setLastPhotoUrl(null);
