@@ -45,6 +45,8 @@ const STYLES: { value: Style; label: string; description: string }[] = [
   { value: "concise", label: "Concise", description: "Short, punchy, social-ready" },
 ];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 export default function DescriptionWriterPage() {
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
@@ -53,6 +55,7 @@ export default function DescriptionWriterPage() {
   // Form state
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [propertyData, setPropertyData] = useState<PropertyData>({
     address: "",
     beds: "",
@@ -91,38 +94,75 @@ export default function DescriptionWriterPage() {
 
     setUploading(true);
     setError("");
+    setUploadProgress("");
 
     try {
       const newUrls: string[] = [];
+      const oversized: string[] = [];
+      const failed: string[] = [];
+      const fileArray = Array.from(files);
+      let uploaded = 0;
 
-      for (const file of Array.from(files)) {
-        // Get Cloudinary signature
-        const sigRes = await fetch("/api/cloudinary-signature");
-        const sigData = await sigRes.json();
+      for (const file of fileArray) {
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+          oversized.push(file.name);
+          continue;
+        }
 
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("api_key", sigData.apiKey);
-        formData.append("timestamp", sigData.timestamp.toString());
-        formData.append("signature", sigData.signature);
-        formData.append("folder", sigData.folder || "p2v-lens");
+        setUploadProgress(`Uploading ${uploaded + 1} of ${fileArray.length - oversized.length}...`);
 
-        const uploadRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
-          { method: "POST", body: formData }
-        );
-        const uploadData = await uploadRes.json();
+        try {
+          // Get Cloudinary signature
+          const sigRes = await fetch("/api/cloudinary-signature");
+          const sigData = await sigRes.json();
 
-        if (uploadData.secure_url) {
-          newUrls.push(uploadData.secure_url);
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("api_key", sigData.apiKey);
+          formData.append("timestamp", sigData.timestamp.toString());
+          formData.append("signature", sigData.signature);
+          formData.append("folder", sigData.folder || "p2v-lens");
+
+          const uploadRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
+            { method: "POST", body: formData }
+          );
+          const uploadData = await uploadRes.json();
+
+          if (uploadData.secure_url) {
+            newUrls.push(uploadData.secure_url);
+            uploaded++;
+          } else {
+            failed.push(file.name);
+          }
+        } catch {
+          failed.push(file.name);
         }
       }
 
       setPhotoUrls((prev) => [...prev, ...newUrls].slice(0, 10));
+
+      // Build error messages
+      const messages: string[] = [];
+      if (oversized.length > 0) {
+        messages.push(
+          `${oversized.length} photo${oversized.length > 1 ? "s" : ""} skipped — files must be under 10MB (${oversized.join(", ")})`
+        );
+      }
+      if (failed.length > 0) {
+        messages.push(
+          `${failed.length} photo${failed.length > 1 ? "s" : ""} failed to upload (${failed.join(", ")}). Please try again.`
+        );
+      }
+      if (messages.length > 0) {
+        setError(messages.join(" "));
+      }
     } catch (err) {
       setError("Failed to upload photos. Please try again.");
     } finally {
       setUploading(false);
+      setUploadProgress("");
       // Reset the input
       e.target.value = "";
     }
@@ -310,7 +350,7 @@ export default function DescriptionWriterPage() {
                 {uploading ? (
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-                    <p className="text-sm text-muted-foreground">Uploading...</p>
+                    <p className="text-sm text-muted-foreground">{uploadProgress || "Uploading..."}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
@@ -319,6 +359,9 @@ export default function DescriptionWriterPage() {
                       {photoUrls.length >= 10
                         ? "Maximum 10 photos reached"
                         : "Click to upload photos (max 10)"}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">
+                      JPG, PNG, or HEIC · Max 10MB per photo
                     </p>
                   </div>
                 )}
