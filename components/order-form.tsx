@@ -163,6 +163,28 @@ export function OrderForm() {
     photos.length, formData.name, formData.email,
   ]);
 
+  // Load photos from Photo Coach if navigated from gallery
+  useEffect(() => {
+    try {
+      const coachPhotos = sessionStorage.getItem("coach_photos_for_order");
+      const coachAddress = sessionStorage.getItem("coach_property_address");
+      if (coachPhotos) {
+        const parsed = JSON.parse(coachPhotos);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPhotos(parsed);
+          setSequenceConfirmed(false);
+        }
+        sessionStorage.removeItem("coach_photos_for_order");
+      }
+      if (coachAddress) {
+        setPropertyAddress(coachAddress);
+        sessionStorage.removeItem("coach_property_address");
+      }
+    } catch (e) {
+      console.error("Failed to load coach photos:", e);
+    }
+  }, []);
+
   const photoCount = photos.length;
 
   const isUrlMode = photoInputMode === "url";
