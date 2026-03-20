@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronRight,
   Download,
+  FileText,
   ShoppingCart,
   ImageIcon,
   Volume2,
@@ -987,19 +988,47 @@ export default function PhotoCoachPage() {
 
             {/* Gallery Actions */}
             {approvedPhotos.length > 0 && (
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Link
                   href="/order"
-                  className="bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                  className="bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
                 >
-                  <ShoppingCart className="h-5 w-5" />
-                  Order Video ({approvedPhotos.length} photos)
+                  <ShoppingCart className="h-5 w-5 flex-shrink-0" />
+                  Order Video ({approvedPhotos.length})
+                </Link>
+                <Link
+                  href={`/dashboard/lens/descriptions?from_coach=${activeSession.id}`}
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
+                >
+                  <FileText className="h-5 w-5 flex-shrink-0" />
+                  Write Description
                 </Link>
                 <button
-                  onClick={() => setShowGallery(false)}
-                  className="bg-card border border-border hover:border-accent/40 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-foreground"
+                  onClick={() => {
+                    // Open each photo URL in a new tab for download
+                    // (zip would require server-side — this is the simple approach)
+                    approvedPhotos.forEach((photo, i) => {
+                      const url = photo.edited_url || photo.url;
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.target = "_blank";
+                      a.download = `${activeSession.property_address.replace(/[^a-zA-Z0-9]/g, "_")}_${photo.room || i + 1}.jpg`;
+                      a.rel = "noopener noreferrer";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    });
+                  }}
+                  className="bg-card border border-border hover:border-accent/40 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-foreground text-sm sm:text-base"
                 >
-                  <Camera className="h-5 w-5" />
+                  <Download className="h-5 w-5 flex-shrink-0" />
+                  Download All
+                </button>
+                <button
+                  onClick={() => setShowGallery(false)}
+                  className="bg-card border border-border hover:border-accent/40 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-foreground text-sm sm:text-base"
+                >
+                  <Camera className="h-5 w-5 flex-shrink-0" />
                   Continue Shooting
                 </button>
               </div>
