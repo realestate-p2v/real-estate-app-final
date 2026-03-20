@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
 const SCORING_PROMPT = `You are a professional real estate photography coach reviewing a listing photo. 
 Score this photo 1-10 and provide specific, actionable feedback.
@@ -40,47 +42,63 @@ The "fixable_issues" array should list things the agent can fix right now.
 The "flagged_issues" array should list things that can't be fixed on-site but AI editing can handle later.
 If score is below 8, "what_would_make_10" should still be included but focus on the most impactful fix.`;
 
-async function deleteFromCloudinary(url: string) {
+async function callClaude(messages: any[], system?: string, maxTokens = 1024) {
+  const body: any = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: maxTokens,
+    messages,
+  };
+  if (system) body.system = system;
+
+  const res = await fetch(ANTHROPIC_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Claude API error: ${res.status} — ${err}`);
+  }
+
+  const data = await res.json();
+  return data.content?.[0]?.text || "";
+}
+
+async function deleteFromCloudinary(url: string): Promise<void> {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    console.warn("Cloudinary credentials not set — skipping photo deletion");
+    return;
+  }
   try {
     // Extract public_id from Cloudinary URL
-    // URL format: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{folder}/{filename}.{ext}
     const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
     if (!match) return;
 
     const publicId = match[1];
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-    if (!cloudName || !apiKey || !apiSecret) {
-      console.error("Missing Cloudinary credentials for deletion");
-      return;
-    }
-
-    const timestamp = Math.floor(Date.now() / 1000);
-    // Generate signature for deletion
+    const timestamp = Math.floor(Date.now() / 1000).toString();
     const crypto = await import("crypto");
-    const signatureString = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
     const signature = crypto
       .createHash("sha1")
-      .update(signatureString)
+      .update(`public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`)
       .digest("hex");
 
     const formData = new URLSearchParams();
     formData.append("public_id", publicId);
-    formData.append("api_key", apiKey);
-    formData.append("timestamp", timestamp.toString());
+    formData.append("timestamp", timestamp);
+    formData.append("api_key", CLOUDINARY_API_KEY);
     formData.append("signature", signature);
 
     await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
-      {
-        method: "POST",
-        body: formData,
-      }
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      { method: "POST", body: formData }
     );
   } catch (err) {
-    console.error("Failed to delete from Cloudinary:", err);
+    console.error("Cloudinary delete error:", err);
   }
 }
 
@@ -97,10 +115,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Claude Vision for scoring
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [
+    const rawResult = await callClaude(
+      [
         {
           role: "user",
           content: [
@@ -118,24 +134,20 @@ export async function POST(request: NextRequest) {
           ],
         },
       ],
-    });
+      undefined,
+      1024
+    );
 
     // Parse the response
-    const textContent = response.content.find((c) => c.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      throw new Error("No text response from Claude");
-    }
-
     let result;
     try {
-      // Clean the response - strip any markdown fences if present
-      const cleaned = textContent.text
+      const cleaned = rawResult
         .replace(/```json\s*/g, "")
         .replace(/```\s*/g, "")
         .trim();
       result = JSON.parse(cleaned);
     } catch (parseErr) {
-      console.error("Failed to parse Claude response:", textContent.text);
+      console.error("Failed to parse Claude response:", rawResult);
       throw new Error("Failed to parse scoring response");
     }
 
