@@ -139,7 +139,9 @@ export async function POST(req: NextRequest) {
       .eq("user_id", userId);
 
     // TODO: Check actual subscription status once Stripe is wired
-    const isSubscriber = false; // Replace with real check
+    const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const isSubscriber = ADMIN_EMAILS.includes(userData?.user?.email || "");
     if (!isSubscriber && existingDescriptions && existingDescriptions.length >= 1) {
       return NextResponse.json(
         { error: "free_trial_used", message: "Subscribe to P2V Lens to generate more descriptions." },
