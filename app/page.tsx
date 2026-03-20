@@ -24,8 +24,8 @@ export default function HomePage() {
       <DemoSection />
       <SaleBanner />
       <BrokerageCTA />
-      <LensIntroSection />
       <ProcessSection />
+      <LensIntroSection />
       <TrustSection />
       <CTASection />
       <FAQ />
