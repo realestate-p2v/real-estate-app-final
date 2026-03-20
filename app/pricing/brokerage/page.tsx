@@ -20,6 +20,8 @@ import {
   Star,
   Camera,
   ArrowRight,
+  FileText,
+  Download,
 } from "lucide-react";
 
 const TIERS = [
@@ -128,7 +130,6 @@ function ROICalculator() {
   const costPerListing = listings > 0 ? monthlyCost / listings : 0;
   const videoROI = avgSalePrice * 0.03;
 
-  // Next tier info
   const nextTier =
     listings < 25
       ? { name: "Growth", threshold: 25, rate: 3.29 }
@@ -227,7 +228,6 @@ function ROICalculator() {
         </div>
       </div>
 
-      {/* Next tier nudge */}
       {nextTier && listings >= 10 && (
         <div className="mt-4 bg-accent/5 border border-accent/20 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
           <p className="text-sm text-foreground">
@@ -290,6 +290,30 @@ export default function BrokeragePricingPage() {
             Give every agent in your brokerage cinematic listing videos at bulk rates.
             Pay per clip, scale with your team, no long-term contracts.
           </p>
+        </div>
+
+        {/* Download Presentation */}
+        <div className="mb-14">
+          <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl border border-primary/20 p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h2 className="text-xl font-bold text-foreground">Download Our Brokerage Presentation</h2>
+              <p className="text-muted-foreground mt-1">
+                17-slide overview of Photo 2 Video + P2V Lens — pricing, ROI, features, and how to get started. Share it with your leadership team.
+              </p>
+            </div>
+            <Button
+              asChild
+              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-6 py-5 flex-shrink-0"
+            >
+              <a href="/P2V_Brokerage_Presentation.pdf" download>
+                <Download className="mr-2 h-5 w-5" />
+                Download PDF
+              </a>
+            </Button>
+          </div>
         </div>
 
         {/* Why video */}
