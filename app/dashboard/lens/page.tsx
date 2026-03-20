@@ -43,6 +43,9 @@ export default function DashboardLensPage() {
   renewsAt: null,
 });
 
+const [coachSessionCount, setCoachSessionCount] = useState(0);
+const [descriptionCount, setDescriptionCount] = useState(0);
+
 useEffect(() => {
   const checkAdmin = async () => {
     const supabase = (await import("@/lib/supabase/client")).createClient();
@@ -56,6 +59,20 @@ useEffect(() => {
         renewsAt: null,
       });
     }
+    // Load counts for live tools
+    if (user) {
+      const { count: sessionCount } = await supabase
+        .from("lens_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setCoachSessionCount(sessionCount || 0);
+
+      const { count: descCount } = await supabase
+        .from("lens_descriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setDescriptionCount(descCount || 0);
+    }
   };
   checkAdmin();
 }, []);
@@ -65,9 +82,10 @@ useEffect(() => {
       icon: Camera,
       title: "AI Photo Coach",
       description: "Open a shoot session for any property. Snap a photo, get instant AI scoring — green means approved, yellow means almost there, red means reshoot. Use the room checklist so you never miss a shot. All approved photos save to your session gallery.",
-      status: "coming" as const,
+      status: "live" as const,
       actionLabel: "Start a Shoot",
       actionHref: "/dashboard/lens/coach",
+      count: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null,
     },
     {
       icon: ImageIcon,
@@ -113,9 +131,10 @@ useEffect(() => {
       icon: MessageSquare,
       title: "AI Listing Description Writer",
       description: "Upload your listing photos and enter property details. AI analyzes each room — features, finishes, condition — then writes a polished MLS-ready description. Choose from Professional, Luxury, Conversational, or Concise styles.",
-      status: "coming" as const,
+      status: "live" as const,
       actionLabel: "Write a Description",
       actionHref: "/dashboard/lens/descriptions",
+      count: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""} generated` : null,
     },
     {
       icon: Sofa,
@@ -237,7 +256,7 @@ useEffect(() => {
             <h2 className="text-2xl font-bold text-foreground">Your Features</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map(({ icon: Icon, title, description, status, actionLabel, actionHref }, i) => (
+            {features.map(({ icon: Icon, title, description, status, actionLabel, actionHref, count }, i) => (
               <div
                 key={i}
                 className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
@@ -265,6 +284,9 @@ useEffect(() => {
                 </div>
                 <h3 className="font-bold text-foreground">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                {count && (
+                  <p className="text-xs text-muted-foreground font-medium">{count}</p>
+                )}
                 {status === "live" && actionLabel && actionHref && subscription.active && (
                   <Link
                     href={actionHref}
