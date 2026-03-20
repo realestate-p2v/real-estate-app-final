@@ -9,6 +9,10 @@ const supabaseAdmin = createClient(
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
 async function callClaude(messages: any[], system?: string, maxTokens = 1024) {
   const body: any = {
     model: "claude-sonnet-4-20250514",
@@ -68,10 +72,51 @@ async function analyzePhoto(photoUrl: string): Promise<string | null> {
   }
 }
 
+// Extract Cloudinary public_id from a secure_url
+// e.g. https://res.cloudinary.com/CLOUD/image/upload/v123/folder/filename.jpg → folder/filename
+function extractPublicId(url: string): string | null {
+  try {
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function deleteFromCloudinary(publicId: string): Promise<void> {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    console.warn("Cloudinary credentials not set — skipping photo deletion");
+    return;
+  }
+  try {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const crypto = await import("crypto");
+    const signature = crypto
+      .createHash("sha1")
+      .update(`public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`)
+      .digest("hex");
+
+    const formData = new URLSearchParams();
+    formData.append("public_id", publicId);
+    formData.append("timestamp", timestamp);
+    formData.append("api_key", CLOUDINARY_API_KEY);
+    formData.append("signature", signature);
+
+    await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      { method: "POST", body: formData }
+    );
+  } catch (err) {
+    console.error("Cloudinary delete error:", err);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { photoUrls, propertyData, style, userId } = body;
+    const { photoUrls, propertyData, style, userId, fromCoach } = body;
+    // fromCoach: array of booleans matching photoUrls — true means photo is from Photo Coach (don't delete)
+    // If not provided, assume all are freshly uploaded (delete all)
 
     if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length === 0) {
       return NextResponse.json({ error: "At least one photo URL is required" }, { status: 400 });
@@ -83,7 +128,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Style is required" }, { status: 400 });
     }
 
-    // Check free tier: if no userId, reject. If userId but no subscription, check usage count
     if (!userId) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
@@ -95,7 +139,6 @@ export async function POST(req: NextRequest) {
       .eq("user_id", userId);
 
     // TODO: Check actual subscription status once Stripe is wired
-    // For now, allow 1 free use for non-subscribers
     const isSubscriber = false; // Replace with real check
     if (!isSubscriber && existingDescriptions && existingDescriptions.length >= 1) {
       return NextResponse.json(
@@ -108,7 +151,6 @@ export async function POST(req: NextRequest) {
     const photosToAnalyze = photoUrls.slice(0, 10);
     const analyses = await Promise.all(photosToAnalyze.map(analyzePhoto));
 
-    // Filter out nulls (skipped photos)
     const validAnalyses = analyses.filter((a): a is string => a !== null);
 
     if (validAnalyses.length === 0) {
@@ -165,7 +207,7 @@ Requirements:
       600
     );
 
-    // Step 4: Save to Supabase
+    // Step 4: Save to Supabase (description + property data only, no photo URLs)
     const { data: saved, error: saveError } = await supabaseAdmin
       .from("lens_descriptions")
       .insert({
@@ -181,7 +223,26 @@ Requirements:
 
     if (saveError) {
       console.error("Save error:", saveError);
-      // Still return the description even if save fails
+    }
+
+    // Step 5: Delete freshly uploaded photos from Cloudinary (not Photo Coach photos)
+    const fromCoachFlags = fromCoach || new Array(photosToAnalyze.length).fill(false);
+    const deletePromises: Promise<void>[] = [];
+
+    photosToAnalyze.forEach((url, i) => {
+      if (!fromCoachFlags[i]) {
+        const publicId = extractPublicId(url);
+        if (publicId) {
+          deletePromises.push(deleteFromCloudinary(publicId));
+        }
+      }
+    });
+
+    // Fire and forget — don't block the response
+    if (deletePromises.length > 0) {
+      Promise.all(deletePromises).catch((err) =>
+        console.error("Cloudinary cleanup error:", err)
+      );
     }
 
     return NextResponse.json({
