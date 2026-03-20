@@ -1,365 +1,226 @@
-"use client";
+import { NextRequest, NextResponse } from "next/server";
 
-import { useState, useEffect } from "react";
-import { Navigation } from "@/components/navigation";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import {
-  Camera,
-  Sparkles,
-  Zap,
-  Clock,
-  Sofa,
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft,
-  ImageIcon,
-  MessageSquare,
-  Play,
-  BookOpen,
-  Lock,
-  Crown,
-  BarChart3,
-  DollarSign,
-  PenTool,
-} from "lucide-react";
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
-interface LensSubscription {
-  active: boolean;
-  plan: string | null;
-  analysesUsed: number;
-  analysesLimit: number;
-  renewsAt: string | null;
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
+const SCORING_PROMPT = `You are a professional real estate photography coach reviewing a listing photo. 
+Score this photo 1-10 and provide specific, actionable feedback.
+
+EVALUATE:
+- Lighting: natural light usage, shadows, exposure, window light
+- Composition: angles, rule of thirds, room coverage, framing
+- Staging: clutter, personal items, distractions, doors (open fully or closed)
+- Technical: focus, white balance, blur
+
+CRITICAL RULES:
+- Only penalize things the agent can fix RIGHT NOW on-site: camera angle, position, 
+  opening/closing blinds, turning lights on/off, removing clutter, closing/opening doors,
+  removing stickers/items, stepping back/forward
+- Do NOT penalize and do NOT lower the score for things AI editing will fix after the shoot:
+  * Lens distortion / barrel distortion / non-vertical vertical lines (wide-angle lens effect)
+  * Slightly tilted horizon line
+  * Mixed lighting color temperatures (warm/cool mismatch from different bulbs)
+  * Minor white balance issues
+  * Mismatched light bulb colors, paint colors, furniture style, architectural features, 
+    countertop materials, backsplash design
+  FLAG all of the above as "noted for AI editing" in flagged_issues but do NOT lower the score.
+- ACCURACY RULES — do NOT give bad advice:
+  * DOORS: Not all doors are hinged. Sliding doors, pocket doors, barn doors, and bifold doors 
+    look different when fully open — they may still be visible in the frame. Do NOT tell the agent 
+    to "open or close" a door unless you are confident it is a standard hinged door that is 
+    clearly partially open. When in doubt, do not mention the door.
+  * LIGHTS — THIS IS CRITICAL, READ CAREFULLY: 
+    A lamp is ON if you can see ANY of these: a visible glow on the shade, warm light cast on 
+    nearby walls or surfaces, an illuminated bulb, a bright spot on the lampshade, or any light 
+    emanating from the fixture. Bedside lamps in real estate photos are almost always already 
+    turned on for staging. Do NOT suggest "turn on the lamp" or "turn on the bedside lamp" 
+    unless the lamp is clearly dark with zero glow and zero light cast on surrounding surfaces. 
+    When in doubt, assume the lamp is ON and do not mention it.
+  * GENERAL: If you are not certain about the state of something (is that door open or closed? 
+    is that light on or off?), do NOT include it as a fixable issue. Only flag things you can 
+    clearly and confidently identify. False advice wastes the agent's time and erodes trust.
+- Be specific: "Back up 2 feet" not "consider adjusting your position"
+- Be encouraging but honest. This is a coach, not a critic.
+- If score is 8+, explain what would make it a 10
+
+Return ONLY valid JSON (no markdown, no backticks):
+{
+  "score": 8,
+  "summary": "Good shot! Strong natural light from the windows.",
+  "fixable_issues": ["Back up 2 feet to capture the full kitchen island"],
+  "flagged_issues": ["Slight warm/cool mismatch from different bulbs — AI Edit will fix"],
+  "what_would_make_10": "Capture the full island and show more of the window wall",
+  "approved": true
 }
 
-export default function DashboardLensPage() {
-  // For Friday demo: hardcoded as no active subscription
-  // Will wire to real subscription data post-launch
-  const [subscription, setSubscription] = useState<LensSubscription>({
-  active: false,
-  plan: null,
-  analysesUsed: 0,
-  analysesLimit: 200,
-  renewsAt: null,
-});
+The "approved" field must be true if score >= 8, false otherwise.
+The "fixable_issues" array should list things the agent can fix right now.
+The "flagged_issues" array should list things that can't be fixed on-site but AI editing can handle later.
+If score is below 8, "what_would_make_10" should still be included but focus on the most impactful fix.`;
 
-useEffect(() => {
-  const checkAdmin = async () => {
-    const supabase = (await import("@/lib/supabase/client")).createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email === "realestatephoto2video@gmail.com") {
-      setSubscription({
-        active: true,
-        plan: "Admin",
-        analysesUsed: 0,
-        analysesLimit: 200,
-        renewsAt: null,
-      });
-    }
+async function callClaude(messages: any[], system?: string, maxTokens = 1024) {
+  const body: any = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: maxTokens,
+    messages,
   };
-  checkAdmin();
-}, []);
+  if (system) body.system = system;
 
-  const features = [
-    {
-      icon: Camera,
-      title: "AI Photo Coach",
-      description: "Open a shoot session for any property. Snap a photo, get instant AI scoring — green means approved, yellow means almost there, red means reshoot. Use the room checklist so you never miss a shot. All approved photos save to your session gallery.",
-      status: "coming" as const,
-      actionLabel: "Start a Shoot",
-      actionHref: "/dashboard/lens/coach",
+  const res = await fetch(ANTHROPIC_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
     },
-    {
-      icon: ImageIcon,
-      title: "Free Photo Editing",
-      description: "All video orders include professional AI corrections — brightness, color, white balance, and vertical line straightening at no extra charge. Lens subscribers can also AI-edit photos on the spot during a shoot session.",
-      status: "coming" as const,
-      actionLabel: "Order a Video",
-      actionHref: "/order",
-    },
-    {
-      icon: Sparkles,
-      title: "AI Suggest",
-      description: "When ordering a video, AI auto-fills optimal camera directions for each photo based on room type and composition. Skip the guesswork.",
-      status: "live" as const,
-      actionLabel: "Order a Video",
-      actionHref: "/order",
-    },
-    {
-      icon: DollarSign,
-      title: "10% Off Video Orders",
-      description: "Save 10% on every Photo 2 Video order, automatically applied at checkout. Brokerage members enjoy even deeper bulk pricing.",
-      status: "coming" as const,
-      actionLabel: "Order a Video",
-      actionHref: "/order",
-    },
-    {
-      icon: Zap,
-      title: "Priority Delivery",
-      description: "Get your listing videos in 12 hours instead of the standard 24-hour turnaround. Subscribers always go first in the queue.",
-      status: "coming" as const,
-      actionLabel: "Order a Video",
-      actionHref: "/order",
-    },
-    {
-      icon: PenTool,
-      title: "Marketing Design Studio",
-      description: "Create Just Listed, Open House, Price Reduced, and Just Sold graphics in under a minute. Upload your headshot, listing photo, and logo — download print-ready and social-ready formats. Includes a branding card builder for your video intros and outros.",
-      status: "coming" as const,
-      actionLabel: "Open Design Studio",
-      actionHref: "/dashboard/lens/design-studio",
-    },
-    {
-      icon: MessageSquare,
-      title: "AI Listing Description Writer",
-      description: "Upload your listing photos and enter property details. AI analyzes each room — features, finishes, condition — then writes a polished MLS-ready description. Choose from Professional, Luxury, Conversational, or Concise styles.",
-      status: "coming" as const,
-      actionLabel: "Write a Description",
-      actionHref: "/dashboard/lens/descriptions",
-    },
-    {
-      icon: Sofa,
-      title: "Virtual Staging",
-      description: "Upload a photo of an empty room and see it furnished in seconds. Choose from Modern, Traditional, Minimalist, Scandinavian, Coastal, or Farmhouse styles. Before/after comparison included.",
-      status: "coming" as const,
-      actionLabel: "Stage a Room",
-      actionHref: "/dashboard/lens/staging",
-    },
-  ];
+    body: JSON.stringify(body),
+  });
 
-  const usagePercent = subscription.analysesLimit > 0
-    ? Math.round((subscription.analysesUsed / subscription.analysesLimit) * 100)
-    : 0;
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Claude API error: ${res.status} — ${err}`);
+  }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+  const data = await res.json();
+  return data.content?.[0]?.text || "";
+}
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-              P2V Lens
-            </h1>
-            <p className="text-muted-foreground mt-1">Your AI-powered real estate marketing suite</p>
-          </div>
-        </div>
+async function deleteFromCloudinary(url: string): Promise<void> {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    console.warn("Cloudinary credentials not set — skipping photo deletion");
+    return;
+  }
+  try {
+    // Extract public_id from Cloudinary URL
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+    if (!match) return;
 
-        {/* ═══ SUBSCRIPTION STATUS ═══ */}
-        <div className="mt-8 mb-10">
-          {subscription.active ? (
-            <div className="bg-card rounded-2xl border border-green-200 p-6 sm:p-8">
-              <div className="flex items-start justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-green-100 flex items-center justify-center">
-                    <Crown className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">P2V Lens — {subscription.plan}</h2>
-                    <p className="text-sm text-green-600 font-medium">Active</p>
-                  </div>
-                </div>
-                {subscription.renewsAt && (
-                  <p className="text-sm text-muted-foreground">
-                    Renews {new Date(subscription.renewsAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                  </p>
-                )}
-              </div>
+    const publicId = match[1];
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const crypto = await import("crypto");
+    const signature = crypto
+      .createHash("sha1")
+      .update(`public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`)
+      .digest("hex");
 
-              {/* Usage meter */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-foreground">Photo Analyses This Month</span>
-                  <span className="text-sm text-muted-foreground">{subscription.analysesUsed} / {subscription.analysesLimit}</span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      usagePercent > 80 ? "bg-amber-500" : usagePercent > 95 ? "bg-red-500" : "bg-green-500"
-                    }`}
-                    style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  ~{Math.floor((subscription.analysesLimit - subscription.analysesUsed) / 100)} full listing shoots remaining
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-card rounded-2xl border border-border p-6 sm:p-8">
-              <div className="flex items-start gap-4 flex-wrap">
-                <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                  <Lock className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-bold text-foreground">No Active Subscription</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Subscribe to P2V Lens to unlock AI photo coaching, design studio, listing descriptions, virtual staging, free photo editing, and priority 12-hour delivery.
-                  </p>
-                  <div className="flex flex-wrap gap-3 mt-4">
-                    <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black">
-                      <Link href="/lens">
-                        Subscribe to P2V Lens
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline">
-                      <Link href="/lens#waitlist-form">
-                        Join the Waitlist
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
+    const formData = new URLSearchParams();
+    formData.append("public_id", publicId);
+    formData.append("timestamp", timestamp);
+    formData.append("api_key", CLOUDINARY_API_KEY);
+    formData.append("signature", signature);
 
-              {/* Preview usage meter (inactive state) */}
-              <div className="mt-6 opacity-50">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-foreground">Photo Analyses This Month</span>
-                  <span className="text-sm text-muted-foreground">0 / 200</span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-muted-foreground/20" style={{ width: "0%" }} />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+    await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      { method: "POST", body: formData }
+    );
+  } catch (err) {
+    console.error("Cloudinary delete error:", err);
+  }
+}
 
-        {/* ═══ FEATURES ═══ */}
-        <div className="mb-14">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-8 w-1.5 bg-accent rounded-full" />
-            <h2 className="text-2xl font-bold text-foreground">Your Features</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map(({ icon: Icon, title, description, status, actionLabel, actionHref }, i) => (
-              <div
-                key={i}
-                className={`relative bg-card rounded-xl border p-5 space-y-2.5 ${
-                  status === "coming"
-                    ? "border-border opacity-70"
-                    : subscription.active
-                    ? "border-primary/20 hover:border-accent/40 hover:shadow-lg transition-all duration-300"
-                    : "border-border"
-                }`}
-              >
-                {status === "live" && (
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
-                    {subscription.active ? "Active" : "With Subscription"}
-                  </span>
-                )}
-                {status === "coming" && (
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    Coming Soon
-                  </span>
-                )}
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                  status === "live" ? "bg-accent/10" : "bg-muted"
-                }`}>
-                  <Icon className={`h-5 w-5 ${status === "live" ? "text-accent" : "text-muted-foreground"}`} />
-                </div>
-                <h3 className="font-bold text-foreground">{title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-                {status === "live" && actionLabel && actionHref && subscription.active && (
-                  <Link
-                    href={actionHref}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent/80 transition-colors pt-1"
-                  >
-                    {actionLabel}
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { photo_url, session_id, user_id } = body;
 
-        {/* ═══ QUICK ACTIONS ═══ */}
-        <div className="mb-14">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-8 w-1.5 bg-primary rounded-full" />
-            <h2 className="text-2xl font-bold text-foreground">Quick Actions</h2>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Link
-              href="/order"
-              className="group bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg transition-all duration-300 block"
-            >
-              <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Play className="h-5 w-5 text-accent" />
-              </div>
-              <h3 className="font-bold text-foreground group-hover:text-accent transition-colors">Order a Video</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Upload photos and get a cinematic listing video in {subscription.active ? "12" : "24"} hours.
-              </p>
-            </Link>
-            <Link
-              href="/tips"
-              className="group bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg transition-all duration-300 block"
-            >
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-bold text-foreground group-hover:text-accent transition-colors">Photo Tips</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Browse DIY video tips to get the most from your listing photos.
-              </p>
-            </Link>
-            <Link
-              href="/resources/photography-guide"
-              className="group bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg transition-all duration-300 block"
-            >
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Camera className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-bold text-foreground group-hover:text-accent transition-colors">Photography Guide</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                32-page guide with camera settings, lighting, staging, and drone tips.
-              </p>
-            </Link>
-          </div>
-        </div>
+    if (!photo_url) {
+      return NextResponse.json(
+        { error: "photo_url is required" },
+        { status: 400 }
+      );
+    }
 
-        {/* CTA */}
-        {!subscription.active && (
-          <div className="bg-card rounded-2xl border border-border p-8 sm:p-10 text-center space-y-5">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Your Complete Listing Marketing Suite
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto">
-              P2V Lens gives you AI photo coaching, a marketing design studio, listing description writer,
-              virtual staging, free photo editing, and priority delivery. Plans start at $27.95/month.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild className="bg-accent hover:bg-accent/90 px-8 py-6 text-lg font-bold">
-                <Link href="/lens">
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Get P2V Lens
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="px-8 py-6 text-lg">
-                <Link href="/order">Create a Video Instead</Link>
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+    // Call Claude Vision for scoring
+    const rawResult = await callClaude(
+      [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "url",
+                url: photo_url,
+              },
+            },
+            {
+              type: "text",
+              text: SCORING_PROMPT,
+            },
+          ],
+        },
+      ],
+      undefined,
+      1024
+    );
 
-      <footer className="bg-muted/50 border-t py-8 mt-12">
-        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-            <Link href="/lens" className="hover:text-foreground transition-colors">P2V Lens</Link>
-            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+    // Parse the response
+    let result;
+    try {
+      const cleaned = rawResult
+        .replace(/```json\s*/g, "")
+        .replace(/```\s*/g, "")
+        .trim();
+      result = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error("Failed to parse Claude response:", rawResult);
+      throw new Error("Failed to parse scoring response");
+    }
+
+    // Validate and normalize
+    const score = Math.min(10, Math.max(1, Math.round(result.score || 1)));
+    const approved = score >= 8;
+
+    const scoringResult = {
+      score,
+      summary: result.summary || "Photo analyzed.",
+      fixable_issues: Array.isArray(result.fixable_issues)
+        ? result.fixable_issues
+        : [],
+      flagged_issues: Array.isArray(result.flagged_issues)
+        ? result.flagged_issues
+        : [],
+      what_would_make_10: result.what_would_make_10 || "",
+      approved,
+    };
+
+    // NOTE: We do NOT auto-delete low-score photos. The client shows the user
+    // "Reshoot" vs "Keep Anyway" options. Deletion only happens if the user
+    // explicitly chooses to reshoot (via DELETE /api/lens/coach).
+    return NextResponse.json(scoringResult);
+  } catch (err: any) {
+    console.error("Photo Coach API error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to analyze photo" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE — called when user explicitly chooses "Reshoot" on a low-score photo
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { photo_url } = body;
+
+    if (!photo_url) {
+      return NextResponse.json(
+        { error: "photo_url is required" },
+        { status: 400 }
+      );
+    }
+
+    await deleteFromCloudinary(photo_url);
+    return NextResponse.json({ deleted: true });
+  } catch (err: any) {
+    console.error("Photo deletion error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to delete photo" },
+      { status: 500 }
+    );
+  }
 }
