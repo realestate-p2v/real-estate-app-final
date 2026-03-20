@@ -28,6 +28,17 @@ CRITICAL RULES:
   * Mismatched light bulb colors, paint colors, furniture style, architectural features, 
     countertop materials, backsplash design
   FLAG all of the above as "noted for AI editing" in flagged_issues but do NOT lower the score.
+- ACCURACY RULES — do NOT give bad advice:
+  * DOORS: Not all doors are hinged. Sliding doors, pocket doors, barn doors, and bifold doors 
+    look different when fully open — they may still be visible in the frame. Do NOT tell the agent 
+    to "open or close" a door unless you are confident it is a standard hinged door that is 
+    clearly partially open. When in doubt, do not mention the door.
+  * LIGHTS: If a lamp or light fixture appears to be glowing, emitting light, or illuminated, 
+    it is already ON. Do NOT tell the agent to turn on a light that is already visibly lit. 
+    Only suggest turning on lights that are clearly off (no visible glow or illumination).
+  * GENERAL: If you are not certain about the state of something (is that door open or closed? 
+    is that light on or off?), do NOT include it as a fixable issue. Only flag things you can 
+    clearly and confidently identify. False advice wastes the agent's time and erodes trust.
 - Be specific: "Back up 2 feet" not "consider adjusting your position"
 - Be encouraging but honest. This is a coach, not a critic.
 - If score is 8+, explain what would make it a 10
