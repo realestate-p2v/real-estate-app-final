@@ -52,18 +52,28 @@ export default function DashboardLensPage() {
 
       const isAdmin = user.email === "realestatephoto2video@gmail.com";
 
-      // Load usage data (real analyses count)
+      // Load usage data — try lens_usage first, fallback to summing lens_sessions
       const { data: usage } = await supabase
         .from("lens_usage")
         .select("*")
         .eq("user_id", user.id)
         .single();
 
+      // Also get total analyses from sessions (more reliable since admin skips lens_usage)
+      const { data: sessions } = await supabase
+        .from("lens_sessions")
+        .select("total_analyses")
+        .eq("user_id", user.id);
+      const totalFromSessions = (sessions || []).reduce((sum, s) => sum + (s.total_analyses || 0), 0);
+
+      // Use whichever is higher
+      const totalAnalyses = Math.max(usage?.total_analyses || 0, totalFromSessions);
+
       if (isAdmin) {
         setSubscription({
           active: true,
           plan: "Admin",
-          analysesUsed: usage?.total_analyses || 0,
+          analysesUsed: totalAnalyses,
           analysesLimit: 200,
           renewsAt: null,
         });
@@ -71,7 +81,7 @@ export default function DashboardLensPage() {
         setSubscription({
           active: true,
           plan: usage.subscription_tier || "Individual",
-          analysesUsed: usage.total_analyses || 0,
+          analysesUsed: totalAnalyses,
           analysesLimit: 200,
           renewsAt: null,
         });
