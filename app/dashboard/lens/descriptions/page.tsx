@@ -113,25 +113,32 @@ export default function DescriptionWriterPage() {
         setUploadProgress(`Uploading ${uploaded + 1} of ${fileArray.length - oversized.length}...`);
 
         try {
-          // Get Cloudinary signature
-          const sigRes = await fetch("/api/cloudinary-signature", { method: "POST" });
-          const sigData = await sigRes.json();
+          // Get Cloudinary signature — matches exact pattern from photo-uploader.tsx
+          const sigResponse = await fetch("/api/cloudinary-signature", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: "p2v-lens/descriptions" }),
+          });
+          const sigData = await sigResponse.json();
+          if (!sigData.success) throw new Error("Signature failed");
 
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("api_key", sigData.apiKey);
-          formData.append("timestamp", sigData.timestamp.toString());
-          formData.append("signature", sigData.signature);
-          formData.append("folder", sigData.folder || "p2v-lens");
+          const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
 
-          const uploadRes = await fetch(
-            `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
-            { method: "POST", body: formData }
+          const uploadData = new FormData();
+          uploadData.append("file", file);
+          uploadData.append("api_key", apiKey);
+          uploadData.append("timestamp", timestamp.toString());
+          uploadData.append("signature", signature);
+          uploadData.append("folder", folder);
+
+          const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+            { method: "POST", body: uploadData }
           );
-          const uploadData = await uploadRes.json();
+          const result = await response.json();
 
-          if (uploadData.secure_url) {
-            newUrls.push(uploadData.secure_url);
+          if (result.secure_url) {
+            newUrls.push(result.secure_url);
             uploaded++;
           } else {
             failed.push(file.name);
@@ -163,7 +170,6 @@ export default function DescriptionWriterPage() {
     } finally {
       setUploading(false);
       setUploadProgress("");
-      // Reset the input
       e.target.value = "";
     }
   }, []);
