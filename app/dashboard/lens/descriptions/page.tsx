@@ -22,7 +22,7 @@ import {
   ImageIcon,
   AlertCircle,
 } from "lucide-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 
 type Style = "professional" | "luxury" | "conversational" | "concise";
 
@@ -46,7 +46,7 @@ const STYLES: { value: Style; label: string; description: string }[] = [
 ];
 
 export default function DescriptionWriterPage() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
