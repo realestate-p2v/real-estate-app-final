@@ -88,6 +88,27 @@ export default function DescriptionWriterPage() {
     getUser();
   }, [supabase.auth]);
 
+  // Load photos from Photo Coach if navigated from gallery
+  useEffect(() => {
+    try {
+      const coachPhotos = sessionStorage.getItem("coach_photos_for_description");
+      const coachAddress = sessionStorage.getItem("coach_property_address");
+      if (coachPhotos) {
+        const parsed = JSON.parse(coachPhotos);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPhotoUrls(parsed);
+        }
+        sessionStorage.removeItem("coach_photos_for_description");
+      }
+      if (coachAddress) {
+        setPropertyData(prev => ({ ...prev, address: coachAddress }));
+        sessionStorage.removeItem("coach_property_address");
+      }
+    } catch (e) {
+      console.error("Failed to load coach photos:", e);
+    }
+  }, []);
+
   const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
