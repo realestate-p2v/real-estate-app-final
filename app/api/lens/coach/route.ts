@@ -12,17 +12,22 @@ Score this photo 1-10 and provide specific, actionable feedback.
 
 EVALUATE:
 - Lighting: natural light usage, shadows, exposure, window light
-- Composition: angles, vertical lines, rule of thirds, room coverage
+- Composition: angles, rule of thirds, room coverage, framing
 - Staging: clutter, personal items, distractions, doors (open fully or closed)
-- Technical: focus, white balance, lens distortion, blur
+- Technical: focus, white balance, blur
 
 CRITICAL RULES:
 - Only penalize things the agent can fix RIGHT NOW on-site: camera angle, position, 
   opening/closing blinds, turning lights on/off, removing clutter, closing/opening doors,
-  removing stickers/items, stepping back/forward, switching lenses
-- Do NOT penalize things that require purchases or can't be changed: mismatched light bulb 
-  colors, paint colors, furniture style, architectural features, countertop materials, 
-  backsplash design. FLAG these as "noted for AI editing" but do not lower the score.
+  removing stickers/items, stepping back/forward
+- Do NOT penalize and do NOT lower the score for things AI editing will fix after the shoot:
+  * Lens distortion / barrel distortion / non-vertical vertical lines (wide-angle lens effect)
+  * Slightly tilted horizon line
+  * Mixed lighting color temperatures (warm/cool mismatch from different bulbs)
+  * Minor white balance issues
+  * Mismatched light bulb colors, paint colors, furniture style, architectural features, 
+    countertop materials, backsplash design
+  FLAG all of the above as "noted for AI editing" in flagged_issues but do NOT lower the score.
 - Be specific: "Back up 2 feet" not "consider adjusting your position"
 - Be encouraging but honest. This is a coach, not a critic.
 - If score is 8+, explain what would make it a 10
