@@ -15,13 +15,16 @@ import {
   Camera,
   Sparkles,
   ArrowRight,
-  BookOpen,
+  ArrowLeft,
+  ImageIcon,
+  MessageSquare,
   Play,
+  BookOpen,
   DollarSign,
   UserPlus,
   Edit,
   Building2,
-  Image as ImageIcon,
+  Image as ImageIcon2,
 } from "lucide-react";
 
 const REALTOR_FEATURES = [
@@ -70,7 +73,7 @@ const REALTOR_FEATURES = [
   {
     icon: Sparkles,
     title: "P2V Lens",
-    description: "AI photography coaching, free photo editing, and priority 12-hour delivery on every order.",
+    description: "AI photo coaching, marketing design studio, listing description writer, virtual staging, free photo editing, and priority 12-hour delivery.",
     status: "live",
     href: "/dashboard/lens",
   },
@@ -116,7 +119,7 @@ const PHOTOGRAPHER_FEATURES_HAS_LISTING = [
     href: "/directory/edit",
   },
   {
-    icon: ImageIcon,
+    icon: ImageIcon2,
     title: "View My Listing",
     description: "See how your profile looks to realtors browsing the directory.",
     status: "live",
