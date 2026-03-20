@@ -35,7 +35,7 @@ interface LensSubscription {
 export default function DashboardLensPage() {
   // For Friday demo: hardcoded as no active subscription
   // Will wire to real subscription data post-launch
-  cconst [subscription, setSubscription] = useState<LensSubscription>({
+  const [subscription, setSubscription] = useState<LensSubscription>({
   active: false,
   plan: null,
   analysesUsed: 0,
