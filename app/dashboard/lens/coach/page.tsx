@@ -85,9 +85,9 @@ const DEFAULT_ROOMS = [
   { key: "dining_room", label: "Dining Room", icon: "🍽️" },
   { key: "master_bedroom", label: "Master Bedroom", icon: "🛏️" },
   { key: "master_bath", label: "Master Bath", icon: "🚿" },
-  { key: "bedroom_2", label: "Bedroom 2", icon: "🛏️", countable: true, base: "bedroom", startAt: 2 },
-  { key: "bedroom_3", label: "Bedroom 3", icon: "🛏️", countable: true, base: "bedroom", startAt: 3 },
-  { key: "bathroom_2", label: "Bathroom 2", icon: "🚿", countable: true, base: "bathroom", startAt: 2 },
+  { key: "bedroom_2", label: "Bedroom 2", icon: "🛏️" },
+  { key: "bedroom_3", label: "Bedroom 3", icon: "🛏️" },
+  { key: "bathroom_2", label: "Bathroom 2", icon: "🚿" },
   { key: "laundry", label: "Laundry", icon: "🧺" },
   { key: "garage", label: "Garage", icon: "🚗" },
   { key: "backyard_pool", label: "Backyard / Pool", icon: "🏊" },
@@ -256,13 +256,30 @@ export default function PhotoCoachPage() {
   };
 
   const saveChecklist = async () => {
-    // Add extra bedrooms/bathrooms
+    // Add extra bedrooms/bathrooms starting after the highest existing number
     const rooms = { ...selectedRooms };
-    for (let i = 4; i < 4 + extraBedrooms; i++) {
-      rooms[`bedroom_${i}`] = "pending";
+    
+    // Find highest existing bedroom number
+    const existingBedroomNums = Object.keys(rooms)
+      .filter(k => k.startsWith("bedroom_"))
+      .map(k => parseInt(k.split("_")[1]) || 0);
+    const highestBedroom = existingBedroomNums.length > 0 ? Math.max(...existingBedroomNums) : 3;
+    // Also count master_bedroom as 1
+    const startBedroom = rooms["master_bedroom"] ? Math.max(highestBedroom + 1, 4) : Math.max(highestBedroom + 1, 2);
+    
+    for (let i = 0; i < extraBedrooms; i++) {
+      rooms[`bedroom_${startBedroom + i}`] = "pending";
     }
-    for (let i = 3; i < 3 + extraBathrooms; i++) {
-      rooms[`bathroom_${i}`] = "pending";
+    
+    // Find highest existing bathroom number
+    const existingBathroomNums = Object.keys(rooms)
+      .filter(k => k.startsWith("bathroom_"))
+      .map(k => parseInt(k.split("_")[1]) || 0);
+    const highestBathroom = existingBathroomNums.length > 0 ? Math.max(...existingBathroomNums) : 1;
+    const startBathroom = rooms["master_bath"] ? Math.max(highestBathroom + 1, 3) : Math.max(highestBathroom + 1, 2);
+    
+    for (let i = 0; i < extraBathrooms; i++) {
+      rooms[`bathroom_${startBathroom + i}`] = "pending";
     }
 
     setSelectedRooms(rooms);
@@ -867,7 +884,7 @@ export default function PhotoCoachPage() {
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-              {DEFAULT_ROOMS.filter((r) => !r.countable).map((room) => (
+              {DEFAULT_ROOMS.map((room) => (
                 <button
                   key={room.key}
                   onClick={() => toggleRoom(room.key)}
@@ -1049,8 +1066,8 @@ export default function PhotoCoachPage() {
                   href={`/dashboard/lens/descriptions?from_coach=${activeSession.id}`}
                   className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
                 >
-                  <FileText className="h-5 w-5 flex-shrink-0" />
-                  Write Description
+                  <Sparkles className="h-5 w-5 flex-shrink-0" />
+                  AI Description
                 </Link>
                 <button
                   onClick={() => {
@@ -1248,15 +1265,16 @@ export default function PhotoCoachPage() {
 
                 {/* Photo preview with watermark overlay */}
                 {lastPhotoUrl && (
-                  <div className="relative rounded-xl overflow-hidden" style={{ pointerEvents: "none" }}>
+                  <div className="relative rounded-xl overflow-hidden bg-black/5">
                     <img
                       src={lastPhotoUrl}
                       alt="Analyzed photo"
-                      className="w-full max-h-64 object-contain bg-black/5 rounded-xl"
+                      className="w-full rounded-xl"
+                      style={{ maxHeight: "300px", objectFit: "contain", pointerEvents: "none", userSelect: "none" }}
                     />
                     {/* Light watermark */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-                      <span className="text-4xl font-black text-black rotate-[-20deg]">P2V LENS</span>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ userSelect: "none" }}>
+                      <span className="text-4xl font-black text-black opacity-10 rotate-[-20deg]">P2V LENS</span>
                     </div>
                   </div>
                 )}
