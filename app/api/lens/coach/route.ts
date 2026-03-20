@@ -33,9 +33,13 @@ CRITICAL RULES:
     look different when fully open — they may still be visible in the frame. Do NOT tell the agent 
     to "open or close" a door unless you are confident it is a standard hinged door that is 
     clearly partially open. When in doubt, do not mention the door.
-  * LIGHTS: If a lamp or light fixture appears to be glowing, emitting light, or illuminated, 
-    it is already ON. Do NOT tell the agent to turn on a light that is already visibly lit. 
-    Only suggest turning on lights that are clearly off (no visible glow or illumination).
+  * LIGHTS — THIS IS CRITICAL, READ CAREFULLY: 
+    A lamp is ON if you can see ANY of these: a visible glow on the shade, warm light cast on 
+    nearby walls or surfaces, an illuminated bulb, a bright spot on the lampshade, or any light 
+    emanating from the fixture. Bedside lamps in real estate photos are almost always already 
+    turned on for staging. Do NOT suggest "turn on the lamp" or "turn on the bedside lamp" 
+    unless the lamp is clearly dark with zero glow and zero light cast on surrounding surfaces. 
+    When in doubt, assume the lamp is ON and do not mention it.
   * GENERAL: If you are not certain about the state of something (is that door open or closed? 
     is that light on or off?), do NOT include it as a fixable issue. Only flag things you can 
     clearly and confidently identify. False advice wastes the agent's time and erodes trust.
