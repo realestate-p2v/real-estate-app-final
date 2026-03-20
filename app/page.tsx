@@ -13,6 +13,7 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { TrustSection } from "@/components/trust-section";
 import { FAQ } from "@/components/faq";
 import { BrokerageCTA } from "@/components/brokerage-cta";
+import { LensIntroSection } from "@/components/lens-intro-section";
 
 export default function HomePage() {
   return (
@@ -23,6 +24,7 @@ export default function HomePage() {
       <DemoSection />
       <SaleBanner />
       <BrokerageCTA />
+      <LensIntroSection />
       <ProcessSection />
       <TrustSection />
       <CTASection />
