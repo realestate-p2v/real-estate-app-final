@@ -144,6 +144,7 @@ export default function PhotoCoachPage() {
   const [hdrDetected, setHdrDetected] = useState<boolean | null>(null); // null = not checked yet
   const [hdrBannerDismissed, setHdrBannerDismissed] = useState(false);
   const [showHdrHelp, setShowHdrHelp] = useState(false);
+  const [showTips, setShowTips] = useState(false);
 
   // Gallery view
   const [showGallery, setShowGallery] = useState(false);
@@ -1122,6 +1123,57 @@ export default function PhotoCoachPage() {
             )}
           </div>
         )}
+
+        {/* ─── Photo Tips ─── */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden mb-6">
+          <button
+            onClick={() => setShowTips(!showTips)}
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+          >
+            <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+              📸 Tips for best photo quality
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showTips ? "rotate-180" : ""}`} />
+          </button>
+          {showTips && (
+            <div className="px-4 pb-4 space-y-3 text-xs text-muted-foreground">
+              <div>
+                <p className="font-bold text-foreground mb-1">Camera Format (iPhone)</p>
+                <p>
+                  Go to Settings → Camera → Formats → choose <span className="font-semibold text-foreground">&quot;Most Compatible&quot;</span> (JPEG). 
+                  This ensures maximum compatibility with web uploads and video processing. &quot;High Efficiency&quot; (HEIF) can sometimes 
+                  cause issues. ProRAW is unnecessary for listing photos.
+                </p>
+              </div>
+              <div>
+                <p className="font-bold text-foreground mb-1">Enable Grid & Level (iPhone)</p>
+                <p>
+                  Settings → Camera → turn on <span className="font-semibold text-foreground">Grid</span> and <span className="font-semibold text-foreground">Level</span>. 
+                  The grid helps with composition (rule of thirds) and the level ensures your camera is perfectly straight — 
+                  critical for real estate photos where vertical lines need to be vertical.
+                </p>
+              </div>
+              <div>
+                <p className="font-bold text-foreground mb-1">Shooting Technique</p>
+                <p>• Hold your phone at <span className="font-semibold text-foreground">chest height</span> — not eye level. This shows more floor and feels more natural.</p>
+                <p>• Stand in <span className="font-semibold text-foreground">doorways or corners</span> to capture the most room possible.</p>
+                <p>• Shoot <span className="font-semibold text-foreground">toward natural light</span> (windows) when possible — it makes rooms look brighter and more inviting.</p>
+                <p>• Turn on <span className="font-semibold text-foreground">all lights</span> in every room, even during the day.</p>
+                <p>• Open all blinds and curtains fully.</p>
+                <p>• Close all toilet lids.</p>
+                <p>• Remove personal items, shoes, trash cans from view.</p>
+              </div>
+              <div>
+                <p className="font-bold text-foreground mb-1">Wide-Angle Lens</p>
+                <p>
+                  If your phone has an ultra-wide lens (0.5x), use it for small rooms like bathrooms and closets. 
+                  Use the standard lens (1x) for larger rooms — ultra-wide can distort larger spaces. 
+                  AI Edit will correct minor lens distortion automatically.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ─── Checklist Setup Modal ─── */}
         {showChecklist && !checklistSetup && (
