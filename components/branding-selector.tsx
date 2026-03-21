@@ -545,7 +545,7 @@ export function BrandingSelector({
             </div>
           </div>
 
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Tip: Use the P2V Lens Design Studio to create professional branding cards with your headshot, logo, and listing details.
           </p>
         </div>
