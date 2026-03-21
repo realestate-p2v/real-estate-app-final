@@ -26,6 +26,7 @@ import {
   Calendar,
   Sparkles,
   Type,
+  Play,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════
@@ -249,21 +250,22 @@ function InfoBarTemplate({
   const isStory = size.id === "story";
 
   const unit = w / 1080;
-  const photoPercent = isStory ? 65 : 58;
-  const barPadX = Math.round(36 * unit);
-  const barPadY = Math.round(20 * unit);
+  const photoPercent = isStory ? 62 : 55;
+  const barH = h * (1 - photoPercent / 100);
+  const barPadX = Math.round(40 * unit);
+  const barPadY = Math.round(24 * unit);
 
-  // Font sizes
-  const badgeFontSize = Math.round(26 * unit);
-  const addressFontSize = Math.round(34 * unit);
-  const detailsFontSize = Math.round(24 * unit);
-  const priceFontSize = Math.round(52 * unit);
-  const agentNameFontSize = Math.round(30 * unit);
-  const agentDetailFontSize = Math.round(22 * unit);
-  // BIGGER headshot and logo
-  const headshotSize = Math.round((isStory ? 160 : 140) * unit);
-  const logoMaxW = Math.round(140 * unit);
-  const logoMaxH = Math.round(70 * unit);
+  // Font sizes — proportional to bar height so they fill the space
+  const badgeFontSize = Math.round(barH * 0.07);
+  const addressFontSize = Math.round(barH * 0.09);
+  const detailsFontSize = Math.round(barH * 0.065);
+  const priceFontSize = Math.round(barH * 0.14);
+  const agentNameFontSize = Math.round(barH * 0.09);
+  const agentDetailFontSize = Math.round(barH * 0.065);
+  // Headshot fills ~70% of bar height
+  const headshotSize = Math.round(barH * 0.68);
+  const logoMaxW = Math.round(barH * 0.40);
+  const logoMaxH = Math.round(barH * 0.22);
 
   const accent = accentColor || "#ffffff";
   const usedBadgeColor = accentColor || badgeColor;
@@ -802,7 +804,11 @@ export default function DesignStudioPage() {
   const [selectedSize, setSelectedSize] = useState<SizeOption>("square");
 
   // Uploads
+  const [mediaMode, setMediaMode] = useState<"image" | "video">("image");
   const [listingPhoto, setListingPhoto] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail: string; orderId: string } | null>(null);
+  const [userVideos, setUserVideos] = useState<any[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
   const [headshot, setHeadshot] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [uploadingListing, setUploadingListing] = useState(false);
@@ -884,6 +890,39 @@ export default function DesignStudioPage() {
     const url = await uploadToCloudinary(file, folder);
     setUrl(url);
     setLoading(false);
+  };
+
+  // Load user's unbranded videos for video overlay option
+  const loadUserVideos = async () => {
+    if (userVideos.length > 0) return; // already loaded
+    setLoadingVideos(true);
+    try {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("order_id, delivery_url, unbranded_delivery_url, photos, created_at")
+        .eq("user_id", user.id)
+        .in("status", ["complete", "delivered", "closed"])
+        .order("created_at", { ascending: false });
+      
+      // Only show orders that have an unbranded version
+      const videos = (orders || [])
+        .filter((o: any) => o.unbranded_delivery_url || o.delivery_url)
+        .map((o: any) => ({
+          orderId: o.order_id,
+          url: o.unbranded_delivery_url || o.delivery_url,
+          thumbnail: o.photos?.[0]?.secure_url || null,
+          hasUnbranded: !!o.unbranded_delivery_url,
+          date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        }));
+      setUserVideos(videos);
+    } catch (err) {
+      console.error("Failed to load videos:", err);
+    } finally {
+      setLoadingVideos(false);
+    }
   };
 
   // Export via html2canvas
@@ -994,32 +1033,130 @@ export default function DesignStudioPage() {
                 <div className="bg-card rounded-2xl border border-border p-6">
                   <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
                     <Upload className="h-4 w-4 text-accent" />
-                    Upload Images
+                    Upload Media
                   </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <ImageUploadBox
-                      label="Listing Photo *"
-                      imageUrl={listingPhoto}
-                      onUpload={(f) => handleUpload(f, "design-studio", setListingPhoto, setUploadingListing)}
-                      onClear={() => setListingPhoto(null)}
-                      uploading={uploadingListing}
-                    />
-                    <ImageUploadBox
-                      label="Headshot"
-                      imageUrl={headshot}
-                      onUpload={(f) => handleUpload(f, "design-studio", setHeadshot, setUploadingHeadshot)}
-                      onClear={() => setHeadshot(null)}
-                      uploading={uploadingHeadshot}
-                    />
-                    <ImageUploadBox
-                      label="Logo"
-                      imageUrl={logo}
-                      onUpload={(f) => handleUpload(f, "design-studio", setLogo, setUploadingLogo)}
-                      onClear={() => setLogo(null)}
-                      uploading={uploadingLogo}
-                      hint="Optional"
-                    />
+
+                  {/* Image / Video toggle for listing media */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => { setMediaMode("image"); setSelectedVideo(null); }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        mediaMode === "image" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                      Image
+                    </button>
+                    <button
+                      onClick={() => { setMediaMode("video"); setListingPhoto(null); loadUserVideos(); }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        mediaMode === "video" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      <Play className="h-4 w-4" />
+                      Video Overlay
+                    </button>
                   </div>
+
+                  {mediaMode === "image" ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      <ImageUploadBox
+                        label="Listing Photo *"
+                        imageUrl={listingPhoto}
+                        onUpload={(f) => handleUpload(f, "design-studio", setListingPhoto, setUploadingListing)}
+                        onClear={() => setListingPhoto(null)}
+                        uploading={uploadingListing}
+                      />
+                      <ImageUploadBox
+                        label="Headshot"
+                        imageUrl={headshot}
+                        onUpload={(f) => handleUpload(f, "design-studio", setHeadshot, setUploadingHeadshot)}
+                        onClear={() => setHeadshot(null)}
+                        uploading={uploadingHeadshot}
+                      />
+                      <ImageUploadBox
+                        label="Logo"
+                        imageUrl={logo}
+                        onUpload={(f) => handleUpload(f, "design-studio", setLogo, setUploadingLogo)}
+                        onClear={() => setLogo(null)}
+                        uploading={uploadingLogo}
+                        hint="Optional"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Select an unbranded video from your orders. The listing graphic overlay will be applied to the video.
+                      </p>
+
+                      {loadingVideos ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : userVideos.length === 0 ? (
+                        <div className="text-center py-8 bg-muted/30 rounded-xl border border-dashed border-border">
+                          <p className="text-sm text-muted-foreground">No completed videos found.</p>
+                          <p className="text-xs text-muted-foreground mt-1">Order a video first, then come back to add overlays.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                          {userVideos.map((v) => (
+                            <button
+                              key={v.orderId}
+                              onClick={() => {
+                                setSelectedVideo(v);
+                                if (v.thumbnail) setListingPhoto(v.thumbnail);
+                              }}
+                              className={`relative rounded-xl border-2 overflow-hidden text-left transition-all ${
+                                selectedVideo?.orderId === v.orderId
+                                  ? "border-primary ring-2 ring-primary/30"
+                                  : "border-border hover:border-primary/40"
+                              }`}
+                            >
+                              {v.thumbnail ? (
+                                <img src={v.thumbnail} alt="" className="w-full aspect-video object-cover" />
+                              ) : (
+                                <div className="w-full aspect-video bg-muted flex items-center justify-center">
+                                  <Play className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="p-2">
+                                <p className="text-xs font-semibold truncate">Order {v.orderId?.slice(0, 8)}</p>
+                                <p className="text-[11px] text-muted-foreground">{v.date}</p>
+                                {!v.hasUnbranded && (
+                                  <p className="text-[10px] text-amber-600 font-medium mt-0.5">Branded only</p>
+                                )}
+                              </div>
+                              {selectedVideo?.orderId === v.orderId && (
+                                <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                                  <CheckCircle className="h-4 w-4 text-white" />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Still show headshot + logo uploads */}
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <ImageUploadBox
+                          label="Headshot"
+                          imageUrl={headshot}
+                          onUpload={(f) => handleUpload(f, "design-studio", setHeadshot, setUploadingHeadshot)}
+                          onClear={() => setHeadshot(null)}
+                          uploading={uploadingHeadshot}
+                        />
+                        <ImageUploadBox
+                          label="Logo"
+                          imageUrl={logo}
+                          onUpload={(f) => handleUpload(f, "design-studio", setLogo, setUploadingLogo)}
+                          onClear={() => setLogo(null)}
+                          uploading={uploadingLogo}
+                          hint="Optional"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-card rounded-2xl border border-border p-6">
