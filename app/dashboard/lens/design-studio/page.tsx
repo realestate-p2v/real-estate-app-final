@@ -222,6 +222,9 @@ function InfoBarTemplate({
   brokerage,
   badgeText,
   badgeColor,
+  fontFamily,
+  barColor,
+  accentColor,
 }: {
   size: SizeConfig;
   listingPhoto: string | null;
@@ -237,29 +240,36 @@ function InfoBarTemplate({
   brokerage: string;
   badgeText: string;
   badgeColor: string;
+  fontFamily: string;
+  barColor: string;
+  accentColor: string;
 }) {
   const w = size.width;
   const h = size.height;
   const isStory = size.id === "story";
-  const isPostcard = size.id === "postcard";
 
-  // Proportional sizing based on canvas width
   const unit = w / 1080;
-  const photoPercent = isStory ? 68 : 62;
+  const photoPercent = isStory ? 65 : 58;
   const barPadX = Math.round(36 * unit);
-  const barPadY = Math.round(24 * unit);
+  const barPadY = Math.round(20 * unit);
 
-  // Font sizes — BIG and readable
-  const badgeFontSize = Math.round(24 * unit);
-  const addressFontSize = Math.round(32 * unit);
+  // Font sizes
+  const badgeFontSize = Math.round(26 * unit);
+  const addressFontSize = Math.round(34 * unit);
   const detailsFontSize = Math.round(24 * unit);
-  const priceFontSize = Math.round(48 * unit);
-  const agentNameFontSize = Math.round(28 * unit);
+  const priceFontSize = Math.round(52 * unit);
+  const agentNameFontSize = Math.round(30 * unit);
   const agentDetailFontSize = Math.round(22 * unit);
-  const headshotSize = Math.round(isStory ? 110 : 100) * unit;
+  // BIGGER headshot and logo
+  const headshotSize = Math.round((isStory ? 160 : 140) * unit);
+  const logoMaxW = Math.round(140 * unit);
+  const logoMaxH = Math.round(70 * unit);
+
+  const accent = accentColor || "#ffffff";
+  const usedBadgeColor = accentColor || badgeColor;
 
   return (
-    <div className="relative overflow-hidden bg-gray-900" style={{ width: w, height: h }}>
+    <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
       {/* Listing photo */}
       <div className="absolute inset-x-0 top-0" style={{ height: `${photoPercent}%` }}>
         {listingPhoto ? (
@@ -269,13 +279,13 @@ function InfoBarTemplate({
             <ImageIcon className="text-gray-500" style={{ width: 80 * unit, height: 80 * unit }} />
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-900 to-transparent" style={{ height: Math.round(60 * unit) }} />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent" style={{ height: Math.round(80 * unit), backgroundImage: `linear-gradient(to top, ${barColor}, transparent)` }} />
       </div>
 
       {/* Info bar */}
       <div
-        className="absolute inset-x-0 bottom-0 bg-gray-900 flex items-center justify-between"
-        style={{ height: `${100 - photoPercent}%`, padding: `${barPadY}px ${barPadX}px` }}
+        className="absolute inset-x-0 bottom-0 flex items-center justify-between"
+        style={{ height: `${100 - photoPercent}%`, padding: `${barPadY}px ${barPadX}px`, backgroundColor: barColor }}
       >
         {/* Left: Agent info */}
         <div className="flex items-center flex-shrink-0" style={{ gap: Math.round(16 * unit), maxWidth: "48%" }}>
@@ -284,14 +294,14 @@ function InfoBarTemplate({
               src={headshot}
               alt="Agent"
               className="rounded-full object-cover flex-shrink-0"
-              style={{ width: headshotSize, height: headshotSize, border: `3px solid rgba(255,255,255,0.25)` }}
+              style={{ width: headshotSize, height: headshotSize, border: `${Math.round(4 * unit)}px solid rgba(255,255,255,0.3)` }}
             />
           ) : (
             <div
               className="rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
-              style={{ width: headshotSize, height: headshotSize, border: `3px solid rgba(255,255,255,0.25)` }}
+              style={{ width: headshotSize, height: headshotSize, border: `${Math.round(4 * unit)}px solid rgba(255,255,255,0.25)` }}
             >
-              <User className="text-gray-500" style={{ width: 36 * unit, height: 36 * unit }} />
+              <User className="text-gray-500" style={{ width: 48 * unit, height: 48 * unit }} />
             </div>
           )}
           <div className="min-w-0">
@@ -313,7 +323,7 @@ function InfoBarTemplate({
             className="inline-block text-white font-black uppercase tracking-wider rounded-sm"
             style={{
               fontSize: badgeFontSize,
-              backgroundColor: badgeColor,
+              backgroundColor: usedBadgeColor,
               padding: `${Math.round(6 * unit)}px ${Math.round(16 * unit)}px`,
               marginBottom: Math.round(10 * unit),
             }}
@@ -328,12 +338,12 @@ function InfoBarTemplate({
               .filter(Boolean)
               .join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}
           </p>
-          <p className="text-white font-black" style={{ fontSize: priceFontSize, marginTop: Math.round(6 * unit), lineHeight: 1.1 }}>
+          <p className="font-black" style={{ fontSize: priceFontSize, marginTop: Math.round(6 * unit), lineHeight: 1.1, color: accent }}>
             {price ? `$${price}` : "$000,000"}
           </p>
         </div>
 
-        {/* Logo in corner */}
+        {/* Logo */}
         {logo && (
           <img
             src={logo}
@@ -342,9 +352,9 @@ function InfoBarTemplate({
             style={{
               top: barPadY,
               left: barPadX,
-              maxWidth: Math.round(80 * unit),
-              maxHeight: Math.round(40 * unit),
-              opacity: 0.6,
+              maxWidth: logoMaxW,
+              maxHeight: logoMaxH,
+              opacity: 0.8,
             }}
           />
         )}
@@ -372,6 +382,9 @@ function OpenHouseTemplate({
   agentName,
   phone,
   brokerage,
+  fontFamily,
+  barColor,
+  accentColor,
 }: {
   size: SizeConfig;
   listingPhoto: string | null;
@@ -387,6 +400,9 @@ function OpenHouseTemplate({
   agentName: string;
   phone: string;
   brokerage: string;
+  fontFamily: string;
+  barColor: string;
+  accentColor: string;
 }) {
   const w = size.width;
   const h = size.height;
@@ -398,15 +414,20 @@ function OpenHouseTemplate({
   const timeFontSize = Math.round(26 * unit);
   const addressFontSize = Math.round(30 * unit);
   const detailsFontSize = Math.round(24 * unit);
-  const priceFontSize = Math.round(40 * unit);
-  const agentFontSize = Math.round(22 * unit);
-  const agentDetailFontSize = Math.round(18 * unit);
-  const headshotSize = Math.round(64 * unit);
+  const priceFontSize = Math.round(44 * unit);
+  const agentFontSize = Math.round(24 * unit);
+  const agentDetailFontSize = Math.round(20 * unit);
+  // BIGGER headshot and logo
+  const headshotSize = Math.round(90 * unit);
+  const logoMaxW = Math.round(120 * unit);
+  const logoMaxH = Math.round(56 * unit);
   const pad = Math.round(40 * unit);
 
+  const accent = accentColor || "#ffffff";
+  const badgeBg = accentColor || "#059669";
+
   return (
-    <div className="relative overflow-hidden bg-gray-900" style={{ width: w, height: h }}>
-      {/* Full bleed photo */}
+    <div className="relative overflow-hidden bg-gray-900" style={{ width: w, height: h, fontFamily }}>
       {listingPhoto ? (
         <img src={listingPhoto} alt="Listing" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
@@ -415,7 +436,6 @@ function OpenHouseTemplate({
         </div>
       )}
 
-      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
 
       {/* Top: Badge + date/time */}
@@ -424,8 +444,8 @@ function OpenHouseTemplate({
         style={{ height: isStory ? "28%" : "36%", padding: `0 ${pad}px` }}
       >
         <div
-          className="inline-block bg-emerald-600 text-white font-black uppercase tracking-[0.15em] rounded-sm"
-          style={{ fontSize: badgeFontSize, padding: `${Math.round(8 * unit)}px ${Math.round(24 * unit)}px` }}
+          className="inline-block text-white font-black uppercase tracking-[0.15em] rounded-sm"
+          style={{ fontSize: badgeFontSize, padding: `${Math.round(8 * unit)}px ${Math.round(24 * unit)}px`, backgroundColor: badgeBg }}
         >
           Open House
         </div>
@@ -439,7 +459,6 @@ function OpenHouseTemplate({
 
       {/* Bottom: Property + agent */}
       <div className="absolute inset-x-0 bottom-0" style={{ padding: `0 ${pad}px` }}>
-        {/* Property details */}
         <div className="text-center text-white" style={{ marginBottom: Math.round(12 * unit) }}>
           <p className="font-bold leading-tight" style={{ fontSize: addressFontSize }}>
             {address || "123 Main Street"}
@@ -449,29 +468,29 @@ function OpenHouseTemplate({
               .filter(Boolean)
               .join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}
           </p>
-          <p className="font-black" style={{ fontSize: priceFontSize, marginTop: Math.round(8 * unit), lineHeight: 1.1 }}>
+          <p className="font-black" style={{ fontSize: priceFontSize, marginTop: Math.round(8 * unit), lineHeight: 1.1, color: accent }}>
             {price ? `$${price}` : "$000,000"}
           </p>
         </div>
 
         {/* Agent bar */}
         <div
-          className="flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-t-xl"
-          style={{ padding: `${Math.round(14 * unit)}px ${Math.round(20 * unit)}px`, gap: Math.round(12 * unit) }}
+          className="flex items-center justify-center backdrop-blur-sm rounded-t-xl"
+          style={{ padding: `${Math.round(14 * unit)}px ${Math.round(20 * unit)}px`, gap: Math.round(14 * unit), backgroundColor: barColor + "cc" }}
         >
           {headshot ? (
             <img
               src={headshot}
               alt="Agent"
               className="rounded-full object-cover flex-shrink-0"
-              style={{ width: headshotSize, height: headshotSize, border: "2px solid rgba(255,255,255,0.3)" }}
+              style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }}
             />
           ) : (
             <div
               className="rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0"
-              style={{ width: headshotSize, height: headshotSize, border: "2px solid rgba(255,255,255,0.3)" }}
+              style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }}
             >
-              <User className="text-gray-400" style={{ width: 24 * unit, height: 24 * unit }} />
+              <User className="text-gray-400" style={{ width: 32 * unit, height: 32 * unit }} />
             </div>
           )}
           <div className="text-white min-w-0">
@@ -483,11 +502,8 @@ function OpenHouseTemplate({
             </p>
           </div>
           {logo && (
-            <img
-              src={logo}
-              alt="Logo"
-              className="object-contain flex-shrink-0 ml-auto"
-              style={{ maxWidth: Math.round(80 * unit), maxHeight: Math.round(40 * unit), opacity: 0.8 }}
+            <img src={logo} alt="Logo" className="object-contain flex-shrink-0 ml-auto"
+              style={{ maxWidth: logoMaxW, maxHeight: logoMaxH, opacity: 0.9 }}
             />
           )}
         </div>
@@ -804,6 +820,9 @@ export default function DesignStudioPage() {
   const [agentName, setAgentName] = useState("");
   const [phone, setPhone] = useState("");
   const [brokerage, setBrokerage] = useState("");
+  const [listingFont, setListingFont] = useState("sans");
+  const [listingBarColor, setListingBarColor] = useState("#111827");
+  const [listingAccentColor, setListingAccentColor] = useState("");
 
   // Branding card state
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
@@ -834,6 +853,7 @@ export default function DesignStudioPage() {
   const currentSize = SIZES.find((s) => s.id === selectedSize)!;
   const currentBrandOrientation = BRANDING_ORIENTATIONS.find((o) => o.id === brandOrientation)!;
   const currentFontFamily = FONT_OPTIONS.find((f) => f.id === brandFont)?.family || FONT_OPTIONS[0].family;
+  const listingFontFamily = FONT_OPTIONS.find((f) => f.id === listingFont)?.family || FONT_OPTIONS[1].family;
 
   // Scale to fit preview area
   const getScaledDimensions = useCallback(() => {
@@ -1067,6 +1087,54 @@ export default function DesignStudioPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Appearance */}
+                <div className="bg-card rounded-2xl border border-border p-6">
+                  <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-accent" />
+                    Appearance
+                  </h3>
+
+                  <Label className="text-sm font-semibold mb-2 block">Font Style</Label>
+                  <div className="grid grid-cols-2 gap-2 mb-5">
+                    {FONT_OPTIONS.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setListingFont(f.id)}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${
+                          listingFont === f.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">{f.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: f.family }}>Aa Bb Cc 123</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  <Label className="text-sm font-semibold mb-2 block">Info Bar Color</Label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input type="color" value={listingBarColor} onChange={(e) => setListingBarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" />
+                    <Input value={listingBarColor} onChange={(e) => setListingBarColor(e.target.value)} className="w-28 font-mono text-sm" />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    {["#111827", "#0f172a", "#1e293b", "#18181b", "#1a1a2e", "#14532d", "#1e3a5f", "#7f1d1d", "#27272a", "#374151"].map((c) => (
+                      <button key={c} onClick={() => setListingBarColor(c)} className={`w-8 h-8 rounded-lg border-2 transition-all flex-shrink-0 ${listingBarColor === c ? "border-primary scale-110 ring-2 ring-primary/30" : "border-border"}`} style={{ backgroundColor: c }} title={c} />
+                    ))}
+                  </div>
+
+                  <Label className="text-sm font-semibold mb-2 block">Accent Color <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <p className="text-xs text-muted-foreground mb-2">Applies to price and badge.</p>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={listingAccentColor || "#ffffff"} onChange={(e) => setListingAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" />
+                    <Input value={listingAccentColor} onChange={(e) => setListingAccentColor(e.target.value)} placeholder="None" className="w-28 font-mono text-sm" />
+                    {listingAccentColor && <button onClick={() => setListingAccentColor("")} className="text-xs text-muted-foreground hover:text-foreground underline">Clear</button>}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {["#f59e0b", "#ef4444", "#3b82f6", "#10b981", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#d4af37", "#c0c0c0"].map((c) => (
+                      <button key={c} onClick={() => setListingAccentColor(c)} className={`w-7 h-7 rounded-lg border-2 transition-all flex-shrink-0 ${listingAccentColor === c ? "border-primary scale-110 ring-2 ring-primary/30" : "border-border"}`} style={{ backgroundColor: c }} title={c} />
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Right: Preview */}
@@ -1100,6 +1168,9 @@ export default function DesignStudioPage() {
                             agentName={agentName}
                             phone={phone}
                             brokerage={brokerage}
+                            fontFamily={listingFontFamily}
+                            barColor={listingBarColor}
+                            accentColor={listingAccentColor}
                           />
                         ) : (
                           <InfoBarTemplate
@@ -1117,6 +1188,9 @@ export default function DesignStudioPage() {
                             brokerage={brokerage}
                             badgeText={badge.text}
                             badgeColor={badge.color}
+                            fontFamily={listingFontFamily}
+                            barColor={listingBarColor}
+                            accentColor={listingAccentColor}
                           />
                         )}
                       </div>
