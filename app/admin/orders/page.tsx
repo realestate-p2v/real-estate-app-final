@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -526,15 +526,49 @@ export default function AdminOrdersPage() {
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                         {isAwaitingApproval && (
                           <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(order.id, "approved")}
-                              disabled={isProcessing}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-                              Approve & Deliver{allVideos.length > 1 ? ` (${allVideos.length} versions)` : ""}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={(order as any).revision_orientations || "both"}
+                                onChange={(e) => {
+                                  setOrders(orders.map(o => o.id === order.id ? { ...o, revision_orientations: e.target.value } as any : o));
+                                }}
+                                className="text-xs border rounded-lg px-2 py-1.5 bg-white"
+                              >
+                                <option value="both">Revise Both Orientations</option>
+                                <option value="landscape">Revise Landscape Only</option>
+                                <option value="vertical">Revise Vertical Only</option>
+                              </select>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  setActionLoading(order.id);
+                                  try {
+                                    const res = await fetch("/api/admin/orders", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        orderId: order.id,
+                                        status: "revision_requested",
+                                        revisionOrientations: (order as any).revision_orientations || "both",
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      setOrders(orders.map(o => o.id === order.id ? { ...o, status: "revision_requested" } : o));
+                                    }
+                                  } catch (err) {
+                                    console.error("Failed:", err);
+                                  } finally {
+                                    setActionLoading(null);
+                                  }
+                                }}
+                                disabled={isProcessing}
+                                className="text-amber-600 border-amber-200"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-1" /> Request My Revision
+                              </Button>
+                            </div>
                             <Button
                               size="sm"
                               variant="outline"
