@@ -213,7 +213,6 @@ export function OrderForm() {
 
   const getBasePrice = () => {
     if (isUrlMode && listingPackage) return listingPackage.price;
-    if (photoCount === 1) return 1;
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 129;
     if (photoCount <= 35) return 179;
