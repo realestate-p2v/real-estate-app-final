@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
@@ -22,18 +23,28 @@ export async function POST(request: Request) {
 
     const origin = request.headers.get("origin") || "https://realestatephoto2video.com";
 
-    // ═══ ADMIN BYPASS — skip Stripe, go straight to success ═══
-    if (ADMIN_EMAILS.includes(customerEmail.toLowerCase())) {
-      // Update order status to paid directly
+    // ═══ ADMIN BYPASS — authenticated session only (never form email) ═══
+    let isAdmin = false;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        isAdmin = true;
+      }
+    } catch (e) {
+      // Auth check failed — not admin, proceed to Stripe
+    }
+
+    if (isAdmin) {
       if (orderId && orderId !== "direct") {
         try {
-          const supabase = createAdminClient();
-          await supabase
+          const adminDb = createAdminClient();
+          await adminDb
             .from("orders")
-            .update({ 
-              status: "new", 
+            .update({
+              status: "new",
               payment_status: "admin_bypass",
-              stripe_session_id: "admin_bypass_" + Date.now()
+              stripe_session_id: "admin_bypass_" + Date.now(),
             })
             .eq("order_id", orderId);
           console.log("[Checkout] Admin bypass — order set to new:", orderId);
@@ -51,7 +62,6 @@ export async function POST(request: Request) {
     }
 
     // ═══ NORMAL STRIPE CHECKOUT ═══
-    // Fetch order from Supabase to include all details in metadata
     let photoUrls = "";
     let musicSelection = "Not specified";
     let specialInstructions = "None";
@@ -68,7 +78,7 @@ export async function POST(request: Request) {
           .select("*")
           .eq("order_id", orderId)
           .single();
-        
+
         if (!error && orderData) {
           console.log("[Checkout] Found order in Supabase:", orderId);
           musicSelection = orderData.music_selection || "Not specified";
@@ -77,7 +87,7 @@ export async function POST(request: Request) {
           brandingType = orderData.branding?.type || "unbranded";
           voiceoverIncluded = orderData.voiceover ? "Yes" : "No";
           includeEditedPhotos = orderData.include_edited_photos ? "Yes" : "No";
-          
+
           if (orderData.photos && orderData.photos.length > 0) {
             photoUrls = orderData.photos
               .map((p: { secure_url: string }, i: number) => `${i + 1}:${p.secure_url}`)
