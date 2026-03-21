@@ -558,38 +558,58 @@ export default function PhotoCoachPage() {
   /* ─── HDR Detection via EXIF data ─── */
   const checkHdr = async (file: File): Promise<boolean> => {
     try {
-      const exif = await exifr.parse(file, {
-        // Request specific tags that indicate HDR
-        pick: ["CustomRendered", "MakerNote", "HDRPMakerNote"],
-        // Also try to get Apple and Samsung maker notes
-        makerNote: true,
+      // First check device make/model — some phones always shoot HDR
+      const basicExif = await exifr.parse(file, {
+        pick: ["Make", "Model", "CustomRendered"],
+        makerNote: false,
         translateValues: false,
       });
 
-      if (!exif) return false;
+      if (basicExif) {
+        const make = String(basicExif.Make || "").toLowerCase();
+        const model = String(basicExif.Model || "").toLowerCase();
 
-      // Check CustomRendered — value 3 or 4 typically means HDR
-      if (exif.CustomRendered && (exif.CustomRendered === 3 || exif.CustomRendered === 4 || String(exif.CustomRendered).toLowerCase().includes("hdr"))) {
-        return true;
-      }
+        // iPhone 12 and newer: HDR is always on, no toggle exists
+        // Models: iPhone 12, 12 mini, 12 Pro, 12 Pro Max, 13, 14, 15, 16 series
+        if (make.includes("apple") && model.includes("iphone")) {
+          const modelMatch = model.match(/iphone\s*(\d+)/);
+          if (modelMatch) {
+            const modelNum = parseInt(modelMatch[1]);
+            if (modelNum >= 12) return true; // iPhone 12+ always has Smart HDR
+          }
+        }
 
-      // Check for any key containing "hdr" (case-insensitive)
-      const allKeys = Object.keys(exif);
-      for (const key of allKeys) {
-        const keyLower = key.toLowerCase();
-        const valStr = String(exif[key]).toLowerCase();
-        if (keyLower.includes("hdr") || valStr.includes("hdr") || valStr.includes("rich tone")) {
+        // Google Pixel: HDR+ is always on by default
+        if (make.includes("google")) return true;
+
+        // Check CustomRendered — value 3 or 4 typically means HDR
+        if (basicExif.CustomRendered && (basicExif.CustomRendered === 3 || basicExif.CustomRendered === 4 || String(basicExif.CustomRendered).toLowerCase().includes("hdr"))) {
           return true;
         }
       }
 
-      // If we got maker note data with many entries, it's likely a modern phone camera
-      // which typically has HDR on by default (especially Pixel)
-      // But we can't be certain, so return false to be safe
+      // Deeper scan for HDR metadata in all EXIF fields
+      const fullExif = await exifr.parse(file, {
+        makerNote: true,
+        translateValues: false,
+      });
+
+      if (fullExif) {
+        const allKeys = Object.keys(fullExif);
+        for (const key of allKeys) {
+          const keyLower = key.toLowerCase();
+          const valStr = String(fullExif[key]).toLowerCase();
+          if (keyLower.includes("hdr") || valStr.includes("hdr") || valStr.includes("rich tone")) {
+            return true;
+          }
+        }
+      }
+
       return false;
     } catch (e) {
-      // EXIF parsing failed — can't determine HDR status
-      return false;
+      // EXIF parsing failed — can't determine HDR status, assume it's fine
+      // rather than showing a potentially incorrect warning
+      return true;
     }
   };
 
