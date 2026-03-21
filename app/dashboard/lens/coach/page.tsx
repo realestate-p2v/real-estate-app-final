@@ -140,6 +140,8 @@ export default function PhotoCoachPage() {
 
   // Gallery view
   const [showGallery, setShowGallery] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [galleryEditUrl, setGalleryEditUrl] = useState<string | null>(null);
 
   // Paywall
   const [paywallHit, setPaywallHit] = useState(false);
@@ -613,6 +615,57 @@ export default function PhotoCoachPage() {
     setLastPhotoUrl(null);
     setShowAiEdit(false);
     setEditedPreviewUrl(null);
+  };
+
+  /* ─── Gallery Photo Actions ─── */
+  const handleGalleryAiEdit = (index: number) => {
+    const photos = activeSession?.photos || [];
+    const photo = photos[index];
+    if (!photo) return;
+    const edited = getEditedUrl(photo.url);
+    setGalleryEditUrl(edited);
+  };
+
+  const applyGalleryEdit = async (index: number, useEdited: boolean) => {
+    if (!activeSession) return;
+    const photos = [...(activeSession.photos || [])];
+    if (useEdited && galleryEditUrl) {
+      photos[index] = { ...photos[index], edited: true, edited_url: galleryEditUrl };
+    }
+    await supabase
+      .from("lens_sessions")
+      .update({ photos })
+      .eq("id", activeSession.id);
+    setActiveSession((prev) => prev ? { ...prev, photos } : prev);
+    setGalleryEditUrl(null);
+    setSelectedPhotoIndex(null);
+  };
+
+  const deleteGalleryPhoto = async (index: number) => {
+    if (!activeSession) return;
+    const photos = [...(activeSession.photos || [])];
+    const removed = photos.splice(index, 1)[0];
+    const updatedCount = Math.max(0, (activeSession.approved_count || 0) - 1);
+
+    await supabase
+      .from("lens_sessions")
+      .update({ photos, approved_count: updatedCount })
+      .eq("id", activeSession.id);
+    setActiveSession((prev) =>
+      prev ? { ...prev, photos, approved_count: updatedCount } : prev
+    );
+
+    // Delete from Cloudinary
+    if (removed?.url) {
+      fetch("/api/lens/coach", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo_url: removed.url }),
+      }).catch(() => {});
+    }
+
+    setSelectedPhotoIndex(null);
+    setGalleryEditUrl(null);
   };
 
   /* ─── Room label from key ─── */
@@ -1090,7 +1143,11 @@ export default function PhotoCoachPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {approvedPhotos.map((photo, i) => (
-                    <div key={i} className="relative group rounded-xl overflow-hidden border border-border">
+                    <button
+                      key={i}
+                      onClick={() => { setSelectedPhotoIndex(i); setGalleryEditUrl(null); }}
+                      className="relative group rounded-xl overflow-hidden border border-border hover:border-accent/40 hover:shadow-md transition-all text-left"
+                    >
                       <div className="aspect-[4/3] relative">
                         <img
                           src={photo.edited_url || photo.url}
@@ -1100,14 +1157,115 @@ export default function PhotoCoachPage() {
                         <div className="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                           {photo.score}/10
                         </div>
+                        {photo.edited && (
+                          <div className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            AI Edited
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                       </div>
                       {photo.room && (
                         <div className="px-2 py-1.5 bg-card">
                           <p className="text-xs font-semibold text-foreground truncate">{photo.room}</p>
                         </div>
                       )}
-                    </div>
+                    </button>
                   ))}
+                </div>
+              )}
+
+              {/* ─── Photo Detail Modal ─── */}
+              {selectedPhotoIndex !== null && approvedPhotos[selectedPhotoIndex] && (
+                <div className="mt-4 bg-muted/50 rounded-xl border border-border p-4 space-y-4">
+                  {(() => {
+                    const photo = approvedPhotos[selectedPhotoIndex];
+                    return (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-foreground">
+                            {photo.room || `Photo ${selectedPhotoIndex + 1}`}
+                            <span className="text-muted-foreground font-normal ml-2">· {photo.score}/10</span>
+                          </h3>
+                          <button
+                            onClick={() => { setSelectedPhotoIndex(null); setGalleryEditUrl(null); }}
+                            className="p-1 rounded-lg hover:bg-muted transition-colors"
+                          >
+                            <X className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </div>
+
+                        {/* Before/After if AI Edit is active */}
+                        {galleryEditUrl ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <p className="text-xs font-semibold text-muted-foreground text-center">Original</p>
+                                <div className="rounded-lg overflow-hidden border border-border">
+                                  <img src={photo.url} alt="Original" className="w-full aspect-[4/3] object-cover" />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-semibold text-blue-600 text-center">AI Enhanced</p>
+                                <div className="rounded-lg overflow-hidden border border-blue-300">
+                                  <img src={galleryEditUrl} alt="AI Enhanced" className="w-full aspect-[4/3] object-cover" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => applyGalleryEdit(selectedPhotoIndex, true)}
+                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold" size="sm"
+                              >
+                                <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+                                Use AI Edit
+                              </Button>
+                              <Button
+                                onClick={() => setGalleryEditUrl(null)}
+                                variant="outline" className="flex-1 font-bold" size="sm"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Photo preview */}
+                            <div className="rounded-xl overflow-hidden border border-border">
+                              <img
+                                src={photo.edited_url || photo.url}
+                                alt={photo.room || "Photo"}
+                                className="w-full max-h-72 object-contain bg-black/5"
+                              />
+                            </div>
+
+                            {/* Feedback */}
+                            <p className="text-sm text-muted-foreground">{photo.feedback}</p>
+
+                            {/* Action buttons */}
+                            <div className="flex gap-2">
+                              {!photo.edited && (
+                                <Button
+                                  onClick={() => handleGalleryAiEdit(selectedPhotoIndex)}
+                                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold" size="sm"
+                                >
+                                  <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+                                  AI Edit
+                                </Button>
+                              )}
+                              <Button
+                                onClick={() => deleteGalleryPhoto(selectedPhotoIndex)}
+                                variant="outline"
+                                className="flex-1 font-bold text-red-500 hover:text-red-600 hover:border-red-300" size="sm"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                Delete
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -1606,11 +1764,19 @@ export default function PhotoCoachPage() {
                   </button>
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {approvedPhotos.slice(-5).map((photo, i) => (
-                    <div key={i} className="flex-shrink-0 h-16 w-20 rounded-lg overflow-hidden border border-border">
-                      <img src={photo.url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
+                  {approvedPhotos.slice(-5).map((photo, i) => {
+                    const realIndex = approvedPhotos.length - 5 + i;
+                    const idx = realIndex < 0 ? i : realIndex;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => { setShowGallery(true); setSelectedPhotoIndex(idx); setGalleryEditUrl(null); }}
+                        className="flex-shrink-0 h-16 w-20 rounded-lg overflow-hidden border border-border hover:border-accent/40 hover:shadow-sm transition-all"
+                      >
+                        <img src={photo.edited_url || photo.url} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
