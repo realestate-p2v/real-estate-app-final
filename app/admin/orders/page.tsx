@@ -140,6 +140,10 @@ export default function AdminOrdersPage() {
       const data = await res.json();
       if (data.success) {
         setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        // Refresh data after a short delay to catch pipeline delivery
+        if (newStatus === "approved") {
+          setTimeout(() => fetchData(), 5000);
+        }
       }
     } catch (err) {
       console.error("Failed to update:", err);
