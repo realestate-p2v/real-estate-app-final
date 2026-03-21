@@ -145,8 +145,46 @@ export default function PhotoCoachPage() {
   const [paywallHit, setPaywallHit] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const approvedSoundRef = useRef<HTMLAudioElement | null>(null);
-  const perfectSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  /* ─── Sound Effects via Web Audio API ─── */
+  const playApprovedSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {}
+  }, [soundEnabled]);
+
+  const playPerfectSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Three ascending notes: C6, E6, G6
+      const notes = [1047, 1319, 1568];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        const startTime = ctx.currentTime + i * 0.15;
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.25, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.35);
+        osc.start(startTime);
+        osc.stop(startTime + 0.35);
+      });
+    } catch (e) {}
+  }, [soundEnabled]);
 
   /* ─── Auth & Subscription Check ─── */
   useEffect(() => {
@@ -446,12 +484,10 @@ export default function PhotoCoachPage() {
       setLastResult(result);
 
       // Play sound
-      if (soundEnabled) {
-        if (result.score === 10) {
-          perfectSoundRef.current?.play().catch(() => {});
-        } else if (result.approved) {
-          approvedSoundRef.current?.play().catch(() => {});
-        }
+      if (result.score === 10) {
+        playPerfectSound();
+      } else if (result.approved) {
+        playApprovedSound();
       }
 
       // If approved: do NOT auto-save — the AI Edit flow buttons handle saving
@@ -680,9 +716,6 @@ export default function PhotoCoachPage() {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        {/* Hidden audio elements for fun feedback */}
-        <audio ref={approvedSoundRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" preload="auto" />
-        <audio ref={perfectSoundRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" preload="auto" />
 
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
           {/* Header */}
@@ -831,10 +864,6 @@ export default function PhotoCoachPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-
-      {/* Hidden audio — we use simple Web Audio beeps since we can't host files */}
-      <audio ref={approvedSoundRef} preload="auto" />
-      <audio ref={perfectSoundRef} preload="auto" />
 
       {/* Hidden file input — camera on mobile, gallery fallback */}
       <input
