@@ -33,8 +33,10 @@ import {
   Home,
   Star,
   Wand2,
+  Info,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import * as exifr from "exifr";
 
 /* ═══════════════════════════════════════════
    TYPES
@@ -137,6 +139,11 @@ export default function PhotoCoachPage() {
   const [addOtherRoom, setAddOtherRoom] = useState("");
   const [showAiEdit, setShowAiEdit] = useState(false);
   const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
+
+  // HDR detection
+  const [hdrDetected, setHdrDetected] = useState<boolean | null>(null); // null = not checked yet
+  const [hdrBannerDismissed, setHdrBannerDismissed] = useState(false);
+  const [showHdrHelp, setShowHdrHelp] = useState(false);
 
   // Gallery view
   const [showGallery, setShowGallery] = useState(false);
@@ -446,6 +453,12 @@ export default function PhotoCoachPage() {
     setEditedPreviewUrl(null);
 
     try {
+      // Check HDR status from EXIF (only if not already checked this session)
+      if (hdrDetected === null) {
+        const isHdr = await checkHdr(file);
+        setHdrDetected(isHdr);
+      }
+
       // Upload to Cloudinary (same signed pattern as descriptions page)
       const sigResponse = await fetch("/api/cloudinary-signature", {
         method: "POST",
@@ -483,6 +496,7 @@ export default function PhotoCoachPage() {
           photo_url: uploadResult.secure_url,
           session_id: activeSession.id,
           user_id: user?.id,
+          hdr_detected: hdrDetected,
         }),
       });
 
@@ -539,6 +553,44 @@ export default function PhotoCoachPage() {
     if (score >= 8) return "Good Shot!";
     if (score >= 5) return "Needs Improvement";
     return "Reshoot";
+  };
+
+  /* ─── HDR Detection via EXIF data ─── */
+  const checkHdr = async (file: File): Promise<boolean> => {
+    try {
+      const exif = await exifr.parse(file, {
+        // Request specific tags that indicate HDR
+        pick: ["CustomRendered", "MakerNote", "HDRPMakerNote"],
+        // Also try to get Apple and Samsung maker notes
+        makerNote: true,
+        translateValues: false,
+      });
+
+      if (!exif) return false;
+
+      // Check CustomRendered — value 3 or 4 typically means HDR
+      if (exif.CustomRendered && (exif.CustomRendered === 3 || exif.CustomRendered === 4 || String(exif.CustomRendered).toLowerCase().includes("hdr"))) {
+        return true;
+      }
+
+      // Check for any key containing "hdr" (case-insensitive)
+      const allKeys = Object.keys(exif);
+      for (const key of allKeys) {
+        const keyLower = key.toLowerCase();
+        const valStr = String(exif[key]).toLowerCase();
+        if (keyLower.includes("hdr") || valStr.includes("hdr") || valStr.includes("rich tone")) {
+          return true;
+        }
+      }
+
+      // If we got maker note data with many entries, it's likely a modern phone camera
+      // which typically has HDR on by default (especially Pixel)
+      // But we can't be certain, so return false to be safe
+      return false;
+    } catch (e) {
+      // EXIF parsing failed — can't determine HDR status
+      return false;
+    }
   };
 
   /* ─── AI Edit via Cloudinary URL transformations ─── */
@@ -992,6 +1044,62 @@ export default function PhotoCoachPage() {
             <p className="text-xs text-foreground">
               <span className="font-bold">Free trial:</span> {FREE_APPROVED_LIMIT - freeApprovedUsed} approved photo{FREE_APPROVED_LIMIT - freeApprovedUsed !== 1 ? "s" : ""} remaining
             </p>
+          </div>
+        )}
+
+        {/* HDR detection banner */}
+        {hdrDetected === true && (
+          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-2 mb-6 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+            <p className="text-xs text-green-700 font-semibold">HDR Active</p>
+          </div>
+        )}
+        {hdrDetected === false && !hdrBannerDismissed && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 space-y-2">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-amber-800 font-semibold">
+                  Enable HDR for better results
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  HDR helps capture detail in bright windows and dark corners — important for real estate photos.
+                </p>
+              </div>
+              <button
+                onClick={() => setHdrBannerDismissed(true)}
+                className="text-amber-400 hover:text-amber-600 flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => setShowHdrHelp(!showHdrHelp)}
+              className="text-xs font-semibold text-amber-700 hover:text-amber-900 flex items-center gap-1"
+            >
+              <Info className="h-3 w-3" />
+              {showHdrHelp ? "Hide instructions" : "How to enable HDR"}
+            </button>
+            {showHdrHelp && (
+              <div className="bg-white/60 rounded-lg p-3 space-y-2 text-xs text-amber-800">
+                <div>
+                  <p className="font-bold">iPhone:</p>
+                  <p>Settings → Camera → Smart HDR → ON. Or tap the HDR icon in the camera app top bar.</p>
+                </div>
+                <div>
+                  <p className="font-bold">Samsung:</p>
+                  <p>Camera → Settings → Scene Optimizer → ON (includes auto HDR). Or look for &quot;Rich Tone&quot; in camera settings.</p>
+                </div>
+                <div>
+                  <p className="font-bold">Google Pixel:</p>
+                  <p>HDR+ is always on by default — no action needed.</p>
+                </div>
+                <div>
+                  <p className="font-bold">Other Android:</p>
+                  <p>Camera → Settings → look for HDR, Rich Tone, or Scene Optimizer and turn it on.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
