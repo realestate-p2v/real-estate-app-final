@@ -526,6 +526,15 @@ export default function AdminOrdersPage() {
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                         {isAwaitingApproval && (
                           <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleStatusUpdate(order.id, "approved")}
+                              disabled={isProcessing}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                              Approve & Deliver{allVideos.length > 1 ? ` (${allVideos.length} versions)` : ""}
+                            </Button>
                             <div className="flex items-center gap-2">
                               <select
                                 value={(order as any).revision_orientations || "both"}
@@ -569,7 +578,6 @@ export default function AdminOrdersPage() {
                                 <RefreshCw className="h-4 w-4 mr-1" /> Request My Revision
                               </Button>
                             </div>
-                            
                           </>
                         )}
 
