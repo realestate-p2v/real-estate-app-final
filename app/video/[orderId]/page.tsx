@@ -40,6 +40,8 @@ interface Order {
   resolution: string;
   orientation: string;
   delivery_url: string;
+  unbranded_delivery_url: string;
+  additional_video_urls: Record<string, string>;
   edited_photos_url: string;
   created_at: string;
   delivered_at: string;
@@ -52,6 +54,85 @@ function getFileIdFromUrl(url: string): string | null {
   if (!url) return null;
   const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   return match ? match[1] : null;
+}
+
+function getAllVideos(order: Order): { label: string; url: string }[] {
+  const videos: { label: string; url: string }[] = [];
+  if (order.delivery_url) {
+    const hasMultiple = order.additional_video_urls && Object.keys(order.additional_video_urls).length > 0;
+    videos.push({ label: hasMultiple ? "Landscape (Branded)" : "Your Video", url: order.delivery_url });
+  }
+  if (order.additional_video_urls) {
+    Object.entries(order.additional_video_urls).forEach(([key, url]) => {
+      const parts = key.split("_");
+      const orient = (parts[0] || "").charAt(0).toUpperCase() + (parts[0] || "").slice(1);
+      const brand = (parts[1] || "").charAt(0).toUpperCase() + (parts[1] || "").slice(1);
+      videos.push({ label: `${orient} (${brand})`, url });
+    });
+  }
+  return videos;
+}
+
+function MultiVideoPlayer({ videos, isClosed }: { videos: { label: string; url: string }[]; isClosed: boolean }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const activeVideo = videos[activeIdx];
+  const activeFileId = getFileIdFromUrl(activeVideo?.url || "");
+
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {videos.map((v, i) => (
+          <button
+            key={i}
+            onClick={() => setActiveIdx(i)}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+              activeIdx === i
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/30"
+            }`}
+          >
+            <Play className="inline h-3.5 w-3.5 mr-1.5" />
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {activeFileId ? (
+        <div className="bg-black rounded-2xl overflow-hidden">
+          <div className="aspect-video">
+            <iframe
+              key={activeFileId}
+              src={`https://drive.google.com/file/d/${activeFileId}/preview`}
+              className="w-full h-full border-0"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {isClosed && (
+        <div className="flex flex-wrap gap-2">
+          {videos.map((v, i) => (
+            <a
+              key={i}
+              href={v.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-muted transition-colors"
+            >
+              <Download className="h-3 w-3" />
+              Download {v.label}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        {videos.length} video versions available. Click the tabs above to preview each version.
+      </p>
+    </div>
+  );
 }
 
 const REVIEW_PLATFORMS = [
@@ -154,14 +235,13 @@ export default function VideoDeliveryPage() {
     if (orderId) loadOrder();
   }, [orderId]);
 
-  // Live countdown timer
   useEffect(() => {
     if (!order?.delivered_at) return;
     if (order.status === "closed") return;
 
     const update = () => setTimeRemaining(getTimeRemaining(order.delivered_at));
     update();
-    const interval = setInterval(update, 60000); // update every minute
+    const interval = setInterval(update, 60000);
     return () => clearInterval(interval);
   }, [order?.delivered_at, order?.status]);
 
@@ -264,13 +344,14 @@ export default function VideoDeliveryPage() {
     );
   }
 
+  const allVideos = getAllVideos(order);
+  const hasMultipleVideos = allVideos.length > 1;
   const fileId = getFileIdFromUrl(order.delivery_url);
   const isDelivered = DELIVERED_STATUSES.includes(order.status);
   const isClosed = order.status === "closed";
   const isRevisionInProgress = REVISION_IN_PROGRESS_STATUSES.includes(order.status);
   const statusInfo = STATUS_DISPLAY[order.status];
 
-  // 5-day review window logic
   const hasDeliveredAt = !!order.delivered_at;
   const reviewWindowExpired = timeRemaining?.expired ?? false;
   const freeRevisionUsed = (order.revision_count || 0) >= (order.revisions_allowed || 1);
@@ -288,6 +369,7 @@ export default function VideoDeliveryPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">{getOrderName()}</h1>
             <p className="text-muted-foreground mt-1">
               {isDelivered ? `Delivered ${formatDate(order.delivered_at || order.created_at)}` : `Ordered ${formatDate(order.created_at)}`}
+              {hasMultipleVideos && ` · ${allVideos.length} video versions`}
             </p>
           </div>
           {isRevisionInProgress && statusInfo ? (
@@ -313,7 +395,7 @@ export default function VideoDeliveryPage() {
           )}
         </div>
 
-        {/* ═══ REVISION IN PROGRESS BANNER ═══ */}
+        {/* Revision In Progress Banner */}
         {isRevisionInProgress && statusInfo && (
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
             <div className="flex items-start gap-4">
@@ -328,7 +410,7 @@ export default function VideoDeliveryPage() {
           </div>
         )}
 
-        {/* ═══ 5-DAY REVIEW WINDOW COUNTDOWN ═══ */}
+        {/* 5-Day Review Window Countdown */}
         {isDelivered && !isClosed && !isRevisionInProgress && hasDeliveredAt && timeRemaining && (
           <div className={`rounded-2xl p-5 mb-6 border ${
             reviewWindowExpired
@@ -400,7 +482,7 @@ export default function VideoDeliveryPage() {
           </div>
         )}
 
-        {/* ═══ REVIEW PROMPT BANNER — only after customer has closed/accepted ═══ */}
+        {/* Review Prompt Banner — only after customer has closed/accepted */}
         {isClosed && !reviewDismissed && (
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
             <div className="flex items-start gap-4">
@@ -420,8 +502,8 @@ export default function VideoDeliveryPage() {
                       onClick={() => {
                         const urls: Record<string, string> = {
                           google: "https://g.page/r/CX6ne0m0RmqtEBM/review",
-facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
-trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
+                          facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
+                          trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
                         };
                         window.open(urls[platform.key], "_blank");
                       }}
@@ -448,8 +530,10 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
           </div>
         )}
 
-        {/* Video Player */}
-        {fileId ? (
+        {/* ═══ VIDEO PLAYER — single or multi-version ═══ */}
+        {hasMultipleVideos ? (
+          <MultiVideoPlayer videos={allVideos} isClosed={isClosed} />
+        ) : fileId ? (
           <div className="bg-black rounded-2xl overflow-hidden mb-6">
             <div className="aspect-video">
               <iframe
@@ -471,8 +555,8 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
 
         {/* Action Buttons */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          {/* Download + Copy only after accepting/closing */}
-          {isClosed && order.delivery_url && (
+          {/* Single video download (only when no multiple versions) */}
+          {isClosed && order.delivery_url && !hasMultipleVideos && (
             <Button asChild className="bg-primary hover:bg-primary/90">
               <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
                 <Download className="mr-2 h-4 w-4" />
@@ -481,7 +565,7 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
             </Button>
           )}
           
-          {/* Edited photos available after closing */}
+          {/* Edited photos */}
           {isClosed && order.edited_photos_url && (
             <Button asChild variant="outline">
               <a href={order.edited_photos_url} target="_blank" rel="noopener noreferrer">
@@ -490,7 +574,8 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
               </a>
             </Button>
           )}
-          {/* Accept button in action bar (delivered but not closed) */}
+
+          {/* Accept button (delivered but not closed) */}
           {isDelivered && !isClosed && !isRevisionInProgress && (
             <Button
               onClick={handleAcceptClose}
@@ -505,6 +590,7 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
               Accept & Download
             </Button>
           )}
+
           {/* Revision button — not during revision processing */}
           {!isRevisionInProgress && !isClosed && isDelivered && (
             <Button asChild variant="outline">
@@ -514,6 +600,7 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
               </Link>
             </Button>
           )}
+
           {/* Paid revision after closing */}
           {isClosed && (
             <Button asChild variant="outline">
@@ -548,6 +635,12 @@ trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
                 <span className="text-muted-foreground">Orientation</span>
                 <span className="text-foreground capitalize">{order.orientation || "landscape"}</span>
               </div>
+              {hasMultipleVideos && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Video Versions</span>
+                  <span className="text-foreground">{allVideos.length} versions</span>
+                </div>
+              )}
               {order.include_edited_photos && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Photo Editing</span>
