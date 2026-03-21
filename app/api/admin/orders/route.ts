@@ -43,7 +43,7 @@ export async function PATCH(request: Request) {
     const { isAdmin: admin } = await isAdmin();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    const { orderId, status, revisionNotes, clientRevisionNotes, deliveryUrl } = await request.json();
+    const { orderId, status, revisionNotes, clientRevisionNotes, deliveryUrl, revisionOrientations } = await request.json();
     if (!orderId || !status) {
       return NextResponse.json({ success: false, error: "orderId and status required" }, { status: 400 });
     }
@@ -80,6 +80,10 @@ export async function PATCH(request: Request) {
       updateData.revision_notes = revisionNotes;
     }
 
+    // If revision orientation target specified
+    if (request_body.revisionOrientations) {
+      updateData.revision_orientations = request_body.revisionOrientations;
+    }
     // If admin overrode client revision clip settings
     if (clientRevisionNotes) {
       updateData.client_revision_notes = clientRevisionNotes;
