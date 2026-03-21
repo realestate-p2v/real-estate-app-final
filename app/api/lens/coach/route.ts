@@ -143,13 +143,19 @@ async function deleteFromCloudinary(url: string): Promise<void> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { photo_url, session_id, user_id } = body;
+    const { photo_url, session_id, user_id, hdr_detected } = body;
 
     if (!photo_url) {
       return NextResponse.json(
         { error: "photo_url is required" },
         { status: 400 }
       );
+    }
+
+    // Build the prompt — add HDR note if not detected
+    let prompt = SCORING_PROMPT;
+    if (hdr_detected === false) {
+      prompt += `\n\nIMPORTANT: This photo was NOT shot in HDR mode. Add this to the flagged_issues array: "Enable HDR mode in your camera settings for better dynamic range — especially important for rooms with windows where inside is dark and outside is bright." Do NOT lower the score for missing HDR.`;
     }
 
     // Call Claude Vision for scoring
@@ -167,7 +173,7 @@ export async function POST(request: NextRequest) {
             },
             {
               type: "text",
-              text: SCORING_PROMPT,
+              text: prompt,
             },
           ],
         },
