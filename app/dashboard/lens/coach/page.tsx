@@ -32,6 +32,7 @@ import {
   ArrowRight,
   Home,
   Star,
+  Wand2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -134,6 +135,8 @@ export default function PhotoCoachPage() {
   const [showRoomPicker, setShowRoomPicker] = useState(false);
   const [shootingRoom, setShootingRoom] = useState<string>(""); // room key for the current photo
   const [addOtherRoom, setAddOtherRoom] = useState("");
+  const [showAiEdit, setShowAiEdit] = useState(false);
+  const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
 
   // Gallery view
   const [showGallery, setShowGallery] = useState(false);
@@ -392,6 +395,8 @@ export default function PhotoCoachPage() {
     setUploading(true);
     setLastResult(null);
     setLastPhotoUrl(null);
+    setShowAiEdit(false);
+    setEditedPreviewUrl(null);
 
     try {
       // Upload to Cloudinary (same signed pattern as descriptions page)
@@ -449,66 +454,9 @@ export default function PhotoCoachPage() {
         }
       }
 
-      // If approved, save to session
-      if (result.approved) {
-        const roomLabel = getCurrentRoomLabel();
-        const newPhoto: SessionPhoto = {
-          url: uploadResult.secure_url,
-          room: roomLabel,
-          score: result.score,
-          feedback: result.summary,
-          fixable_issues: result.fixable_issues,
-          flagged_issues: result.flagged_issues,
-          approved: true,
-          edited: false,
-          edited_url: null,
-          analyzed_at: new Date().toISOString(),
-        };
-
-        const updatedPhotos = [...(activeSession.photos || []), newPhoto];
-        const updatedCount = (activeSession.approved_count || 0) + 1;
-        const updatedTotal = (activeSession.total_analyses || 0) + 1;
-
-        await supabase
-          .from("lens_sessions")
-          .update({
-            photos: updatedPhotos,
-            approved_count: updatedCount,
-            total_analyses: updatedTotal,
-          })
-          .eq("id", activeSession.id);
-
-        setActiveSession((prev) =>
-          prev
-            ? { ...prev, photos: updatedPhotos, approved_count: updatedCount, total_analyses: updatedTotal }
-            : prev
-        );
-
-        // Mark the room as done in checklist
-        if (shootingRoom && selectedRooms[shootingRoom]) {
-          const updatedChecklist = { ...selectedRooms, [shootingRoom]: "done" };
-          setSelectedRooms(updatedChecklist);
-          await supabase
-            .from("lens_sessions")
-            .update({ checklist: updatedChecklist })
-            .eq("id", activeSession.id);
-          setActiveSession((prev) => prev ? { ...prev, checklist: updatedChecklist } : prev);
-        }
-
-        // Update free trial usage
-        if (!isSubscriber && !isAdmin) {
-          const newUsed = freeApprovedUsed + 1;
-          setFreeApprovedUsed(newUsed);
-          await supabase
-            .from("lens_usage")
-            .upsert({
-              user_id: user.id,
-              free_analyses_used: newUsed,
-              total_analyses: (activeSession.total_analyses || 0) + 1,
-            }, { onConflict: "user_id" });
-        }
-      } else {
-        // Not approved — update total_analyses only
+      // If approved: do NOT auto-save — the AI Edit flow buttons handle saving
+      // If not approved: update total_analyses count only
+      if (!result.approved) {
         const updatedTotal = (activeSession.total_analyses || 0) + 1;
         await supabase
           .from("lens_sessions")
@@ -546,6 +494,89 @@ export default function PhotoCoachPage() {
     if (score >= 8) return "Good Shot!";
     if (score >= 5) return "Needs Improvement";
     return "Reshoot";
+  };
+
+  /* ─── AI Edit via Cloudinary URL transformations ─── */
+  const getEditedUrl = (originalUrl: string) => {
+    // Insert Cloudinary auto-enhancement transformations into the URL
+    // URL format: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{path}
+    if (!originalUrl.includes("/upload/")) return originalUrl;
+    return originalUrl.replace(
+      "/upload/",
+      "/upload/e_auto_brightness/e_auto_color/e_auto_contrast/e_improve/"
+    );
+  };
+
+  const handleAiEdit = () => {
+    if (!lastPhotoUrl) return;
+    const edited = getEditedUrl(lastPhotoUrl);
+    setEditedPreviewUrl(edited);
+    setShowAiEdit(true);
+  };
+
+  const savePhotoToGallery = async (url: string, editedUrl: string | null) => {
+    if (!activeSession || !lastResult) return;
+    const roomLbl = getCurrentRoomLabel();
+    const newPhoto: SessionPhoto = {
+      url: lastPhotoUrl!,
+      room: roomLbl,
+      score: lastResult.score,
+      feedback: lastResult.summary,
+      fixable_issues: lastResult.fixable_issues,
+      flagged_issues: lastResult.flagged_issues,
+      approved: true,
+      edited: !!editedUrl,
+      edited_url: editedUrl,
+      analyzed_at: new Date().toISOString(),
+    };
+
+    const updatedPhotos = [...(activeSession.photos || []), newPhoto];
+    const updatedCount = (activeSession.approved_count || 0) + 1;
+    const updatedTotal = (activeSession.total_analyses || 0) + 1;
+
+    await supabase
+      .from("lens_sessions")
+      .update({
+        photos: updatedPhotos,
+        approved_count: updatedCount,
+        total_analyses: updatedTotal,
+      })
+      .eq("id", activeSession.id);
+
+    setActiveSession((prev) =>
+      prev
+        ? { ...prev, photos: updatedPhotos, approved_count: updatedCount, total_analyses: updatedTotal }
+        : prev
+    );
+
+    // Mark room done in checklist
+    if (shootingRoom && selectedRooms[shootingRoom]) {
+      const updatedChecklist = { ...selectedRooms, [shootingRoom]: "done" };
+      setSelectedRooms(updatedChecklist);
+      await supabase
+        .from("lens_sessions")
+        .update({ checklist: updatedChecklist })
+        .eq("id", activeSession.id);
+      setActiveSession((prev) => prev ? { ...prev, checklist: updatedChecklist } : prev);
+    }
+
+    // Update free trial usage
+    if (!isSubscriber && !isAdmin) {
+      const newUsed = freeApprovedUsed + 1;
+      setFreeApprovedUsed(newUsed);
+      await supabase
+        .from("lens_usage")
+        .upsert({
+          user_id: user.id,
+          free_analyses_used: newUsed,
+          total_analyses: updatedTotal,
+        }, { onConflict: "user_id" });
+    }
+
+    setLastResult(null);
+    setLastPhotoUrl(null);
+    setShowAiEdit(false);
+    setEditedPreviewUrl(null);
   };
 
   /* ─── Room label from key ─── */
@@ -1350,27 +1381,83 @@ export default function PhotoCoachPage() {
                 )}
 
                 {/* Action buttons */}
-                <div className="flex gap-3 pt-2">
+                <div className="space-y-3 pt-2">
                   {lastResult.approved ? (
-                    <>
-                      <Button
-                        onClick={handleCapture}
-                        className="flex-1 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold"
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Next Photo
-                      </Button>
-                      <Button
-                        onClick={() => setShowGallery(true)}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <ImageIcon className="h-4 w-4 mr-2" />
-                        View Gallery
-                      </Button>
-                    </>
+                    showAiEdit ? (
+                      /* ─── AI Edit Before/After View ─── */
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Wand2 className="h-4 w-4 text-blue-500" />
+                          <p className="text-sm font-bold text-foreground">AI Edit Preview</p>
+                        </div>
+
+                        {/* Before/After comparison */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold text-muted-foreground text-center">Original</p>
+                            <div className="rounded-lg overflow-hidden border border-border">
+                              <img
+                                src={lastPhotoUrl!}
+                                alt="Original"
+                                className="w-full aspect-[4/3] object-cover"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold text-blue-600 text-center">AI Enhanced</p>
+                            <div className="rounded-lg overflow-hidden border border-blue-300">
+                              <img
+                                src={editedPreviewUrl!}
+                                alt="AI Enhanced"
+                                className="w-full aspect-[4/3] object-cover"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground text-center">
+                          Auto brightness, color correction, contrast, and general enhancement applied
+                        </p>
+
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => savePhotoToGallery(lastPhotoUrl!, editedPreviewUrl)}
+                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold"
+                          >
+                            <Wand2 className="h-4 w-4 mr-2" />
+                            Use AI Edit
+                          </Button>
+                          <Button
+                            onClick={() => savePhotoToGallery(lastPhotoUrl!, null)}
+                            variant="outline"
+                            className="flex-1 font-bold"
+                          >
+                            Use Original
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ─── Standard Approved Buttons ─── */
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={handleAiEdit}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold"
+                        >
+                          <Wand2 className="h-4 w-4 mr-2" />
+                          AI Edit
+                        </Button>
+                        <Button
+                          onClick={() => savePhotoToGallery(lastPhotoUrl!, null)}
+                          variant="outline"
+                          className="flex-1 font-bold"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Skip — Next Photo
+                        </Button>
+                      </div>
+                    )
                   ) : (
-                    <>
+                    <div className="flex gap-3">
                       <Button
                         onClick={async () => {
                           // User chose to reshoot — delete the photo from Cloudinary
@@ -1455,7 +1542,7 @@ export default function PhotoCoachPage() {
                         <Check className="h-4 w-4 mr-2" />
                         Keep Anyway
                       </Button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
