@@ -149,7 +149,7 @@ export default function DashboardLensPage() {
       icon: PenTool,
       title: "Marketing Design Studio",
       description: "Create Just Listed, Open House, Price Reduced, and Just Sold graphics in under a minute. Upload your headshot, listing photo, and logo — download print-ready and social-ready formats. Includes a branding card builder for your video intros and outros.",
-      status: "coming" as const,
+      status: "live" as const,
       actionLabel: "Open Design Studio",
       actionHref: "/dashboard/lens/design-studio",
     },
