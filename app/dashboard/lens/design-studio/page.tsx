@@ -536,8 +536,6 @@ function BrandingCardTemplate({
   const w = orientation.width;
   const h = orientation.height;
   const isVertical = orientation.id === "vertical";
-  const unit = w / 1920;
-  const vUnit = isVertical ? w / 1080 : unit;
 
   // Determine if text should be light or dark based on bg color
   const isLightBg = bgColor && !bgPhoto ? (() => {
@@ -550,37 +548,44 @@ function BrandingCardTemplate({
 
   const textColor = isLightBg ? "#1a1a2e" : "#ffffff";
   const textMuted = isLightBg ? "rgba(26,26,46,0.6)" : "rgba(255,255,255,0.7)";
-  const borderColor = isLightBg ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.2)";
+  const borderColor = isLightBg ? "rgba(0,0,0,0.2)" : "rgba(180,180,180,0.5)";
 
-  const cornerRadius = Math.round(30 * vUnit);
-  const borderWidth = Math.round(4 * vUnit);
-  const innerPad = Math.round(50 * vUnit);
-
+  /* ── VERTICAL: stacked layout ── */
   if (isVertical) {
-    // Vertical: stacked layout
-    const addressSize = Math.round(52 * vUnit);
-    const citySize = Math.round(30 * vUnit);
-    const priceSize = Math.round(44 * vUnit);
-    const featureSize = Math.round(26 * vUnit);
-    const nameSize = Math.round(36 * vUnit);
-    const detailSize = Math.round(24 * vUnit);
-    const headshotSz = Math.round(280 * vUnit);
+    // Scale relative to 1080 width
+    const u = w / 1080;
+    const inset = Math.round(24 * u);
+    const radius = Math.round(30 * u);
+    const border = Math.round(4 * u);
+    const pad = Math.round(48 * u);
+
+    // Font sizes — proportional to card
+    const addressSz = Math.round(64 * u);
+    const citySz = Math.round(38 * u);
+    const priceSz = Math.round(54 * u);
+    const featureSz = Math.round(32 * u);
+    const nameSz = Math.round(40 * u);
+    const detailSz = Math.round(28 * u);
+    const headshotSz = Math.round(400 * u);
+    const frameBorder = Math.round(8 * u);
+    const logoMaxW = Math.round(300 * u);
+    const logoMaxH = Math.round(140 * u);
 
     return (
-      <div style={{ width: w, height: h, position: "relative", background: "transparent" }}>
+      <div style={{ width: w, height: h, background: "transparent" }}>
         <div
           style={{
             position: "absolute",
-            inset: Math.round(10 * vUnit),
-            borderRadius: cornerRadius,
-            border: `${borderWidth}px solid ${borderColor}`,
+            inset: inset,
+            borderRadius: radius,
+            border: `${border}px solid ${borderColor}`,
             backgroundColor: bgColor || "#14532d",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: innerPad,
+            padding: pad,
             fontFamily,
           }}
         >
@@ -599,109 +604,118 @@ function BrandingCardTemplate({
                 style={{
                   width: headshotSz,
                   height: headshotSz,
-                  borderRadius: Math.round(16 * vUnit),
                   objectFit: "cover",
-                  border: `${Math.round(4 * vUnit)}px solid rgba(255,255,255,0.3)`,
+                  border: `${frameBorder}px solid white`,
                   margin: "0 auto",
                   display: "block",
                 }}
               />
             ) : (
-              <div
-                style={{
-                  width: headshotSz,
-                  height: headshotSz,
-                  borderRadius: Math.round(16 * vUnit),
-                  backgroundColor: "rgba(255,255,255,0.1)",
-                  border: `${Math.round(4 * vUnit)}px solid rgba(255,255,255,0.2)`,
-                  margin: "0 auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <User style={{ width: 60 * vUnit, height: 60 * vUnit, color: textMuted }} />
+              <div style={{
+                width: headshotSz, height: headshotSz,
+                backgroundColor: "rgba(255,255,255,0.08)",
+                border: `${frameBorder}px solid ${borderColor}`,
+                margin: "0 auto",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
               </div>
             )}
-            <p style={{ fontSize: nameSize, fontWeight: 700, color: textColor, marginTop: Math.round(24 * vUnit) }}>
+            <p style={{ fontSize: nameSz, fontWeight: 700, color: textColor, marginTop: Math.round(16 * u) }}>
               {agentName || "Agent Name"}
             </p>
 
-            {/* Logo */}
             {logo && (
-              <img
-                src={logo}
-                alt="Logo"
-                style={{
-                  maxWidth: Math.round(240 * vUnit),
-                  maxHeight: Math.round(100 * vUnit),
-                  objectFit: "contain",
-                  margin: `${Math.round(24 * vUnit)}px auto`,
-                  display: "block",
-                }}
-              />
+              <img src={logo} alt="Logo" style={{
+                maxWidth: logoMaxW, maxHeight: logoMaxH, objectFit: "contain",
+                margin: `${Math.round(28 * u)}px auto`, display: "block",
+              }} />
             )}
 
-            {/* Address block */}
             {address && (
-              <p style={{ fontSize: addressSize, fontWeight: 800, color: textColor, marginTop: Math.round(20 * vUnit), lineHeight: 1.1 }}>
+              <p style={{ fontSize: addressSz, fontWeight: 800, color: textColor, marginTop: Math.round(24 * u), lineHeight: 1.05 }}>
                 {address}
               </p>
             )}
             {cityState && (
-              <p style={{ fontSize: citySize, fontWeight: 600, color: textColor, marginTop: Math.round(6 * vUnit) }}>
-                {cityState}
-              </p>
+              <p style={{ fontSize: citySz, fontWeight: 600, color: textColor, marginTop: Math.round(8 * u) }}>{cityState}</p>
             )}
             {price && (
-              <p style={{ fontSize: priceSize, fontWeight: 800, color: textColor, marginTop: Math.round(16 * vUnit) }}>
-                ${price}
-              </p>
+              <p style={{ fontSize: priceSz, fontWeight: 800, color: textColor, marginTop: Math.round(20 * u) }}>${price}</p>
             )}
             {features && (
-              <div style={{ marginTop: Math.round(16 * vUnit), color: textMuted, fontSize: featureSize, lineHeight: 1.6, textAlign: "center" }}>
+              <div style={{ marginTop: Math.round(18 * u), color: textMuted, fontSize: featureSz, lineHeight: 1.6 }}>
                 {features.split("\n").map((f, i) => <div key={i}>{f}</div>)}
               </div>
             )}
 
-            {/* Contact row */}
-            <div style={{ marginTop: Math.round(30 * vUnit), display: "flex", justifyContent: "center", gap: Math.round(24 * vUnit), flexWrap: "wrap" }}>
-              {phone && <span style={{ fontSize: detailSize, color: textMuted }}>{phone}</span>}
-              {email && <span style={{ fontSize: detailSize, color: textMuted }}>{email}</span>}
+            <div style={{ marginTop: Math.round(30 * u), display: "flex", justifyContent: "center", gap: Math.round(24 * u), flexWrap: "wrap" }}>
+              {phone && <span style={{ fontSize: detailSz, color: textMuted }}>{phone}</span>}
+              {email && <span style={{ fontSize: detailSz, color: textMuted }}>{email}</span>}
             </div>
-            {brokerage && (
-              <p style={{ fontSize: detailSize, color: textMuted, marginTop: Math.round(8 * vUnit) }}>{brokerage}</p>
-            )}
-            {tagline && (
-              <p style={{ fontSize: detailSize, color: textMuted, fontStyle: "italic", marginTop: Math.round(8 * vUnit) }}>{tagline}</p>
-            )}
+            {brokerage && <p style={{ fontSize: detailSz, color: textMuted, marginTop: Math.round(6 * u) }}>{brokerage}</p>}
+            {tagline && <p style={{ fontSize: detailSz, color: textMuted, fontStyle: "italic", marginTop: Math.round(6 * u) }}>{tagline}</p>}
           </div>
         </div>
       </div>
     );
   }
 
-  // ── LANDSCAPE — Wolfe-style layout ──
-  const addressSize = Math.round(64 * unit);
-  const citySize = Math.round(36 * unit);
-  const priceSize = Math.round(56 * unit);
-  const featureSize = Math.round(32 * unit);
-  const nameSize = Math.round(32 * unit);
-  const headshotSz = Math.round(260 * unit);
+  /* ── LANDSCAPE — Wolfe-style 3-column layout ──
+     Measured from reference card (1200×628):
+     - Outer inset: 2.5% → ~48px at 1920w
+     - Corner radius: 2.5% of width → ~48px
+     - Gray border: ~4px stroke (0.35% of width → ~7px)
+     - Inner padding: 4% from edges
+     - Left text column: 36% of inner width
+     - Center logo column: 32% of inner width
+     - Right headshot column: 24% of inner width + margins
+     - Headshot frame: 82% of inner height, white border 6px (scaled ~10px)
+     - Address: 11% of card height
+     - City: 6.7% of card height
+     - Price: 8.9% of card height
+     - Features: 5.6% each
+     - Agent name: below headshot, moderate size
+  */
+  const u = w / 1920;
+  const uh = h / 1080; // separate height unit for accurate vertical proportions
+
+  // Outer structure
+  const inset = Math.round(48 * u);
+  const radius = Math.round(48 * u);
+  const borderW = Math.round(7 * u);
+  const contentPadX = Math.round(72 * u);  // 4% inner padding
+  const contentPadY = Math.round(52 * uh);
+
+  // Text sizes — derived from Wolfe card proportions (% of card height)
+  const addressSz = Math.round(h * 0.11);   // 11% of height
+  const citySz = Math.round(h * 0.067);     // 6.7%
+  const priceSz = Math.round(h * 0.089);    // 8.9%
+  const featureSz = Math.round(h * 0.050);  // 5%
+  const nameSz = Math.round(h * 0.055);     // agent name
+  const detailSz = Math.round(h * 0.035);   // phone/email
+
+  // Headshot frame — 82% of inner height
+  const innerH = h - inset * 2 - borderW * 2;
+  const innerW = w - inset * 2 - borderW * 2;
+  const frameH = Math.round(innerH * 0.82);
+  const frameW = Math.round(innerW * 0.237);  // 23.7% of inner width
+  const frameBorder = Math.round(10 * u);
+
+  // Logo area
+  const logoMaxW = Math.round(innerW * 0.18);
+  const logoMaxH = Math.round(innerH * 0.50);
 
   return (
-    <div style={{ width: w, height: h, position: "relative", background: "transparent" }}>
+    <div style={{ width: w, height: h, background: "transparent" }}>
       <div
         style={{
           position: "absolute",
-          inset: Math.round(10 * unit),
-          borderRadius: cornerRadius,
-          border: `${borderWidth}px solid ${borderColor}`,
+          inset: inset,
+          borderRadius: radius,
+          border: `${borderW}px solid ${borderColor}`,
           backgroundColor: bgColor || "#14532d",
           overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          padding: innerPad,
           fontFamily,
         }}
       >
@@ -712,103 +726,131 @@ function BrandingCardTemplate({
           </>
         )}
 
-        {/* Left: Property info */}
-        <div style={{ position: "relative", zIndex: 1, flex: "1 1 0%", minWidth: 0 }}>
-          {address && (
-            <p style={{ fontSize: addressSize, fontWeight: 800, color: textColor, lineHeight: 1.05 }}>
-              {address}
-            </p>
-          )}
-          {cityState && (
-            <p style={{ fontSize: citySize, fontWeight: 600, color: textColor, marginTop: Math.round(6 * unit) }}>
-              {cityState}
-            </p>
-          )}
-          {price && (
-            <p style={{ fontSize: priceSize, fontWeight: 800, color: textColor, marginTop: Math.round(20 * unit) }}>
-              ${price}
-            </p>
-          )}
-          {features && (
-            <div style={{ marginTop: Math.round(16 * unit), color: textMuted, fontSize: featureSize, lineHeight: 1.6 }}>
-              {features.split("\n").map((f, i) => <div key={i}>{f}</div>)}
-            </div>
-          )}
-          {!address && !price && (
-            <p style={{ fontSize: nameSize, fontWeight: 700, color: textColor }}>
-              {agentName || "Your Name"}
-            </p>
-          )}
-          {tagline && !address && (
-            <p style={{ fontSize: Math.round(28 * unit), color: textMuted, fontStyle: "italic", marginTop: Math.round(8 * unit) }}>
-              {tagline}
-            </p>
-          )}
-        </div>
+        {/* 3-column flex layout */}
+        <div style={{
+          position: "relative", zIndex: 1,
+          display: "flex", alignItems: "stretch",
+          width: "100%", height: "100%",
+          padding: `${contentPadY}px ${contentPadX}px`,
+        }}>
 
-        {/* Center: Logo */}
-        <div style={{ position: "relative", zIndex: 1, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `0 ${Math.round(30 * unit)}px` }}>
-          {logo ? (
-            <img
-              src={logo}
-              alt="Logo"
-              style={{
-                maxWidth: Math.round(220 * unit),
-                maxHeight: Math.round(200 * unit),
+          {/* LEFT COLUMN — Text (36% width) */}
+          <div style={{
+            flex: "0 0 38%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            paddingRight: Math.round(20 * u),
+            minWidth: 0,
+          }}>
+            {address ? (
+              <p style={{ fontSize: addressSz, fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0 }}>
+                {address}
+              </p>
+            ) : (
+              <p style={{ fontSize: addressSz, fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0 }}>
+                {agentName || "Your Name"}
+              </p>
+            )}
+            {cityState && (
+              <p style={{ fontSize: citySz, fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(h * 0.035) }}>
+                {cityState}
+              </p>
+            )}
+            {price && (
+              <p style={{ fontSize: priceSz, fontWeight: 800, color: textColor, margin: 0, marginTop: Math.round(h * 0.045) }}>
+                ${price}
+              </p>
+            )}
+            {features && (
+              <div style={{ marginTop: Math.round(h * 0.04), color: textMuted, fontSize: featureSz, lineHeight: 1.55 }}>
+                {features.split("\n").map((f, i) => <div key={i}>{f}</div>)}
+              </div>
+            )}
+            {!address && tagline && (
+              <p style={{ fontSize: citySz, color: textMuted, fontStyle: "italic", marginTop: Math.round(h * 0.03), margin: 0 }}>{tagline}</p>
+            )}
+            {!address && brokerage && (
+              <p style={{ fontSize: featureSz, color: textMuted, marginTop: Math.round(h * 0.02), margin: 0 }}>{brokerage}</p>
+            )}
+            {!address && phone && (
+              <p style={{ fontSize: featureSz, color: textMuted, marginTop: Math.round(h * 0.015), margin: 0 }}>{phone}</p>
+            )}
+          </div>
+
+          {/* CENTER COLUMN — Logo (24% width, centered) */}
+          <div style={{
+            flex: "0 0 24%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            {logo ? (
+              <img src={logo} alt="Logo" style={{
+                maxWidth: logoMaxW,
+                maxHeight: logoMaxH,
                 objectFit: "contain",
-              }}
-            />
-          ) : (
-            <div style={{ width: Math.round(120 * unit), height: Math.round(120 * unit), borderRadius: "50%", border: `2px dashed ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ImageIcon style={{ width: Math.round(40 * unit), height: Math.round(40 * unit), color: textMuted }} />
-            </div>
-          )}
-          {brokerage && (
-            <p style={{ fontSize: Math.round(20 * unit), color: textMuted, marginTop: Math.round(12 * unit), textAlign: "center", maxWidth: Math.round(220 * unit) }}>
-              {brokerage}
-            </p>
-          )}
-        </div>
+              }} />
+            ) : (
+              <div style={{
+                width: Math.round(120 * u), height: Math.round(120 * u),
+                borderRadius: "50%",
+                border: `3px dashed ${borderColor}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <ImageIcon style={{ width: 40 * u, height: 40 * u, color: textMuted }} />
+              </div>
+            )}
+            {brokerage && address && (
+              <p style={{ fontSize: detailSz, color: textMuted, marginTop: Math.round(16 * u), textAlign: "center" }}>
+                {brokerage}
+              </p>
+            )}
+          </div>
 
-        {/* Right: Headshot + name */}
-        <div style={{ position: "relative", zIndex: 1, flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {headshot ? (
-            <img
-              src={headshot}
-              alt="Agent"
-              style={{
-                width: headshotSz,
-                height: headshotSz,
-                borderRadius: Math.round(16 * unit),
-                objectFit: "cover",
-                border: `${Math.round(5 * unit)}px solid rgba(255,255,255,0.3)`,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: headshotSz,
-                height: headshotSz,
-                borderRadius: Math.round(16 * unit),
-                backgroundColor: "rgba(255,255,255,0.1)",
-                border: `${Math.round(5 * unit)}px solid rgba(255,255,255,0.2)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <User style={{ width: 60 * unit, height: 60 * unit, color: textMuted }} />
-            </div>
-          )}
-          <p style={{ fontSize: nameSize, fontWeight: 600, color: textColor, marginTop: Math.round(12 * unit), textAlign: "center" }}>
-            {agentName || "Agent Name"}
-          </p>
-          {phone && (
-            <p style={{ fontSize: Math.round(22 * unit), color: textMuted, marginTop: Math.round(4 * unit) }}>{phone}</p>
-          )}
-          {email && (
-            <p style={{ fontSize: Math.round(20 * unit), color: textMuted, marginTop: Math.round(2 * unit) }}>{email}</p>
-          )}
+          {/* RIGHT COLUMN — Headshot + Name (38% width) */}
+          <div style={{
+            flex: "0 0 38%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            {headshot ? (
+              <img
+                src={headshot}
+                alt="Agent"
+                style={{
+                  width: frameW,
+                  height: frameH,
+                  objectFit: "cover",
+                  border: `${frameBorder}px solid white`,
+                }}
+              />
+            ) : (
+              <div style={{
+                width: frameW, height: frameH,
+                backgroundColor: "rgba(255,255,255,0.06)",
+                border: `${frameBorder}px solid ${borderColor}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
+              </div>
+            )}
+            <p style={{
+              fontSize: nameSz, fontWeight: 600, color: textColor,
+              marginTop: Math.round(10 * uh), textAlign: "center",
+            }}>
+              {address ? (agentName || "Agent Name") : ""}
+            </p>
+            {address && phone && (
+              <p style={{ fontSize: detailSz, color: textMuted, marginTop: Math.round(4 * uh), textAlign: "center" }}>{phone}</p>
+            )}
+            {address && email && (
+              <p style={{ fontSize: detailSz, color: textMuted, marginTop: Math.round(2 * uh), textAlign: "center" }}>{email}</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
