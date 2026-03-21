@@ -2,66 +2,11 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    // ─── Brokerage bypass ───
-    // If brokerageId is passed, skip Stripe entirely
-    if (body.brokerageId) {
-      const orderId = body.orderData?.orderId;
-      if (!orderId) {
-        return NextResponse.json(
-          { success: false, error: "Order ID required for brokerage checkout" },
-          { status: 400 }
-        );
-      }
-
-      const supabase = createAdminClient();
-
-      // Verify brokerage is active
-      const { data: brokerage } = await supabase
-        .from("brokerages")
-        .select("id, company, status, per_clip_rate")
-        .eq("id", body.brokerageId)
-        .eq("status", "active")
-        .single();
-
-      if (!brokerage) {
-        return NextResponse.json(
-          { success: false, error: "Invalid or inactive brokerage account" },
-          { status: 403 }
-        );
-      }
-
-      // Update order: set to new, attach brokerage_id
-      const { error: updateError } = await supabase
-        .from("orders")
-        .update({
-          status: "new",
-          brokerage_id: brokerage.id,
-        })
-        .eq("order_id", orderId);
-
-      if (updateError) {
-        console.error("[Checkout] Brokerage order update failed:", updateError);
-        return NextResponse.json(
-          { success: false, error: "Failed to activate brokerage order" },
-          { status: 500 }
-        );
-      }
-
-      console.log(`[Checkout] Brokerage order ${orderId} activated for ${brokerage.company} (${brokerage.id})`);
-
-      const origin = request.headers.get("origin") || "https://realestatephoto2video.com";
-      return NextResponse.json({
-        success: true,
-        brokerage: true,
-        url: `${origin}/order/success?orderId=${orderId}&brokerage=true`,
-      });
-    }
-
-    // ─── Standard Stripe checkout ───
     const orderId = body.orderData?.orderId ?? body.orderId;
     const amountCents = body.items?.[0]?.amount ?? (body.amount != null ? Math.round(Number(body.amount) * 100) : null);
     const customerName = body.customerDetails?.name ?? body.customerName;
@@ -75,9 +20,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the origin for redirect URLs
     const origin = request.headers.get("origin") || "https://realestatephoto2video.com";
 
+    // ═══ ADMIN BYPASS — skip Stripe, go straight to success ═══
+    if (ADMIN_EMAILS.includes(customerEmail.toLowerCase())) {
+      // Update order status to paid directly
+      if (orderId && orderId !== "direct") {
+        try {
+          const supabase = createAdminClient();
+          await supabase
+            .from("orders")
+            .update({ 
+              status: "new", 
+              payment_status: "admin_bypass",
+              stripe_session_id: "admin_bypass_" + Date.now()
+            })
+            .eq("order_id", orderId);
+          console.log("[Checkout] Admin bypass — order set to new:", orderId);
+        } catch (e) {
+          console.error("[Checkout] Admin bypass DB error:", e);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: "admin_bypass",
+        sessionId: "admin_bypass",
+        url: `${origin}/order/success?orderId=${orderId || "direct"}&session_id=admin_bypass`,
+      });
+    }
+
+    // ═══ NORMAL STRIPE CHECKOUT ═══
     // Fetch order from Supabase to include all details in metadata
     let photoUrls = "";
     let musicSelection = "Not specified";
@@ -98,8 +71,6 @@ export async function POST(request: Request) {
         
         if (!error && orderData) {
           console.log("[Checkout] Found order in Supabase:", orderId);
-          
-          // Extract all order details
           musicSelection = orderData.music_selection || "Not specified";
           specialInstructions = orderData.special_instructions || "None";
           customerPhone = orderData.customer_phone || "Not provided";
@@ -107,7 +78,6 @@ export async function POST(request: Request) {
           voiceoverIncluded = orderData.voiceover ? "Yes" : "No";
           includeEditedPhotos = orderData.include_edited_photos ? "Yes" : "No";
           
-          // Build photo URLs string (truncated to fit Stripe's 500 char limit per key)
           if (orderData.photos && orderData.photos.length > 0) {
             photoUrls = orderData.photos
               .map((p: { secure_url: string }, i: number) => `${i + 1}:${p.secure_url}`)
@@ -119,8 +89,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Stripe metadata has a 500 character limit per value
-    // Split photo URLs into multiple keys if needed
     const photoUrlChunks: Record<string, string> = {};
     if (photoUrls.length > 0) {
       const chunkSize = 490;
@@ -132,7 +100,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create Stripe checkout session with all order details in metadata
     const session = await stripe.checkout.sessions.create({
       allow_promotion_codes: true,
       payment_method_types: ["card"],
