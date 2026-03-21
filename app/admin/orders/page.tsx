@@ -569,15 +569,7 @@ export default function AdminOrdersPage() {
                                 <RefreshCw className="h-4 w-4 mr-1" /> Request My Revision
                               </Button>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusUpdate(order.id, "revision_requested")}
-                              disabled={isProcessing}
-                              className="text-amber-600 border-amber-200"
-                            >
-                              <RefreshCw className="h-4 w-4 mr-1" /> Request My Revision
-                            </Button>
+                            
                           </>
                         )}
 
