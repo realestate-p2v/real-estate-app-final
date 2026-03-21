@@ -1409,11 +1409,37 @@ export default function PhotoCoachPage() {
                 </div>
 
                 {/* Skip / no label */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => proceedWithRoom("")}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+                  >
+                    Skip — take photo without a room label
+                  </button>
+                  <button
+                    onClick={() => setShowRoomPicker(false)}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Selected room indicator with Change option */}
+            {!showRoomPicker && !lastResult && !uploading && !analyzing && shootingRoom && (
+              <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-accent" />
+                  <p className="text-sm font-semibold text-accent">
+                    Shooting: {getCurrentRoomLabel()}
+                  </p>
+                </div>
                 <button
-                  onClick={() => proceedWithRoom("")}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+                  onClick={() => setShowRoomPicker(true)}
+                  className="text-xs font-semibold text-accent hover:text-accent/70 underline transition-colors"
                 >
-                  Skip — take photo without a room label
+                  Change
                 </button>
               </div>
             )}
