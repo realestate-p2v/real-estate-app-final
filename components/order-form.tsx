@@ -173,6 +173,22 @@ export function OrderForm() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPhotos(parsed);
           setSequenceConfirmed(false);
+          // Detect image dimensions for each photo (needed for crop preview)
+          parsed.forEach((photo: any) => {
+            if (photo.secure_url && !photo.original_width) {
+              const img = new window.Image();
+              img.onload = () => {
+                setPhotos((prev) =>
+                  prev.map((p) =>
+                    p.id === photo.id
+                      ? { ...p, original_width: img.naturalWidth, original_height: img.naturalHeight }
+                      : p
+                  )
+                );
+              };
+              img.src = photo.secure_url;
+            }
+          });
         }
         sessionStorage.removeItem("coach_photos_for_order");
       }
