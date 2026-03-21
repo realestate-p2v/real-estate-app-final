@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Loader2,
@@ -38,6 +37,8 @@ interface Order {
   resolution: string;
   orientation: string;
   delivery_url: string;
+  unbranded_delivery_url: string;
+  additional_video_urls: Record<string, string>;
   total_price: number;
   created_at: string;
   revision_count: number;
@@ -80,6 +81,23 @@ function getFileIdFromUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
+function getAllVideos(order: Order): { label: string; url: string }[] {
+  const videos: { label: string; url: string }[] = [];
+  if (order.delivery_url) {
+    const hasMultiple = order.additional_video_urls && Object.keys(order.additional_video_urls).length > 0;
+    videos.push({ label: hasMultiple ? "Landscape (Branded)" : "Final Video", url: order.delivery_url });
+  }
+  if (order.additional_video_urls) {
+    Object.entries(order.additional_video_urls).forEach(([key, url]) => {
+      const parts = key.split("_");
+      const orient = (parts[0] || "").charAt(0).toUpperCase() + (parts[0] || "").slice(1);
+      const brand = (parts[1] || "").charAt(0).toUpperCase() + (parts[1] || "").slice(1);
+      videos.push({ label: `${orient} (${brand})`, url });
+    });
+  }
+  return videos;
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [revisions, setRevisions] = useState<RevisionRequest[]>([]);
@@ -88,6 +106,7 @@ export default function AdminOrdersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("action_needed");
   const [manualDeliveryUrl, setManualDeliveryUrl] = useState<Record<string, string>>({});
+  const [activeVideoIdx, setActiveVideoIdx] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchData();
@@ -135,7 +154,6 @@ export default function AdminOrdersPage() {
   const getAddress = (o: Order) =>
     o.property_address || (o.property_city && o.property_state ? `${o.property_city}, ${o.property_state}` : `Order ${o.id.slice(0, 8)}`);
 
-  // Group orders by action needed
   const revisionRequests = orders.filter(o => o.status === "client_revision_requested");
   const awaitingApproval = orders.filter(o => o.status === "awaiting_approval");
   const newOrders = orders.filter(o => ["new", "pending"].includes(o.status));
@@ -173,7 +191,6 @@ export default function AdminOrdersPage() {
       <Navigation />
 
       <div className="mx-auto max-w-6xl px-4 py-8">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <Link href="/admin" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
@@ -184,7 +201,6 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        {/* Filter Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
             { key: "action_needed", label: "Action Needed", count: actionNeededCount, color: "text-red-600" },
@@ -207,7 +223,6 @@ export default function AdminOrdersPage() {
           ))}
         </div>
 
-        {/* Orders List */}
         <div className="space-y-3">
           {getFilteredOrders().length === 0 ? (
             <div className="bg-card rounded-xl border border-border p-12 text-center">
@@ -217,24 +232,23 @@ export default function AdminOrdersPage() {
           ) : (
             getFilteredOrders().map((order) => {
               const isExpanded = expandedOrder === order.id;
-              const fileId = getFileIdFromUrl(order.delivery_url);
               const isRevisionRequest = order.status === "client_revision_requested";
               const isAwaitingApproval = order.status === "awaiting_approval";
               const isError = order.status === "error";
               const isProcessing = actionLoading === order.id;
-
-              // Get revision details for this order
               const orderRevisions = revisions.filter(r => r.order_id === order.id);
               const latestRevision = orderRevisions[0];
+              const allVideos = getAllVideos(order);
+              const currentVideoIdx = activeVideoIdx[order.id] || 0;
+              const currentVideo = allVideos[currentVideoIdx];
+              const currentFileId = currentVideo ? getFileIdFromUrl(currentVideo.url) : null;
 
               return (
                 <div key={order.id} className="bg-card rounded-xl border border-border overflow-hidden">
-                  {/* Order Header */}
                   <button
                     onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                     className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
                   >
-                    {/* Status indicator */}
                     <div className={`h-2 w-2 rounded-full flex-shrink-0 ${
                       isRevisionRequest ? "bg-amber-500" :
                       isAwaitingApproval ? "bg-indigo-500" :
@@ -250,6 +264,11 @@ export default function AdminOrdersPage() {
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-600"}`}>
                           {order.status.replace(/_/g, " ")}
                         </span>
+                        {allVideos.length > 1 && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            {allVideos.length} versions
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span>{order.customer_name}</span>
@@ -264,7 +283,6 @@ export default function AdminOrdersPage() {
                       </div>
                     </div>
 
-                    {/* Quick action badges */}
                     {isRevisionRequest && (
                       <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-1 rounded-lg flex items-center gap-1">
                         <RefreshCw className="h-3 w-3" /> Revision
@@ -279,10 +297,8 @@ export default function AdminOrdersPage() {
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                   </button>
 
-                  {/* Expanded Details */}
                   {isExpanded && (
                     <div className="border-t border-border p-4 space-y-4">
-                      {/* Customer info */}
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Customer</p>
@@ -296,27 +312,55 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
 
-                      {/* Video Preview */}
-                      {fileId && (
-                        <div className="aspect-video bg-black rounded-lg overflow-hidden max-w-xl">
-                          <iframe
-                            src={`https://drive.google.com/file/d/${fileId}/preview`}
-                            className="w-full h-full border-0"
-                            allow="autoplay; encrypted-media"
-                            allowFullScreen
-                          />
+                      {/* ═══ MULTI-VIDEO PREVIEW ═══ */}
+                      {allVideos.length > 0 && (
+                        <div className="space-y-3">
+                          {/* Video version tabs */}
+                          {allVideos.length > 1 && (
+                            <div className="flex flex-wrap gap-2">
+                              {allVideos.map((v, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => setActiveVideoIdx({ ...activeVideoIdx, [order.id]: idx })}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                    currentVideoIdx === idx
+                                      ? "border-primary bg-primary/10 text-primary"
+                                      : "border-border text-muted-foreground hover:border-primary/30"
+                                  }`}
+                                >
+                                  <Play className="inline h-3 w-3 mr-1" />
+                                  {v.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Active video player */}
+                          {currentFileId && (
+                            <div className="aspect-video bg-black rounded-lg overflow-hidden max-w-xl">
+                              <iframe
+                                key={currentFileId}
+                                src={`https://drive.google.com/file/d/${currentFileId}/preview`}
+                                className="w-full h-full border-0"
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                              />
+                            </div>
+                          )}
+
+                          {/* Drive links for all versions */}
+                          <div className="flex flex-wrap gap-2">
+                            {allVideos.map((v, idx) => (
+                              <a key={idx} href={v.url} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                <ExternalLink className="h-3 w-3" /> {v.label}
+                              </a>
+                            ))}
+                          </div>
                         </div>
                       )}
 
-                      {/* Drive link */}
-                      {order.delivery_url && (
-                        <a href={order.delivery_url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                          <ExternalLink className="h-3.5 w-3.5" /> Open in Google Drive
-                        </a>
-                      )}
-
-                      {/* Revision Details — show on any order with revision data */}
+                      {/* Revision Details */}
                       {latestRevision && (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                           <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
@@ -332,103 +376,97 @@ export default function AdminOrdersPage() {
                             <p className="text-sm text-amber-700 mb-2">Customer notes: &ldquo;{latestRevision.notes}&rdquo;</p>
                           )}
                           <div className="space-y-3">
-                            {(order.client_revision_notes || latestRevision.clips || []).map((clip: any, i: number) => {
-                              return (
-                                <div key={i} className="bg-white rounded-lg p-3 text-sm">
-                                  <div className="flex items-start gap-4">
-                                    {/* Left: clip info + customer request */}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-foreground">Clip {clip.position}</span>
-                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                                          clip.action === "remove" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                                        }`}>
-                                          {clip.action}
-                                        </span>
-                                      </div>
-                                      {clip.camera_direction && (
-                                        <p className="text-xs text-muted-foreground">Requested: <span className="font-semibold text-foreground">{clip.camera_direction}</span>{clip.camera_speed ? ` · ${clip.camera_speed}` : ""}</p>
-                                      )}
-                                      {clip.problem_description && (
-                                        <p className="text-muted-foreground italic mt-1">&ldquo;{clip.problem_description}&rdquo;</p>
-                                      )}
-                                      {clip.custom_motion && (
-                                        <p className="text-xs text-muted-foreground mt-1">Custom motion: &ldquo;{clip.custom_motion}&rdquo;</p>
-                                      )}
+                            {(order.client_revision_notes || latestRevision.clips || []).map((clip: any, i: number) => (
+                              <div key={i} className="bg-white rounded-lg p-3 text-sm">
+                                <div className="flex items-start gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-bold text-foreground">Clip {clip.position}</span>
+                                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                        clip.action === "remove" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                                      }`}>
+                                        {clip.action}
+                                      </span>
                                     </div>
-
-                                    {/* Right: editable camera controls for admin override */}
-                                    {clip.action !== "remove" && (isRevisionRequest || isAwaitingApproval) && (
-                                      <div className="flex-shrink-0 w-52 space-y-2 border-l border-border pl-3">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Admin Override</p>
-                                        <div>
-                                          <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Direction</p>
-                                          <select
-                                            value={clip.camera_direction || ""}
-                                            onChange={(e) => {
-                                              const source = order.client_revision_notes || latestRevision.clips || [];
-                                              const updated = source.map((c: any, idx: number) => idx === i ? { ...c, camera_direction: e.target.value } : c);
-                                              setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
-                                            }}
-                                            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
-                                          >
-                                            <option value="">Auto</option>
-                                            <option value="push_in">Fwd</option>
-                                            <option value="pull_back">Back</option>
-                                            <option value="diagonal_top_left">Fwd + L</option>
-                                            <option value="diagonal_top_right">Fwd + R</option>
-                                            <option value="diagonal_bottom_left">Back + L</option>
-                                            <option value="diagonal_bottom_right">Back + R</option>
-                                            <option value="tilt_up">Look Up</option>
-                                            <option value="tilt_down">Look Down</option>
-                                            <option value="orbit_left">Orbit L</option>
-                                            <option value="orbit_right">Orbit R</option>
-                                            <option value="rise">Rise</option>
-                                            <option value="bring_to_life">Bring to Life</option>
-                                          </select>
-                                        </div>
-                                        <div>
-                                          <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Speed</p>
-                                          <select
-                                            value={clip.camera_speed || ""}
-                                            onChange={(e) => {
-                                              const source = order.client_revision_notes || latestRevision.clips || [];
-                                              const updated = source.map((c: any, idx: number) => idx === i ? { ...c, camera_speed: e.target.value } : c);
-                                              setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
-                                            }}
-                                            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
-                                          >
-                                            <option value="">Default</option>
-                                            <option value="slow">Slow</option>
-                                            <option value="medium">Medium</option>
-                                            <option value="fast">Fast</option>
-                                          </select>
-                                        </div>
-                                        <div>
-                                          <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">
-                                            {clip.camera_direction === "bring_to_life" ? "Action Prompt" : "Custom Motion"}
-                                          </p>
-                                          <input
-                                            type="text"
-                                            value={clip.custom_motion || ""}
-                                            onChange={(e) => {
-                                              const source = order.client_revision_notes || latestRevision.clips || [];
-                                              const updated = source.map((c: any, idx: number) => idx === i ? { ...c, custom_motion: e.target.value } : c);
-                                              setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
-                                            }}
-                                            placeholder={clip.camera_direction === "bring_to_life" ? "e.g. Dog jumps excitedly" : "e.g. Slow zoom into fireplace"}
-                                            maxLength={80}
-                                            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
-                                          />
-                                        </div>
-                                      </div>
+                                    {clip.camera_direction && (
+                                      <p className="text-xs text-muted-foreground">Requested: <span className="font-semibold text-foreground">{clip.camera_direction}</span>{clip.camera_speed ? ` · ${clip.camera_speed}` : ""}</p>
+                                    )}
+                                    {clip.problem_description && (
+                                      <p className="text-muted-foreground italic mt-1">&ldquo;{clip.problem_description}&rdquo;</p>
+                                    )}
+                                    {clip.custom_motion && (
+                                      <p className="text-xs text-muted-foreground mt-1">Custom motion: &ldquo;{clip.custom_motion}&rdquo;</p>
                                     )}
                                   </div>
+
+                                  {clip.action !== "remove" && (isRevisionRequest || isAwaitingApproval) && (
+                                    <div className="flex-shrink-0 w-52 space-y-2 border-l border-border pl-3">
+                                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Admin Override</p>
+                                      <div>
+                                        <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Direction</p>
+                                        <select
+                                          value={clip.camera_direction || ""}
+                                          onChange={(e) => {
+                                            const source = order.client_revision_notes || latestRevision.clips || [];
+                                            const updated = source.map((c: any, idx: number) => idx === i ? { ...c, camera_direction: e.target.value } : c);
+                                            setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
+                                          }}
+                                          className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                        >
+                                          <option value="">Auto</option>
+                                          <option value="push_in">Fwd</option>
+                                          <option value="pull_back">Back</option>
+                                          <option value="diagonal_top_left">Fwd + L</option>
+                                          <option value="diagonal_top_right">Fwd + R</option>
+                                          <option value="diagonal_bottom_left">Back + L</option>
+                                          <option value="diagonal_bottom_right">Back + R</option>
+                                          <option value="tilt_up">Look Up</option>
+                                          <option value="tilt_down">Look Down</option>
+                                          <option value="orbit_left">Orbit L</option>
+                                          <option value="orbit_right">Orbit R</option>
+                                          <option value="rise">Rise</option>
+                                          <option value="bring_to_life">Bring to Life</option>
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Speed</p>
+                                        <select
+                                          value={clip.camera_speed || ""}
+                                          onChange={(e) => {
+                                            const source = order.client_revision_notes || latestRevision.clips || [];
+                                            const updated = source.map((c: any, idx: number) => idx === i ? { ...c, camera_speed: e.target.value } : c);
+                                            setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
+                                          }}
+                                          className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                        >
+                                          <option value="">Default</option>
+                                          <option value="slow">Slow</option>
+                                          <option value="medium">Medium</option>
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">
+                                          {clip.camera_direction === "bring_to_life" ? "Action Prompt" : "Custom Motion"}
+                                        </p>
+                                        <input
+                                          type="text"
+                                          value={clip.custom_motion || ""}
+                                          onChange={(e) => {
+                                            const source = order.client_revision_notes || latestRevision.clips || [];
+                                            const updated = source.map((c: any, idx: number) => idx === i ? { ...c, custom_motion: e.target.value } : c);
+                                            setOrders(orders.map(o => o.id === order.id ? { ...o, client_revision_notes: updated } : o));
+                                          }}
+                                          placeholder={clip.camera_direction === "bring_to_life" ? "e.g. Dog jumps excitedly" : "e.g. Slow zoom into fireplace"}
+                                          maxLength={80}
+                                          className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              );
-                            })}
+                              </div>
+                            ))}
                           </div>
-                          {/* Save overrides & reprocess button */}
                           {(isRevisionRequest || isAwaitingApproval) && (
                             <div className="mt-3 pt-3 border-t border-amber-200 flex gap-2">
                               <Button
@@ -436,7 +474,6 @@ export default function AdminOrdersPage() {
                                 onClick={async () => {
                                   setActionLoading(order.id);
                                   try {
-                                    // Save updated revision notes and reprocess
                                     const res = await fetch("/api/admin/orders", {
                                       method: "PATCH",
                                       headers: { "Content-Type": "application/json" },
@@ -478,11 +515,10 @@ export default function AdminOrdersPage() {
                         </div>
                       )}
 
-                      {/* Error info */}
                       {isError && (
                         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                           <p className="text-sm text-red-700 font-semibold">This order errored during processing.</p>
-                          <p className="text-xs text-red-600 mt-1">Check the pipeline logs for details. You can retry by setting status back to "new".</p>
+                          <p className="text-xs text-red-600 mt-1">Check the pipeline logs for details. You can retry by setting status back to &ldquo;new&rdquo;.</p>
                         </div>
                       )}
 
@@ -497,7 +533,7 @@ export default function AdminOrdersPage() {
                               className="bg-green-600 hover:bg-green-700 text-white"
                             >
                               {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-                              Approve & Deliver
+                              Approve & Deliver{allVideos.length > 1 ? ` (${allVideos.length} versions)` : ""}
                             </Button>
                             <Button
                               size="sm"
