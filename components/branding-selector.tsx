@@ -1,28 +1,35 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Check, ImageIcon, Upload, X } from "lucide-react";
+import { Check, ImageIcon, Upload, X, Sparkles, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
 
 const brandingOptions = [
   {
     id: "unbranded",
-    name: "Unbranded",
-    description: "Clean video without any branding",
+    name: "No Branding",
+    description: "Clean video without intro/outro cards",
     price: 0,
   },
   {
     id: "custom",
-    name: "Custom Branding",
-    description: "Custom intro/outro with your branding",
+    name: "Built-in Branding",
+    description: "We create intro/outro cards with your info",
+    price: 0,
+  },
+  {
+    id: "upload",
+    name: "Upload Your Own Cards",
+    description: "Use your own custom intro/outro images",
     price: 0,
   },
 ];
 
 export interface BrandingData {
-  type: "unbranded" | "custom";
+  type: "unbranded" | "custom" | "upload";
   logoUrl?: string;
   logoFile?: File;
   agentName?: string;
@@ -30,6 +37,8 @@ export interface BrandingData {
   phone?: string;
   email?: string;
   website?: string;
+  customIntroCardUrl?: string;
+  customOutroCardUrl?: string;
 }
 
 interface BrandingSelectorProps {
@@ -44,6 +53,8 @@ interface BrandingSelectorProps {
   propertyAddress?: string;
   includeAddressOnCard?: boolean;
   onIncludeAddressChange?: (val: boolean) => void;
+  includeUnbranded?: boolean;
+  onIncludeUnbrandedChange?: (val: boolean) => void;
 }
 
 function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyState, propertyBedrooms, propertyBathrooms, propertyAddress, includeAddressOnCard }: { 
@@ -69,12 +80,9 @@ function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyStat
 
   return (
     <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border shadow-lg">
-      {/* Blurred background placeholder */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900" />
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/55" />
 
-      {/* Content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
         {isEmpty ? (
           <div className="space-y-2">
@@ -83,52 +91,34 @@ function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyStat
           </div>
         ) : (
           <>
-            {/* Logo */}
             {logoPreview && (
               <div className="mb-1">
-                <img
-                  src={logoPreview}
-                  alt="Logo"
-                  className="h-10 sm:h-12 w-auto object-contain mx-auto"
-                />
+                <img src={logoPreview} alt="Logo" className="h-10 sm:h-12 w-auto object-contain mx-auto" />
               </div>
             )}
-
-            {/* Agent name */}
             <p className={`text-white font-bold leading-tight ${agent ? '' : 'text-white/30'}`}
                style={{ fontSize: 'clamp(13px, 3.5vw, 18px)', marginTop: logoPreview ? '1%' : '0' }}>
               {agent || "Agent Name"}
             </p>
-
-            {/* Company */}
             <p className={`leading-tight mt-0.5 ${company ? 'text-white/85' : 'text-white/25'}`}
                style={{ fontSize: 'clamp(10px, 2.5vw, 13px)' }}>
               {company || "Company / Brokerage"}
             </p>
-
-            {/* Contact */}
             {(contactLine || (!agent && !company)) && (
               <p className={`leading-tight mt-1 ${contactLine ? 'text-white/80' : 'text-white/20'}`}
                  style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
                 {contactLine || "(555) 123-4567 | agent@email.com"}
               </p>
             )}
-
-            {/* Website */}
             {(website || (!agent && !company)) && (
               <p className={`leading-tight mt-0.5 ${website ? 'text-white/75' : 'text-white/20'}`}
                  style={{ fontSize: 'clamp(8px, 2vw, 11px)' }}>
                 {website || "www.example.com"}
               </p>
             )}
-
-            {/* CTA */}
-            <p className="font-bold mt-2"
-               style={{ fontSize: 'clamp(10px, 2.5vw, 13px)', color: '#FFD700' }}>
+            <p className="font-bold mt-2" style={{ fontSize: 'clamp(10px, 2.5vw, 13px)', color: '#FFD700' }}>
               Schedule a Showing Today
             </p>
-
-            {/* Property line */}
             {(() => {
               const parts = [];
               if (propertyBedrooms) parts.push(`${propertyBedrooms} BD`);
@@ -149,7 +139,6 @@ function BrandingPreview({ brandingData, logoPreview, propertyCity, propertyStat
         )}
       </div>
 
-      {/* Label */}
       <div className="absolute top-2 left-2 bg-black/60 text-white/70 text-[9px] font-medium px-2 py-0.5 rounded-full">
         Preview — Intro / Outro Card
       </div>
@@ -169,9 +158,15 @@ export function BrandingSelector({
   propertyAddress,
   includeAddressOnCard,
   onIncludeAddressChange,
+  includeUnbranded,
+  onIncludeUnbrandedChange,
 }: BrandingSelectorProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(brandingData?.logoUrl || null);
+  const [introPreview, setIntroPreview] = useState<string | null>(null);
+  const [outroPreview, setOutroPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const introInputRef = useRef<HTMLInputElement>(null);
+  const outroInputRef = useRef<HTMLInputElement>(null);
 
   const handleTypeSelect = (type: string) => {
     onSelect(type);
@@ -180,6 +175,10 @@ export function BrandingSelector({
         ...brandingData,
         type: type as BrandingData["type"],
       });
+    }
+    // Reset unbranded checkbox when switching to "No Branding"
+    if (type === "unbranded" && onIncludeUnbrandedChange) {
+      onIncludeUnbrandedChange(false);
     }
   };
 
@@ -204,15 +203,50 @@ export function BrandingSelector({
 
   const handleRemoveLogo = () => {
     setLogoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
     if (onBrandingDataChange) {
       onBrandingDataChange({
         ...brandingData,
         type: selected as BrandingData["type"],
         logoFile: undefined,
         logoUrl: undefined,
+      });
+    }
+  };
+
+  const handleCardUpload = (type: "intro" | "outro") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const url = reader.result as string;
+        if (type === "intro") setIntroPreview(url);
+        else setOutroPreview(url);
+        if (onBrandingDataChange) {
+          onBrandingDataChange({
+            ...brandingData,
+            type: "upload",
+            [type === "intro" ? "customIntroCardUrl" : "customOutroCardUrl"]: url,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveCard = (type: "intro" | "outro") => {
+    if (type === "intro") {
+      setIntroPreview(null);
+      if (introInputRef.current) introInputRef.current.value = "";
+    } else {
+      setOutroPreview(null);
+      if (outroInputRef.current) outroInputRef.current.value = "";
+    }
+    if (onBrandingDataChange) {
+      onBrandingDataChange({
+        ...brandingData,
+        type: "upload",
+        [type === "intro" ? "customIntroCardUrl" : "customOutroCardUrl"]: undefined,
       });
     }
   };
@@ -227,19 +261,23 @@ export function BrandingSelector({
     }
   };
 
+  const hasBranding = selected !== "unbranded";
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
           <ImageIcon className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold text-foreground">Brand Options</h3>
-          <p className="text-sm text-muted-foreground">Add your logo to the video</p>
+          <h3 className="font-semibold text-foreground">Branding</h3>
+          <p className="text-sm text-muted-foreground">Add your branding to the video intro &amp; outro</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Three branding options */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {brandingOptions.map((option) => (
           <button
             key={option.id}
@@ -256,21 +294,40 @@ export function BrandingSelector({
                 <Check className="h-5 w-5 text-primary" />
               </div>
             )}
-            <p className="font-semibold text-foreground pr-6">{option.name}</p>
-            <p className="text-sm text-muted-foreground mt-1">{option.description}</p>
-            <p className="text-sm font-semibold text-primary mt-2">
-              {option.price === 0 ? "Free" : `+$${option.price}`}
-            </p>
+            <p className="font-semibold text-foreground pr-6 text-sm">{option.name}</p>
+            <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
+            <p className="text-xs font-semibold text-primary mt-2">Free</p>
           </button>
         ))}
       </div>
 
-      {/* Show branding details form when custom is selected */}
+      {/* ═══ DELIVER BOTH COPIES CHECKBOX ═══ */}
+      {/* Shows whenever any branding is selected (custom or upload) */}
+      {hasBranding && (
+        <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <Checkbox
+              checked={includeUnbranded}
+              onCheckedChange={(checked) => onIncludeUnbrandedChange?.(checked === true)}
+              className="h-5 w-5 mt-0.5"
+            />
+            <div>
+              <span className="text-sm font-semibold text-foreground">
+                Deliver both branded and unbranded copies
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Get two versions — branded with intro/outro cards for social media, unbranded for MLS and websites.
+              </p>
+            </div>
+          </label>
+        </div>
+      )}
+
+      {/* ═══ BUILT-IN BRANDING FORM ═══ */}
       {selected === "custom" && (
-        <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border space-y-4">
+        <div className="mt-2 p-4 bg-muted/30 rounded-xl border border-border space-y-4">
           <h4 className="font-medium text-foreground">Branding Details</h4>
           
-          {/* Two-column layout: form left, preview right */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left: Form fields */}
             <div className="space-y-4">
@@ -366,7 +423,7 @@ export function BrandingSelector({
               </div>
 
               {/* Address on card checkbox */}
-              <label className="flex items-center gap-2 cursor-pointer mt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <Checkbox
                   checked={includeAddressOnCard}
                   onCheckedChange={(checked) => onIncludeAddressChange?.(checked === true)}
@@ -393,6 +450,104 @@ export function BrandingSelector({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ═══ UPLOAD CUSTOM CARDS ═══ */}
+      {selected === "upload" && (
+        <div className="mt-2 p-4 bg-muted/30 rounded-xl border border-border space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-foreground">Upload Custom Cards</h4>
+            <Link 
+              href="/dashboard/lens/design-studio" 
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 transition-colors"
+            >
+              <Sparkles className="h-3 w-3" />
+              Create in Design Studio
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Upload your own intro and outro card images. Recommended: 1920×1080 for landscape videos, 1080×1920 for vertical.
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Intro Card Upload */}
+            <div className="space-y-2">
+              <Label>Intro Card</Label>
+              {introPreview ? (
+                <div className="relative aspect-video rounded-lg overflow-hidden border border-border">
+                  <img src={introPreview} alt="Intro card" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCard("intro")}
+                    className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-2 left-2 bg-black/60 text-white/80 text-[9px] font-medium px-2 py-0.5 rounded-full">
+                    Intro Card
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => introInputRef.current?.click()}
+                  className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-2 transition-colors"
+                >
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Upload intro card image</span>
+                </button>
+              )}
+              <input
+                ref={introInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCardUpload("intro")}
+                className="hidden"
+              />
+            </div>
+
+            {/* Outro Card Upload */}
+            <div className="space-y-2">
+              <Label>Outro Card</Label>
+              {outroPreview ? (
+                <div className="relative aspect-video rounded-lg overflow-hidden border border-border">
+                  <img src={outroPreview} alt="Outro card" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCard("outro")}
+                    className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-2 left-2 bg-black/60 text-white/80 text-[9px] font-medium px-2 py-0.5 rounded-full">
+                    Outro Card
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => outroInputRef.current?.click()}
+                  className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-2 transition-colors"
+                >
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Upload outro card image</span>
+                </button>
+              )}
+              <input
+                ref={outroInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCardUpload("outro")}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          <p className="text-[10px] text-muted-foreground">
+            Tip: Use the P2V Lens Design Studio to create professional branding cards with your headshot, logo, and listing details.
+          </p>
         </div>
       )}
     </div>
