@@ -356,13 +356,20 @@ export default function PhotoCoachPage() {
   };
 
   const setRoomNext = async (key: string) => {
-    // Clear previous "next", set this one
     const updated: Record<string, string> = {};
+    const isAlreadyNext = selectedRooms[key] === "next";
     for (const [k, v] of Object.entries(selectedRooms)) {
       updated[k] = v === "next" ? "pending" : v;
     }
-    updated[key] = "next";
+    // Toggle: if it was already "next", leave it as "pending"; otherwise set to "next"
+    if (!isAlreadyNext) {
+      updated[key] = "next";
+    }
     setSelectedRooms(updated);
+    // Also clear shootingRoom if we just deselected
+    if (isAlreadyNext) {
+      setShootingRoom("");
+    }
     if (activeSession) {
       await supabase
         .from("lens_sessions")
