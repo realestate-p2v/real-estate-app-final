@@ -326,6 +326,8 @@ export function OrderForm() {
           voiceoverVoice: selectedVoice,
           includeEditedPhotos,
           includeUnbranded: brandingSelection !== "unbranded" && includeUnbranded,
+          customIntroCardUrl: brandingData.customIntroCardUrl || null,
+          customOutroCardUrl: brandingData.customOutroCardUrl || null,
           includeAddressOnCard,
           totalPrice: getTotalPrice(),
           specialInstructions: formData.notes,
@@ -693,25 +695,9 @@ export function OrderForm() {
                     propertyAddress={propertyAddress}
                     includeAddressOnCard={includeAddressOnCard}
                     onIncludeAddressChange={setIncludeAddressOnCard}
+                    includeUnbranded={includeUnbranded}
+                    onIncludeUnbrandedChange={setIncludeUnbranded}
                   />
-                  {brandingSelection !== "unbranded" && (
-                    <div className="mt-4 flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
-                      <Checkbox
-                        id="include-unbranded"
-                        checked={includeUnbranded}
-                        onCheckedChange={(checked) => setIncludeUnbranded(checked === true)}
-                        className="h-5 w-5 mt-0.5"
-                      />
-                      <div>
-                        <label htmlFor="include-unbranded" className="text-sm font-semibold text-foreground cursor-pointer">
-                          Deliver both branded and unbranded copies
-                        </label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Get two versions — branded with intro/outro cards for social media, unbranded for MLS and websites.
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
                 <div className="border-t pt-6">
                   <VoiceoverSelector
