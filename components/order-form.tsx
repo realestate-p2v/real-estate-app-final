@@ -428,7 +428,7 @@ export function OrderForm() {
                   }`}
                 >
                   <Upload className="h-4 w-4" />
-                  Upload My Photos
+                  Use My Photos
                 </button>
                 <button
                   type="button"
