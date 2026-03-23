@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles } from "lucide-react";
+import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, MessageSquare, PenTool, Sofa } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +16,7 @@ export function Navigation() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [brokerageInfo, setBrokerageInfo] = useState<{ company: string } | null>(null);
+  const [isLensSubscriber, setIsLensSubscriber] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -38,6 +39,25 @@ export function Navigation() {
       .then(r => r.json())
       .then(d => { if (d.isBrokerage) setBrokerageInfo(d.brokerage); })
       .catch(() => {});
+  }, [user]);
+
+  // Check Lens subscription status
+  useEffect(() => {
+    if (!user) return;
+    const isAdmin = user.email && ADMIN_EMAILS.includes(user.email);
+    if (isAdmin) {
+      setIsLensSubscriber(true);
+      return;
+    }
+    const checkLens = async () => {
+      const { data } = await supabase
+        .from("lens_usage")
+        .select("is_subscriber")
+        .eq("user_id", user.id)
+        .single();
+      if (data?.is_subscriber) setIsLensSubscriber(true);
+    };
+    checkLens();
   }, [user]);
 
   useEffect(() => {
@@ -63,8 +83,20 @@ export function Navigation() {
   const initial = (displayName.charAt(0) || "U").toUpperCase();
   const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
 
-  // Smart Lens link: logged in → app dashboard, logged out → landing page
-  const lensHref = user ? "/dashboard/lens" : "/lens";
+  // Smart Lens links: logged in → dashboard, logged out → landing page
+  const lensLinks = user ? {
+    lens: "/dashboard/lens",
+    coach: "/dashboard/lens/coach",
+    descriptions: "/dashboard/lens/descriptions",
+    designStudio: "/dashboard/lens/design-studio",
+    staging: "/dashboard/lens/staging",
+  } : {
+    lens: "/lens",
+    coach: "/lens",
+    descriptions: "/lens",
+    designStudio: "/lens",
+    staging: "/lens",
+  };
 
   return (
     <nav className="bg-primary border-b border-primary/80 sticky top-0 z-40">
@@ -102,13 +134,45 @@ export function Navigation() {
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showTools ? "rotate-180" : ""}`} />
               </button>
               {showTools && (
-                <div className="absolute left-0 top-full mt-2 w-56 bg-card rounded-xl border border-border shadow-lg py-2 z-50">
-                  <Link href={lensHref} onClick={() => setShowTools(false)}
+                <div className="absolute left-0 top-full mt-2 w-60 bg-card rounded-xl border border-border shadow-lg py-2 z-50">
+                  {/* AI Tools section */}
+                  <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Tools</p>
+                  <Link href={lensLinks.lens} onClick={() => setShowTools(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                    <Sparkles className="h-4 w-4 text-cyan-600" />
+                    <Sparkles className="h-4 w-4 text-cyan-500" />
                     P2V Lens
-                    <span className="ml-auto bg-accent/10 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                    {isLensSubscriber ? (
+                      <span className="ml-auto bg-cyan-100 text-cyan-700 text-xs font-bold px-1.5 py-0.5 rounded-full">SUBSCRIBED</span>
+                    ) : (
+                      <span className="ml-auto bg-accent/10 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                    )}
                   </Link>
+                  <Link href={lensLinks.coach} onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Sparkles className="h-4 w-4 text-cyan-500" />
+                    AI Photo Coach
+                  </Link>
+                  <Link href={lensLinks.descriptions} onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Sparkles className="h-4 w-4 text-cyan-500" />
+                    Description Writer
+                  </Link>
+                  <Link href={lensLinks.designStudio} onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Sparkles className="h-4 w-4 text-cyan-500" />
+                    Design Studio
+                  </Link>
+                  <Link href={lensLinks.staging} onClick={() => setShowTools(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                    <Sparkles className="h-4 w-4 text-cyan-500" />
+                    Virtual Staging
+                  </Link>
+
+                  {/* Separator */}
+                  <div className="h-px bg-border my-1" />
+
+                  {/* More Tools section */}
+                  <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">More Tools</p>
                   <Link href="/tips" onClick={() => setShowTools(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                     <Play className="h-4 w-4 text-muted-foreground" />
@@ -169,6 +233,12 @@ export function Navigation() {
                     <div className="px-4 py-2 border-b border-border">
                       <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      {isLensSubscriber && (
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <Sparkles className="h-3 w-3 text-cyan-600" />
+                          <span className="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-0.5 rounded-full">P2V Lens</span>
+                        </div>
+                      )}
                       {brokerageInfo && (
                         <div className="flex items-center gap-1.5 mt-1.5">
                           <Building2 className="h-3 w-3 text-green-600" />
@@ -236,6 +306,11 @@ export function Navigation() {
                   <div className="min-w-0">
                     <p className="text-primary-foreground font-semibold text-sm truncate">{displayName}</p>
                     <p className="text-primary-foreground/50 text-xs truncate">{user.email}</p>
+                    {isLensSubscriber && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="bg-cyan-500/20 text-cyan-300 text-xs font-bold px-2 py-0.5 rounded-full">P2V Lens</span>
+                      </div>
+                    )}
                     {brokerageInfo && (
                       <div className="flex items-center gap-1.5 mt-1">
                         <Building2 className="h-3 w-3 text-green-300" />
@@ -269,15 +344,43 @@ export function Navigation() {
                 Blog
               </Link>
 
-              {/* Tools section */}
+              {/* AI Tools section */}
               <div className="h-[1px] bg-white/10 my-2" />
-              <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">Tools</p>
-              <Link href={lensHref} onClick={() => setIsOpen(false)}
+              <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">AI Tools</p>
+              <Link href={lensLinks.lens} onClick={() => setIsOpen(false)}
                 className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                 <Sparkles className="h-4 w-4 text-cyan-400" />
                 P2V Lens
-                <span className="ml-auto bg-accent/20 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                {isLensSubscriber ? (
+                  <span className="ml-auto bg-cyan-500/20 text-cyan-300 text-xs font-bold px-1.5 py-0.5 rounded-full">SUBSCRIBED</span>
+                ) : (
+                  <span className="ml-auto bg-accent/20 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                )}
               </Link>
+              <Link href={lensLinks.coach} onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                AI Photo Coach
+              </Link>
+              <Link href={lensLinks.descriptions} onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                Description Writer
+              </Link>
+              <Link href={lensLinks.designStudio} onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                Design Studio
+              </Link>
+              <Link href={lensLinks.staging} onClick={() => setIsOpen(false)}
+                className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                Virtual Staging
+              </Link>
+
+              {/* More Tools section */}
+              <div className="h-[1px] bg-white/10 my-2" />
+              <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">More Tools</p>
               <Link href="/tips" onClick={() => setIsOpen(false)}
                 className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                 <Play className="h-4 w-4 text-primary-foreground/60" />
