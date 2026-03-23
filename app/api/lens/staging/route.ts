@@ -66,6 +66,8 @@ export async function POST(request: Request) {
     }
 
     // ── Step 1: Claude Vision analyzes the empty room ──
+    const roomLabel = room_type.replace(/_/g, " ");
+
     const visionResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 500,
+        max_tokens: 700,
         messages: [
           {
             role: "user",
@@ -83,14 +85,18 @@ export async function POST(request: Request) {
               { type: "image", source: { type: "url", url: photo_url } },
               {
                 type: "text",
-                text: `Analyze this empty room photo for virtual staging. Describe:
-1. Room dimensions and shape (approximate)
-2. Window positions and natural light direction
-3. Floor type and color
-4. Wall color and any architectural features (moldings, fireplace, built-ins)
-5. Ceiling height and type
-6. Any existing fixtures (light fixtures, outlets visible)
-Keep it factual and concise — this will be used to generate a furnished version.`,
+                text: `You are a virtual staging interior designer. Analyze this empty room photo and provide TWO sections:
+
+SECTION 1 - ROOM DESCRIPTION:
+Briefly describe the room's dimensions, floor type/color, wall color, windows, lighting, and architectural features.
+
+SECTION 2 - FURNITURE STAGING PLAN for a ${roomLabel} in ${style} style:
+List exactly which furniture pieces and decor items should be placed in this room, with specific placement. Be very detailed about the furniture. For example:
+- "A large king-size bed with upholstered headboard centered on the back wall"
+- "Two matching nightstands flanking the bed"
+- "A plush area rug under the bed extending 2 feet on each side"
+- "Floor-length curtains on both windows"
+Include at least 8-12 specific items with materials, colors, and placement.`,
               },
             ],
           },
@@ -111,8 +117,7 @@ Keep it factual and concise — this will be used to generate a furnished versio
     const roomAnalysis = visionData.content[0].text;
 
     // ── Step 2: Build Minimax prompt from analysis + style + room type ──
-    const roomLabel = room_type.replace(/_/g, " ");
-    const constructedPrompt = `Professional interior design photograph of a ${roomLabel} furnished in ${style} style. Room details: ${roomAnalysis}. The furniture and decor should match the room's architecture and lighting. Photorealistic, magazine-quality interior design photography, warm natural lighting, high resolution.`;
+    const constructedPrompt = `A beautifully furnished ${roomLabel} in ${style} interior design style. The room is FULLY FURNISHED with complete furniture, rugs, curtains, artwork, lamps, plants, and decorative accessories. ${roomAnalysis}. Ultra-realistic interior design photography for a real estate listing, professionally staged with high-end furniture, styled like an Architectural Digest photo shoot, 8K quality, warm natural lighting through windows.`;
 
     // ── Step 3: Minimax image-01 generation ──
     const minimaxResponse = await fetch("https://api.minimax.io/v1/image_generation", {
@@ -127,6 +132,7 @@ Keep it factual and concise — this will be used to generate a furnished versio
         aspect_ratio: "4:3",
         response_format: "url",
         n: 1,
+        prompt_optimizer: true,
       }),
     });
 
