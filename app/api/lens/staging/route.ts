@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import Anthropic from "@anthropic-ai/sdk";
 
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
@@ -67,19 +66,24 @@ export async function POST(request: Request) {
     }
 
     // ── Step 1: Claude Vision analyzes the empty room ──
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const visionResponse = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 500,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "url", url: photo_url } },
-            {
-              type: "text",
-              text: `Analyze this empty room photo for virtual staging. Describe:
+    const visionResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "url", url: photo_url } },
+              {
+                type: "text",
+                text: `Analyze this empty room photo for virtual staging. Describe:
 1. Room dimensions and shape (approximate)
 2. Window positions and natural light direction
 3. Floor type and color
@@ -87,23 +91,24 @@ export async function POST(request: Request) {
 5. Ceiling height and type
 6. Any existing fixtures (light fixtures, outlets visible)
 Keep it factual and concise — this will be used to generate a furnished version.`,
-            },
-          ],
-        },
-      ],
+              },
+            ],
+          },
+        ],
+      }),
     });
 
-    const roomAnalysis =
-      visionResponse.content[0].type === "text"
-        ? visionResponse.content[0].text
-        : "";
+    const visionData = await visionResponse.json();
 
-    if (!roomAnalysis) {
+    if (!visionResponse.ok || !visionData.content?.[0]?.text) {
+      console.error("[Staging] Claude Vision error:", JSON.stringify(visionData));
       return NextResponse.json(
-        { success: false, error: "Failed to analyze room photo" },
+        { success: false, error: "Failed to analyze room photo. Please try again." },
         { status: 500 }
       );
     }
+
+    const roomAnalysis = visionData.content[0].text;
 
     // ── Step 2: Build Minimax prompt from analysis + style + room type ──
     const roomLabel = room_type.replace(/_/g, " ");
