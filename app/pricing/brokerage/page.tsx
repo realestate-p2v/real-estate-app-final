@@ -3,6 +3,7 @@
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { VideoPlayer } from "@/components/video-player";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -510,12 +511,10 @@ export default function BrokeragePricingPage() {
             See What Your Agents Get
           </h2>
           <div className="bg-card rounded-2xl border border-border p-6 text-center">
-            <div className="aspect-video max-w-2xl mx-auto rounded-xl overflow-hidden bg-muted/50 flex items-center justify-center">
-              <iframe
-                src="https://drive.google.com/file/d/1ikcUGNefikzELQhJ44MaFvauoLdssFyv/preview"
-                className="w-full h-full"
-                allow="autoplay"
-                allowFullScreen
+            <div className="max-w-2xl mx-auto">
+              <VideoPlayer
+                url="https://drive.google.com/file/d/1ikcUGNefikzELQhJ44MaFvauoLdssFyv/view"
+                className="aspect-video"
               />
             </div>
             <p className="text-sm text-muted-foreground mt-4">
@@ -547,7 +546,7 @@ export default function BrokeragePricingPage() {
               {
                 num: "4",
                 title: "Delivered",
-                desc: "Video delivered via Google Drive within 24 hours. Ready to share.",
+                desc: "Video delivered within 24 hours. Ready to share.",
               },
             ].map((s, i) => (
               <div key={i} className="text-center space-y-3">
