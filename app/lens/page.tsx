@@ -71,6 +71,8 @@ export default function LensPage() {
       description: "Snap a listing photo and hit Analyze. AI tells you exactly what to fix — \"Turn on the overhead lights, move two feet left, and reshoot from chest height.\" Fix it on the spot, re-analyze, and leave every room with a perfect shot.",
       color: "bg-blue-500/10 text-blue-600",
       status: "live" as const,
+      tryHref: "/dashboard/lens/coach",
+      tryLabel: "Try Free →",
     },
     {
       icon: <ImageIcon className="h-6 w-6" />,
@@ -78,6 +80,8 @@ export default function LensPage() {
       description: "Every video order includes professional AI color correction, brightness, and white balance adjustments at no extra charge. Normally $2.99/photo.",
       color: "bg-emerald-500/10 text-emerald-600",
       status: "live" as const,
+      tryHref: "/order",
+      tryLabel: "Order a Video →",
     },
     {
       icon: <Sparkles className="h-6 w-6" />,
@@ -85,6 +89,8 @@ export default function LensPage() {
       description: "When ordering a video, AI auto-fills optimal camera directions for each photo based on room type and composition. Skip the guesswork.",
       color: "bg-purple-500/10 text-purple-600",
       status: "live" as const,
+      tryHref: "/order",
+      tryLabel: "Order a Video →",
     },
     {
       icon: <Zap className="h-6 w-6" />,
@@ -92,19 +98,23 @@ export default function LensPage() {
       description: "Get your listing videos in 12 hours instead of the standard 24. When time is money, P2V Lens subscribers go first.",
       color: "bg-amber-500/10 text-amber-600",
       status: "live" as const,
-    },
-    {
-      icon: <ImageIcon className="h-6 w-6" />,
-      title: "Marketing Design Studio",
-      description: "Premade templates for Just Listed, Just Sold, Open House, Price Reduced, Market Reports, and more. Upload your headshot + home photo — AI assembles a polished, print-ready flyer in seconds.",
-      color: "bg-orange-500/10 text-orange-600",
-      status: "coming" as const,
+      tryHref: "/order",
+      tryLabel: "Order a Video →",
     },
     {
       icon: <MessageSquare className="h-6 w-6" />,
       title: "AI Listing Description Writer",
       description: "AI analyzes your approved listing photos, notes room details and finishes, then combines them with your property data to write a polished, MLS-ready listing description. Multiple styles available.",
       color: "bg-teal-500/10 text-teal-600",
+      status: "live" as const,
+      tryHref: "/dashboard/lens/descriptions",
+      tryLabel: "Try Free →",
+    },
+    {
+      icon: <ImageIcon className="h-6 w-6" />,
+      title: "Marketing Design Studio",
+      description: "Premade templates for Just Listed, Just Sold, Open House, Price Reduced, Market Reports, and more. Upload your headshot + home photo — AI assembles a polished, print-ready flyer in seconds.",
+      color: "bg-orange-500/10 text-orange-600",
       status: "coming" as const,
     },
     {
@@ -160,7 +170,7 @@ export default function LensPage() {
     },
     {
       q: "When are the other features launching?",
-      a: "Marketing Design Studio, AI Listing Description Writer, and Virtual Staging are all in active development and expected to roll out through 2026. P2V Lens subscribers will get access to each at no additional cost as they launch.",
+      a: "Marketing Design Studio and Virtual Staging are in active development and expected to roll out through 2026. P2V Lens subscribers will get access to each at no additional cost as they launch.",
     },
   ];
 
@@ -198,28 +208,39 @@ export default function LensPage() {
               Upload a photo, get instant AI feedback, reshoot on the spot — perfect photos every time.
             </p>
 
-            {/* Hero Email Capture */}
+            {/* Hero CTAs */}
             {!submitted ? (
-              <form onSubmit={handleWaitlist} className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-white/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/40 h-12 text-base"
-                />
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-12 px-6 text-base whitespace-nowrap"
-                >
-                  {submitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Get Early Access
-                </Button>
-              </form>
+              <div className="mt-8 space-y-4">
+                <form onSubmit={handleWaitlist} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-white/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/40 h-12 text-base"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-12 px-6 text-base whitespace-nowrap"
+                  >
+                    {submitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Get Early Access
+                  </Button>
+                </form>
+                <div className="flex items-center justify-center">
+                  <Link
+                    href="/dashboard/lens/coach"
+                    className="inline-flex items-center gap-1.5 text-primary-foreground/70 hover:text-primary-foreground text-sm font-semibold transition-colors"
+                  >
+                    Try Photo Coach Free
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
             ) : (
               <div className="mt-8 inline-flex items-center gap-2 bg-green-500/20 text-green-200 rounded-full px-6 py-3 font-semibold">
                 <Check className="h-5 w-5" />
@@ -269,7 +290,7 @@ export default function LensPage() {
               Everything You Need to Shoot Like a Pro
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Four powerful features available now, plus three game-changers coming soon — all included in your subscription.
+              Five powerful features available now, plus two game-changers coming soon — all included in your subscription.
             </p>
           </div>
 
@@ -299,6 +320,14 @@ export default function LensPage() {
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                {feature.status === "live" && feature.tryHref && (
+                  <Link
+                    href={feature.tryHref}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent/80 transition-colors mt-3"
+                  >
+                    {feature.tryLabel}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
@@ -455,6 +484,14 @@ export default function LensPage() {
                 Join the Waitlist
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+              <p className="text-center mt-3">
+                <Link
+                  href="/dashboard/lens/coach"
+                  className="text-sm font-semibold text-accent hover:text-accent/80 transition-colors"
+                >
+                  Already have an account? Try the Photo Coach free →
+                </Link>
+              </p>
             </div>
 
             {/* Brokerage Plan */}
@@ -497,6 +534,14 @@ export default function LensPage() {
                 Contact for Brokerage Pricing
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+              <p className="text-center mt-3">
+                <Link
+                  href="/dashboard/lens/coach"
+                  className="text-sm font-semibold text-accent hover:text-accent/80 transition-colors"
+                >
+                  Already have an account? Try the Photo Coach free →
+                </Link>
+              </p>
             </div>
           </div>
         </div>
