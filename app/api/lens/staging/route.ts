@@ -132,15 +132,15 @@ Keep it factual and concise — this will be used to generate a furnished versio
 
     const minimaxData = await minimaxResponse.json();
 
-    if (!minimaxResponse.ok || !minimaxData?.data?.image_url) {
+    const stagedImageUrl = minimaxData?.data?.image_urls?.[0] || minimaxData?.data?.image_url;
+
+    if (!stagedImageUrl) {
       console.error("[Staging] Minimax error:", JSON.stringify(minimaxData));
       return NextResponse.json(
         { success: false, error: "Image generation failed. Please try again." },
         { status: 500 }
       );
     }
-
-    const stagedImageUrl = minimaxData.data.image_url;
 
     // ── Step 4: Save to Supabase ──
     const { error: insertError } = await supabase.from("lens_staging").insert({
