@@ -94,8 +94,7 @@ export default function LensPage() {
       description:
         'Snap a listing photo and hit Analyze. AI tells you exactly what to fix — "Turn on the overhead lights, move two feet left, and reshoot from chest height." Fix it on the spot, re-analyze, and leave every room with a perfect shot.',
       color: "bg-blue-500/10 text-blue-600",
-      tryHref: "/dashboard/lens/coach",
-      tryLabel: "Try Free →",
+      href: "/dashboard/lens/coach",
     },
     {
       icon: <ImageIcon className="h-6 w-6" />,
@@ -103,35 +102,7 @@ export default function LensPage() {
       description:
         "Every video order includes professional AI enhancement — brightness, color correction, white balance, and vertical line straightening at no extra charge.",
       color: "bg-emerald-500/10 text-emerald-600",
-      tryHref: "/order",
-      tryLabel: "Order a Video →",
-    },
-    {
-      icon: <Sparkles className="h-6 w-6" />,
-      title: "AI Suggest",
-      description:
-        "When ordering a video, AI auto-fills optimal camera directions for each photo based on room type and composition. Skip the guesswork.",
-      color: "bg-purple-500/10 text-purple-600",
-      tryHref: "/order",
-      tryLabel: "Order a Video →",
-    },
-    {
-      icon: <Zap className="h-6 w-6" />,
-      title: "Priority Delivery",
-      description:
-        "Get your listing videos in 12 hours instead of the standard 24. When time is money, P2V Lens subscribers go first.",
-      color: "bg-amber-500/10 text-amber-600",
-      tryHref: "/order",
-      tryLabel: "Order a Video →",
-    },
-    {
-      icon: <MessageSquare className="h-6 w-6" />,
-      title: "AI Listing Description Writer",
-      description:
-        "AI analyzes your approved listing photos, notes room details and finishes, then combines them with your property data to write a polished, MLS-ready listing description. Multiple styles available.",
-      color: "bg-teal-500/10 text-teal-600",
-      tryHref: "/dashboard/lens/descriptions",
-      tryLabel: "Try Free →",
+      href: "/order",
     },
     {
       icon: <ImageIcon className="h-6 w-6" />,
@@ -139,8 +110,15 @@ export default function LensPage() {
       description:
         "Premade templates for Just Listed, Just Sold, Open House, Price Reduced, and more. Upload your headshot + home photo — download print-ready and social-ready formats in seconds.",
       color: "bg-orange-500/10 text-orange-600",
-      tryHref: "/dashboard/lens/design-studio",
-      tryLabel: "Open Design Studio →",
+      href: "/dashboard/lens/design-studio",
+    },
+    {
+      icon: <MessageSquare className="h-6 w-6" />,
+      title: "AI Listing Description Writer",
+      description:
+        "AI analyzes your approved listing photos, notes room details and finishes, then combines them with your property data to write a polished, MLS-ready listing description. Multiple styles available.",
+      color: "bg-teal-500/10 text-teal-600",
+      href: "/dashboard/lens/descriptions",
     },
     {
       icon: <Sofa className="h-6 w-6" />,
@@ -148,8 +126,23 @@ export default function LensPage() {
       description:
         "Upload photos of empty rooms, and AI generates beautifully furnished versions in multiple styles — modern, traditional, minimalist, and more.",
       color: "bg-indigo-500/10 text-indigo-600",
-      tryHref: "/dashboard/lens/staging",
-      tryLabel: "Stage a Room →",
+      href: "/dashboard/lens/staging",
+    },
+    {
+      icon: <Zap className="h-6 w-6" />,
+      title: "Priority Delivery",
+      description:
+        "Get your listing videos in 12 hours instead of the standard 24. When time is money, P2V Lens subscribers go first.",
+      color: "bg-amber-500/10 text-amber-600",
+      href: "/order",
+    },
+    {
+      icon: <Sparkles className="h-6 w-6" />,
+      title: "AI Suggest",
+      description:
+        "When ordering a video, AI auto-fills optimal camera directions for each photo based on room type and composition. Skip the guesswork.",
+      color: "bg-purple-500/10 text-purple-600",
+      href: "/order",
     },
   ];
 
@@ -239,7 +232,9 @@ export default function LensPage() {
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-primary-foreground/70 max-w-2xl mx-auto leading-relaxed">
-              Photo coaching, virtual staging, listing descriptions, marketing graphics, photo enhancement, priority delivery, and 10% off every video order — all in one subscription.
+              Photo coaching, virtual staging, listing descriptions, marketing graphics, photo
+              enhancement, priority delivery, and 10% off every video order — all in one
+              subscription.
             </p>
 
             {/* Hero CTAs */}
@@ -257,7 +252,9 @@ export default function LensPage() {
               ) : (
                 <Button
                   onClick={() => {
-                    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                    document
+                      .getElementById("pricing")
+                      ?.scrollIntoView({ behavior: "smooth" });
                   }}
                   className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg"
                 >
@@ -284,7 +281,8 @@ export default function LensPage() {
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-accent" />
             <span className="text-sm font-semibold text-foreground">
-              Listings with video get <span className="text-accent">403% more inquiries</span>
+              Listings with video get{" "}
+              <span className="text-accent">403% more inquiries</span>
             </span>
           </div>
           <div className="hidden sm:block h-5 w-px bg-border" />
@@ -320,9 +318,10 @@ export default function LensPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
-              <div
+              <Link
                 key={i}
-                className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"
+                href={feature.href}
+                className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block group"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div
@@ -335,19 +334,17 @@ export default function LensPage() {
                     Available
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
+                <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-accent transition-colors">
+                  {feature.title}
+                </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
-                {feature.tryHref && (
-                  <Link
-                    href={feature.tryHref}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent/80 transition-colors mt-3"
-                  >
-                    {feature.tryLabel}
-                  </Link>
-                )}
-              </div>
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:text-accent/80 transition-colors mt-3">
+                  Try it
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
             ))}
           </div>
         </div>
@@ -615,7 +612,9 @@ export default function LensPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 mb-6">
             <Building2 className="h-4 w-4 text-primary-foreground/70" />
-            <span className="text-primary-foreground/80 text-sm font-medium">For Brokerages</span>
+            <span className="text-primary-foreground/80 text-sm font-medium">
+              For Brokerages
+            </span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-primary-foreground mb-4">
             Equip Your Entire Team
@@ -652,7 +651,9 @@ export default function LensPage() {
       <section className="py-20 sm:py-24 bg-muted/30">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl font-extrabold text-foreground">Frequently Asked Questions</h2>
+            <h2 className="text-3xl font-extrabold text-foreground">
+              Frequently Asked Questions
+            </h2>
           </div>
 
           <div className="space-y-3">
