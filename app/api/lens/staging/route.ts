@@ -115,7 +115,7 @@ Keep it factual and concise — this will be used to generate a furnished versio
     const constructedPrompt = `Professional interior design photograph of a ${roomLabel} furnished in ${style} style. Room details: ${roomAnalysis}. The furniture and decor should match the room's architecture and lighting. Photorealistic, magazine-quality interior design photography, warm natural lighting, high resolution.`;
 
     // ── Step 3: Minimax image-01 generation ──
-    const minimaxResponse = await fetch("https://api.minimax.chat/v1/image_generation", {
+    const minimaxResponse = await fetch("https://api.minimax.io/v1/image_generation", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
