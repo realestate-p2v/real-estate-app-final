@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+const LENS_COUPON_ID = process.env.STRIPE_LENS_COUPON_ID || "P6k7SJ7z";
 
 export async function POST(request: Request) {
   try {
@@ -25,14 +26,30 @@ export async function POST(request: Request) {
 
     // ═══ ADMIN BYPASS — authenticated session only (never form email) ═══
     let isAdmin = false;
+    let isLensSubscriber = false;
+
     try {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
         isAdmin = true;
       }
+
+      // ═══ CHECK LENS SUBSCRIBER STATUS FOR 10% DISCOUNT ═══
+      if (user && !isAdmin) {
+        const adminDb = createAdminClient();
+        const { data: usage } = await adminDb
+          .from("lens_usage")
+          .select("is_subscriber")
+          .eq("user_id", user.id)
+          .single();
+
+        if (usage?.is_subscriber) {
+          isLensSubscriber = true;
+        }
+      }
     } catch (e) {
-      // Auth check failed — not admin, proceed to Stripe
+      // Auth check failed — not admin, no subscriber discount
     }
 
     if (isAdmin) {
@@ -110,8 +127,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const session = await stripe.checkout.sessions.create({
-      allow_promotion_codes: true,
+    // ═══ BUILD SESSION PARAMS ═══
+    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       payment_method_types: ["card"],
       line_items: [
         {
@@ -141,9 +158,23 @@ export async function POST(request: Request) {
         brandingType,
         voiceoverIncluded,
         includeEditedPhotos,
+        lensSubscriberDiscount: isLensSubscriber ? "yes" : "no",
         ...photoUrlChunks,
       },
-    });
+    };
+
+    // Apply 10% Lens subscriber discount OR allow manual promo codes — Stripe can't do both
+    if (isLensSubscriber) {
+      sessionParams.discounts = [{ coupon: LENS_COUPON_ID }];
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    if (isLensSubscriber) {
+      console.log(`[Checkout] 🏷️ Applied Lens subscriber 10% discount for order ${orderId}`);
+    }
 
     return NextResponse.json({
       success: true,
