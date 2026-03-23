@@ -115,14 +115,18 @@ export default function LensPage() {
       title: "Marketing Design Studio",
       description: "Premade templates for Just Listed, Just Sold, Open House, Price Reduced, Market Reports, and more. Upload your headshot + home photo — AI assembles a polished, print-ready flyer in seconds.",
       color: "bg-orange-500/10 text-orange-600",
-      status: "coming" as const,
+      status: "live" as const,
+      tryHref: "/dashboard/lens/design-studio",
+      tryLabel: "Open Design Studio →",
     },
     {
       icon: <Sofa className="h-6 w-6" />,
       title: "Virtual Staging",
       description: "Upload photos of empty rooms, and AI generates beautifully furnished versions in multiple styles — modern, traditional, minimalist.",
       color: "bg-indigo-500/10 text-indigo-600",
-      status: "coming" as const,
+      status: "live" as const,
+      tryHref: "/dashboard/lens/staging",
+      tryLabel: "Stage a Room →",
     },
   ];
 
@@ -169,8 +173,8 @@ export default function LensPage() {
       a: "Brokerage plans are $19.95 per agent per month with a minimum of 10 agents. Each agent gets their own login and 200 analyses per month. Seats are tied to email addresses to prevent sharing. Contact us to set up your brokerage account.",
     },
     {
-      q: "When are the other features launching?",
-      a: "Marketing Design Studio and Virtual Staging are in active development and expected to roll out through 2026. P2V Lens subscribers will get access to each at no additional cost as they launch.",
+      q: "Are all seven features available now?",
+      a: "Yes — all seven P2V Lens features are live and included in your subscription: AI Photo Coach, Free Photo Editing, AI Suggest, Priority Delivery, AI Listing Description Writer, Marketing Design Studio, and Virtual Staging.",
     },
   ];
 
@@ -290,7 +294,7 @@ export default function LensPage() {
               Everything You Need to Shoot Like a Pro
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Five powerful features available now, plus two game-changers coming soon — all included in your subscription.
+              Seven powerful features — all included in your subscription.
             </p>
           </div>
 
