@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
+import { VideoPlayer } from "@/components/video-player";
 import { Play, Camera } from "lucide-react";
 
 const SAMPLES = [
@@ -51,15 +52,10 @@ export default function PortfolioPage() {
             <div className="grid md:grid-cols-2 gap-6 mb-14">
               {horizontal.map((v, i) => (
                 <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="aspect-video bg-black">
-                    <iframe
-                      src={`https://drive.google.com/file/d/${v.fileId}/preview`}
-                      className="w-full h-full border-0"
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                      loading={i < 2 ? "eager" : "lazy"}
-                    />
-                  </div>
+                  <VideoPlayer
+                    url={`https://drive.google.com/file/d/${v.fileId}/view`}
+                    className="aspect-video"
+                  />
                   <div className="p-5">
                     <h3 className="font-bold text-lg text-foreground">{v.title}</h3>
                     <p className="text-sm text-muted-foreground">{v.location}</p>
@@ -85,15 +81,10 @@ export default function PortfolioPage() {
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 mb-14">
               {vertical.map((v, i) => (
                 <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="aspect-[9/16] bg-black">
-                    <iframe
-                      src={`https://drive.google.com/file/d/${v.fileId}/preview`}
-                      className="w-full h-full border-0"
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                      loading="lazy"
-                    />
-                  </div>
+                  <VideoPlayer
+                    url={`https://drive.google.com/file/d/${v.fileId}/view`}
+                    className="aspect-[9/16]"
+                  />
                   <div className="p-5">
                     <h3 className="font-bold text-lg text-foreground">{v.title}</h3>
                     <p className="text-sm text-muted-foreground">{v.location}</p>
