@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
+import { VideoPlayer } from "@/components/video-player";
 import {
   ArrowLeft,
   Loader2,
@@ -75,11 +76,6 @@ const STATUS_COLORS: Record<string, string> = {
   revision_requested: "bg-orange-100 text-orange-700",
   error: "bg-red-100 text-red-700",
 };
-
-function getFileIdFromUrl(url: string): string | null {
-  const match = url?.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
-}
 
 function getAllVideos(order: Order): { label: string; url: string }[] {
   const videos: { label: string; url: string }[] = [];
@@ -245,7 +241,6 @@ export default function AdminOrdersPage() {
               const allVideos = getAllVideos(order);
               const currentVideoIdx = activeVideoIdx[order.id] || 0;
               const currentVideo = allVideos[currentVideoIdx];
-              const currentFileId = currentVideo ? getFileIdFromUrl(currentVideo.url) : null;
 
               return (
                 <div key={order.id} className="bg-card rounded-xl border border-border overflow-hidden">
@@ -340,19 +335,13 @@ export default function AdminOrdersPage() {
                           )}
 
                           {/* Active video player */}
-                          {currentFileId && (
-                            <div className="aspect-video bg-black rounded-lg overflow-hidden max-w-xl">
-                              <iframe
-                                key={currentFileId}
-                                src={`https://drive.google.com/file/d/${currentFileId}/preview`}
-                                className="w-full h-full border-0"
-                                allow="autoplay; encrypted-media"
-                                allowFullScreen
-                              />
+                          {currentVideo?.url && (
+                            <div className="max-w-xl">
+                              <VideoPlayer key={currentVideoIdx} url={currentVideo.url} className="aspect-video" />
                             </div>
                           )}
 
-                          {/* Drive links for all versions */}
+                          {/* Links for all versions */}
                           <div className="flex flex-wrap gap-2">
                             {allVideos.map((v, idx) => (
                               <a key={idx} href={v.url} target="_blank" rel="noopener noreferrer"
@@ -628,21 +617,21 @@ export default function AdminOrdersPage() {
                       {/* Manual Delivery Override */}
                       <div className="pt-3 border-t border-border">
                         <p className="text-xs font-semibold text-muted-foreground mb-2">MANUAL DELIVERY</p>
-                        <p className="text-xs text-muted-foreground mb-2">Paste a Google Drive link to deliver manually (bypasses pipeline).</p>
+                        <p className="text-xs text-muted-foreground mb-2">Paste a video URL to deliver manually (bypasses pipeline).</p>
                         <div className="flex gap-2">
                           <input
                             type="text"
                             value={manualDeliveryUrl[order.id] || ""}
                             onChange={(e) => setManualDeliveryUrl({ ...manualDeliveryUrl, [order.id]: e.target.value })}
-                            placeholder="https://drive.google.com/file/d/... or folder link"
+                            placeholder="https://drive.google.com/... or Cloudinary URL"
                             className="flex-1 text-xs border rounded-lg px-3 py-2 bg-white"
                           />
                           <Button
                             size="sm"
                             onClick={async () => {
                               const url = manualDeliveryUrl[order.id];
-                              if (!url || !url.includes("drive.google.com")) {
-                                alert("Please paste a valid Google Drive link");
+                              if (!url) {
+                                alert("Please paste a valid video URL");
                                 return;
                               }
                               setActionLoading(order.id);
