@@ -134,7 +134,7 @@ export default function DashboardLensPage() {
       icon: Sofa,
       title: "Virtual Staging",
       description: "Upload a photo of an empty room and see it furnished in seconds. Choose from Modern, Traditional, Minimalist, Scandinavian, Coastal, or Farmhouse styles. Before/after comparison included.",
-      status: "coming" as const,
+      status: "live" as const,
       actionLabel: "Stage a Room",
       actionHref: "/dashboard/lens/staging",
     },
