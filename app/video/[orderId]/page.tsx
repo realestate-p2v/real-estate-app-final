@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
+import { VideoPlayer, getDownloadUrl } from "@/components/video-player";
 import Link from "next/link";
 import {
   Download,
@@ -50,12 +51,6 @@ interface Order {
   revisions_allowed: number;
 }
 
-function getFileIdFromUrl(url: string): string | null {
-  if (!url) return null;
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
-}
-
 function getAllVideos(order: Order): { label: string; url: string }[] {
   const videos: { label: string; url: string }[] = [];
   if (order.delivery_url) {
@@ -76,7 +71,6 @@ function getAllVideos(order: Order): { label: string; url: string }[] {
 function MultiVideoPlayer({ videos, isClosed }: { videos: { label: string; url: string }[]; isClosed: boolean }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const activeVideo = videos[activeIdx];
-  const activeFileId = getFileIdFromUrl(activeVideo?.url || "");
 
   return (
     <div className="mb-6 space-y-3">
@@ -97,18 +91,8 @@ function MultiVideoPlayer({ videos, isClosed }: { videos: { label: string; url: 
         ))}
       </div>
 
-      {activeFileId ? (
-        <div className="bg-black rounded-2xl overflow-hidden">
-          <div className="aspect-video">
-            <iframe
-              key={activeFileId}
-              src={`https://drive.google.com/file/d/${activeFileId}/preview`}
-              className="w-full h-full border-0"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
-          </div>
-        </div>
+      {activeVideo?.url ? (
+        <VideoPlayer key={activeIdx} url={activeVideo.url} className="aspect-video" />
       ) : null}
 
       {isClosed && (
@@ -116,7 +100,7 @@ function MultiVideoPlayer({ videos, isClosed }: { videos: { label: string; url: 
           {videos.map((v, i) => (
             <a
               key={i}
-              href={v.url}
+              href={getDownloadUrl(v.url)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-muted transition-colors"
@@ -346,7 +330,7 @@ export default function VideoDeliveryPage() {
 
   const allVideos = getAllVideos(order);
   const hasMultipleVideos = allVideos.length > 1;
-  const fileId = getFileIdFromUrl(order.delivery_url);
+  const hasDeliveryUrl = !!order.delivery_url;
   const isDelivered = DELIVERED_STATUSES.includes(order.status);
   const isClosed = order.status === "closed";
   const isRevisionInProgress = REVISION_IN_PROGRESS_STATUSES.includes(order.status);
@@ -533,16 +517,9 @@ export default function VideoDeliveryPage() {
         {/* ═══ VIDEO PLAYER — single or multi-version ═══ */}
         {hasMultipleVideos ? (
           <MultiVideoPlayer videos={allVideos} isClosed={isClosed} />
-        ) : fileId ? (
-          <div className="bg-black rounded-2xl overflow-hidden mb-6">
-            <div className="aspect-video">
-              <iframe
-                src={`https://drive.google.com/file/d/${fileId}/preview`}
-                className="w-full h-full border-0"
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-              />
-            </div>
+        ) : hasDeliveryUrl ? (
+          <div className="mb-6">
+            <VideoPlayer url={order.delivery_url} className="aspect-video" />
           </div>
         ) : (
           <div className="aspect-video bg-muted rounded-2xl flex items-center justify-center mb-6">
@@ -558,7 +535,7 @@ export default function VideoDeliveryPage() {
           {/* Single video download (only when no multiple versions) */}
           {isClosed && order.delivery_url && !hasMultipleVideos && (
             <Button asChild className="bg-primary hover:bg-primary/90">
-              <a href={order.delivery_url} target="_blank" rel="noopener noreferrer">
+              <a href={getDownloadUrl(order.delivery_url)} target="_blank" rel="noopener noreferrer">
                 <Download className="mr-2 h-4 w-4" />
                 Download Video
               </a>
