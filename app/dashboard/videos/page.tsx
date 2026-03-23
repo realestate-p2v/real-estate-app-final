@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
+import { VideoPlayer, getDownloadUrl, isCloudinaryUrl } from "@/components/video-player";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Video, Download, RefreshCw, Clock, CheckCircle, Loader2, AlertCircle, Play, ExternalLink, Check, ThumbsUp } from "lucide-react";
@@ -42,11 +43,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   client_revision_requested: { label: "Revision Submitted", color: "bg-amber-100 text-amber-700", icon: RefreshCw },
   error: { label: "Issue — Contact Support", color: "bg-red-100 text-red-700", icon: AlertCircle },
 };
-
-function getFileIdFromUrl(url: string): string | null {
-  const match = url?.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
-}
 
 export default function MyVideosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -197,7 +193,7 @@ export default function MyVideosPage() {
                 </h2>
                 <div className="grid md:grid-cols-2 gap-6">
                   {deliveredOrders.map((order) => {
-                    const fileId = getFileIdFromUrl(order.delivery_url);
+                    const hasUrl = !!order.delivery_url;
                     const hasClips = order.clip_urls && order.clip_urls.length > 0;
                     const revCount = order.revision_count || 0;
                     const revAllowed = order.revisions_allowed || 1;
@@ -206,14 +202,9 @@ export default function MyVideosPage() {
                     return (
                       <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden">
                         <Link href={`/video/${order.order_id || order.id}`} className="block">
-                          {fileId ? (
-                            <div className="aspect-video bg-black">
-                              <iframe
-                                src={`https://drive.google.com/file/d/${fileId}/preview`}
-                                className="w-full h-full border-0 pointer-events-none"
-                                allow="autoplay; encrypted-media"
-                                loading="lazy"
-                              />
+                          {hasUrl ? (
+                            <div className="pointer-events-none">
+                              <VideoPlayer url={order.delivery_url} className="aspect-video" />
                             </div>
                           ) : (
                             <div className="aspect-video bg-muted flex items-center justify-center">
@@ -240,10 +231,9 @@ export default function MyVideosPage() {
                             )}
                           </Link>
                           <div className="flex gap-2 flex-wrap">
-                        
-                            {fileId && (
+                            {hasUrl && (
                               <Button asChild size="sm" variant="outline">
-                                <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
+                                <a href={getDownloadUrl(order.delivery_url)} target="_blank" rel="noopener noreferrer">
                                   <Download className="mr-1.5 h-3.5 w-3.5" />
                                   Download Video
                                 </a>
@@ -308,18 +298,13 @@ export default function MyVideosPage() {
                 </h2>
                 <div className="grid md:grid-cols-2 gap-6">
                   {closedOrders.map((order) => {
-                    const fileId = getFileIdFromUrl(order.delivery_url);
+                    const hasUrl = !!order.delivery_url;
                     return (
                       <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/40 hover:opacity-100 transition-all opacity-75">
                         <Link href={`/video/${order.order_id || order.id}`} className="block">
-                          {fileId ? (
-                            <div className="aspect-video bg-black">
-                              <iframe
-                                src={`https://drive.google.com/file/d/${fileId}/preview`}
-                                className="w-full h-full border-0 pointer-events-none"
-                                allow="autoplay; encrypted-media"
-                                loading="lazy"
-                              />
+                          {hasUrl ? (
+                            <div className="pointer-events-none">
+                              <VideoPlayer url={order.delivery_url} className="aspect-video" />
                             </div>
                           ) : (
                             <div className="aspect-video bg-muted flex items-center justify-center">
@@ -342,9 +327,9 @@ export default function MyVideosPage() {
                               View Video
                             </Link>
                           </Button>
-                          {fileId && (
+                          {hasUrl && (
                             <Button asChild size="sm" variant="outline">
-                              <a href={`https://drive.google.com/uc?export=download&id=${fileId}`}>
+                              <a href={getDownloadUrl(order.delivery_url)} target="_blank" rel="noopener noreferrer">
                                 <Download className="mr-1.5 h-3.5 w-3.5" />
                                 Download
                               </a>
