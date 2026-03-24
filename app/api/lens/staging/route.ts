@@ -218,7 +218,7 @@ The result should look like a professional interior design photograph, photoreal
     const file = new File([photoBuffer], "room.png", { type: "image/png" });
 
     const openaiResponse = await openai.images.edit({
-      model: "gpt-image-1.5",
+      model: "gpt-image-1-mini",
       image: file,
       prompt: editPrompt,
       size: aspectSize,
