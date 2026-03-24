@@ -462,7 +462,7 @@ export default function VideoDeliveryPage() {
 
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">{getOrderName()}</h1>
             <p className="text-muted-foreground mt-1">
@@ -538,9 +538,9 @@ export default function VideoDeliveryPage() {
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-foreground">Review your video</h3>
-                      <span className={`text-sm font-bold ${timeRemaining.days <= 1 ? "text-amber-700" : "text-blue-700"}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                    <h3 className="font-bold text-foreground">Review your video</h3>
+                    <span className={`text-sm font-bold flex-shrink-0 ${timeRemaining.days <= 1 ? "text-amber-700" : "text-blue-700"}`}>
                         {timeRemaining.days > 0 && `${timeRemaining.days}d `}
                         {timeRemaining.hours}h {timeRemaining.minutes}m remaining
                       </span>
@@ -552,7 +552,7 @@ export default function VideoDeliveryPage() {
                     </p>
                   </>
                 )}
-                <div className="flex gap-2 mt-3">
+               <div className="flex flex-col sm:flex-row gap-2 mt-3">
                   {!reviewWindowExpired && !freeRevisionUsed && (
                     <Button asChild size="sm" variant="outline">
                       <Link href={`/video/${orderId}/revise`}>
@@ -612,17 +612,17 @@ export default function VideoDeliveryPage() {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-4">
-                  <p className="text-xs text-muted-foreground">
-                    🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = mystery spin!</strong>
-                  </p>
-                  <button
-                    onClick={() => setReviewDismissed(true)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
-                  >
-                    Maybe later
-                  </button>
-                </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+  <p className="text-xs text-muted-foreground">
+    🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = mystery spin!</strong>
+  </p>
+  <button
+    onClick={() => setReviewDismissed(true)}
+    className="text-xs text-muted-foreground hover:text-foreground transition-colors sm:ml-auto"
+  >
+    Maybe later
+  </button>
+</div>
               </div>
             </div>
           </div>
