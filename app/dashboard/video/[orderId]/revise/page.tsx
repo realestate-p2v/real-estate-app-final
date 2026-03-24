@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { getClipPlaybackUrl, isCloudinaryUrl, isDriveUrl } from "@/components/video-player";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -29,8 +30,13 @@ import {
 interface ClipData {
   position: number;
   clip_file: string;
+  // Old Drive format
   drive_url: string;
   file_id: string;
+  // New Cloudinary format
+  url: string;
+  cloudinary_public_id: string;
+  // Shared fields
   description: string;
   photo_url: string;
   camera_direction: string;
@@ -41,6 +47,7 @@ interface RevisionClip {
   position: number;
   original_position: number;
   file_id: string;
+  playback_url: string;
   description: string;
   action: "keep" | "revise" | "remove";
   camera_direction: string;
@@ -68,6 +75,68 @@ const SPEEDS = [
   { key: "slow", label: "Slow" },
   { key: "medium", label: "Med" },
 ];
+
+// ── Clip Preview Component ──
+// Handles both Cloudinary URLs and Drive file IDs
+function ClipPreview({ clip, isRemoved }: { clip: RevisionClip; isRemoved: boolean }) {
+  const url = clip.playback_url;
+
+  if (!url) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <Play className="h-6 w-6 text-white/40" />
+      </div>
+    );
+  }
+
+  // Cloudinary or direct URL: use native video
+  if (isCloudinaryUrl(url) || !isDriveUrl(url)) {
+    return (
+      <>
+        <video
+          src={url}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover"
+        />
+        {isRemoved && (
+          <div className="absolute inset-0 bg-red-500/30 flex items-center justify-center">
+            <X className="h-8 w-8 text-white" />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Drive URL: extract file ID for iframe
+  const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = fileIdMatch ? fileIdMatch[1] : clip.file_id;
+
+  if (fileId) {
+    return (
+      <>
+        <iframe
+          src={`https://drive.google.com/file/d/${fileId}/preview`}
+          className="w-full h-full border-0"
+          allow="autoplay; encrypted-media"
+          loading="lazy"
+        />
+        {isRemoved && (
+          <div className="absolute inset-0 bg-red-500/30 flex items-center justify-center">
+            <X className="h-8 w-8 text-white" />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <Play className="h-6 w-6 text-white/40" />
+    </div>
+  );
+}
 
 export default function DashboardRevisionPage() {
   const params = useParams();
@@ -121,7 +190,8 @@ export default function DashboardRevisionPage() {
             data.clipUrls.map((clip: ClipData) => ({
               position: clip.position,
               original_position: clip.position,
-              file_id: clip.file_id,
+              file_id: clip.file_id || "",
+              playback_url: getClipPlaybackUrl(clip) || "",
               description: clip.description || `Clip ${clip.position}`,
               action: "keep" as const,
               camera_direction: clip.camera_direction || "",
@@ -321,10 +391,12 @@ export default function DashboardRevisionPage() {
                     <button onClick={() => moveClip(index, "down")} disabled={index === clips.length - 1} className={`p-0.5 ${index === clips.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}><ChevronDown className="h-3.5 w-3.5" /></button>
                   </div>
                   <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${isRemoved ? "bg-red-100 text-red-500 line-through" : isRevising ? "bg-amber-100 text-amber-700" : "bg-primary text-primary-foreground"}`}>{index + 1}</div>
+
+                  {/* Clip preview — universal player */}
                   <div className="w-64 h-[144px] sm:w-80 sm:h-[180px] rounded-lg overflow-hidden flex-shrink-0 bg-black relative">
-                    {clip.file_id ? (<iframe src={`https://drive.google.com/file/d/${clip.file_id}/preview`} className="w-full h-full border-0" allow="autoplay; encrypted-media" loading="lazy" />) : (<div className="w-full h-full flex items-center justify-center"><Play className="h-6 w-6 text-white/40" /></div>)}
-                    {isRemoved && (<div className="absolute inset-0 bg-red-500/30 flex items-center justify-center"><X className="h-8 w-8 text-white" /></div>)}
+                    <ClipPreview clip={clip} isRemoved={isRemoved} />
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground text-sm truncate">{clip.description || `Clip ${clip.original_position}`}</p>
                     <p className="text-xs text-muted-foreground">{clip.camera_direction || "Auto"} · {clip.camera_speed || "Default"}</p>
