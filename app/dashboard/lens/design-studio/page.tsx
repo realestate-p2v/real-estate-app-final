@@ -494,74 +494,48 @@ if (pageNumber === 0) {
     const photo2 = photos[1] || null;
     const photo3 = photos[2] || null;
     const gap = 30;
-    const leftW = Math.round(innerW * 0.43);
-    const rightW = innerW - leftW - gap;
-    const halfPhotoW = Math.round((rightW - gap) / 2);
+    const halfW = Math.round((innerW - gap) / 2);
 
     return (
-      <div style={{ width: W, height: H, backgroundColor: "#f5f0eb", fontFamily, padding: margin }}>
-        <div style={{ display: "flex", gap, width: "100%" }}>
-          {/* Left column: text */}
-          <div style={{ width: leftW, flexShrink: 0, paddingTop: 40 }}>
-            <p style={{ fontSize: 64, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
-            <p style={{ fontSize: 108, fontWeight: 900, color: accent, lineHeight: 0.95, fontStyle: "italic", marginTop: 4 }}>{address || "Property"}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
-              <span style={{ fontSize: 36, color: accent }}>📍</span>
-              <p style={{ fontSize: 36, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
-            </div>
-            <p style={{ fontSize: 40, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 60 }}>Offered At:</p>
-            <div style={{ backgroundColor: accent, display: "inline-block", padding: "12px 0", marginTop: 8, marginLeft: -20, paddingLeft: 20, paddingRight: 40, borderRadius: "0 8px 8px 0" }}>
-              <p style={{ fontSize: 130, fontWeight: 900, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
-            </div>
-            {features && (
-              <>
-                <p style={{ fontSize: 38, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginTop: 50, marginBottom: 24 }}>
-                  {address ? `${address} Features:` : "Features:"}
+      <div style={{ width: W, height: H, backgroundColor: "#f5f0eb", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
+        {/* Top third: all text content */}
+        <div style={{ marginBottom: 40 }}>
+          <p style={{ fontSize: 64, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
+          <p style={{ fontSize: 108, fontWeight: 900, color: accent, lineHeight: 0.95, fontStyle: "italic", marginTop: 4 }}>{address || "Property Name"}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
+            <span style={{ fontSize: 36, color: accent }}>📍</span>
+            <p style={{ fontSize: 36, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
+          </div>
+
+          <div style={{ display: "flex", gap: 60, marginTop: 40 }}>
+            {/* Left: price + specs */}
+            <div style={{ flexShrink: 0 }}>
+              <p style={{ fontSize: 36, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em" }}>Offered At:</p>
+              <div style={{ backgroundColor: accent, display: "inline-block", padding: "10px 40px 10px 20px", marginTop: 8, marginLeft: -20, borderRadius: "0 8px 8px 0" }}>
+                <p style={{ fontSize: 110, fontWeight: 900, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
+              </div>
+              {(beds || baths || sqft) && (
+                <p style={{ fontSize: 32, color: "#555", marginTop: 12, fontWeight: 600 }}>
+                  {[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ")}
                 </p>
-                <div style={{ fontSize: 34, color: "#333", lineHeight: 2.1 }}>
+              )}
+            </div>
+            {/* Right: features */}
+            {features && (
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 32, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginBottom: 16 }}>
+                  Features:
+                </p>
+                <div style={{ fontSize: 30, color: "#333", lineHeight: 1.9 }}>
                   {features.split("\n").filter(Boolean).map((f, i) => (
-                    <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                      <span style={{ color: "#333", fontWeight: 900, fontSize: 38, lineHeight: 1.3, flexShrink: 0 }}>•</span>
+                    <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <span style={{ color: accent, fontWeight: 900, fontSize: 32, lineHeight: 1.2, flexShrink: 0 }}>•</span>
                       <span>{f.replace(/^[•\-*]\s*/, "")}</span>
                     </div>
                   ))}
                 </div>
-              </>
-            )}
-          </div>
-          {/* Right column: photos — native aspect ratio, no cropping */}
-          <div style={{ width: rightW, display: "flex", flexDirection: "column", gap }}>
-            {heroPhoto ? (
-              <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "auto", borderRadius: 16 }} />
-            ) : (
-              <div style={{ width: "100%", aspectRatio: "4/3", backgroundColor: "#ddd", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 40 }}>Photo 1</span></div>
-            )}
-            <div style={{ display: "flex", gap }}>
-              {photo2 ? (
-                <img src={photo2} alt="Photo 2" style={{ width: halfPhotoW, height: "auto", borderRadius: 16 }} />
-              ) : (
-                <div style={{ width: halfPhotoW, aspectRatio: "4/3", backgroundColor: "#ddd", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 2</span></div>
-              )}
-              {photo3 ? (
-                <img src={photo3} alt="Photo 3" style={{ width: halfPhotoW, height: "auto", borderRadius: 16 }} />
-              ) : (
-                <div style={{ width: halfPhotoW, aspectRatio: "4/3", backgroundColor: "#ddd", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 3</span></div>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* Description below the two-column layout */}
-        {description && (
-          <div style={{ marginTop: 50 }}>
-            <p style={{ fontSize: 38, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 20 }}>About This Property</p>
-            <div style={{ fontSize: 32, color: "#374151", lineHeight: 1.75 }}>
-              {description.split("\n").filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: 14 }}>{p}</p>)}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+              </div>
+            )
 
   // Pages 2+: header bar + description (if page 2) + 2×3 photo grid
   const startIdx = 3 + (pageNumber - 1) * 6;
