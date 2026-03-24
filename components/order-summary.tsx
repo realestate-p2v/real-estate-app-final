@@ -25,9 +25,6 @@ export function OrderSummary({
     if (photoCount === 0) {
       return { price: 0, originalPrice: 0, tier: "Select photos to see price" };
     }
-    if (photoCount === 1) {
-      return { price: 1, originalPrice: 1, tier: "Test Product (1 photo)" };
-    }
     if (photoCount <= 15) {
       return { price: 79, originalPrice: 149, tier: "Standard (up to 15 photos)" };
     }
