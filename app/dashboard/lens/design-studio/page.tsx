@@ -493,32 +493,37 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
     const heroPhoto = photos[0] || null;
     const photo2 = photos[1] || null;
     const photo3 = photos[2] || null;
-    const gap = 40;
-    const leftW = Math.round(innerW * 0.44);
+    const gap = 30;
+    const leftW = Math.round(innerW * 0.43);
     const rightW = innerW - leftW - gap;
+    const rightTopH = Math.round((H - margin * 2) * 0.56);
+    const rightBottomH = (H - margin * 2) - rightTopH - gap;
+    const halfPhotoW = Math.round((rightW - gap) / 2);
 
     return (
-      <div style={{ width: W, height: H, backgroundColor: "#f0f7f7", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", gap, flex: 1 }}>
-          {/* Left column */}
-          <div style={{ width: leftW, display: "flex", flexDirection: "column" }}>
-            <p style={{ fontSize: 72, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
-            <p style={{ fontSize: 120, fontWeight: 900, color: accent, lineHeight: 1.0, fontStyle: "italic" }}>{address || "Property Name"}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 24 }}>
-              <span style={{ fontSize: 40, color: accent }}>📍</span>
-              <p style={{ fontSize: 40, color: "#555", fontWeight: 500 }}>{cityStateZip || "City, State"}</p>
+      <div style={{ width: W, height: H, backgroundColor: "#f5f0eb", fontFamily, padding: `${margin}px ${margin}px ${margin}px ${margin}px` }}>
+        <div style={{ display: "flex", gap, width: "100%", height: H - margin * 2 }}>
+          {/* Left column: text */}
+          <div style={{ width: leftW, flexShrink: 0, display: "flex", flexDirection: "column", paddingTop: 40 }}>
+            <p style={{ fontSize: 64, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
+            <p style={{ fontSize: 108, fontWeight: 900, color: accent, lineHeight: 0.95, fontStyle: "italic", marginTop: 4 }}>{address || "Property"}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
+              <span style={{ fontSize: 36, color: accent }}>📍</span>
+              <p style={{ fontSize: 36, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
             </div>
-            <p style={{ fontSize: 44, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 70 }}>Offered At:</p>
-            <p style={{ fontSize: 140, fontWeight: 900, color: "#111827", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
+            <p style={{ fontSize: 40, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 60 }}>Offered At:</p>
+            <div style={{ backgroundColor: accent, display: "inline-block", padding: "12px 0", marginTop: 8, marginLeft: -20, paddingLeft: 20, paddingRight: 40, borderRadius: "0 8px 8px 0" }}>
+              <p style={{ fontSize: 130, fontWeight: 900, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
+            </div>
             {features && (
               <>
-                <p style={{ fontSize: 42, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginTop: 60, marginBottom: 30 }}>
+                <p style={{ fontSize: 38, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginTop: 50, marginBottom: 24 }}>
                   {address ? `${address} Features:` : "Features:"}
                 </p>
-                <div style={{ fontSize: 38, color: "#333", lineHeight: 2.0 }}>
+                <div style={{ fontSize: 34, color: "#333", lineHeight: 2.1 }}>
                   {features.split("\n").filter(Boolean).map((f, i) => (
-                    <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-                      <span style={{ color: accent, fontWeight: 900, fontSize: 44, lineHeight: 1.3, flexShrink: 0 }}>•</span>
+                    <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                      <span style={{ color: "#333", fontWeight: 900, fontSize: 38, lineHeight: 1.3, flexShrink: 0 }}>•</span>
                       <span>{f.replace(/^[•\-*]\s*/, "")}</span>
                     </div>
                   ))}
@@ -526,17 +531,19 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
               </>
             )}
           </div>
-          {/* Right column: 1 large hero top, 2 smaller bottom */}
-          <div style={{ width: rightW, display: "flex", flexDirection: "column", gap: 24 }}>
-            <div style={{ flex: 3, borderRadius: 20, overflow: "hidden", backgroundColor: "#dde5e5" }}>
-              {heroPhoto ? <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#9ca3af", fontSize: 44 }}>Photo 1</span></div>}
+          {/* Right column: photos */}
+          <div style={{ width: rightW, display: "flex", flexDirection: "column", gap }}>
+            {/* Hero photo — top ~56% */}
+            <div style={{ height: rightTopH, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+              {heroPhoto ? <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 40 }}>Photo 1</span></div>}
             </div>
-            <div style={{ flex: 2, display: "flex", gap: 24 }}>
-              <div style={{ flex: 1, borderRadius: 20, overflow: "hidden", backgroundColor: "#dde5e5" }}>
-                {photo2 ? <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#9ca3af", fontSize: 36 }}>Photo 2</span></div>}
+            {/* Two photos side by side — bottom ~40% */}
+            <div style={{ height: rightBottomH, display: "flex", gap }}>
+              <div style={{ width: halfPhotoW, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+                {photo2 ? <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 2</span></div>}
               </div>
-              <div style={{ flex: 1, borderRadius: 20, overflow: "hidden", backgroundColor: "#dde5e5" }}>
-                {photo3 ? <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#9ca3af", fontSize: 36 }}>Photo 3</span></div>}
+              <div style={{ width: halfPhotoW, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+                {photo3 ? <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 3</span></div>}
               </div>
             </div>
           </div>
