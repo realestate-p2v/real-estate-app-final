@@ -507,9 +507,9 @@ if (pageNumber === 0) {
             <p style={{ fontSize: 36, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
           </div>
 
-          <div style={{ display: "flex", gap: 60, marginTop: 40 }}>
-            {/* Left: price + specs */}
-            <div style={{ flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 50, marginTop: 40 }}>
+            {/* Left: price + specs + features */}
+            <div style={{ flex: 1 }}>
               <p style={{ fontSize: 36, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em" }}>Offered At:</p>
               <div style={{ backgroundColor: accent, display: "inline-block", padding: "10px 40px 10px 20px", marginTop: 8, marginLeft: -20, borderRadius: "0 8px 8px 0" }}>
                 <p style={{ fontSize: 110, fontWeight: 900, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
@@ -519,35 +519,30 @@ if (pageNumber === 0) {
                   {[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ")}
                 </p>
               )}
+              {features && (
+                <>
+                  <p style={{ fontSize: 32, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginTop: 30, marginBottom: 16 }}>Features:</p>
+                  <div style={{ fontSize: 30, color: "#333", lineHeight: 1.9 }}>
+                    {features.split("\n").filter(Boolean).map((f, i) => (
+                      <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                        <span style={{ color: accent, fontWeight: 900, fontSize: 32, lineHeight: 1.2, flexShrink: 0 }}>•</span>
+                        <span>{f.replace(/^[•\-*]\s*/, "")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-            {/* Right: features */}
-            {features && (
+            {/* Right: description */}
+            {description && (
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 32, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginBottom: 16 }}>
-                  Features:
-                </p>
-                <div style={{ fontSize: 30, color: "#333", lineHeight: 1.9 }}>
-                  {features.split("\n").filter(Boolean).map((f, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      <span style={{ color: accent, fontWeight: 900, fontSize: 32, lineHeight: 1.2, flexShrink: 0 }}>•</span>
-                      <span>{f.replace(/^[•\-*]\s*/, "")}</span>
-                    </div>
-                  ))}
+                <p style={{ fontSize: 32, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 16 }}>About This Property</p>
+                <div style={{ fontSize: 28, color: "#374151", lineHeight: 1.75 }}>
+                  {description.split("\n").filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: 12 }}>{p}</p>)}
                 </div>
               </div>
             )}
           </div>
-
-          {/* Description */}
-          {description && (
-            <div style={{ marginTop: 30 }}>
-              <p style={{ fontSize: 32, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 12 }}>About This Property</p>
-              <div style={{ fontSize: 28, color: "#374151", lineHeight: 1.7 }}>
-                {description.split("\n").filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: 10 }}>{p}</p>)}
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Bottom two-thirds: 1 large photo + 2 side-by-side */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap }}>
