@@ -543,7 +543,7 @@ if (pageNumber === 0) {
               </div>
             )}
           </div>
-
+        </div>
         {/* Bottom two-thirds: 1 large photo + 2 side-by-side */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap }}>
           {/* Large hero photo */}
