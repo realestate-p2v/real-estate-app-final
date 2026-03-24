@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
@@ -489,22 +489,20 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
   const innerW = W - margin * 2;
   const accent = accentColor || "#0d9488";
 
-  if (pageNumber === 0) {
+if (pageNumber === 0) {
     const heroPhoto = photos[0] || null;
     const photo2 = photos[1] || null;
     const photo3 = photos[2] || null;
     const gap = 30;
     const leftW = Math.round(innerW * 0.43);
     const rightW = innerW - leftW - gap;
-    const rightTopH = Math.round((H - margin * 2) * 0.56);
-    const rightBottomH = (H - margin * 2) - rightTopH - gap;
     const halfPhotoW = Math.round((rightW - gap) / 2);
 
     return (
-      <div style={{ width: W, height: H, backgroundColor: "#f5f0eb", fontFamily, padding: `${margin}px ${margin}px ${margin}px ${margin}px` }}>
-        <div style={{ display: "flex", gap, width: "100%", height: H - margin * 2 }}>
+      <div style={{ width: W, height: H, backgroundColor: "#f5f0eb", fontFamily, padding: margin }}>
+        <div style={{ display: "flex", gap, width: "100%" }}>
           {/* Left column: text */}
-          <div style={{ width: leftW, flexShrink: 0, display: "flex", flexDirection: "column", paddingTop: 40 }}>
+          <div style={{ width: leftW, flexShrink: 0, paddingTop: 40 }}>
             <p style={{ fontSize: 64, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
             <p style={{ fontSize: 108, fontWeight: 900, color: accent, lineHeight: 0.95, fontStyle: "italic", marginTop: 4 }}>{address || "Property"}</p>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
@@ -531,23 +529,36 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
               </>
             )}
           </div>
-          {/* Right column: photos */}
+          {/* Right column: photos — native aspect ratio, no cropping */}
           <div style={{ width: rightW, display: "flex", flexDirection: "column", gap }}>
-            {/* Hero photo — top ~56% */}
-            <div style={{ height: rightTopH, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
-              {heroPhoto ? <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 40 }}>Photo 1</span></div>}
-            </div>
-            {/* Two photos side by side — bottom ~40% */}
-            <div style={{ height: rightBottomH, display: "flex", gap }}>
-              <div style={{ width: halfPhotoW, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
-                {photo2 ? <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 2</span></div>}
-              </div>
-              <div style={{ width: halfPhotoW, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
-                {photo3 ? <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 3</span></div>}
-              </div>
+            {heroPhoto ? (
+              <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "auto", borderRadius: 16 }} />
+            ) : (
+              <div style={{ width: "100%", aspectRatio: "4/3", backgroundColor: "#ddd", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 40 }}>Photo 1</span></div>
+            )}
+            <div style={{ display: "flex", gap }}>
+              {photo2 ? (
+                <img src={photo2} alt="Photo 2" style={{ width: halfPhotoW, height: "auto", borderRadius: 16 }} />
+              ) : (
+                <div style={{ width: halfPhotoW, aspectRatio: "4/3", backgroundColor: "#ddd", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 2</span></div>
+              )}
+              {photo3 ? (
+                <img src={photo3} alt="Photo 3" style={{ width: halfPhotoW, height: "auto", borderRadius: 16 }} />
+              ) : (
+                <div style={{ width: halfPhotoW, aspectRatio: "4/3", backgroundColor: "#ddd", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 3</span></div>
+              )}
             </div>
           </div>
         </div>
+        {/* Description below the two-column layout */}
+        {description && (
+          <div style={{ marginTop: 50 }}>
+            <p style={{ fontSize: 38, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 20 }}>About This Property</p>
+            <div style={{ fontSize: 32, color: "#374151", lineHeight: 1.75 }}>
+              {description.split("\n").filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: 14 }}>{p}</p>)}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
