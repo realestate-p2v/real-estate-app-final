@@ -611,76 +611,7 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
       </p>
     </div>
   );
-}
-  // Pages 2+: two columns, 3 photos each (6 per page)
-  const startIdx = 3 + (pageNumber - 1) * 6;
-  const pagePhotos = photos.slice(startIdx, startIdx + 6);
-  const colW = Math.round((W - 240) / 2);
-  const photoH = Math.round((H - 240 - 80) / 3);
-  const pgGap = 30;
 
-  return (
-    <div style={{ width: W, height: H, backgroundColor: "#f8f7f2", fontFamily, padding: 120, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", gap: pgGap }}>
-        <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
-          {[0, 2, 4].map((idx) => {
-            const photo = pagePhotos[idx];
-            return (
-              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f8f7f2" }}>
-                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
-          {[1, 3, 5].map((idx) => {
-            const photo = pagePhotos[idx];
-            return (
-              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f8f7f2" }}>
-                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <p style={{ fontSize: 36, color: "#9ca3af", textAlign: "center", marginTop: 30 }}>
-        {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
-      </p>
-    </div>
-  );
-
-  return (
-    <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", gap }}>
-        {/* Left column: photos 0, 2, 4 */}
-        <div style={{ width: colW, display: "flex", flexDirection: "column", gap }}>
-          {[0, 2, 4].map((idx) => {
-            const photo = pagePhotos[idx];
-            return (
-              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? "#ddd" : "#f3f4f6" }}>
-                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />}
-              </div>
-            );
-          })}
-        </div>
-        {/* Right column: photos 1, 3, 5 */}
-        <div style={{ width: colW, display: "flex", flexDirection: "column", gap }}>
-          {[1, 3, 5].map((idx) => {
-            const photo = pagePhotos[idx];
-            return (
-              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? "#ddd" : "#f3f4f6" }}>
-                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <p style={{ fontSize: 36, color: "#9ca3af", textAlign: "center", marginTop: 30 }}>
-        {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
-      </p>
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════════════
    BRANDING CARD TEMPLATE (unchanged from original)
