@@ -1,22 +1,84 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import OpenAI from "openai";
+import { v2 as cloudinary } from "cloudinary";
 
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
+// ── Cloudinary config ──
+cloudinary.config({
+  cloud_name:
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+/** Upload a buffer to Cloudinary and return the secure URL */
+async function uploadBufferToCloudinary(
+  buffer: Buffer,
+  folder: string,
+  publicId: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: `photo2video/${folder}`,
+        public_id: publicId,
+        resource_type: "image",
+        overwrite: true,
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result!.secure_url);
+      }
+    );
+    stream.end(buffer);
+  });
+}
+
+/**
+ * Pick the best gpt-image-1 size based on aspect ratio.
+ * Supported: "1024x1024", "1536x1024" (landscape), "1024x1536" (portrait)
+ */
+function detectAspectSize(
+  width: number,
+  height: number
+): "1024x1024" | "1536x1024" | "1024x1536" {
+  const ratio = width / height;
+  if (ratio > 1.15) return "1536x1024";
+  if (ratio < 0.87) return "1024x1536";
+  return "1024x1024";
+}
+
 export async function POST(request: Request) {
   try {
-    const { photo_url, room_type, style, user_id, user_email } = await request.json();
+    const { photo_url, room_type, style, user_id, user_email } =
+      await request.json();
 
     if (!photo_url || !room_type || !style || !user_id) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields: photo_url, room_type, style, user_id" },
+        {
+          success: false,
+          error: "Missing required fields: photo_url, room_type, style, user_id",
+        },
         { status: 400 }
+      );
+    }
+
+    // ── Require OpenAI key ──
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("[Staging] OPENAI_API_KEY is not configured");
+      return NextResponse.json(
+        { success: false, error: "Virtual staging is temporarily unavailable. Please try again later." },
+        { status: 503 }
       );
     }
 
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
     // ── Paywall check ──
@@ -32,7 +94,6 @@ export async function POST(request: Request) {
       const isSubscriber = usage?.is_subscriber === true;
 
       if (!isSubscriber) {
-        // Free trial: 1 staging allowed
         const { count } = await supabase
           .from("lens_staging")
           .select("*", { count: "exact", head: true })
@@ -40,12 +101,16 @@ export async function POST(request: Request) {
 
         if ((count || 0) >= 1) {
           return NextResponse.json(
-            { success: false, error: "free_limit_reached", message: "You've used your free staging. Subscribe to P2V Lens for unlimited virtual staging." },
+            {
+              success: false,
+              error: "free_limit_reached",
+              message:
+                "You've used your free staging. Subscribe to P2V Lens for unlimited virtual staging.",
+            },
             { status: 403 }
           );
         }
       } else {
-        // Subscriber cap: 20/month
         const monthStart = new Date();
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
@@ -58,7 +123,12 @@ export async function POST(request: Request) {
 
         if ((count || 0) >= 20) {
           return NextResponse.json(
-            { success: false, error: "monthly_limit_reached", message: "You've reached the 20 staging limit for this month. Resets on the 1st." },
+            {
+              success: false,
+              error: "monthly_limit_reached",
+              message:
+                "You've reached the 20 staging limit for this month. Resets on the 1st.",
+            },
             { status: 403 }
           );
         }
@@ -116,56 +186,74 @@ Include at least 8-12 specific items with materials, colors, and placement.`,
 
     const roomAnalysis = visionData.content[0].text;
 
-    // ── Step 2: Build Minimax prompt from analysis + style + room type ──
-    // Minimax has a 1500 char limit. Our framing text is ~250 chars, so cap analysis at 1200.
-    const trimmedAnalysis = roomAnalysis.length > 1200 ? roomAnalysis.slice(0, 1200) : roomAnalysis;
-    const constructedPrompt = `A beautifully furnished ${roomLabel} in ${style} style. FULLY FURNISHED with furniture, rugs, curtains, artwork, lamps, plants. ${trimmedAnalysis}. Photorealistic interior design photography, professionally staged, Architectural Digest quality, warm natural lighting.`;
+    // ── Step 2: Download the original photo ──
+    const photoResponse = await fetch(photo_url);
+    if (!photoResponse.ok) {
+      throw new Error(`Failed to download original photo: ${photoResponse.status}`);
+    }
+    const photoBuffer = Buffer.from(await photoResponse.arrayBuffer());
 
-    // Safety check: hard truncate if still over 1500
-    const finalPrompt = constructedPrompt.length > 1500 ? constructedPrompt.slice(0, 1497) + "..." : constructedPrompt;
+    // Detect aspect ratio from Cloudinary URL transforms, default landscape
+    let aspectSize: "1024x1024" | "1536x1024" | "1024x1536" = "1536x1024";
+    try {
+      const urlMatch = photo_url.match(/\/upload\/.*?w_(\d+),h_(\d+)/);
+      if (urlMatch) {
+        aspectSize = detectAspectSize(parseInt(urlMatch[1]), parseInt(urlMatch[2]));
+      }
+    } catch {
+      // keep default landscape — most common for real estate photos
+    }
 
-    // ── Step 3: Minimax image-01 generation ──
-    const minimaxResponse = await fetch("https://api.minimax.io/v1/image_generation", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.MINIMAX_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "image-01",
-        prompt: finalPrompt,
-        aspect_ratio: "4:3",
-        response_format: "url",
-        n: 1,
-        prompt_optimizer: true,
-      }),
+    // ── Step 3: OpenAI gpt-image-1 Edit API ──
+    const trimmedAnalysis =
+      roomAnalysis.length > 2000 ? roomAnalysis.slice(0, 2000) : roomAnalysis;
+
+    const editPrompt = `Add furniture and decor to this empty room in ${style} style.
+Room details from analysis: ${trimmedAnalysis}
+Keep all existing architectural features exactly as they are — walls, windows, floors, ceiling, doors, fixtures.
+Only add: furniture, rugs, art, plants, decorative items, and soft furnishings appropriate for a ${roomLabel}.
+The result should look like a professional interior design photograph, photorealistic, magazine-quality.`;
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const file = new File([photoBuffer], "room.png", { type: "image/png" });
+
+    const openaiResponse = await openai.images.edit({
+      model: "gpt-image-1",
+      image: file,
+      prompt: editPrompt,
+      size: aspectSize,
+      quality: "high",
     });
 
-    const minimaxData = await minimaxResponse.json();
+    const base64Image = openaiResponse.data?.[0]?.b64_json;
 
-    const stagedImageUrl = minimaxData?.data?.image_urls?.[0] || minimaxData?.data?.image_url;
-
-    if (!stagedImageUrl) {
-      console.error("[Staging] Minimax error:", JSON.stringify(minimaxData));
+    if (!base64Image) {
+      console.error("[Staging] OpenAI returned no image data:", JSON.stringify(openaiResponse));
       return NextResponse.json(
         { success: false, error: "Image generation failed. Please try again." },
         { status: 500 }
       );
     }
 
-    // ── Step 4: Save to Supabase ──
-    const { error: insertError } = await supabase.from("lens_staging").insert({
-      user_id,
-      original_url: photo_url,
-      staged_url: stagedImageUrl,
-      room_type,
-      style,
-      room_analysis: roomAnalysis,
-    });
+    // ── Step 4: Upload to Cloudinary ──
+    const imageBuffer = Buffer.from(base64Image, "base64");
+    const publicId = `staging_${user_id}_${Date.now()}`;
+    const stagedImageUrl = await uploadBufferToCloudinary(imageBuffer, "staging", publicId);
+
+    // ── Step 5: Save to Supabase ──
+    const { error: insertError } = await supabase
+      .from("lens_staging")
+      .insert({
+        user_id,
+        original_url: photo_url,
+        staged_url: stagedImageUrl,
+        room_type,
+        style,
+        room_analysis: roomAnalysis,
+      });
 
     if (insertError) {
       console.error("[Staging] Supabase insert error:", insertError);
-      // Don't fail the request — the user still gets the image
     }
 
     return NextResponse.json({
