@@ -535,44 +535,73 @@ if (pageNumber === 0) {
                   ))}
                 </div>
               </div>
-            )
+            )}
+          </div>
 
-  // Pages 2+: header bar + description (if page 2) + 2×3 photo grid
+          {/* Description */}
+          {description && (
+            <div style={{ marginTop: 30 }}>
+              <p style={{ fontSize: 32, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 12 }}>About This Property</p>
+              <div style={{ fontSize: 28, color: "#374151", lineHeight: 1.7 }}>
+                {description.split("\n").filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: 10 }}>{p}</p>)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom two-thirds: 1 large photo + 2 side-by-side */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap }}>
+          {/* Large hero photo */}
+          <div style={{ flex: 2, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+            {heroPhoto ? <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 40 }}>Photo 1</span></div>}
+          </div>
+          {/* Two photos side by side */}
+          <div style={{ flex: 1, display: "flex", gap }}>
+            <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+              {photo2 ? <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 2</span></div>}
+            </div>
+            <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+              {photo3 ? <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 3</span></div>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // Pages 2+: two columns, 3 photos each (6 per page)
   const startIdx = 3 + (pageNumber - 1) * 6;
   const pagePhotos = photos.slice(startIdx, startIdx + 6);
-  const gap = 24;
-  const cellW = Math.floor((innerW - gap * 2) / 3);
-  const cellH = Math.round(cellW * 0.67);
-  const showDescription = pageNumber === 1 && description;
+  const gap = 30;
+  const colW = Math.round((innerW - gap) / 2);
+  const photoH = Math.round((H - margin * 2 - gap * 2 - 80) / 3); // 3 rows, footer space
 
   return (
     <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
-      {/* Header bar */}
-      {showDescription && (
-        <div style={{ backgroundColor: accent, padding: "24px 40px", borderRadius: 8, marginBottom: 40 }}>
-          <p style={{ fontSize: 34, fontWeight: 800, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.06em" }}>About This Property</p>
+      <div style={{ flex: 1, display: "flex", gap }}>
+        {/* Left column: photos 0, 2, 4 */}
+        <div style={{ width: colW, display: "flex", flexDirection: "column", gap }}>
+          {[0, 2, 4].map((idx) => {
+            const photo = pagePhotos[idx];
+            return (
+              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? "#ddd" : "#f3f4f6" }}>
+                {photo ? <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : null}
+              </div>
+            );
+          })}
         </div>
-      )}
-      {showDescription && (
-        <div style={{ fontSize: 28, color: "#374151", lineHeight: 1.7, marginBottom: 40, maxHeight: 400, overflow: "hidden" }}>
-          {description.split("\n").map((p, i) => <p key={i} style={{ marginBottom: 14 }}>{p}</p>)}
+        {/* Right column: photos 1, 3, 5 */}
+        <div style={{ width: colW, display: "flex", flexDirection: "column", gap }}>
+          {[1, 3, 5].map((idx) => {
+            const photo = pagePhotos[idx];
+            return (
+              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? "#ddd" : "#f3f4f6" }}>
+                {photo ? <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : null}
+              </div>
+            );
+          })}
         </div>
-      )}
-
-      {/* Photo grid */}
-      <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap, alignContent: "flex-start" }}>
-        {Array.from({ length: 6 }).map((_, i) => {
-          const photo = pagePhotos[i];
-          return (
-            <div key={i} style={{ width: cellW, height: cellH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f3f4f6" }}>
-              {photo && <img src={photo} alt={`Photo ${startIdx + i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-            </div>
-          );
-        })}
       </div>
-
-      {/* Footer */}
-      <p style={{ fontSize: 26, color: "#9ca3af", textAlign: "center", marginTop: 30 }}>
+      <p style={{ fontSize: 26, color: "#9ca3af", textAlign: "center", marginTop: 24 }}>
         {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
       </p>
     </div>
