@@ -28,6 +28,9 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  LogIn,
+  Lock,
+  Sparkles,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════
@@ -312,7 +315,6 @@ function OpenHouseTemplate({ size, listingPhoto, headshot, logo, address, beds, 
 
 /* ═══════════════════════════════════════════════════════
    YARD SIGN — DESIGN 1: SPLIT BAR (RE/MAX style)
-   Top color bar + white center + bottom color bar
    ═══════════════════════════════════════════════════════ */
 
 function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, email, brokerage, officeName, officePhone, headerText, topColor, bottomColor, fontFamily, qrDataUrl }: {
@@ -333,13 +335,10 @@ function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, ema
 
   return (
     <div style={{ width, height, fontFamily, display: "flex", flexDirection: "column" }}>
-      {/* Top bar */}
       <div style={{ height: topH, backgroundColor: topColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ fontSize: headerSz, fontWeight: 900, color: topLight ? "#000" : "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>{headerText || "FOR SALE"}</p>
       </div>
-      {/* Center — white */}
       <div style={{ height: centerH, backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.05), gap: Math.round(width * 0.05) }}>
-        {/* Left: headshot */}
         <div style={{ flexShrink: 0 }}>
           {headshot ? (
             <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} />
@@ -349,19 +348,16 @@ function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, ema
             </div>
           )}
         </div>
-        {/* Right: name + contact */}
         <div style={{ textAlign: "left" }}>
           <p style={{ fontSize: nameSz, fontWeight: 800, color: "#111", lineHeight: 1.15 }}>{agentName || "AGENT NAME"}</p>
           <p style={{ fontSize: phoneSz, fontWeight: 700, color: "#111", marginTop: Math.round(height * 0.012) }}>{phone || "321-555-4321"}</p>
           {email && <p style={{ fontSize: detailSz, color: "#555", marginTop: Math.round(height * 0.006) }}>{email}</p>}
-          {/* Logo + QR row */}
           <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.02), marginTop: Math.round(height * 0.015) }}>
             {logo && <img src={logo} alt="Logo" style={{ maxHeight: Math.round(centerH * 0.15), maxWidth: Math.round(width * 0.2), objectFit: "contain" }} />}
             {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(centerH * 0.15), height: Math.round(centerH * 0.15), borderRadius: 4 }} />}
           </div>
         </div>
       </div>
-      {/* Bottom bar */}
       <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.04), padding: `0 ${Math.round(width * 0.06)}px` }}>
         <div style={{ textAlign: "center" }}>
           <p style={{ fontSize: bottomNameSz, fontWeight: 800, color: bottomLight ? "#000" : "#fff" }}>{officeName || brokerage || "OFFICE NAME"}</p>
@@ -374,7 +370,6 @@ function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, ema
 
 /* ═══════════════════════════════════════════════════════
    YARD SIGN — DESIGN 2: SIDEBAR (Century 21 style)
-   Vertical sidebar on left, main content right
    ═══════════════════════════════════════════════════════ */
 
 function YardSignSidebar({ width, height, headshot, logo, agentName, phone, email, brokerage, website, headerText, sidebarColor, mainBgColor, fontFamily, qrDataUrl }: {
@@ -395,13 +390,11 @@ function YardSignSidebar({ width, height, headshot, logo, agentName, phone, emai
 
   return (
     <div style={{ width, height, fontFamily, display: "flex" }}>
-      {/* Sidebar */}
       <div style={{ width: sideW, height, backgroundColor: sidebarColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: `${Math.round(height * 0.04)}px ${Math.round(sideW * 0.1)}px` }}>
         {logo && <img src={logo} alt="Logo" style={{ width: logoSz, height: logoSz, objectFit: "contain" }} />}
         <p style={{ fontSize: Math.round(sideW * 0.22), fontWeight: 800, color: sideLight ? "#000" : "#fff", writingMode: "vertical-rl", textOrientation: "mixed", letterSpacing: "0.12em", textTransform: "uppercase" }}>{brokerage || "BROKERAGE"}</p>
         {logo && <img src={logo} alt="Logo" style={{ width: logoSz, height: logoSz, objectFit: "contain" }} />}
       </div>
-      {/* Main area */}
       <div style={{ width: mainW, height, backgroundColor: mainBgColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.04), textAlign: "center" }}>
         {headshot ? (
           <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", border: `${Math.round(width * 0.01)}px solid ${sidebarColor}` }} />
@@ -416,7 +409,6 @@ function YardSignSidebar({ width, height, headshot, logo, agentName, phone, emai
         {website && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.008) }}>{website}</p>}
         {email && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.005) }}>{email}</p>}
         {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(height * 0.08), height: Math.round(height * 0.08), marginTop: Math.round(height * 0.015), borderRadius: 4 }} />}
-        {/* Footer banner */}
         <div style={{ marginTop: Math.round(height * 0.03), backgroundColor: sidebarColor, padding: `${Math.round(height * 0.012)}px ${Math.round(width * 0.06)}px`, borderRadius: 4 }}>
           <p style={{ fontSize: headerSz, fontWeight: 900, color: sideLight ? "#000" : "#fff", letterSpacing: "0.06em", textTransform: "uppercase" }}>{headerText || "FOR SALE"}</p>
         </div>
@@ -427,7 +419,6 @@ function YardSignSidebar({ width, height, headshot, logo, agentName, phone, emai
 
 /* ═══════════════════════════════════════════════════════
    YARD SIGN — DESIGN 3: TOP HEAVY (Coldwell Banker style)
-   Large color top section, white/light bottom with agent
    ═══════════════════════════════════════════════════════ */
 
 function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, email, brokerage, headerText, topColor, bottomColor, fontFamily, qrDataUrl }: {
@@ -449,13 +440,11 @@ function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, ema
 
   return (
     <div style={{ width, height, fontFamily, display: "flex", flexDirection: "column" }}>
-      {/* Top section */}
       <div style={{ height: topH, backgroundColor: topColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.06), textAlign: "center" }}>
         <p style={{ fontSize: headerSz, fontWeight: 900, color: topLight ? "#000" : "#fff", letterSpacing: "0.05em", textTransform: "uppercase", lineHeight: 1.0 }}>{headerText || "FOR SALE"}</p>
         {logo && <img src={logo} alt="Logo" style={{ maxHeight: logoMaxH, maxWidth: logoMaxW, objectFit: "contain", marginTop: Math.round(topH * 0.08) }} />}
         {!logo && brokerage && <p style={{ fontSize: Math.round(topH * 0.10), fontWeight: 700, color: topLight ? "#000" : "#fff", marginTop: Math.round(topH * 0.06), textTransform: "uppercase", letterSpacing: "0.08em" }}>{brokerage}</p>}
       </div>
-      {/* Bottom section */}
       <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.06), textAlign: "center" }}>
         {headshot ? (
           <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} />
@@ -478,7 +467,6 @@ function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, ema
 
 /* ═══════════════════════════════════════════════════════
    PROPERTY PDF TEMPLATE
-   Matches uploaded screenshots: teal accent, photo collage
    ═══════════════════════════════════════════════════════ */
 
 function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths, sqft, description, features, photos, accentColor, fontFamily }: {
@@ -614,7 +602,7 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
 }
 
 /* ═══════════════════════════════════════════════════════
-   BRANDING CARD TEMPLATE (unchanged from original)
+   BRANDING CARD TEMPLATE
    ═══════════════════════════════════════════════════════ */
 
 function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
@@ -704,6 +692,19 @@ export default function DesignStudioPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("just-listed");
   const [selectedSize, setSelectedSize] = useState<SizeOption>("square");
 
+  /* ─── Auth + Paywall state (Task 2) ─── */
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSubscriber, setIsSubscriber] = useState(false);
+  const [freeExportsUsed, setFreeExportsUsed] = useState(0);
+  const [paywallHit, setPaywallHit] = useState(false);
+  const FREE_EXPORT_LIMIT = 3;
+
+  /* ─── Saved headshot/logo persistence (Task 1) ─── */
+  const [savedHeadshot, setSavedHeadshot] = useState<string | null>(null);
+  const [savedLogo, setSavedLogo] = useState<string | null>(null);
+
   // Shared uploads & fields
   const [mediaMode, setMediaMode] = useState<"image" | "video">("image");
   const [listingPhoto, setListingPhoto] = useState<string | null>(null);
@@ -789,6 +790,57 @@ export default function DesignStudioPage() {
   const listingFontFamily = FONT_OPTIONS.find((f) => f.id === listingFont)?.family || FONT_OPTIONS[1].family;
   const currentYardSize = YARD_SIGN_SIZES.find((s) => s.id === yardSignSize)!;
 
+  /* ─── Merged init: auth + subscription + saved assets + export counter ─── */
+  useEffect(() => {
+    const init = async () => {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      setAuthLoading(false);
+      if (!authUser) return;
+      setUser(authUser);
+
+      const admin = authUser.email === "realestatephoto2video@gmail.com";
+      setIsAdmin(admin);
+
+      const { data } = await supabase
+        .from("lens_usage")
+        .select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used")
+        .eq("user_id", authUser.id)
+        .single();
+
+      if (data) {
+        // Saved assets (Task 1)
+        if (data.saved_headshot_url) {
+          setSavedHeadshot(data.saved_headshot_url);
+          setHeadshot(data.saved_headshot_url);
+          setBrandHeadshot(data.saved_headshot_url);
+        }
+        if (data.saved_logo_url) {
+          setSavedLogo(data.saved_logo_url);
+          setLogo(data.saved_logo_url);
+          setBrandLogo(data.saved_logo_url);
+        }
+        // Subscription (Task 2)
+        if (admin || data.is_subscriber) {
+          setIsSubscriber(true);
+        }
+        setFreeExportsUsed(data.free_design_exports_used || 0);
+      }
+
+      if (admin) setIsSubscriber(true);
+    };
+    init();
+  }, []);
+
+  /* ─── Save asset to DB helper (Task 1) ─── */
+  const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => {
+    if (!user) return;
+    const supabase = (await import("@/lib/supabase/client")).createClient();
+    await supabase
+      .from("lens_usage")
+      .upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" });
+  };
+
   // QR code
   useEffect(() => {
     if (!yardQrUrl) { setYardQrDataUrl(null); return; }
@@ -814,7 +866,39 @@ export default function DesignStudioPage() {
 
   const { scale, width: previewW, height: previewH, rawW, rawH } = getScaledDimensions();
 
+  /* ─── Upload handlers with persistence + cross-tab sync (Task 1) ─── */
   const handleUpload = async (file: File, folder: string, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, folder); setUrl(url); setLoading(false); };
+
+  const handleHeadshotUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => {
+    setLoading(true);
+    const url = await uploadToCloudinary(file, "design-studio");
+    if (url) {
+      setUrl(url);
+      // Cross-tab sync
+      setHeadshot(url);
+      setBrandHeadshot(url);
+      // Persist
+      saveAssetToDb("saved_headshot_url", url);
+      setSavedHeadshot(url);
+    }
+    setLoading(false);
+  };
+
+  const handleLogoUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => {
+    setLoading(true);
+    const url = await uploadToCloudinary(file, "design-studio");
+    if (url) {
+      setUrl(url);
+      // Cross-tab sync
+      setLogo(url);
+      setBrandLogo(url);
+      // Persist
+      saveAssetToDb("saved_logo_url", url);
+      setSavedLogo(url);
+    }
+    setLoading(false);
+  };
+
   const handlePdfPhotoUpload = async (file: File) => { if (pdfPhotos.length >= 25) return; setUploadingPdfPhoto(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) setPdfPhotos(prev => [...prev, url]); setUploadingPdfPhoto(false); };
 
   const loadUserVideos = async () => {
@@ -823,7 +907,14 @@ export default function DesignStudioPage() {
     try { const supabase = (await import("@/lib/supabase/client")).createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: orders } = await supabase.from("orders").select("order_id, delivery_url, unbranded_delivery_url, photos, created_at").eq("user_id", user.id).in("status", ["complete", "delivered", "closed"]).order("created_at", { ascending: false }); setUserVideos((orders || []).filter((o: any) => o.unbranded_delivery_url || o.delivery_url).map((o: any) => ({ orderId: o.order_id, url: o.unbranded_delivery_url || o.delivery_url, thumbnail: o.photos?.[0]?.secure_url || null, hasUnbranded: !!o.unbranded_delivery_url, date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) }))); } catch (err) { console.error(err); } finally { setLoadingVideos(false); }
   };
 
+  /* ─── Export with paywall gate (Task 2) ─── */
   const handleExport = async () => {
+    // Paywall check for free users
+    if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) {
+      setPaywallHit(true);
+      return;
+    }
+
     if (!previewRef.current) return;
     setExporting(true);
     try {
@@ -835,10 +926,29 @@ export default function DesignStudioPage() {
       link.download = `p2v-${tab}-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
+
+      // Increment counter for free users after successful export
+      if (!isSubscriber && !isAdmin && user) {
+        const newCount = freeExportsUsed + 1;
+        setFreeExportsUsed(newCount);
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        await supabase
+          .from("lens_usage")
+          .upsert({
+            user_id: user.id,
+            free_design_exports_used: newCount,
+          }, { onConflict: "user_id" });
+      }
     } catch (err) { console.error(err); alert("Export failed."); } finally { setExporting(false); }
   };
 
   const handlePdfExport = async () => {
+    // Paywall check for free users
+    if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) {
+      setPaywallHit(true);
+      return;
+    }
+
     if (!previewRef.current) return;
     setExporting(true);
     try {
@@ -856,10 +966,106 @@ export default function DesignStudioPage() {
       }
       pdf.save(`${pdfAddress.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "property"}_sheet.pdf`);
       setPdfPreviewPage(0);
+
+      // Increment counter for free users after successful export
+      if (!isSubscriber && !isAdmin && user) {
+        const newCount = freeExportsUsed + 1;
+        setFreeExportsUsed(newCount);
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        await supabase
+          .from("lens_usage")
+          .upsert({
+            user_id: user.id,
+            free_design_exports_used: newCount,
+          }, { onConflict: "user_id" });
+      }
     } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); }
   };
 
   const badge = getBadgeConfig(selectedTemplate);
+
+  /* ═══════════════════════════════════════════════════════
+     AUTH GATES (Task 2)
+     ═══════════════════════════════════════════════════════ */
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="mx-auto max-w-2xl px-4 py-24 text-center">
+          <div className="bg-card rounded-2xl border border-border p-10 space-y-5">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
+              <LogIn className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h1 className="text-2xl font-extrabold text-foreground">
+              Sign In to Use the Design Studio
+            </h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Create a free account to try the Marketing Design Studio. Your first 3 exports are free — no subscription required.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base">
+                <Link href="/login?redirect=/dashboard/lens/design-studio">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="px-8 py-6 text-base">
+                <Link href="/lens">Learn About P2V Lens</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (paywallHit) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="mx-auto max-w-2xl px-4 py-24 text-center">
+          <div className="bg-card rounded-2xl border border-border p-10 space-y-5">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center">
+              <Lock className="h-8 w-8 text-accent" />
+            </div>
+            <h1 className="text-2xl font-extrabold text-foreground">
+              You&apos;ve Used Your 3 Free Exports
+            </h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Subscribe to P2V Lens for unlimited design exports, plus AI photo coaching, listing descriptions, virtual staging, and more — starting at $27.95/month.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base">
+                <Link href="/lens">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Subscribe to P2V Lens
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="px-8 py-6 text-base"
+                onClick={() => setPaywallHit(false)}
+              >
+                Back to Design Studio
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -873,6 +1079,28 @@ export default function DesignStudioPage() {
             <p className="text-muted-foreground mt-1">Create listing graphics, yard signs, property sheets, and branding cards</p>
           </div>
         </div>
+
+        {/* ═══ Free trial / subscription badge (Task 2) ═══ */}
+        {isAdmin ? (
+          <div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" />
+            <p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p>
+          </div>
+        ) : isSubscriber ? (
+          <div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
+            <p className="text-sm text-foreground">
+              <span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited exports
+            </p>
+          </div>
+        ) : (
+          <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-accent flex-shrink-0" />
+            <p className="text-sm text-foreground">
+              <span className="font-bold">Free trial:</span> {FREE_EXPORT_LIMIT - freeExportsUsed} of {FREE_EXPORT_LIMIT} exports remaining. Subscribe for unlimited access.
+            </p>
+          </div>
+        )}
 
         {/* ═══ 4 TOP-LEVEL TABS ═══ */}
         <div className="flex flex-wrap gap-2 mb-8">
@@ -909,8 +1137,18 @@ export default function DesignStudioPage() {
                   {mediaMode === "image" ? (
                     <div className="grid grid-cols-3 gap-4">
                       <ImageUploadBox label="Listing Photo *" imageUrl={listingPhoto} onUpload={(f) => handleUpload(f, "design-studio", setListingPhoto, setUploadingListing)} onClear={() => setListingPhoto(null)} uploading={uploadingListing} />
-                      <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleUpload(f, "design-studio", setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
-                      <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleUpload(f, "design-studio", setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
+                      <div>
+                        <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
+                        {!headshot && savedHeadshot && (
+                          <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
+                        )}
+                      </div>
+                      <div>
+                        <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
+                        {!logo && savedLogo && (
+                          <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -921,8 +1159,18 @@ export default function DesignStudioPage() {
                         </div>
                       )}
                       <div className="grid grid-cols-2 gap-4 pt-2">
-                        <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleUpload(f, "design-studio", setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
-                        <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleUpload(f, "design-studio", setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
+                        <div>
+                          <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
+                          {!headshot && savedHeadshot && (
+                            <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
+                          )}
+                        </div>
+                        <div>
+                          <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
+                          {!logo && savedLogo && (
+                            <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -998,8 +1246,18 @@ export default function DesignStudioPage() {
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleUpload(f, "design-studio", setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
-                  <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleUpload(f, "design-studio", setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
+                  <div>
+                    <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
+                    {!headshot && savedHeadshot && (
+                      <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
+                    )}
+                  </div>
+                  <div>
+                    <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
+                    {!logo && savedLogo && (
+                      <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
+                    )}
+                  </div>
                 </div>
               </div>
               {/* Details */}
@@ -1156,8 +1414,18 @@ export default function DesignStudioPage() {
                 <div className="bg-card rounded-2xl border border-border p-6">
                   <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3>
                   <div className="grid grid-cols-3 gap-4">
-                    <ImageUploadBox label="Headshot" imageUrl={brandHeadshot} onUpload={(f) => handleUpload(f, "design-studio", setBrandHeadshot, setUploadingBrandHeadshot)} onClear={() => setBrandHeadshot(null)} uploading={uploadingBrandHeadshot} />
-                    <ImageUploadBox label="Logo" imageUrl={brandLogo} onUpload={(f) => handleUpload(f, "design-studio", setBrandLogo, setUploadingBrandLogo)} onClear={() => setBrandLogo(null)} uploading={uploadingBrandLogo} />
+                    <div>
+                      <ImageUploadBox label="Headshot" imageUrl={brandHeadshot} onUpload={(f) => handleHeadshotUpload(f, setBrandHeadshot, setUploadingBrandHeadshot)} onClear={() => setBrandHeadshot(null)} uploading={uploadingBrandHeadshot} />
+                      {!brandHeadshot && savedHeadshot && (
+                        <button onClick={() => { setBrandHeadshot(savedHeadshot); setHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
+                      )}
+                    </div>
+                    <div>
+                      <ImageUploadBox label="Logo" imageUrl={brandLogo} onUpload={(f) => handleLogoUpload(f, setBrandLogo, setUploadingBrandLogo)} onClear={() => setBrandLogo(null)} uploading={uploadingBrandLogo} />
+                      {!brandLogo && savedLogo && (
+                        <button onClick={() => { setBrandLogo(savedLogo); setLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
+                      )}
+                    </div>
                     <ImageUploadBox label="Background Photo" imageUrl={brandBgPhoto} onUpload={(f) => handleUpload(f, "design-studio", setBrandBgPhoto, setUploadingBrandBg)} onClear={() => setBrandBgPhoto(null)} uploading={uploadingBrandBg} hint="Optional — overrides color" />
                   </div>
                 </div>
