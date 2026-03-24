@@ -233,7 +233,6 @@ function InfoBarTemplate({ size, listingPhoto, headshot, logo, address, beds, ba
   const photoPercent = isStory ? 62 : 55;
   const barH = h * (1 - photoPercent / 100);
   const barPadX = Math.round(40 * unit), barPadY = Math.round(24 * unit);
-  const barH = h * (1 - photoPercent / 100);
   const headshotSize = Math.round(barH * 0.55);
   const agentNameFontSize = Math.round(barH * 0.075);
   const agentDetailFontSize = Math.round(barH * 0.055);
