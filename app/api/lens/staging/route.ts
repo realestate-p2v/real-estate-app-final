@@ -222,7 +222,6 @@ The result should look like a professional interior design photograph, photoreal
       image: file,
       prompt: editPrompt,
       size: aspectSize,
-      quality: "medium",
       fidelity: "high",
     } as any);
 
