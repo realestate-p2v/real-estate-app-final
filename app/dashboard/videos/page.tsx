@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { VideoPlayer, getDownloadUrl, isCloudinaryUrl } from "@/components/video-player";
+import { VideoPlayer, getDownloadUrl, isCloudinaryUrl, getVideoThumbnail } from "@/components/video-player";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Video, Download, RefreshCw, Clock, CheckCircle, Loader2, AlertCircle, Play, ExternalLink, Check, ThumbsUp } from "lucide-react";
@@ -26,6 +26,7 @@ interface Order {
   created_at: string;
   include_edited_photos: boolean;
   clip_urls: any[];
+  photos: any[];
   revision_count: number;
   revisions_allowed: number;
 }
@@ -43,6 +44,52 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   client_revision_requested: { label: "Revision Submitted", color: "bg-amber-100 text-amber-700", icon: RefreshCw },
   error: { label: "Issue — Contact Support", color: "bg-red-100 text-red-700", icon: AlertCircle },
 };
+
+// ── Thumbnail resolver ──
+// Tries Cloudinary video thumbnail first, then falls back to first listing photo
+function getOrderThumbnail(order: Order): string | null {
+  // 1. Cloudinary video thumbnail
+  if (order.delivery_url) {
+    const cloudThumb = getVideoThumbnail(order.delivery_url);
+    if (cloudThumb) return cloudThumb;
+  }
+  // 2. First listing photo as fallback
+  if (order.photos && order.photos.length > 0) {
+    const firstPhoto = order.photos[0];
+    if (firstPhoto.secure_url) return firstPhoto.secure_url;
+    if (firstPhoto.url) return firstPhoto.url;
+  }
+  return null;
+}
+
+// ── Thumbnail card component ──
+function VideoThumbnail({ order }: { order: Order }) {
+  const thumbnail = getOrderThumbnail(order);
+
+  if (thumbnail) {
+    return (
+      <div className="aspect-video bg-black relative overflow-hidden">
+        <img
+          src={thumbnail}
+          alt={order.property_address || "Video thumbnail"}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors">
+          <div className="h-12 w-12 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+            <Play className="h-5 w-5 text-white ml-0.5" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-video bg-muted flex items-center justify-center">
+      <Video className="h-10 w-10 text-muted-foreground/40" />
+    </div>
+  );
+}
 
 export default function MyVideosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -202,15 +249,7 @@ export default function MyVideosPage() {
                     return (
                       <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden">
                         <Link href={`/video/${order.order_id || order.id}`} className="block">
-                          {hasUrl ? (
-                            <div className="pointer-events-none">
-                              <VideoPlayer url={order.delivery_url} className="aspect-video" />
-                            </div>
-                          ) : (
-                            <div className="aspect-video bg-muted flex items-center justify-center">
-                              <Video className="h-10 w-10 text-muted-foreground/40" />
-                            </div>
-                          )}
+                          <VideoThumbnail order={order} />
                         </Link>
                         <div className="p-5 space-y-3">
                           <Link href={`/video/${order.order_id || order.id}`} className="block">
@@ -302,15 +341,7 @@ export default function MyVideosPage() {
                     return (
                       <div key={order.id} className="bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/40 hover:opacity-100 transition-all opacity-75">
                         <Link href={`/video/${order.order_id || order.id}`} className="block">
-                          {hasUrl ? (
-                            <div className="pointer-events-none">
-                              <VideoPlayer url={order.delivery_url} className="aspect-video" />
-                            </div>
-                          ) : (
-                            <div className="aspect-video bg-muted flex items-center justify-center">
-                              <Video className="h-10 w-10 text-muted-foreground/40" />
-                            </div>
-                          )}
+                          <VideoThumbnail order={order} />
                           <div className="p-5 pb-3">
                             <h3 className="font-bold text-lg text-foreground hover:text-accent transition-colors">{getOrderName(order)}</h3>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
