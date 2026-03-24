@@ -648,12 +648,6 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
       </p>
     </div>
   );
-}
-  // Pages 2+: two columns, 3 photos each (6 per page)
-  const startIdx = 3 + (pageNumber - 1) * 6;
-  const pagePhotos = photos.slice(startIdx, startIdx + 6);
-  const colW = Math.round((innerW - gap) / 2);
-  const photoH = Math.round((H - margin * 2 - gap * 2 - 100) / 3);
 
   return (
     <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
