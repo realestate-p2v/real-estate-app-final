@@ -38,8 +38,8 @@ async function uploadBufferToCloudinary(
 }
 
 /**
- * Pick the best gpt-image-1 size based on aspect ratio.
- * Supported: "1024x1024", "1536x1024" (landscape), "1024x1536" (portrait)
+ * Pick the best image size based on aspect ratio.
+ * Supported: "1024x1024", "1536x1024" (landscape), "1024x1536" (portrait), "auto"
  */
 function detectAspectSize(
   width: number,
@@ -204,7 +204,7 @@ Include at least 8-12 specific items with materials, colors, and placement.`,
       // keep default landscape — most common for real estate photos
     }
 
-    // ── Step 3: OpenAI gpt-image-1 Edit API ──
+    // ── Step 3: OpenAI gpt-image-1.5 Edit API ──
     const trimmedAnalysis =
       roomAnalysis.length > 2000 ? roomAnalysis.slice(0, 2000) : roomAnalysis;
 
@@ -218,12 +218,13 @@ The result should look like a professional interior design photograph, photoreal
     const file = new File([photoBuffer], "room.png", { type: "image/png" });
 
     const openaiResponse = await openai.images.edit({
-      model: "gpt-image-1",
+      model: "gpt-image-1.5",
       image: file,
       prompt: editPrompt,
       size: aspectSize,
-      quality: "high",
-    });
+      quality: "medium",
+      fidelity: "high",
+    } as any);
 
     const base64Image = openaiResponse.data?.[0]?.b64_json;
 
