@@ -252,6 +252,7 @@ function InfoBarTemplate({ size, listingPhoto, headshot, logo, address, beds, ba
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between" style={{ height: `${100 - photoPercent}%`, padding: `${barPadY}px ${barPadX}px`, backgroundColor: barColor }}>
         <div className="flex items-center flex-shrink-0" style={{ gap: Math.round(16 * unit), maxWidth: "48%" }}>
             {headshot ? <img src={headshot} alt="Agent" className="rounded-full object-cover flex-shrink-0" style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }} /> : <div className="rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0" style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.25)` }}><User className="text-gray-500" style={{ width: 36 * unit, height: 36 * unit }} /></div>}
+          <div className="min-w-0">
             <p className="text-white font-bold truncate" style={{ fontSize: agentNameFontSize, lineHeight: 1.2 }}>{agentName || "Agent Name"}</p>
             <p className="text-gray-400 truncate" style={{ fontSize: agentDetailFontSize, lineHeight: 1.3 }}>{brokerage || "Brokerage"}</p>
             <p className="text-gray-400 truncate" style={{ fontSize: agentDetailFontSize, lineHeight: 1.3 }}>{phone || "(555) 000-0000"}</p>
