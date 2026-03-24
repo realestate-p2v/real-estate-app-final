@@ -488,87 +488,110 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
   const margin = 190;
   const innerW = W - margin * 2;
   const accent = accentColor || "#0d9488";
+  const gap = 30;
 
-if (pageNumber === 0) {
+  if (pageNumber === 0) {
     const heroPhoto = photos[0] || null;
     const photo2 = photos[1] || null;
     const photo3 = photos[2] || null;
-    const gap = 30;
-    const halfW = Math.round((innerW - gap) / 2);
 
     return (
       <div style={{ width: W, height: H, backgroundColor: "#f5f0eb", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
-        {/* Top third: all text content */}
-        <div style={{ marginBottom: 40 }}>
-          <p style={{ fontSize: 64, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
-          <p style={{ fontSize: 108, fontWeight: 900, color: accent, lineHeight: 0.95, fontStyle: "italic", marginTop: 4 }}>{address || "Property Name"}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
-            <span style={{ fontSize: 36, color: accent }}>📍</span>
-            <p style={{ fontSize: 36, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
+
+        {/* TOP: Introducing + name + location */}
+        <div>
+          <p style={{ fontSize: 90, color: accent, fontStyle: "italic", fontWeight: 700, lineHeight: 1.1 }}>Introducing</p>
+          <p style={{ fontSize: 140, fontWeight: 900, color: accent, lineHeight: 0.95, fontStyle: "italic", marginTop: 8 }}>{address || "Property Name"}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 24 }}>
+            <span style={{ fontSize: 48, color: accent }}>📍</span>
+            <p style={{ fontSize: 48, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
+          </div>
+        </div>
+
+        {/* MIDDLE: Two columns — price+features left, description right */}
+        <div style={{ display: "flex", gap: 60, marginTop: 50, width: innerW }}>
+
+          {/* Left column: price + specs + features */}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 48, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em" }}>Offered At:</p>
+            <div style={{ backgroundColor: accent, display: "inline-block", padding: "14px 50px 14px 24px", marginTop: 12, marginLeft: -24, borderRadius: "0 10px 10px 0" }}>
+              <p style={{ fontSize: 140, fontWeight: 900, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
+            </div>
+            {(beds || baths || sqft) && (
+              <p style={{ fontSize: 44, color: "#555", marginTop: 16, fontWeight: 600 }}>
+                {[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ")}
+              </p>
+            )}
+            {features && (
+              <>
+                <p style={{ fontSize: 44, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginTop: 40, marginBottom: 24 }}>Features:</p>
+                <div style={{ fontSize: 40, color: "#333", lineHeight: 2.0 }}>
+                  {features.split("\n").filter(Boolean).map((f, i) => (
+                    <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                      <span style={{ color: accent, fontWeight: 900, fontSize: 44, lineHeight: 1.3, flexShrink: 0 }}>•</span>
+                      <span>{f.replace(/^[•\-*]\s*/, "")}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          <div style={{ display: "flex", gap: 50, marginTop: 40, width: innerW }}>
-            {/* Left: price + specs + features */}
+          {/* Right column: description */}
+          {description && (
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 36, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em" }}>Offered At:</p>
-              <div style={{ backgroundColor: accent, display: "inline-block", padding: "10px 40px 10px 20px", marginTop: 8, marginLeft: -20, borderRadius: "0 8px 8px 0" }}>
-                <p style={{ fontSize: 110, fontWeight: 900, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
+              <p style={{ fontSize: 44, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 24 }}>About This Property</p>
+              <div style={{ fontSize: 38, color: "#374151", lineHeight: 1.8 }}>
+                {description.split("\n").filter(Boolean).map((p, i) => (
+                  <p key={i} style={{ marginBottom: 16 }}>{p}</p>
+                ))}
               </div>
-              {(beds || baths || sqft) && (
-                <p style={{ fontSize: 32, color: "#555", marginTop: 12, fontWeight: 600 }}>
-                  {[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ")}
-                </p>
-              )}
-              {features && (
-                <>
-                  <p style={{ fontSize: 32, fontWeight: 800, color: "#111827", textTransform: "uppercase", marginTop: 30, marginBottom: 16 }}>Features:</p>
-                  <div style={{ fontSize: 30, color: "#333", lineHeight: 1.9 }}>
-                    {features.split("\n").filter(Boolean).map((f, i) => (
-                      <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        <span style={{ color: accent, fontWeight: 900, fontSize: 32, lineHeight: 1.2, flexShrink: 0 }}>•</span>
-                        <span>{f.replace(/^[•\-*]\s*/, "")}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
-            {/* Right: description */}
-            {description && (
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 32, fontWeight: 800, color: accent, textTransform: "uppercase", marginBottom: 16 }}>About This Property</p>
-                <div style={{ fontSize: 28, color: "#374151", lineHeight: 1.75 }}>
-                  {description.split("\n").filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: 12 }}>{p}</p>)}
-                </div>
+          )}
+        </div>
+
+        {/* BOTTOM: 1 large photo + 2 side-by-side */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap, marginTop: 40 }}>
+          <div style={{ flex: 2, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
+            {heroPhoto ? (
+              <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />
+            ) : (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: "#999", fontSize: 52 }}>Photo 1</span>
               </div>
             )}
           </div>
-        </div>
-        {/* Bottom two-thirds: 1 large photo + 2 side-by-side */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap }}>
-          {/* Large hero photo */}
-          <div style={{ flex: 2, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
-            {heroPhoto ? <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 40 }}>Photo 1</span></div>}
-          </div>
-          {/* Two photos side by side */}
           <div style={{ flex: 1, display: "flex", gap }}>
             <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
-              {photo2 ? <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 2</span></div>}
+              {photo2 ? (
+                <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: "#999", fontSize: 44 }}>Photo 2</span>
+                </div>
+              )}
             </div>
             <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", backgroundColor: "#ddd" }}>
-              {photo3 ? <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#999", fontSize: 32 }}>Photo 3</span></div>}
+              {photo3 ? (
+                <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: "#999", fontSize: 44 }}>Photo 3</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
       </div>
     );
   }
+
   // Pages 2+: two columns, 3 photos each (6 per page)
   const startIdx = 3 + (pageNumber - 1) * 6;
   const pagePhotos = photos.slice(startIdx, startIdx + 6);
-  const gap = 30;
   const colW = Math.round((innerW - gap) / 2);
-  const photoH = Math.round((H - margin * 2 - gap * 2 - 80) / 3); // 3 rows, footer space
+  const photoH = Math.round((H - margin * 2 - gap * 2 - 100) / 3);
 
   return (
     <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, padding: margin, display: "flex", flexDirection: "column" }}>
@@ -579,7 +602,7 @@ if (pageNumber === 0) {
             const photo = pagePhotos[idx];
             return (
               <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? "#ddd" : "#f3f4f6" }}>
-                {photo ? <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : null}
+                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />}
               </div>
             );
           })}
@@ -590,13 +613,13 @@ if (pageNumber === 0) {
             const photo = pagePhotos[idx];
             return (
               <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? "#ddd" : "#f3f4f6" }}>
-                {photo ? <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} /> : null}
+                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", backgroundColor: "#ddd" }} />}
               </div>
             );
           })}
         </div>
       </div>
-      <p style={{ fontSize: 26, color: "#9ca3af", textAlign: "center", marginTop: 24 }}>
+      <p style={{ fontSize: 36, color: "#9ca3af", textAlign: "center", marginTop: 30 }}>
         {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
       </p>
     </div>
