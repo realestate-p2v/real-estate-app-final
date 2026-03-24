@@ -507,7 +507,7 @@ if (pageNumber === 0) {
             <p style={{ fontSize: 36, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
           </div>
 
-          <div style={{ display: "flex", gap: 50, marginTop: 40 }}>
+          <div style={{ display: "flex", gap: 50, marginTop: 40, width: innerW }}>
             {/* Left: price + specs + features */}
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 36, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.04em" }}>Offered At:</p>
