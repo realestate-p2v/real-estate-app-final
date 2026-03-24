@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { VideoPlayer, getDownloadUrl } from "@/components/video-player";
+import { VideoPlayer, getDownloadUrl, getClipPlaybackUrl, getVideoThumbnail, isCloudinaryUrl } from "@/components/video-player";
 import Link from "next/link";
 import {
   Download,
@@ -25,6 +25,8 @@ import {
   ExternalLink,
   ThumbsUp,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface Order {
@@ -49,6 +51,7 @@ interface Order {
   include_edited_photos: boolean;
   revision_count: number;
   revisions_allowed: number;
+  clip_urls: any[];
 }
 
 function getAllVideos(order: Order): { label: string; url: string }[] {
@@ -115,6 +118,116 @@ function MultiVideoPlayer({ videos, isClosed }: { videos: { label: string; url: 
       <p className="text-xs text-muted-foreground">
         {videos.length} video versions available. Click the tabs above to preview each version.
       </p>
+    </div>
+  );
+}
+
+// ── Individual Clip Player for review ──
+function ClipPreviewPlayer({ clip, index }: { clip: any; index: number }) {
+  const playbackUrl = getClipPlaybackUrl(clip);
+
+  if (!playbackUrl) {
+    return (
+      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+        <Play className="h-6 w-6 text-muted-foreground/40" />
+      </div>
+    );
+  }
+
+  return <VideoPlayer url={playbackUrl} className="aspect-video" />;
+}
+
+function ClipReviewSection({ clips, orderId }: { clips: any[]; orderId: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [activeClipIndex, setActiveClipIndex] = useState(0);
+
+  if (!clips || clips.length === 0) return null;
+
+  return (
+    <div className="bg-card rounded-xl border border-border overflow-hidden mb-8">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-5 hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Camera className="h-5 w-5 text-primary" />
+          <div className="text-left">
+            <h3 className="font-bold text-foreground">Review Individual Clips</h3>
+            <p className="text-sm text-muted-foreground">{clips.length} clips — watch each one to check for issues</p>
+          </div>
+        </div>
+        {expanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border p-5 space-y-4">
+          {/* Clip selector tabs */}
+          <div className="flex flex-wrap gap-1.5">
+            {clips.map((clip, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveClipIndex(i)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  activeClipIndex === i
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/30"
+                }`}
+              >
+                Clip {(clip.position || i + 1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Active clip player */}
+          <div className="max-w-3xl">
+            <ClipPreviewPlayer clip={clips[activeClipIndex]} index={activeClipIndex} />
+          </div>
+
+          {/* Clip description */}
+          {clips[activeClipIndex]?.description && (
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Shot {clips[activeClipIndex].position || activeClipIndex + 1}:</strong>{" "}
+              {clips[activeClipIndex].description}
+            </p>
+          )}
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveClipIndex(Math.max(0, activeClipIndex - 1))}
+              disabled={activeClipIndex === 0}
+            >
+              ← Previous Clip
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {activeClipIndex + 1} of {clips.length}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveClipIndex(Math.min(clips.length - 1, activeClipIndex + 1))}
+              disabled={activeClipIndex === clips.length - 1}
+            >
+              Next Clip →
+            </Button>
+          </div>
+
+          {/* CTA to revise */}
+          <div className="pt-3 border-t border-border">
+            <p className="text-sm text-muted-foreground mb-2">
+              See something that needs fixing? Mark specific clips for revision.
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/video/${orderId}/revise`}>
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                Open Revision Tool
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -331,6 +444,7 @@ export default function VideoDeliveryPage() {
   const allVideos = getAllVideos(order);
   const hasMultipleVideos = allVideos.length > 1;
   const hasDeliveryUrl = !!order.delivery_url;
+  const hasClips = order.clip_urls && order.clip_urls.length > 0;
   const isDelivered = DELIVERED_STATUSES.includes(order.status);
   const isClosed = order.status === "closed";
   const isRevisionInProgress = REVISION_IN_PROGRESS_STATUSES.includes(order.status);
@@ -528,6 +642,11 @@ export default function VideoDeliveryPage() {
               <p className="text-muted-foreground">Video is being processed...</p>
             </div>
           </div>
+        )}
+
+        {/* ═══ INDIVIDUAL CLIP REVIEW ═══ */}
+        {hasClips && isDelivered && (
+          <ClipReviewSection clips={order.clip_urls} orderId={orderId} />
         )}
 
         {/* Action Buttons */}
