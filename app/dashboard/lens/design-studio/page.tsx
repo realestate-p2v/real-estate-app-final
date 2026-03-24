@@ -531,8 +531,8 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
           )}
           {description && (
             <div>
-              <p style={{ fontSize: 44, fontWeight: 800, color: accent, marginTop: 44, marginBottom: 20 }}>ABOUT THIS PROPERTY:</p>
-              <div style={{ fontSize: 36, color: "#444", lineHeight: 1.8 }}>
+             <p style={{ fontSize: 44, fontWeight: 800, color: accent, marginTop: 44, marginBottom: 20 }}>ABOUT THIS PROPERTY:</p>
+              <div style={{ fontSize: 36, color: "#444", lineHeight: 1.8, wordBreak: "break-word", overflowWrap: "break-word" }}>
                 {description.split("\n").filter(Boolean).map((p, i) => (
                   <p key={i} style={{ marginBottom: 14 }}>{p}</p>
                 ))}
