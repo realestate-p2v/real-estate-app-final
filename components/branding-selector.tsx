@@ -214,23 +214,45 @@ export function BrandingSelector({
     }
   };
 
-  const handleCardUpload = (type: "intro" | "outro") => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardUpload = (type: "intro" | "outro") => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const url = reader.result as string;
-        if (type === "intro") setIntroPreview(url);
-        else setOutroPreview(url);
-        if (onBrandingDataChange) {
-          onBrandingDataChange({
-            ...brandingData,
-            type: "upload",
-            [type === "intro" ? "customIntroCardUrl" : "customOutroCardUrl"]: url,
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (type === "intro") setIntroPreview(reader.result as string);
+      else setOutroPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to Cloudinary
+    try {
+      const sigResponse = await fetch("/api/cloudinary-signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: "photo2video/design-studio" }),
+      });
+      const sigData = await sigResponse.json();
+      if (!sigData.success) throw new Error("Signature failed");
+      const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("api_key", apiKey);
+      fd.append("timestamp", timestamp.toString());
+      fd.append("signature", signature);
+      fd.append("folder", folder);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
+      const result = await res.json();
+      if (result.secure_url && onBrandingDataChange) {
+        onBrandingDataChange({
+          ...brandingData,
+          type: "upload",
+          [type === "intro" ? "customIntroCardUrl" : "customOutroCardUrl"]: result.secure_url,
+        });
+      }
+    } catch (err) {
+      console.error("Card upload failed:", err);
     }
   };
 
