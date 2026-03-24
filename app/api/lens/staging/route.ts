@@ -121,13 +121,13 @@ export async function POST(request: Request) {
           .eq("user_id", user_id)
           .gte("created_at", monthStart.toISOString());
 
-        if ((count || 0) >= 20) {
+        if ((count || 0) >= 25) {
           return NextResponse.json(
             {
               success: false,
               error: "monthly_limit_reached",
               message:
-                "You've reached the 20 staging limit for this month. Resets on the 1st.",
+                "You've reached the 25 staging limit for this month. Resets on the 1st.",
             },
             { status: 403 }
           );
