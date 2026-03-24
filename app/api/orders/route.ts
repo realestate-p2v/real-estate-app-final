@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    const {
+const {
       customer,
       uploadedPhotos,
       listing_url,
@@ -52,10 +52,12 @@ export async function POST(request: Request) {
       voiceoverVoice,
       includeEditedPhotos,
       includeUnbranded,
+      customIntroCardUrl,
+      customOutroCardUrl,
       totalPrice,
       specialInstructions,
     } = body
-
+    
     if (!customer?.email) {
       return NextResponse.json(
         { success: false, error: "Customer email is required" },
@@ -111,6 +113,8 @@ export async function POST(request: Request) {
         include_edited_photos: includeEditedPhotos || false,
         include_unbranded: includeUnbranded || false,
         include_address_on_card: body.includeAddressOnCard ?? true,
+        custom_intro_card_url: customIntroCardUrl || null,
+        custom_outro_card_url: customOutroCardUrl || null,
         total_price: totalPrice || 0,
         special_instructions: specialInstructions || null,
         referral_code: body.referral_code || null,
