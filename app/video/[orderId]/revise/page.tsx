@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -97,7 +97,7 @@ function ClipPreview({ clip, isRemoved }: { clip: RevisionClip; isRemoved: boole
           src={url}
           controls
           playsInline
-          preload="metadata"
+          preload="none"
           className="w-full h-full object-cover"
         />
         {isRemoved && (
