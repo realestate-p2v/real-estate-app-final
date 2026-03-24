@@ -222,7 +222,8 @@ The result should look like a professional interior design photograph, photoreal
       image: file,
       prompt: editPrompt,
       size: aspectSize,
-      fidelity: "high",
+      quality: "medium",
+      inputFidelity: "high",
     } as any);
 
     const base64Image = openaiResponse.data?.[0]?.b64_json;
