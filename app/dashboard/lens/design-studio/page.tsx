@@ -484,7 +484,9 @@ function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, ema
 function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths, sqft, description, features, photos, accentColor, fontFamily }: {
   pageNumber: number; address: string; cityStateZip: string; price: string; beds: string; baths: string; sqft: string; description: string; features: string; photos: string[]; accentColor: string; fontFamily: string;
 }) {
-  const W = 2550, H = 3300, margin = 0, accent = accentColor || "#1a8a8a", gap = 0;
+  const W = 2550;
+  const H = 3300;
+  const accent = accentColor || "#1a8a8a";
 
   if (pageNumber === 0) {
     const heroPhoto = photos[0] || null;
@@ -496,7 +498,6 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
 
     return (
       <div style={{ width: W, height: H, backgroundColor: "#f8f7f2", fontFamily, display: "flex" }}>
-        {/* Left column: all text */}
         <div style={{ width: leftW, padding: pad, display: "flex", flexDirection: "column" }}>
           <p style={{ fontSize: 72, color: accent, fontWeight: 700, fontStyle: "italic", lineHeight: 1.1 }}>Introducing</p>
           <p style={{ fontSize: 130, color: accent, fontStyle: "italic", lineHeight: 0.95, marginTop: 4 }}>{address || "Property Name"}</p>
@@ -504,7 +505,6 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
             <span style={{ fontSize: 40, color: accent }}>📍</span>
             <p style={{ fontSize: 40, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
           </div>
-
           <p style={{ fontSize: 44, fontWeight: 800, color: "#333", letterSpacing: "0.04em", marginTop: 50 }}>OFFERED AT:</p>
           <div style={{ backgroundColor: accent, display: "inline-block", padding: "16px 60px 16px 30px", marginTop: 12, marginLeft: -30, clipPath: "polygon(0 0, 100% 0, 92% 100%, 0 100%)" }}>
             <p style={{ fontSize: 120, fontWeight: 300, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
@@ -514,9 +514,8 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
               {[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ")}
             </p>
           )}
-
           {features && (
-            <>
+            <div>
               <p style={{ fontSize: 44, fontWeight: 800, color: "#333", marginTop: 44, marginBottom: 20 }}>
                 {address ? `${address.toUpperCase()} FEATURES:` : "FEATURES:"}
               </p>
@@ -528,22 +527,19 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
-
           {description && (
-            <>
+            <div>
               <p style={{ fontSize: 44, fontWeight: 800, color: accent, marginTop: 44, marginBottom: 20 }}>ABOUT THIS PROPERTY:</p>
               <div style={{ fontSize: 36, color: "#444", lineHeight: 1.8 }}>
                 {description.split("\n").filter(Boolean).map((p, i) => (
                   <p key={i} style={{ marginBottom: 14 }}>{p}</p>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
-
-        {/* Right column: photos */}
         <div style={{ width: rightW, display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 55, overflow: "hidden" }}>
             {heroPhoto ? (
@@ -579,6 +575,43 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
     );
   }
 
+  const startIdx = 3 + (pageNumber - 1) * 6;
+  const pagePhotos = photos.slice(startIdx, startIdx + 6);
+  const pgPad = 120;
+  const pgGap = 30;
+  const colW = Math.round((W - pgPad * 2 - pgGap) / 2);
+  const photoH = Math.round((H - pgPad * 2 - pgGap * 2 - 80) / 3);
+
+  return (
+    <div style={{ width: W, height: H, backgroundColor: "#f8f7f2", fontFamily, padding: pgPad, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex", gap: pgGap }}>
+        <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
+          {[0, 2, 4].map((idx) => {
+            const photo = pagePhotos[idx];
+            return (
+              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f8f7f2" }}>
+                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
+          {[1, 3, 5].map((idx) => {
+            const photo = pagePhotos[idx];
+            return (
+              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f8f7f2" }}>
+                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <p style={{ fontSize: 36, color: "#9ca3af", textAlign: "center", marginTop: 30 }}>
+        {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
+      </p>
+    </div>
+  );
+}
   // Pages 2+: two columns, 3 photos each (6 per page)
   const startIdx = 3 + (pageNumber - 1) * 6;
   const pagePhotos = photos.slice(startIdx, startIdx + 6);
