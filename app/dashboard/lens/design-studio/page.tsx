@@ -611,7 +611,7 @@ function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths
       </p>
     </div>
   );
-
+}
 
 /* ═══════════════════════════════════════════════════════
    BRANDING CARD TEMPLATE (unchanged from original)
