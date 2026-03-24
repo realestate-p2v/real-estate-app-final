@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 const ADMIN_EMAIL = "realestatephoto2video@gmail.com";
+const MONTHLY_STAGING_LIMIT = 25;
 
 const ROOM_TYPES = [
   { value: "living_room", label: "Living Room" },
@@ -166,6 +167,54 @@ function BeforeAfterSlider({
   );
 }
 
+// ─── Usage Bar ───
+function UsageBar({
+  used,
+  limit,
+  isAdmin,
+}: {
+  used: number;
+  limit: number;
+  isAdmin: boolean;
+}) {
+  if (isAdmin) return null;
+
+  const pct = Math.min((used / limit) * 100, 100);
+  const remaining = Math.max(limit - used, 0);
+  const isLow = remaining <= 5 && remaining > 0;
+  const isOut = remaining === 0;
+
+  return (
+    <div className="w-full bg-card rounded-xl border border-border p-4 mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-semibold text-foreground">
+          Monthly Staging Usage
+        </span>
+        <span className="text-sm font-bold text-foreground">
+          {used} <span className="text-muted-foreground font-normal">/ {limit}</span>
+        </span>
+      </div>
+      <div className="h-3 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${
+            isOut
+              ? "bg-red-500"
+              : isLow
+              ? "bg-amber-500"
+              : "bg-[#22c55e]"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1.5">
+        {isOut
+          ? "You've used all stagings this month. Resets on the 1st."
+          : `${remaining} staging${remaining === 1 ? "" : "s"} remaining this month`}
+      </p>
+    </div>
+  );
+}
+
 // ─── Main Page ───
 export default function VirtualStagingPage() {
   // Auth
@@ -174,6 +223,7 @@ export default function VirtualStagingPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
   const [stagingCount, setStagingCount] = useState(0);
+  const [monthlyCount, setMonthlyCount] = useState(0);
 
   // Upload
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -222,7 +272,7 @@ export default function VirtualStagingPage() {
         if (usage?.is_subscriber) setIsSubscriber(true);
       }
 
-      // Load staging count + history
+      // Load total staging count + history
       const { data: stagings, count } = await supabase
         .from("lens_staging")
         .select("*", { count: "exact" })
@@ -231,6 +281,19 @@ export default function VirtualStagingPage() {
 
       setStagingCount(count || 0);
       setPreviousStagings(stagings || []);
+
+      // Calculate monthly count for usage bar
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { count: mCount } = await supabase
+        .from("lens_staging")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", monthStart.toISOString());
+
+      setMonthlyCount(mCount || 0);
 
       // Check sessionStorage for photo from Coach
       try {
@@ -357,6 +420,7 @@ export default function VirtualStagingPage() {
 
       setResult(newResult);
       setStagingCount((c) => c + 1);
+      setMonthlyCount((c) => c + 1);
       setPreviousStagings((prev) => [newResult, ...prev]);
     } catch {
       setError("Something went wrong. Please try again.");
@@ -374,7 +438,7 @@ export default function VirtualStagingPage() {
 
   // ── Access logic ──
   const canGenerate =
-    isAdmin || isSubscriber || stagingCount < 1;
+    isAdmin || (isSubscriber && monthlyCount < MONTHLY_STAGING_LIMIT) || (!isSubscriber && stagingCount < 1);
   const freeTrialUsed = !isAdmin && !isSubscriber && stagingCount >= 1;
 
   // ── Subscription badge ──
@@ -460,6 +524,15 @@ export default function VirtualStagingPage() {
           </div>
           {renderBadge()}
         </div>
+
+        {/* ═══ Usage Bar (subscribers only) ═══ */}
+        {isSubscriber && (
+          <UsageBar
+            used={monthlyCount}
+            limit={MONTHLY_STAGING_LIMIT}
+            isAdmin={isAdmin}
+          />
+        )}
 
         {/* ═══ Main Tool Area ═══ */}
         {!activeSlider ? (
@@ -759,7 +832,7 @@ export default function VirtualStagingPage() {
               Unlimited Virtual Staging with P2V Lens
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto text-sm">
-              Stage up to 20 rooms per month, plus AI photo coaching, listing descriptions, priority
+              Stage up to {MONTHLY_STAGING_LIMIT} rooms per month, plus AI photo coaching, listing descriptions, priority
               delivery, and more — starting at $27.95/month.
             </p>
             <Button
