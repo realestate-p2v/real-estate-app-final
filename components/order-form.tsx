@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Script from "next/script";
 import { PhotoUploader, type PhotoItem } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
 import { BrandingSelector, type BrandingData } from "@/components/branding-selector";
 import { VoiceoverSelector } from "@/components/voiceover-selector";
 import { OrderSummary } from "@/components/order-summary";
+import { hasConsent } from "@/components/cookie-consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import Link from "next/link";
 import {
   Upload,
   Link as LinkIcon,
@@ -241,6 +242,41 @@ export function OrderForm() {
   const allUploadsComplete = photos.length > 0 && photos.every((p) => p.uploadStatus === "complete");
   const steps = isUrlMode ? URL_STEPS : UPLOAD_STEPS;
   const totalSteps = steps.length;
+
+  // ── UTM capture on mount ──
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const utm = {
+        utm_source: params.get("utm_source") || "",
+        utm_medium: params.get("utm_medium") || "",
+        utm_campaign: params.get("utm_campaign") || "",
+        utm_term: params.get("utm_term") || "",
+        utm_content: params.get("utm_content") || "",
+      };
+      if (utm.utm_source) {
+        sessionStorage.setItem("p2v_utm", JSON.stringify(utm));
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+
+  // ── InitiateCheckout event — fire once when first photo uploads or URL is entered ──
+  const [checkoutInitiated, setCheckoutInitiated] = useState(false);
+  useEffect(() => {
+    if (checkoutInitiated) return;
+    const hasContent = (isUploadMode && photos.length > 0) || (isUrlMode && listingUrl.trim() !== "");
+    if (!hasContent) return;
+    setCheckoutInitiated(true);
+
+    if (hasConsent("marketing") && typeof (window as any).fbq === "function") {
+      (window as any).fbq("track", "InitiateCheckout");
+    }
+    if (hasConsent("analytics") && typeof (window as any).gtag === "function") {
+      (window as any).gtag("event", "begin_checkout");
+    }
+  }, [photos.length, listingUrl, isUploadMode, isUrlMode, checkoutInitiated]);
 
   // ── Draft save/load ──
   const draft = useOrderDraft({
@@ -517,6 +553,14 @@ export function OrderForm() {
         musicFileUrl = musicResult?.secure_url || "";
       }
 
+      // Retrieve UTM data from session storage
+      let utmData: Record<string, string> = {};
+      try {
+        utmData = JSON.parse(sessionStorage.getItem("p2v_utm") || "{}");
+      } catch {
+        utmData = {};
+      }
+
       const dbResponse = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -555,6 +599,9 @@ export function OrderForm() {
           includeAddressOnCard,
           totalPrice: getTotalPrice(),
           specialInstructions: formData.notes,
+          utm_source: utmData.utm_source || null,
+          utm_medium: utmData.utm_medium || null,
+          utm_campaign: utmData.utm_campaign || null,
         }),
       });
 
@@ -618,11 +665,6 @@ export function OrderForm() {
 
   return (
     <div className="relative">
-      <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
-        strategy="afterInteractive"
-      />
-
       <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         {/* ── Main Column ── */}
         <div className="lg:col-span-2 space-y-6">
@@ -1326,13 +1368,18 @@ export function OrderForm() {
                 </div>
               </div>
 
+              {/* Terms & Privacy */}
               <p className="text-xs text-muted-foreground text-center mt-3">
                 By placing this order, you agree to our{" "}
-              <a href="/terms" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">Terms of Service</a>
-              {" "}and{" "}
-              <a href="/privacy" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+                <Link href="/terms" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">
+                  Terms of Service
+                </Link>
+                {" "}and{" "}
+                <Link href="/privacy" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </Link>.
               </p>
-              
+
               <StepNavigation
                 currentStep={currentStep}
                 totalSteps={totalSteps}
