@@ -1,8 +1,27 @@
 import { getCheckoutSession } from "@/app/actions/stripe";
+import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, ArrowRight, BookOpen, Clock, Eye, Mail, Share2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConversionTracker } from "@/components/conversion-tracker";
+
+async function getOrderTotalPrice(orderId: string): Promise<number | null> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data } = await supabase
+      .from("orders")
+      .select("total_price")
+      .eq("order_id", orderId)
+      .single();
+    return data?.total_price || null;
+  } catch {
+    return null;
+  }
+}
 
 export default async function SuccessPage({
   searchParams,
@@ -13,6 +32,7 @@ export default async function SuccessPage({
   let customerEmail = null;
   let orderId = null;
   let isBrokerage = false;
+  let totalPrice: number | null = null;
 
   try {
     const params = await searchParams;
@@ -23,12 +43,21 @@ export default async function SuccessPage({
       sessionData = await getCheckoutSession(params.session_id);
       customerEmail = sessionData?.customer_details?.email ?? (sessionData as any)?.customer_email;
     }
+
+    if (orderId) {
+      totalPrice = await getOrderTotalPrice(orderId);
+    }
   } catch (error) {
     console.error("[Success Page] Error loading session:", error);
   }
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Conversion tracking — fires once on mount */}
+      {orderId && (
+        <ConversionTracker orderId={orderId} totalPrice={totalPrice} type="video" />
+      )}
+
       <header className="border-b border-border bg-primary">
         <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
           <Link href="/">
@@ -122,7 +151,7 @@ export default async function SuccessPage({
               <div>
                 <h3 className="font-bold text-foreground">Delivery Within 24 Hours</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  You'll receive an email with a link to watch, download, and share your video. 1 free revision is included if you want any changes.
+                  You&apos;ll receive an email with a link to watch, download, and share your video. 1 free revision is included if you want any changes.
                 </p>
               </div>
             </div>
@@ -136,7 +165,7 @@ export default async function SuccessPage({
               <BookOpen className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-foreground text-lg">Free: The Realtor's Guide to Real Estate Photography</h3>
+              <h3 className="font-bold text-foreground text-lg">Free: The Realtor&apos;s Guide to Real Estate Photography</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 23-page guide with camera settings, lighting tips, staging checklists, drone photography, and more. Download your free copy while you wait.
               </p>
@@ -198,6 +227,11 @@ export default async function SuccessPage({
             <Link href="/resources/photography-guide" className="hover:text-foreground transition-colors">Free Guide</Link>
             <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
             <Link href="/partners" className="hover:text-foreground transition-colors">Partners</Link>
+          </div>
+          <div className="flex justify-center gap-6 mt-2">
+            <Link href="/privacy" className="hover:text-foreground transition-colors text-xs">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors text-xs">Terms of Service</Link>
+            <Link href="/refund-policy" className="hover:text-foreground transition-colors text-xs">Refund Policy</Link>
           </div>
         </div>
       </footer>
