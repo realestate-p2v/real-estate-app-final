@@ -30,7 +30,6 @@ export default function HomePage() {
       <FAQ />
       <ContactSection />
       <Footer />
-      <WhatsAppButton />
     </main>
   );
 }
