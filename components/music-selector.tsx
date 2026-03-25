@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Music, Loader2, Check, Sparkles } from "lucide-react";
 
@@ -51,8 +51,18 @@ export function MusicSelector({
     setLibraryLoading(false);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchLibrary();
+  }, []);
+
+  // Stop audio playback when component unmounts (e.g. navigating to next wizard step)
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   const handlePlayTrack = (trackId: string, audioUrl: string) => {
