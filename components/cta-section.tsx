@@ -21,7 +21,7 @@ export function CTASection() {
         </h2>
         
         <p className="mt-8 text-xl md:text-2xl text-primary-foreground/90 max-w-2xl mx-auto font-medium">
-          Get your professional walkthrough video hand-edited and delivered in under 24 hours. 
+          Get your professional walkthrough video hand-edited and delivered in under 12 hours. 
         </p>
 
         <div className="mt-12 flex flex-col items-center gap-6">
