@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
+import { LensConversionTracker } from "@/components/lens-conversion-tracker";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -179,6 +180,7 @@ export default function DashboardLensPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+      <LensConversionTracker />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
@@ -412,6 +414,11 @@ export default function DashboardLensPage() {
             <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
             <Link href="/lens" className="hover:text-foreground transition-colors">P2V Lens</Link>
             <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
+          </div>
+          <div className="flex justify-center gap-6 mt-2">
+            <Link href="/privacy" className="hover:text-foreground transition-colors text-xs">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors text-xs">Terms of Service</Link>
+            <Link href="/refund-policy" className="hover:text-foreground transition-colors text-xs">Refund Policy</Link>
           </div>
         </div>
       </footer>
