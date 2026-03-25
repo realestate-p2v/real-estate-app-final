@@ -9,7 +9,6 @@ import { PricingSection } from "@/components/pricing-section";
 import { GreenButton } from "@/components/green-button";
 import { ContactSection } from "@/components/contact-section";
 import { Footer } from "@/components/footer";
-import { WhatsAppButton } from "@/components/whatsapp-button";
 import { TrustSection } from "@/components/trust-section";
 import { FAQ } from "@/components/faq";
 import { BrokerageCTA } from "@/components/brokerage-cta";
