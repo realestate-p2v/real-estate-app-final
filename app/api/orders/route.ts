@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-const {
+    const {
       customer,
       uploadedPhotos,
       listing_url,
@@ -56,6 +56,9 @@ const {
       customOutroCardUrl,
       totalPrice,
       specialInstructions,
+      utm_source,
+      utm_medium,
+      utm_campaign,
     } = body
     
     if (!customer?.email) {
@@ -118,6 +121,9 @@ const {
         total_price: totalPrice || 0,
         special_instructions: specialInstructions || null,
         referral_code: body.referral_code || null,
+        utm_source: utm_source || null,
+        utm_medium: utm_medium || null,
+        utm_campaign: utm_campaign || null,
       })
       .select()
       .single()
