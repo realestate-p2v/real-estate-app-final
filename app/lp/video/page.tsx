@@ -15,6 +15,9 @@ import {
   Play,
   CheckCircle,
   ArrowRight,
+  Music,
+  Palette,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasConsent } from "@/components/cookie-consent";
@@ -133,6 +136,36 @@ export default function VideoLandingPage() {
         </div>
       </section>
 
+      {/* ── What's Included ── */}
+      <section className="px-4 sm:px-6 pb-14">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-center text-foreground mb-3">
+            Everything Included — No Hidden Fees
+          </h2>
+          <p className="text-center text-muted-foreground mb-8">
+            Every video order comes with these features at no extra charge.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+            {[
+              { icon: Palette, label: "Custom Branding", desc: "Your name, logo, and contact info on intro & outro cards" },
+              { icon: Music, label: "Licensed Music", desc: "Choose from our royalty-free music library" },
+              { icon: Wand2, label: "AI Camera Motion", desc: "Cinematic pan, zoom, and dolly effects on every photo" },
+              { icon: Users, label: "Human-Reviewed", desc: "A real editor reviews every clip before delivery" },
+              { icon: RefreshCw, label: "1 Free Revision", desc: "Flag any clips you want regenerated within 5 days" },
+              { icon: Monitor, label: "All Platforms", desc: "Landscape for MLS & Zillow, or vertical for Reels & TikTok" },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div key={label} className="bg-card rounded-xl border border-border p-4 text-center">
+                <div className="mx-auto h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center mb-2">
+                  <Icon className="h-5 w-5 text-accent" />
+                </div>
+                <h3 className="text-sm font-bold text-foreground">{label}</h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── How It Works ── */}
       <section className="px-4 sm:px-6 pb-14">
         <div className="max-w-3xl mx-auto">
@@ -211,6 +244,12 @@ export default function VideoLandingPage() {
                 <div className="mt-3 text-xs text-muted-foreground space-y-1">
                   <p className="flex items-center justify-center gap-1">
                     <CheckCircle className="h-3 w-3 text-green-600" /> Under 12h delivery
+                  </p>
+                  <p className="flex items-center justify-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-green-600" /> Free branding cards
+                  </p>
+                  <p className="flex items-center justify-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-green-600" /> Licensed music
                   </p>
                   <p className="flex items-center justify-center gap-1">
                     <CheckCircle className="h-3 w-3 text-green-600" /> 1 free revision
