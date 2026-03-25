@@ -12,31 +12,10 @@ import {
   ImageIcon,
   AlertCircle,
   Phone,
-  Camera,
   GripVertical,
   Loader2,
   Crop,
 } from "lucide-react";
-
-const DIRECTIONS = [
-  { key: 'push_in', label: 'Fwd' },
-  { key: 'pull_back', label: 'Back' },
-  { key: 'diagonal_top_left', label: 'Fwd + L' },
-  { key: 'diagonal_top_right', label: 'Fwd + R' },
-  { key: 'diagonal_bottom_left', label: 'Back + L' },
-  { key: 'diagonal_bottom_right', label: 'Back + R' },
-  { key: 'tilt_up', label: 'Look Up' },
-  { key: 'tilt_down', label: 'Look Down' },
-  { key: 'orbit_left', label: 'Orbit L' },
-  { key: 'orbit_right', label: 'Orbit R' },
-  { key: 'rise', label: 'Rise' },
-  { key: 'bring_to_life', label: '✨ Bring to Life' },
-];
-
-const SPEEDS = [
-  { key: 'slow', label: 'Slow' },
-  { key: 'medium', label: 'Med' },
-];
 
 export interface PhotoItem {
   id: string;
@@ -181,17 +160,14 @@ function CropPreview({
           {cropsTopBottom ? 'Bottom ↓' : 'Right →'}
         </span>
       </div>
-      
-      
     </div>
-    );
+  );
 }
 
 export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape" }: PhotoUploaderProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showPhotoTips, setShowPhotoTips] = useState(false);
-  const [openDirectionIndex, setOpenDirectionIndex] = useState<number | null>(null);
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
 
   const compressImage = (file: File, maxSizeMB: number = 8): Promise<Blob> => {
@@ -328,29 +304,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange]
   );
 
-  const handleDirectionChange = useCallback(
-    (id: string, direction: string | null) => {
-      onPhotosChange(photos.map((p) => (p.id === id ? { ...p, camera_direction: direction, custom_motion: direction ? '' : p.custom_motion } : p)));
-    },
-    [photos, onPhotosChange]
-  );
-
-  const handleSpeedChange = useCallback(
-    (id: string, speed: string | null) => {
-      onPhotosChange(photos.map((p) => (p.id === id ? { ...p, camera_speed: speed } : p)));
-    },
-    [photos, onPhotosChange]
-  );
-
-  const handleCustomMotionChange = useCallback(
-    (id: string, custom_motion: string) => {
-      if (custom_motion.length <= 80) {
-        onPhotosChange(photos.map((p) => (p.id === id ? { ...p, custom_motion, camera_direction: custom_motion ? null : p.camera_direction } : p)));
-      }
-    },
-    [photos, onPhotosChange]
-  );
-
   const handleCropOffsetChange = useCallback(
     (id: string, aspect: 'landscape' | 'vertical', value: number) => {
       const key = aspect === 'landscape' ? 'crop_offset_landscape' : 'crop_offset_vertical';
@@ -388,16 +341,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
   const showTooManyPhotosWarning = photos.length > 35;
 
-  const getCameraDisplayText = (photo: PhotoItem) => {
-    if (photo.custom_motion) return `Custom: "${photo.custom_motion}"`;
-    if (photo.camera_direction) {
-      const dir = DIRECTIONS.find(d => d.key === photo.camera_direction);
-      const speed = SPEEDS.find(s => s.key === photo.camera_speed);
-      return `${dir?.label || photo.camera_direction}${speed ? ` · ${speed.label}` : ''}`;
-    }
-    return 'AI Auto (recommended)';
-  };
-
   const needsCropForOrientation = (photo: PhotoItem, orient: string) => {
     if (!photo.original_width || !photo.original_height) return false;
     const ratio = photo.original_width / photo.original_height;
@@ -434,8 +377,8 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           </div>
           <p className="text-lg font-semibold">Upload your listing photos</p>
           <p className="text-muted-foreground">Drag and drop or click to select</p>
-          <p className="text-xs text-muted-foreground mt-2">💡 Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
-          <p className="text-xs text-muted-foreground mt-1">📐 You can adjust the crop position after uploading.</p>
+          <p className="text-xs text-muted-foreground mt-2">Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
+          <p className="text-xs text-muted-foreground mt-1">You can adjust the crop position after uploading.</p>
         </label>
       </div>
       
@@ -548,17 +491,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                   {photo.uploadStatus === 'failed' && <span className="text-red-500 text-sm font-semibold">✕ Failed</span>}
 
                   <button type="button"
-                    onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(openDirectionIndex === index ? null : index); setOpenCropIndex(null); }}
-                    className={`text-xs py-1.5 px-3 rounded-lg border flex items-center gap-1.5 transition-colors ${
-                      openDirectionIndex === index ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
-                    }`}>
-                    <Camera className="h-3.5 w-3.5" />
-                    <span>Camera Control</span>
-                    <span className="text-muted-foreground">▾</span>
-                  </button>
-
-                  <button type="button"
-                    onClick={(e) => { e.stopPropagation(); setOpenCropIndex(openCropIndex === index ? null : index); setOpenDirectionIndex(null); }}
+                    onClick={(e) => { e.stopPropagation(); setOpenCropIndex(openCropIndex === index ? null : index); }}
                     className={`text-xs py-1.5 px-3 rounded-lg border flex items-center gap-1.5 transition-colors ${
                       openCropIndex === index ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
                     }`}>
@@ -567,7 +500,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                     <span className="text-muted-foreground">▾</span>
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">These controls are optional — if left blank, AI will take care of it.</p>
                 {photo.original_width && (
                   <p className="text-xs text-muted-foreground">{photo.original_width} × {photo.original_height}px</p>
                 )}
@@ -582,7 +514,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
             {openCropIndex === index && (
               <div className="mt-3 pt-3 border-t border-border space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we'll auto-center the crop. Drag the slider to adjust which part of your photo is visible in the video.
+                  <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we&apos;ll auto-center the crop. Drag the slider to adjust which part of your photo is visible in the video.
                 </p>
                 
                 {!needsCropForOrientation(photo, orientation) ? (
@@ -608,7 +540,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-left">
                       <p className="text-xs font-semibold text-foreground">Cropping tips:</p>
-                      <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don't crop too tight on the roofline</p>
+                      <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don&apos;t crop too tight on the roofline</p>
                       <p className="text-xs text-muted-foreground">• Front doors and entryways look best <span className="font-medium text-foreground">slightly below center</span></p>
                       <p className="text-xs text-muted-foreground">• Keep <span className="font-medium text-foreground">key features visible</span> — landscaping, pools, and driveways add context</p>
                       <p className="text-xs text-muted-foreground">• For interiors, keep <span className="font-medium text-foreground">floors and ceilings balanced</span> — avoid cutting off either completely</p>
@@ -617,86 +549,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
                 )}
 
                 <button type="button" onClick={(e) => { e.stopPropagation(); setOpenCropIndex(null); }}
-                  className="text-sm text-primary font-semibold hover:underline">
-                  Done ✓
-                </button>
-              </div>
-            )}
-
-            {openDirectionIndex === index && (
-              <div className="mt-3 pt-3 border-t border-border space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">This is optional.</span> Leave on "AI Auto" and we'll pick the best movement for this photo. Or choose your own below.
-                </p>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Direction:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, null); }}
-                      className={`text-xs py-2 px-3 rounded-lg border text-center transition-all ${
-                        !photo.camera_direction && !photo.custom_motion ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
-                      }`}>
-                      🤖 AI Auto (recommended)
-                    </button>
-                    {DIRECTIONS.map(d => (
-                      <button key={d.key} type="button" onClick={(e) => { e.stopPropagation(); handleDirectionChange(photo.id, d.key); }}
-                        className={`text-xs py-2 px-3 rounded-lg border text-center transition-all ${
-                          photo.camera_direction === d.key ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
-                        }`}>
-                        {d.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {photo.camera_direction !== 'bring_to_life' && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Speed:</p>
-                  <div className="flex gap-1.5">
-                    {SPEEDS.map(s => (
-                      <button key={s.key} type="button"
-                        onClick={(e) => { e.stopPropagation(); handleSpeedChange(photo.id, photo.camera_speed === s.key ? null : s.key); }}
-                        className={`text-xs py-2 px-4 rounded-lg border text-center transition-all ${
-                          photo.camera_speed === s.key ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-border hover:bg-muted'
-                        }`}>
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                )}
-
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    {photo.camera_direction === 'bring_to_life'
-                      ? 'Describe the action (warm, friendly actions work best):'
-                      : 'Or describe your own camera movement (optional):'}
-                  </p>
-                  <Input
-                    placeholder={photo.camera_direction === 'bring_to_life'
-                      ? "e.g. Agent waves warmly at camera and smiles"
-                      : "e.g. Slowly zoom into the fireplace then pan right"}
-                    value={photo.custom_motion || ''}
-                    onChange={(e) => { handleCustomMotionChange(photo.id, e.target.value); }}
-                    onClick={(e) => e.stopPropagation()}
-                    maxLength={80}
-                    className="text-sm h-9"
-                  />
-                  {photo.custom_motion && (
-                    <p className="text-xs text-muted-foreground mt-1">{80 - (photo.custom_motion?.length || 0)} characters remaining</p>
-                  )}
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-foreground">Tips for best results:</p>
-                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">AI Auto works great</span> for most photos — our AI picks the best movement</p>
-                  <p className="text-xs text-muted-foreground">• Move <span className="font-medium text-foreground">toward</span> the focal point of the photo (Fwd is most popular)</p>
-                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Slow or Med</span> speed looks most professional</p>
-                  <p className="text-xs text-muted-foreground">• Use <span className="font-medium text-foreground">Bring to Life</span> for photos with people, pets, or nature</p>
-                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">Text on signs or walls</span> may appear distorted — crop out any text that isn't fully legible in the photo</p>
-                  <p className="text-xs text-muted-foreground">• <span className="font-medium text-foreground">If some text is partially blocked</span> use simple movements like FWD or BACK + SLOW for best results</p>
-                </div>
-                
-                <button type="button" onClick={(e) => { e.stopPropagation(); setOpenDirectionIndex(null); }}
                   className="text-sm text-primary font-semibold hover:underline">
                   Done ✓
                 </button>
