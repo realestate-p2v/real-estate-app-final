@@ -111,6 +111,7 @@ export default function VideoLandingPage() {
       </section>
 
       {/* ── Sample Video ── */}
+      {/* TODO: Replace DEMO_VIDEO_URL with the Cloudinary URL of the uploaded demo video */}
       <section className="px-4 sm:px-6 pb-14">
         <div className="max-w-3xl mx-auto">
           <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl aspect-video bg-black">
@@ -120,10 +121,9 @@ export default function VideoLandingPage() {
               loop
               playsInline
               className="w-full h-full object-cover"
-              poster="/real-estate-photo-to-video.jpg"
             >
               <source
-                src="https://res.cloudinary.com/dvnwrsmfv/video/upload/v1741640873/photo2video/demo/t1_demo_landscape_slhb5y.mp4"
+                src="DEMO_VIDEO_URL"
                 type="video/mp4"
               />
             </video>
