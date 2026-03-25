@@ -111,7 +111,6 @@ export default function VideoLandingPage() {
       </section>
 
       {/* ── Sample Video ── */}
-      {/* TODO: Replace DEMO_VIDEO_URL with the Cloudinary URL of the uploaded demo video */}
       <section className="px-4 sm:px-6 pb-14">
         <div className="max-w-3xl mx-auto">
           <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl aspect-video bg-black">
@@ -123,7 +122,7 @@ export default function VideoLandingPage() {
               className="w-full h-full object-cover"
             >
               <source
-                src="DEMO_VIDEO_URL"
+                src="https://res.cloudinary.com/dh6ztnoue/video/upload/v1774477216/p2v-demo-720HD_zop75m.mp4"
                 type="video/mp4"
               />
             </video>
