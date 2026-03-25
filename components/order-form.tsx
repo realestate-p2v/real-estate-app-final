@@ -218,6 +218,8 @@ export function OrderForm() {
   const [photoPermission, setPhotoPermission] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMobileSummary, setShowMobileSummary] = useState(false);
+  const [seqDraggedIndex, setSeqDraggedIndex] = useState<number | null>(null);
+  const [seqDragOverIndex, setSeqDragOverIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -610,8 +612,6 @@ export function OrderForm() {
     }
   };
 
- 
-
   // ═══════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════
@@ -915,23 +915,51 @@ export function OrderForm() {
                 </div>
               </div>
 
-              {/* Photo grid with reorder */}
+              {/* Photo grid with drag-and-drop reorder */}
+              <p className="text-sm text-muted-foreground">Drag photos to reorder, or use the arrows on hover.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {photos.map((photo, index) => (
                   <div
                     key={photo.id}
-                    className="relative rounded-xl overflow-hidden border border-border group"
+                    draggable
+                    onDragStart={() => setSeqDraggedIndex(index)}
+                    onDragOver={(e) => { e.preventDefault(); setSeqDragOverIndex(index); }}
+                    onDragEnd={() => { setSeqDraggedIndex(null); setSeqDragOverIndex(null); }}
+                    onDrop={() => {
+                      if (seqDraggedIndex !== null && seqDraggedIndex !== index) {
+                        const newPhotos = [...photos];
+                        const [moved] = newPhotos.splice(seqDraggedIndex, 1);
+                        newPhotos.splice(index, 0, moved);
+                        setPhotos(newPhotos);
+                        setSequenceConfirmed(false);
+                      }
+                      setSeqDraggedIndex(null);
+                      setSeqDragOverIndex(null);
+                    }}
+                    className={`relative rounded-xl overflow-hidden border-2 group cursor-grab active:cursor-grabbing transition-all ${
+                      seqDraggedIndex === index
+                        ? "opacity-40 scale-95 border-primary"
+                        : seqDragOverIndex === index
+                        ? "border-primary ring-2 ring-primary/30 scale-105"
+                        : "border-border hover:border-primary/40"
+                    }`}
                   >
                     <div className="aspect-[4/3] relative">
                       <img
                         src={photo.preview}
                         alt={photo.description || `Photo ${index + 1}`}
                         className="absolute inset-0 w-full h-full object-cover"
+                        draggable={false}
                       />
                     </div>
-                    {/* Number badge */}
-                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold shadow-md">
-                      {index + 1}
+                    {/* Drag handle + number badge */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1">
+                      <div className="bg-black/60 text-white rounded p-0.5">
+                        <GripVertical className="h-4 w-4" />
+                      </div>
+                      <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold shadow-md">
+                        {index + 1}
+                      </div>
                     </div>
                     {/* Reorder buttons */}
                     <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -942,6 +970,7 @@ export function OrderForm() {
                           const newPhotos = [...photos];
                           [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
                           setPhotos(newPhotos);
+                          setSequenceConfirmed(false);
                         }}
                         disabled={index === 0}
                         className="h-6 w-6 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/80 disabled:opacity-30"
@@ -955,6 +984,7 @@ export function OrderForm() {
                           const newPhotos = [...photos];
                           [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]];
                           setPhotos(newPhotos);
+                          setSequenceConfirmed(false);
                         }}
                         disabled={index === photos.length - 1}
                         className="h-6 w-6 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/80 disabled:opacity-30"
