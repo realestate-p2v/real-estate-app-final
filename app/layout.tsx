@@ -1,69 +1,62 @@
-import Script from "next/script";
-import React from "react"
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import './globals.css'
+import React from "react";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { TrackingScripts } from "@/components/tracking-scripts";
+import { CookieConsent } from "@/components/cookie-consent";
+import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
 const geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Real Estate Photo 2 Video | Professional Video Agency',
-  description: 'A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos.',
-  generator: 'v0.app',
-  
+  title: "Real Estate Photo 2 Video | Professional Video Agency",
+  description:
+    "A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos.",
+  generator: "v0.app",
+
   openGraph: {
-    title: 'Real Estate Photo 2 Video | Professional Video Agency',
-    description: 'Turn listing photos into professional walkthrough videos. Hand-edited by real editors for maximum impact.',
-    url: 'https://realestatephoto2video.com', 
-    siteName: 'Real Estate Photo 2 Video',
+    title: "Real Estate Photo 2 Video | Professional Video Agency",
+    description:
+      "Turn listing photos into professional walkthrough videos. Hand-edited by real editors for maximum impact.",
+    url: "https://realestatephoto2video.com",
+    siteName: "Real Estate Photo 2 Video",
     images: [
       {
-        url: 'https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2', 
+        url: "https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2",
         width: 1200,
         height: 630,
-        alt: 'Professional Real Estate Video Preview',
+        alt: "Professional Real Estate Video Preview",
       },
     ],
-    locale: 'en_US',
-    type: 'website',
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Real Estate Photo 2 Video',
-    description: 'Hand-edited professional real estate videos from your listing photos.',
-    images: ['https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2'],
+    card: "summary_large_image",
+    title: "Real Estate Photo 2 Video",
+    description:
+      "Hand-edited professional real estate videos from your listing photos.",
+    images: [
+      "https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2",
+    ],
   },
   icons: {
-    icon: '/icon.svg',
-    apple: '/apple-icon.png',
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <head>
-        {/* Google Tag Manager - Head */}
-        <Script
-          id="gtm-head"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-MKVR4C6N');`,
-          }}
-        />
-      </head>
+      <head />
       <body className={`${geist.className} font-sans antialiased`}>
-        {/* Google Tag Manager - Noscript */}
+        {/* Google Tag Manager - Noscript fallback (harmless, no consent needed) */}
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-MKVR4C6N"
@@ -73,29 +66,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
 
-        {/* Meta Pixel */}
-        <Script
-          id="meta-pixel"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1769748957035473');
-      fbq('track', 'PageView');
-    `,
-          }}
-        />
+        {/* Consent-aware tracking scripts (GTM, GA, Meta Pixel) */}
+        <TrackingScripts />
+
         {children}
-       
+
+        {/* Cookie consent banner */}
+        <CookieConsent />
+
+        {/* Vercel Analytics (first-party, no consent needed) */}
         <Analytics />
       </body>
     </html>
-  )
+  );
 }
