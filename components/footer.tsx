@@ -1,23 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import Script from "next/script";
 import { CookieSettingsButton } from "@/components/cookie-settings-button";
 export function Footer() {
   return (
     <footer className="bg-foreground text-background py-16">
-      {/* Google Analytics Script */}
-      <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-4VFMMPJDBN"
-        strategy="afterInteractive"
-      />
-      <Script id="footer-google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-4VFMMPJDBN');
-        `}
-      </Script>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
           
