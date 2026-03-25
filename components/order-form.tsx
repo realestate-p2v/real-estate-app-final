@@ -610,10 +610,7 @@ export function OrderForm() {
     }
   };
 
-  // Scroll to top when step changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [currentStep]);
+ 
 
   // ═══════════════════════════════════════════════════
   // RENDER
