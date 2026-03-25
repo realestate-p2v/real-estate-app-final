@@ -80,18 +80,44 @@ const STATUS_COLORS: Record<string, string> = {
 
 function getAllVideos(order: Order): { label: string; url: string }[] {
   const videos: { label: string; url: string }[] = [];
+  const additionalKeys = order.additional_video_urls ? Object.keys(order.additional_video_urls) : [];
+  const hasMultipleVersions = additionalKeys.length > 0 || !!order.unbranded_delivery_url;
+
+  // Primary delivery URL (landscape branded, or the only video)
   if (order.delivery_url) {
-    const hasMultiple = order.additional_video_urls && Object.keys(order.additional_video_urls).length > 0;
-    videos.push({ label: hasMultiple ? "Landscape (Branded)" : "Final Video", url: order.delivery_url });
+    videos.push({
+      label: hasMultipleVersions ? "Landscape (Branded)" : "Final Video",
+      url: order.delivery_url,
+    });
   }
+
+  // Unbranded delivery URL (stored as separate column, not in additional_video_urls)
+  if (order.unbranded_delivery_url && order.unbranded_delivery_url !== order.delivery_url) {
+    // Check it's not already in additional_video_urls to avoid duplicates
+    const alreadyInAdditional = additionalKeys.some(
+      (k) => k.includes("unbranded") && k.includes("landscape") && order.additional_video_urls[k] === order.unbranded_delivery_url
+    );
+    if (!alreadyInAdditional) {
+      videos.push({
+        label: "Landscape (Unbranded)",
+        url: order.unbranded_delivery_url,
+      });
+    }
+  }
+
+  // Additional video URLs (vertical branded, vertical unbranded, etc.)
   if (order.additional_video_urls) {
     Object.entries(order.additional_video_urls).forEach(([key, url]) => {
+      // Skip if this URL is already added (e.g. same as delivery_url or unbranded_delivery_url)
+      if (url === order.delivery_url) return;
+
       const parts = key.split("_");
       const orient = (parts[0] || "").charAt(0).toUpperCase() + (parts[0] || "").slice(1);
       const brand = (parts[1] || "").charAt(0).toUpperCase() + (parts[1] || "").slice(1);
       videos.push({ label: `${orient} (${brand})`, url });
     });
   }
+
   return videos;
 }
 
