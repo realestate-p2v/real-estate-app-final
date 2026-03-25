@@ -186,7 +186,7 @@ export default async function SuccessPage({
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild variant="outline" size="sm">
               <a
-                href={`mailto:?subject=Check out this listing video service&body=I just ordered a professional walkthrough video for my listing at realestatephoto2video.com. They turn your photos into a cinematic video in 24 hours, starting at $79. Worth checking out!`}
+                href={`mailto:?subject=Check out this listing video service&body=I just ordered a professional walkthrough video for my listing at realestatephoto2video.com. They turn your photos into a cinematic video in 12 hours, starting at $79. Worth checking out!`}
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Share via Email
@@ -194,7 +194,7 @@ export default async function SuccessPage({
             </Button>
             <Button asChild variant="outline" size="sm">
               <a
-                href={`https://wa.me/?text=I just ordered a professional listing video at realestatephoto2video.com — they turn your photos into a cinematic walkthrough video in 24 hours, starting at $79. Check it out!`}
+                href={`https://wa.me/?text=I just ordered a professional listing video at realestatephoto2video.com — they turn your photos into a cinematic walkthrough video in 12 hours, starting at $79. Check it out!`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
