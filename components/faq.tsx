@@ -5,11 +5,11 @@ import { ChevronDown } from "lucide-react";
 const FAQS = [
   {
     q: "How does it work?",
-    a: "Upload your listing photos, arrange them in order, choose your music and branding, then checkout. Our AI generates cinematic camera movements for each photo and assembles them into a professional walkthrough video. You'll receive it within 24 hours."
+    a: "Upload your listing photos, arrange them in order, choose your music and branding, then checkout. Our AI generates cinematic camera movements for each photo and assembles them into a professional walkthrough video. You'll receive it within 12 hours."
   },
   {
     q: "How long does delivery take?",
-    a: "Most videos are delivered within 24 hours. After you submit your order, our team reviews the final video for quality before sending it to your inbox with a Google Drive download link."
+    a: "Most videos are delivered within 12 hours. After you submit your order, our team reviews the final video for quality before sending it to your inbox with a Google Drive download link."
   },
   {
     q: "What photos should I upload?",
@@ -37,7 +37,7 @@ const FAQS = [
   },
   {
     q: "What if I need changes?",
-    a: "Every order includes 2 free revisions. After delivery, you can request specific changes to individual clips — change camera direction, speed, or describe what you want different. We'll regenerate only the clips you flag and deliver a revised video within 24 hours."
+    a: "Every order includes 2 free revisions. After delivery, you can request specific changes to individual clips — change camera direction, speed, or describe what you want different. We'll regenerate only the clips you flag and deliver a revised video within 12 hours."
   },
   {
     q: "Do you offer photo editing?",
