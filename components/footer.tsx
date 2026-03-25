@@ -17,7 +17,7 @@ export function Footer() {
               className="h-20 md:h-24 w-auto object-contain"
             />
             <p className="text-background/60 text-sm max-w-xs text-center md:text-left leading-relaxed">
-              Helping agents stand out with cinematic property tours and professional photo enhancements.
+              AI-powered real estate marketing — cinematic listing videos, photo coaching, virtual staging, design studio, and listing descriptions.
             </p>
             {/* Social Icons */}
             <div className="flex items-center gap-4">
