@@ -11,7 +11,7 @@ const TESTIMONIALS = [
     name: "Marcus Williams",
     brokerage: "Keller Williams",
     city: "Dallas, TX",
-    quote: "At $79 this is a no-brainer. I used to pay $500 for a videographer and wait a week. Now I get it in 24 hours.",
+    quote: "At $79 this is a no-brainer. I used to pay $500 for a videographer and wait a week. Now I get it in 12 hours.",
   },
   {
     name: "Jennifer Park",
