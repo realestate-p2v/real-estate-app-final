@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
+import { CookieSettingsButton } from "@/components/cookie-settings-button";
 export function Footer() {
   return (
     <footer className="bg-foreground text-background py-16">
@@ -92,6 +93,20 @@ export function Footer() {
                 Support
               </Link>
             </nav>
+
+            {/* Legal Links */}
+            <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-3">
+              <Link href="/privacy" className="text-background/50 hover:text-background text-xs transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-background/50 hover:text-background text-xs transition-colors">
+                Terms of Service
+              </Link>
+              <Link href="/refund-policy" className="text-background/50 hover:text-background text-xs transition-colors">
+                Refund Policy
+              </Link>
+              <CookieSettingsButton />
+            </div>
             
             <div className="text-center md:text-right">
               <p className="text-background/40 text-[11px] uppercase tracking-[0.15em] font-bold">
