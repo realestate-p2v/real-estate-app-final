@@ -1326,6 +1326,13 @@ export function OrderForm() {
                 </div>
               </div>
 
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                By placing this order, you agree to our{" "}
+              <a href="/terms" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+              {" "}and{" "}
+              <a href="/privacy" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+              </p>
+              
               <StepNavigation
                 currentStep={currentStep}
                 totalSteps={totalSteps}
