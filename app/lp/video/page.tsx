@@ -127,7 +127,7 @@ export default function VideoLandingPage() {
               className="w-full h-full object-cover"
             >
               <source
-                src="https://res.cloudinary.com/dh6ztnoue/video/upload/q_auto,f_auto,sp_auto/v1774477216/p2v-demo-720HD_zop75m.mp4"
+                src="https://res.cloudinary.com/dh6ztnoue/video/upload/q_auto/v1774477216/p2v-demo-720HD_zop75m.mp4"
                 type="video/mp4"
               />
             </video>
