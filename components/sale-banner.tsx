@@ -68,7 +68,7 @@ export function SaleBanner() {
                 <p className="text-[11px] md:text-[13px] font-bold text-white uppercase tracking-wide">Up to 15 HD clips</p>
                 <div className="h-px w-8 bg-emerald-500/30 mx-auto my-1" />
                 <ul className="text-[10px] md:text-[12px] space-y-1 text-slate-200 font-bold opacity-90">
-                  <li>*48 hour turnaround</li>
+                  <li>*12 hour turnaround</li>
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
                   <li>Free Branding</li>
@@ -94,7 +94,7 @@ export function SaleBanner() {
                 <p className="text-[11px] md:text-[13px] font-bold text-white uppercase tracking-wide">Up to 25 HD clips</p>
                 <div className="h-px w-8 bg-emerald-500/30 mx-auto my-1" />
                 <ul className="text-[10px] md:text-[12px] space-y-1 text-slate-100 font-bold">
-                  <li>*48 hour turnaround</li>
+                  <li>*12 hour turnaround</li>
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
                   <li>Free Branding</li>
@@ -120,7 +120,7 @@ export function SaleBanner() {
                 <p className="text-[11px] md:text-[13px] font-bold text-white uppercase tracking-wide">Up to 35 HD clips</p>
                 <div className="h-px w-8 bg-emerald-500/30 mx-auto my-1" />
                 <ul className="text-[10px] md:text-[12px] space-y-1 text-slate-200 font-bold opacity-90">
-                  <li>*48 hour turnaround</li>
+                  <li>*12 hour turnaround</li>
                   <li>Photo Enhancement</li>
                   <li>Choice of music</li>
                   <li>Free Branding</li>
@@ -132,11 +132,6 @@ export function SaleBanner() {
             </a>
 
           </div>
-          
-          {/* Disclaimer */}
-          <p className="text-right text-[10px] text-slate-100/80">
-            *48-hour turnaround = 2 full business days
-          </p>
           
         </div>
       </div>
