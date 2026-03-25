@@ -15,6 +15,7 @@ import {
   Zap,
   ImageIcon,
   Shield,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasConsent } from "@/components/cookie-consent";
@@ -78,6 +79,18 @@ export default function LensLandingPage() {
       title: "Virtual Staging",
       desc: "Furnish empty rooms with AI. 8 design styles from Modern to Farmhouse. Preserves room architecture and lighting.",
       color: "bg-green-500/10 text-green-600",
+    },
+    {
+      icon: DollarSign,
+      title: "10% Off Video Orders",
+      desc: "Save 10% on every Photo 2 Video order, applied automatically at checkout. Subscribers pay less on every listing video.",
+      color: "bg-emerald-500/10 text-emerald-600",
+    },
+    {
+      icon: Zap,
+      title: "Priority Video Processing",
+      desc: "Subscribers go first in the production queue. Your listing videos are prioritized ahead of standard orders.",
+      color: "bg-orange-500/10 text-orange-600",
     },
   ];
 
@@ -143,7 +156,7 @@ export default function LensLandingPage() {
           <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm font-medium text-foreground">
             <span className="flex items-center gap-1.5">
               <Zap className="h-4 w-4 text-green-600" />
-              7 AI-powered tools
+              Photo coaching, staging, descriptions &amp; more
             </span>
             <span className="flex items-center gap-1.5">
               <Shield className="h-4 w-4 text-green-600" />
@@ -193,7 +206,7 @@ export default function LensLandingPage() {
                 "AI photo coaching on-site",
                 "8 staging design styles",
                 "4 description writing tones",
-                "Priority 12h video delivery",
+                "Priority video processing",
                 "Free photo editing on orders",
                 "10% off all video orders",
               ].map((item) => (
