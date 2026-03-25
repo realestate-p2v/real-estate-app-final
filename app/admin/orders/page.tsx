@@ -48,6 +48,7 @@ interface Order {
   client_revision_notes: any[];
   clip_urls: any[];
   telegram_message_id: number;
+  auto_delivered: boolean;
 }
 
 interface RevisionRequest {
@@ -266,6 +267,11 @@ export default function AdminOrdersPage() {
                         {allVideos.length > 1 && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                             {allVideos.length} versions
+                          </span>
+                        )}
+                        {order.auto_delivered && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            Auto-delivered
                           </span>
                         )}
                       </div>
