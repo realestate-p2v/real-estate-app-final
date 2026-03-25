@@ -22,8 +22,8 @@ const brandingOptions = [
   },
   {
     id: "upload",
-    name: "Upload Your Own Cards",
-    description: "Use your own custom intro/outro images",
+    name: "Upload Your Own Card",
+    description: "Use your own custom intro & outro image",
     price: 0,
   },
 ];
@@ -162,11 +162,9 @@ export function BrandingSelector({
   onIncludeUnbrandedChange,
 }: BrandingSelectorProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(brandingData?.logoUrl || null);
-  const [introPreview, setIntroPreview] = useState<string | null>(null);
-  const [outroPreview, setOutroPreview] = useState<string | null>(null);
+  const [cardPreview, setCardPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const introInputRef = useRef<HTMLInputElement>(null);
-  const outroInputRef = useRef<HTMLInputElement>(null);
+  const cardInputRef = useRef<HTMLInputElement>(null);
 
   const handleTypeSelect = (type: string) => {
     onSelect(type);
@@ -214,15 +212,14 @@ export function BrandingSelector({
     }
   };
 
-  const handleCardUpload = (type: "intro" | "outro") => async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Show local preview immediately
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (type === "intro") setIntroPreview(reader.result as string);
-      else setOutroPreview(reader.result as string);
+      setCardPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
@@ -245,10 +242,12 @@ export function BrandingSelector({
       const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
       const result = await res.json();
       if (result.secure_url && onBrandingDataChange) {
+        // Same image used for both intro and outro
         onBrandingDataChange({
           ...brandingData,
           type: "upload",
-          [type === "intro" ? "customIntroCardUrl" : "customOutroCardUrl"]: result.secure_url,
+          customIntroCardUrl: result.secure_url,
+          customOutroCardUrl: result.secure_url,
         });
       }
     } catch (err) {
@@ -256,19 +255,15 @@ export function BrandingSelector({
     }
   };
 
-  const handleRemoveCard = (type: "intro" | "outro") => {
-    if (type === "intro") {
-      setIntroPreview(null);
-      if (introInputRef.current) introInputRef.current.value = "";
-    } else {
-      setOutroPreview(null);
-      if (outroInputRef.current) outroInputRef.current.value = "";
-    }
+  const handleRemoveCard = () => {
+    setCardPreview(null);
+    if (cardInputRef.current) cardInputRef.current.value = "";
     if (onBrandingDataChange) {
       onBrandingDataChange({
         ...brandingData,
         type: "upload",
-        [type === "intro" ? "customIntroCardUrl" : "customOutroCardUrl"]: undefined,
+        customIntroCardUrl: undefined,
+        customOutroCardUrl: undefined,
       });
     }
   };
@@ -324,7 +319,6 @@ export function BrandingSelector({
       </div>
 
       {/* ═══ DELIVER BOTH COPIES CHECKBOX ═══ */}
-      {/* Shows whenever any branding is selected (custom or upload) */}
       {hasBranding && (
         <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
           <label className="flex items-start gap-3 cursor-pointer">
@@ -475,11 +469,11 @@ export function BrandingSelector({
         </div>
       )}
 
-      {/* ═══ UPLOAD CUSTOM CARDS ═══ */}
+      {/* ═══ UPLOAD CUSTOM CARD (single image for both intro & outro) ═══ */}
       {selected === "upload" && (
         <div className="mt-2 p-4 bg-muted/30 rounded-xl border border-border space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-foreground">Upload Custom Cards</h4>
+            <h4 className="font-medium text-foreground">Upload Your Branding Card</h4>
             <Link 
               href="/dashboard/lens/design-studio" 
               className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 transition-colors"
@@ -490,81 +484,43 @@ export function BrandingSelector({
             </Link>
           </div>
           <p className="text-xs text-muted-foreground">
-            Upload your own intro and outro card images. Recommended: 1920×1080 for landscape videos, 1080×1920 for vertical.
+            Upload one image — it will be used as both the intro and outro card in your video. Recommended: 1920×1080 for landscape videos, 1080×1920 for vertical.
           </p>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Intro Card Upload */}
-            <div className="space-y-2">
-              <Label>Intro Card</Label>
-              {introPreview ? (
-                <div className="relative aspect-video rounded-lg overflow-hidden border border-border">
-                  <img src={introPreview} alt="Intro card" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCard("intro")}
-                    className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <div className="absolute bottom-2 left-2 bg-black/60 text-white/80 text-[9px] font-medium px-2 py-0.5 rounded-full">
-                    Intro Card
-                  </div>
-                </div>
-              ) : (
+          {/* Single card upload */}
+          <div className="space-y-2">
+            {cardPreview ? (
+              <div className="relative aspect-video rounded-lg overflow-hidden border border-border max-w-md">
+                <img src={cardPreview} alt="Branding card" className="w-full h-full object-cover" />
                 <button
                   type="button"
-                  onClick={() => introInputRef.current?.click()}
-                  className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-2 transition-colors"
+                  onClick={handleRemoveCard}
+                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
                 >
-                  <Upload className="h-6 w-6 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Upload intro card image</span>
+                  <X className="h-4 w-4" />
                 </button>
-              )}
-              <input
-                ref={introInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCardUpload("intro")}
-                className="hidden"
-              />
-            </div>
-
-            {/* Outro Card Upload */}
-            <div className="space-y-2">
-              <Label>Outro Card</Label>
-              {outroPreview ? (
-                <div className="relative aspect-video rounded-lg overflow-hidden border border-border">
-                  <img src={outroPreview} alt="Outro card" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCard("outro")}
-                    className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <div className="absolute bottom-2 left-2 bg-black/60 text-white/80 text-[9px] font-medium px-2 py-0.5 rounded-full">
-                    Outro Card
-                  </div>
+                <div className="absolute bottom-2 left-2 bg-black/60 text-white/80 text-[9px] font-medium px-2 py-0.5 rounded-full">
+                  Used for Intro &amp; Outro
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => outroInputRef.current?.click()}
-                  className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-2 transition-colors"
-                >
-                  <Upload className="h-6 w-6 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Upload outro card image</span>
-                </button>
-              )}
-              <input
-                ref={outroInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCardUpload("outro")}
-                className="hidden"
-              />
-            </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => cardInputRef.current?.click()}
+                className="w-full max-w-md aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-2 transition-colors"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Upload your branding card</span>
+                <span className="text-xs text-muted-foreground">PNG or JPG · used for intro &amp; outro</span>
+              </button>
+            )}
+            <input
+              ref={cardInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCardUpload}
+              className="hidden"
+            />
           </div>
 
           <p className="text-sm text-muted-foreground">
