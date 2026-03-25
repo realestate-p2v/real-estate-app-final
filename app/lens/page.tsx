@@ -22,6 +22,10 @@ import {
   ImageIcon,
   TrendingUp,
   LogIn,
+  PenTool,
+  Percent,
+  Clock,
+  Gift,
 } from "lucide-react";
 
 export default function LensPage() {
@@ -59,7 +63,7 @@ export default function LensPage() {
 
   const handleSubscribe = async (plan: "monthly" | "yearly") => {
     if (!user) {
-      router.push("/auth/login?redirect=/lens");
+      router.push("/login?redirect=/lens");
       return;
     }
 
@@ -87,95 +91,16 @@ export default function LensPage() {
     }
   };
 
-  const features = [
-    {
-      icon: <Camera className="h-6 w-6" />,
-      title: "AI Photo Coach",
-      description:
-        'Snap a listing photo and hit Analyze. AI tells you exactly what to fix — "Turn on the overhead lights, move two feet left, and reshoot from chest height." Fix it on the spot, re-analyze, and leave every room with a perfect shot.',
-      color: "bg-blue-500/10 text-blue-600",
-      href: "/dashboard/lens/coach",
-    },
-    {
-      icon: <ImageIcon className="h-6 w-6" />,
-      title: "Free Photo Enhancement",
-      description:
-        "Every video order includes professional AI enhancement — brightness, color correction, white balance, and vertical line straightening at no extra charge.",
-      color: "bg-emerald-500/10 text-emerald-600",
-      href: "/order",
-    },
-    {
-      icon: <ImageIcon className="h-6 w-6" />,
-      title: "Marketing Design Studio",
-      description:
-        "Premade templates for Just Listed, Just Sold, Open House, Price Reduced, and more. Upload your headshot + home photo — download print-ready and social-ready formats in seconds.",
-      color: "bg-orange-500/10 text-orange-600",
-      href: "/dashboard/lens/design-studio",
-    },
-    {
-      icon: <MessageSquare className="h-6 w-6" />,
-      title: "AI Listing Description Writer",
-      description:
-        "AI analyzes your approved listing photos, notes room details and finishes, then combines them with your property data to write a polished, MLS-ready listing description. Multiple styles available.",
-      color: "bg-teal-500/10 text-teal-600",
-      href: "/dashboard/lens/descriptions",
-    },
-    {
-      icon: <Sofa className="h-6 w-6" />,
-      title: "Virtual Staging",
-      description:
-        "Upload photos of empty rooms, and AI generates beautifully furnished versions in multiple styles — modern, traditional, minimalist, and more.",
-      color: "bg-indigo-500/10 text-indigo-600",
-      href: "/dashboard/lens/staging",
-    },
-    {
-      icon: <Zap className="h-6 w-6" />,
-      title: "Priority Delivery",
-      description:
-        "Get your listing videos in 12 hours instead of the standard 24. When time is money, P2V Lens subscribers go first.",
-      color: "bg-amber-500/10 text-amber-600",
-      href: "/order",
-    },
-    {
-      icon: <Sparkles className="h-6 w-6" />,
-      title: "AI Suggest",
-      description:
-        "When ordering a video, AI auto-fills optimal camera directions for each photo based on room type and composition. Skip the guesswork.",
-      color: "bg-purple-500/10 text-purple-600",
-      href: "/order",
-    },
-  ];
-
-  const steps = [
-    {
-      step: "1",
-      title: "Take a Photo",
-      description: "Snap a photo of any room during your listing shoot.",
-      icon: <Camera className="h-8 w-8" />,
-    },
-    {
-      step: "2",
-      title: "Hit Analyze",
-      description:
-        'Think a photo looks good? Upload it and tap Analyze. AI spots what your eye missed — "Too dark, open the blinds and reshoot from the doorway."',
-      icon: <MessageSquare className="h-8 w-8" />,
-    },
-    {
-      step: "3",
-      title: "Reshoot or Keep",
-      description:
-        "Fix issues on the spot. Move on when it's perfect. Leave with professional-quality photos every time.",
-      icon: <CheckCircle className="h-8 w-8" />,
-    },
-  ];
+  // Smart links: logged in → dashboard tools, logged out → login with redirect
+  const toolLink = (path: string) => (user ? path : `/login?redirect=${path}`);
 
   const faqs = [
     {
       q: "How does the AI Photo Coach work?",
-      a: 'Upload any listing photo and our AI (powered by Claude Vision) analyzes it instantly. You\'ll get specific, actionable feedback — not vague tips, but exactly what to fix: "The kitchen is underexposed. Open the blinds on the east wall, turn on the overhead light, and retake from the doorway at chest height." Use it during your photo shoot to coach yourself room by room.',
+      a: "Upload any listing photo and our AI (powered by Claude Vision) analyzes it instantly. You get specific, actionable feedback — not vague tips, but exactly what to fix: \"The kitchen is underexposed. Open the blinds on the east wall, turn on the overhead light, and retake from the doorway at chest height.\" Use it during your photo shoot to coach yourself room by room.",
     },
     {
-      q: 'What counts as one "analysis"?',
+      q: "What counts as one \"analysis\"?",
       a: "Each photo you upload for AI feedback counts as one analysis. You get 200 per month — enough for about 2 full listing shoots with coaching on every single photo (25 photos × 4 attempts each = 100 analyses per listing).",
     },
     {
@@ -191,12 +116,16 @@ export default function LensPage() {
       a: "When you place a video order while subscribed to P2V Lens, the 10% discount is applied automatically at checkout. No coupon code needed — the system detects your active subscription and applies the savings.",
     },
     {
+      q: "How does Virtual Staging work?",
+      a: "Upload a photo of an empty room, choose a furniture style (Modern, Traditional, Farmhouse, etc.), and AI adds realistic furniture while preserving the actual room architecture — walls, windows, floors stay exactly as they are. You get a before/after comparison you can use in your listing.",
+    },
+    {
       q: "How does brokerage pricing work?",
-      a: "Brokerage plans are $19.95 per agent per month with a minimum of 10 agents. Each agent gets their own login and 200 analyses per month. Seats are tied to email addresses to prevent sharing. Contact us to set up your brokerage account.",
+      a: "Brokerage plans are $19.95 per agent per month with a minimum of 10 agents. Each agent gets their own login and 200 analyses per month. Contact us to set up your brokerage account.",
     },
     {
       q: "Can I cancel anytime?",
-      a: "Yes — cancel anytime from your dashboard. Your subscription stays active through the end of your current billing period. No contracts, no cancellation fees.",
+      a: "Yes — cancel anytime from your Account Settings. Your subscription stays active through the end of your current billing period. No contracts, no cancellation fees.",
     },
   ];
 
@@ -216,26 +145,30 @@ export default function LensPage() {
 
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-6">
-              <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-                LIVE
-              </span>
-              <span className="text-primary-foreground/80 text-sm font-medium">
-                P2V Lens — 7 AI Tools for Real Estate Agents
-              </span>
-            </div>
-
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight tracking-tight">
               Your AI-Powered
               <br />
-              <span className="text-accent">Listing Marketing Suite</span>
+              <span className="text-accent">Real Estate Marketing Suite</span>
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-primary-foreground/70 max-w-2xl mx-auto leading-relaxed">
-              Photo coaching, virtual staging, listing descriptions, marketing graphics, photo
-              enhancement, priority delivery, and 10% off every video order — all in one
-              subscription.
+              Photo coaching, marketing design, listing descriptions, virtual staging — everything an agent needs to market listings professionally.
             </p>
+
+            {/* Trust badges */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-primary-foreground/60 text-sm font-medium">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-accent" /> 7 AI Tools
+              </span>
+              <span className="hidden sm:block">·</span>
+              <span className="flex items-center gap-1.5">
+                <Camera className="h-4 w-4 text-accent" /> 200 Analyses/Month
+              </span>
+              <span className="hidden sm:block">·</span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-accent" /> Cancel Anytime
+              </span>
+            </div>
 
             {/* Hero CTAs */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
@@ -251,22 +184,22 @@ export default function LensPage() {
                 </Button>
               ) : (
                 <Button
-                  onClick={() => {
-                    document
-                      .getElementById("pricing")
-                      ?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                  onClick={() =>
+                    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
+                  }
                   className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg"
                 >
-                  Subscribe Now — $27.95/mo
+                  Start Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
               <Button
-                asChild
+                onClick={() =>
+                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })
+                }
                 className="bg-transparent border border-white/30 text-white hover:bg-white/10 hover:text-white h-14 px-8 text-lg font-bold"
               >
-                <Link href="/dashboard/lens/coach">Try Photo Coach Free</Link>
+                See Features
               </Button>
             </div>
           </div>
@@ -281,8 +214,7 @@ export default function LensPage() {
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-accent" />
             <span className="text-sm font-semibold text-foreground">
-              Listings with video get{" "}
-              <span className="text-accent">403% more inquiries</span>
+              Listings with video get <span className="text-accent">403% more inquiries</span>
             </span>
           </div>
           <div className="hidden sm:block h-5 w-px bg-border" />
@@ -296,56 +228,269 @@ export default function LensPage() {
           <div className="flex items-center gap-2">
             <Star className="h-5 w-5 text-accent" />
             <span className="text-sm font-semibold text-foreground">
-              7 AI tools <span className="text-accent">included free</span>
+              7 AI tools · <span className="text-accent">one subscription</span>
             </span>
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════ */}
-      {/* FEATURES SECTION */}
+      {/* FEATURES DEEP DIVE */}
       {/* ═══════════════════════════════════════════ */}
-      <section className="py-20 sm:py-24">
+      <section id="features" className="py-20 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">
               Everything You Need to Market Your Listings
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Seven powerful features — all included in your subscription.
+              Seven powerful tools — all included in your subscription. No limits, no add-on fees.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, i) => (
-              <Link
-                key={i}
-                href={feature.href}
-                className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block group"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div
-                    className={`h-12 w-12 rounded-xl flex items-center justify-center ${feature.color}`}
-                  >
-                    {feature.icon}
-                  </div>
-                  <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Available
-                  </span>
+          {/* Feature 1: AI Photo Coach */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Camera className="h-6 w-6 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-accent transition-colors">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent group-hover:text-accent/80 transition-colors mt-3">
-                  Try it
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Live
                 </span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Never Miss a Shot</h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Open a session per property, and the smart checklist makes sure you never forget a room. Snap a photo and get instant AI scoring with specific feedback — &ldquo;move 3 feet left, turn on the overhead light&rdquo; — then reshoot on the spot until it&apos;s perfect. Approved photos save to your gallery, ready to order a video.
+              </p>
+              <div className="space-y-2 mb-5">
+                {["Room-by-room checklist so you never miss a shot", "Instant 1-10 scoring with specific actionable feedback", "AI Edit: auto brightness, color, contrast correction", "HDR detection and horizon straightening", "Gallery management — approved photos ready for video orders"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-foreground">{point}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={toolLink("/dashboard/lens/coach")}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors"
+              >
+                Try Photo Coach Free <ArrowRight className="h-4 w-4" />
               </Link>
-            ))}
+            </div>
+            {/* Sample feedback mockup */}
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-blue-600" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">AI Photo Coach — Sample Feedback</p>
+              </div>
+              <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="h-5 w-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-red-600 text-xs font-bold">!</span>
+                  </div>
+                  <p className="text-sm text-foreground">
+                    <strong>Lighting:</strong> The kitchen is underexposed. Open the blinds on the east-facing window and turn on the overhead recessed lights.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-amber-600 text-xs font-bold">~</span>
+                  </div>
+                  <p className="text-sm text-foreground">
+                    <strong>Angle:</strong> Step back 3 feet and shoot from the doorway at chest height to show full room depth.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                  </div>
+                  <p className="text-sm text-foreground">
+                    <strong>Composition:</strong> Good framing with the island as a leading line. Keep this angle after fixing the lighting.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 2: Design Studio */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <div className="bg-card rounded-2xl border border-border p-6 space-y-3">
+                <p className="text-sm font-semibold text-foreground mb-2">Template Types:</p>
+                {["Just Listed", "Open House", "Price Reduced", "Just Sold", "Yard Signs", "Property PDF Sheets", "Video Branding Cards"].map((t, i) => (
+                  <div key={i} className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-muted/50">
+                    <PenTool className="h-3.5 w-3.5 text-orange-500" />
+                    <span className="text-sm font-medium text-foreground">{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                  <PenTool className="h-6 w-6 text-orange-600" />
+                </div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Live
+                </span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Professional Marketing in 60 Seconds</h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Just Listed, Open House, Price Reduced, Just Sold graphics. Yard signs for print shops. Property PDF sheets. Video branding cards. Upload your headshot and logo once — they&apos;re saved for next time. Pick your brokerage colors. Download print-ready PNGs and PDFs.
+              </p>
+              <div className="space-y-2 mb-5">
+                {["7 template types for every listing stage", "Brokerage brand colors built in", "Saved headshot & logo auto-populate", "PNG + PDF export for print and social", "Video branding card designer for your orders"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-foreground">{point}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={toolLink("/dashboard/lens/design-studio")}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors"
+              >
+                Open Design Studio <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Feature 3: Description Writer */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-teal-500/10 flex items-center justify-center">
+                  <MessageSquare className="h-6 w-6 text-teal-600" />
+                </div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Live
+                </span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">MLS Descriptions That Sell</h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Upload listing photos, enter property details, pick a writing style. AI analyzes every room — features, finishes, condition — then writes a polished, MLS-ready description. Four styles to match your voice.
+              </p>
+              <div className="space-y-2 mb-5">
+                {["Claude Vision photo analysis — sees what's in every room", "4 styles: Professional, Luxury, Conversational, Concise", "Edit in-place, then copy to clipboard", "Works with Photo Coach gallery photos"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-foreground">{point}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={toolLink("/dashboard/lens/descriptions")}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors"
+              >
+                Write a Description <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <p className="text-sm font-semibold text-foreground mb-3">Writing Styles:</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { style: "Professional", desc: "Clean, MLS-standard tone" },
+                  { style: "Luxury", desc: "Elevated, high-end language" },
+                  { style: "Conversational", desc: "Warm, relatable voice" },
+                  { style: "Concise", desc: "Tight, punchy, no fluff" },
+                ].map((s, i) => (
+                  <div key={i} className="bg-muted/50 rounded-xl p-3">
+                    <p className="font-bold text-foreground text-sm">{s.style}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 4: Virtual Staging */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <p className="text-sm font-semibold text-foreground mb-3">8 Design Styles:</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Modern", "Traditional", "Minimalist", "Coastal", "Farmhouse", "Mid-Century", "Scandinavian", "Industrial"].map((s, i) => (
+                    <span key={i} className="text-xs font-medium bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-sm font-semibold text-foreground mt-4 mb-2">8 Room Types:</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Living Room", "Bedroom", "Kitchen", "Dining Room", "Office", "Bathroom", "Nursery", "Patio"].map((r, i) => (
+                    <span key={i} className="text-xs font-medium bg-muted text-foreground px-3 py-1.5 rounded-lg">
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                  <Sofa className="h-6 w-6 text-indigo-600" />
+                </div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Live
+                </span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Furnish Empty Rooms Instantly</h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Upload a photo of an empty room, choose a style, and AI adds furniture while preserving the actual room architecture — walls, windows, floors stay exactly as they are. Before/after comparison slider. 8 design styles from Modern to Farmhouse.
+              </p>
+              <div className="space-y-2 mb-5">
+                {["Preserves real room structure (not text-to-image)", "8 furniture styles × 8 room types", "Before/after comparison slider", "~$0.07 per staging — pennies per room"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-foreground">{point}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={toolLink("/dashboard/lens/staging")}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors"
+              >
+                Stage a Room <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Features 5-7: Subscriber Perks (cards) */}
+          <div className="text-center mb-10">
+            <h3 className="text-2xl font-extrabold text-foreground">Subscriber Perks on Every Video Order</h3>
+            <p className="mt-2 text-muted-foreground">Automatic benefits when you order listing videos</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4">
+                <ImageIcon className="h-6 w-6 text-emerald-600" />
+              </div>
+              <h4 className="text-lg font-bold text-foreground mb-2">Free Photo Enhancement</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Every video order includes professional AI corrections on all photos — brightness, color balance, contrast, white balance. Normally $2.99/photo, free with your subscription.
+              </p>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4">
+                <Clock className="h-6 w-6 text-amber-600" />
+              </div>
+              <h4 className="text-lg font-bold text-foreground mb-2">Priority 12-Hour Delivery</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Lens subscribers go first in the processing queue. Guaranteed delivery under 12 hours instead of the standard turnaround. When time is money, you get your video faster.
+              </p>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
+                <Percent className="h-6 w-6 text-purple-600" />
+              </div>
+              <h4 className="text-lg font-bold text-foreground mb-2">10% Off Every Video</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Automatic 10% discount on all Photo 2 Video orders, applied at checkout. No coupon code needed — the system detects your subscription automatically.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -357,68 +502,45 @@ export default function LensPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">
-              How AI Photo Coach Works
+              How It Works
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Use it during your listing shoot. Leave with professional photos — every time.
+              Subscribe once, use everything — on every listing.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {steps.map((step, i) => (
+            {[
+              {
+                step: "1",
+                title: "Subscribe",
+                description: "Instant access to all 7 AI tools. No setup, no onboarding — just log in and start using them.",
+                icon: <Sparkles className="h-8 w-8" />,
+              },
+              {
+                step: "2",
+                title: "Use the Tools",
+                description: "Photo Coach during shoots, Design Studio for marketing graphics, Description Writer for MLS, Virtual Staging for empty rooms.",
+                icon: <Camera className="h-8 w-8" />,
+              },
+              {
+                step: "3",
+                title: "Order Videos",
+                description: "When you need a listing video, get priority delivery, free photo editing, and 10% off — automatically.",
+                icon: <Zap className="h-8 w-8" />,
+              },
+            ].map((s, i) => (
               <div key={i} className="text-center">
                 <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-5">
-                  {step.icon}
+                  {s.icon}
                 </div>
                 <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-accent text-accent-foreground text-sm font-bold mb-3">
-                  {step.step}
+                  {s.step}
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">{step.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+                <h3 className="text-xl font-bold text-foreground mb-2">{s.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{s.description}</p>
               </div>
             ))}
-          </div>
-
-          {/* Example feedback mockup */}
-          <div className="mt-14 bg-card rounded-2xl border border-border p-6 sm:p-8 max-w-2xl mx-auto">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">
-                AI Photo Coach — Sample Feedback
-              </p>
-            </div>
-            <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="h-5 w-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-red-600 text-xs font-bold">!</span>
-                </div>
-                <p className="text-sm text-foreground">
-                  <strong>Lighting:</strong> The kitchen is underexposed. Open the blinds on the
-                  east-facing window and turn on the overhead recessed lights. Avoid the fluorescent
-                  above the island — it creates a yellow cast.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-amber-600 text-xs font-bold">~</span>
-                </div>
-                <p className="text-sm text-foreground">
-                  <strong>Angle:</strong> You&apos;re too close to the counter. Step back 3 feet and
-                  shoot from the doorway at chest height to show the full room depth.
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                </div>
-                <p className="text-sm text-foreground">
-                  <strong>Composition:</strong> Good framing with the island as a leading line. Keep
-                  this angle after fixing the lighting.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -433,8 +555,7 @@ export default function LensPage() {
               Simple, Transparent Pricing
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Less than a dollar a day for an AI marketing suite that pays for itself on your first
-              listing.
+              Less than a dollar a day for an AI marketing suite that pays for itself on your first listing.
             </p>
           </div>
 
@@ -495,12 +616,11 @@ export default function LensPage() {
                 {[
                   "200 photo analyses / month",
                   "AI Photo Coach with instant feedback",
-                  "Marketing Design Studio",
+                  "Marketing Design Studio (7 templates)",
                   "AI Listing Description Writer",
-                  "Virtual Staging",
-                  "Free photo enhancement on all video orders",
+                  "Virtual Staging (8 styles)",
+                  "Free photo enhancement on video orders",
                   "10% off all Photo 2 Video orders",
-                  "AI Suggest camera directions",
                   "Priority 12-hour video delivery",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
@@ -546,13 +666,8 @@ export default function LensPage() {
               )}
 
               {!isSubscriber && (
-                <p className="text-center mt-3">
-                  <Link
-                    href="/dashboard/lens/coach"
-                    className="text-sm font-semibold text-accent hover:text-accent/80 transition-colors"
-                  >
-                    Try the Photo Coach free first →
-                  </Link>
+                <p className="text-center mt-3 text-xs text-muted-foreground">
+                  Try free — 3 photo analyses, 1 description, 1 staging, 3 design exports
                 </p>
               )}
             </div>
@@ -594,53 +709,14 @@ export default function LensPage() {
               </Button>
               <p className="text-center mt-3">
                 <Link
-                  href="/dashboard/lens/coach"
+                  href="/P2V_Brokerage_Presentation.pdf"
+                  target="_blank"
                   className="text-sm font-semibold text-accent hover:text-accent/80 transition-colors"
                 >
-                  Try the Photo Coach free first →
+                  Download Brokerage PDF
                 </Link>
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* BROKERAGE CTA */}
-      {/* ═══════════════════════════════════════════ */}
-      <section className="py-16 bg-primary">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 mb-6">
-            <Building2 className="h-4 w-4 text-primary-foreground/70" />
-            <span className="text-primary-foreground/80 text-sm font-medium">
-              For Brokerages
-            </span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-primary-foreground mb-4">
-            Equip Your Entire Team
-          </h2>
-          <p className="text-lg text-primary-foreground/70 max-w-2xl mx-auto mb-8 leading-relaxed">
-            Give every agent AI photography coaching for less than a dollar a day. Combined with
-            brokerage video pricing, your team gets a complete listing media solution.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              asChild
-              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg"
-            >
-              <Link href="mailto:support@realestatephoto2video.com?subject=Brokerage%20Pricing%20Inquiry">
-                Get Brokerage Pricing
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              className="bg-transparent border border-white/30 text-white hover:bg-white/10 hover:text-white px-8 py-6 text-lg font-bold"
-            >
-              <Link href="/P2V_Brokerage_Presentation.pdf" target="_blank">
-                Download Brokerage PDF
-              </Link>
-            </Button>
           </div>
         </div>
       </section>
@@ -684,16 +760,15 @@ export default function LensPage() {
       </section>
 
       {/* ═══════════════════════════════════════════ */}
-      {/* BOTTOM CTA */}
+      {/* FINAL CTA */}
       {/* ═══════════════════════════════════════════ */}
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
-            Ready to Level Up Your Listings?
+            Start Your Free Trial Today
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            P2V Lens + Photo 2 Video = your complete listing media solution. Better photos in,
-            better videos out.
+            3 free photo analyses, 1 listing description, 1 virtual staging, 3 design exports — no credit card required to try.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isSubscriber ? (
