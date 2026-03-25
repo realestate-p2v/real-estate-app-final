@@ -74,14 +74,14 @@ export function BrokerageCTA() {
               </h2>
               <p className="text-white/70 text-lg leading-relaxed mb-6">
                 Per-clip pricing from <span className="text-white font-bold">$2.99/clip</span>.
-                No long-term contracts. Every agent gets branded cinematic videos delivered in 24 hours.
+                No long-term contracts. Every agent gets branded cinematic videos delivered in 12 hours.
               </p>
 
               {/* Feature checklist */}
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 space-y-3 mb-6">
                 {[
                   "Per-clip pricing from $2.99 (Enterprise tier)",
-                  "24-hour delivery, 1 free revision per listing",
+                  "12-hour delivery, 1 free revision per listing",
                   "Agent branding on every video",
                   "P2V Lens AI coaching — $19.95/agent/month",
                   "Exclusive bulk video pricing with Lens subscription",
