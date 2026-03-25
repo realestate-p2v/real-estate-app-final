@@ -149,7 +149,7 @@ export default async function SuccessPage({
                 <div className="w-0.5 flex-1 bg-transparent mt-1" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground">Delivery Within 24 Hours</h3>
+                <h3 className="font-bold text-foreground">Delivery Within 12 Hours</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   You&apos;ll receive an email with a link to watch, download, and share your video. 1 free revision is included if you want any changes.
                 </p>
