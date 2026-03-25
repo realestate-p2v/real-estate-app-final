@@ -122,10 +122,12 @@ export default function VideoLandingPage() {
               muted
               loop
               playsInline
+              preload="auto"
+              poster="https://res.cloudinary.com/dh6ztnoue/video/upload/so_0,w_1280,q_auto,f_jpg/v1774477216/p2v-demo-720HD_zop75m.jpg"
               className="w-full h-full object-cover"
             >
               <source
-                src="https://res.cloudinary.com/dh6ztnoue/video/upload/v1774477216/p2v-demo-720HD_zop75m.mp4"
+                src="https://res.cloudinary.com/dh6ztnoue/video/upload/q_auto,f_auto,sp_auto/v1774477216/p2v-demo-720HD_zop75m.mp4"
                 type="video/mp4"
               />
             </video>
