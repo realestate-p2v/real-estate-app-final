@@ -29,12 +29,12 @@ const TIERS = [
   {
     name: "Standard",
     volume: "10+ listings/mo",
-    perClip: 3.79,
+    perClip: 2.99,
     highlight: false,
     features: [
       "768P video quality",
       "Landscape or vertical",
-      "24-hour delivery",
+      "12-hour delivery",
       "1 free revision per listing",
       "Google Drive delivery",
       "Email support",
@@ -43,12 +43,12 @@ const TIERS = [
   {
     name: "Growth",
     volume: "25+ listings/mo",
-    perClip: 3.29,
+    perClip: 2.49,
     highlight: true,
     features: [
       "768P video quality",
       "Landscape or vertical",
-      "24-hour delivery",
+      "12-hour delivery",
       "1 free revision per listing",
       "Google Drive delivery",
       "Dedicated account support",
@@ -58,7 +58,7 @@ const TIERS = [
   {
     name: "Enterprise",
     volume: "50+ listings/mo",
-    perClip: 2.99,
+    perClip: 1.99,
     highlight: false,
     features: [
       "768P video quality",
@@ -119,13 +119,13 @@ function ROICalculator() {
   const totalClips = listings * photosPerListing;
   const tier =
     listings >= 50
-      ? { name: "Enterprise", rate: 2.99 }
+      ? { name: "Enterprise", rate: 1.99 }
       : listings >= 25
-      ? { name: "Growth", rate: 3.29 }
-      : { name: "Standard", rate: 3.79 };
+      ? { name: "Growth", rate: 2.49 }
+      : { name: "Standard", rate: 2.99 };
 
   const monthlyCost = totalClips * tier.rate;
-  const retailCost = listings * 79;
+  const retailCost = listings * (photosPerListing <= 15 ? 79 : photosPerListing <= 25 ? 99 : 109);
   const savings = retailCost - monthlyCost;
   const savingsPercent = retailCost > 0 ? Math.round((savings / retailCost) * 100) : 0;
   const costPerListing = listings > 0 ? monthlyCost / listings : 0;
@@ -133,9 +133,9 @@ function ROICalculator() {
 
   const nextTier =
     listings < 25
-      ? { name: "Growth", threshold: 25, rate: 3.29 }
+      ? { name: "Growth", threshold: 25, rate: 2.49 }
       : listings < 50
-      ? { name: "Enterprise", threshold: 50, rate: 2.99 }
+      ? { name: "Enterprise", threshold: 50, rate: 1.99 }
       : null;
 
   const nextTierSavings = nextTier
@@ -328,9 +328,9 @@ export default function BrokeragePricingPage() {
             },
             {
               icon: Clock,
-              stat: "24hr",
+              stat: "12hr",
               label: "turnaround",
-              desc: "Upload photos today, get a polished cinematic video delivered tomorrow.",
+              desc: "Upload photos today, get a polished cinematic video delivered in under 12 hours.",
             },
             {
               icon: Zap,
@@ -467,7 +467,7 @@ export default function BrokeragePricingPage() {
                   {[
                     "AI Photo Coach — snap, analyze, perfect",
                     "Free photo editing on all video orders",
-                    "Priority 12-hour video delivery",
+                    "Priority processing — your orders are processed first",
                     "Exclusive bulk video pricing included",
                     "AI Suggest — auto camera directions",
                     "Coming soon: Marketing Design Studio, AI Listing Descriptions & Virtual Staging",
@@ -546,7 +546,7 @@ export default function BrokeragePricingPage() {
               {
                 num: "4",
                 title: "Delivered",
-                desc: "Video delivered within 24 hours. Ready to share.",
+                desc: "Video delivered within 12 hours. Ready to share.",
               },
             ].map((s, i) => (
               <div key={i} className="text-center space-y-3">
@@ -575,7 +575,7 @@ export default function BrokeragePricingPage() {
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
             Email us with your brokerage name and team size. We&apos;ll set up your account 
-            and have your first video ready within 24 hours.
+            and have your first video ready within 12 hours.
           </p>
           <Button
             asChild
