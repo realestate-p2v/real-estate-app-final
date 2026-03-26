@@ -197,16 +197,28 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
   const thirdReviewState = verifiedStates.length >= 3
     ? verifiedStates.find((s) => s.discountPercent && s.discountPercent >= 20)
     : null;
-  const [wheelSpun, setWheelSpun] = useState(false);
   const [showWheelModal, setShowWheelModal] = useState(false);
 
-  // "All prizes won" = all 3 verified AND the 3rd has a discount code (wheel already spun)
-  const allPrizesWon = verifiedCount >= 3 && thirdReviewState?.discountCode;
-  // Can show wheel = 3 verified, has discount data, but user hasn't spun THIS session yet
-  // AND the wheel hasn't been spun before (no discount code yet means admin just approved, wheel not spun)
-  const canShowWheel = verifiedCount >= 3 && thirdReviewState && !wheelSpun && !allPrizesWon;
+  // Check if user has already seen the wheel (persisted across page loads)
+  const [wheelSeen, setWheelSeen] = useState(() => {
+    try {
+      return sessionStorage.getItem("p2v_wheel_seen") === "true";
+    } catch {
+      return false;
+    }
+  });
 
-  // Auto-show the wheel modal when 3rd review is newly verified
+  const markWheelSeen = () => {
+    setWheelSeen(true);
+    try { sessionStorage.setItem("p2v_wheel_seen", "true"); } catch {}
+  };
+
+  // "All prizes won" = all 3 verified AND wheel has been seen
+  const allPrizesWon = verifiedCount >= 3 && thirdReviewState && wheelSeen;
+  // Can show wheel = 3 verified, has discount data, but user hasn't seen it yet
+  const canShowWheel = verifiedCount >= 3 && thirdReviewState && !wheelSeen;
+
+  // Auto-show the wheel modal when 3rd review is verified and user hasn't seen it
   useEffect(() => {
     if (canShowWheel && !showWheelModal) {
       const timer = setTimeout(() => setShowWheelModal(true), 800);
@@ -224,7 +236,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
         <SpinWheel
           winningPercent={thirdReviewState.discountPercent!}
           promoCode={thirdReviewState.discountCode || ""}
-          onComplete={() => setWheelSpun(true)}
+          onComplete={() => markWheelSeen()}
           onClose={() => setShowWheelModal(false)}
         />
       )}
@@ -280,7 +292,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
             )}
 
             {/* Spin again button — only if wheel was just spun this session (before page reload makes it allPrizesWon) */}
-            {wheelSpun && !allPrizesWon && thirdReviewState && (
+            {wheelSeen && !allPrizesWon && thirdReviewState && (
               <button
                 onClick={() => setShowWheelModal(true)}
                 className="mb-3 text-xs text-amber-700 hover:text-amber-900 font-bold underline underline-offset-2 transition-colors"
