@@ -224,8 +224,8 @@ export default function VideoLandingPage() {
           <div className="grid grid-cols-3 gap-3 sm:gap-5">
             {[
               { photos: "Up to 15", price: 79, popular: false },
-              { photos: "Up to 25", price: 129, popular: true },
-              { photos: "Up to 35", price: 179, popular: false },
+              { photos: "Up to 25", price: 99, popular: true },
+              { photos: "Up to 35", price: 109, popular: false },
             ].map(({ photos, price, popular }) => (
               <Link
                 key={price}
