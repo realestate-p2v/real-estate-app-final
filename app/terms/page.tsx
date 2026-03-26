@@ -231,6 +231,9 @@ export default function TermsOfServicePage() {
               virtual stagings per billing cycle. Free trial users are limited to 3 photo analyses, 1
               listing description, 1 virtual staging, and 3 design exports.
             </p>
+            <p className="mt-3">
+              <strong>Subscriber Quick Videos:</strong> P2V Lens subscribers may order short-form videos of 5 to 14 clips at a rate of $4.95 per clip. This rate already reflects the 10% subscriber discount and no additional discount applies. Quick Video orders include custom branding and music selection. Quick Video orders do not include a free revision — all revisions are available at standard paid revision rates ($1.99 for 1 clip, $1.49 per clip for 2-5, $1.24 per clip for 6-15, $0.99 per clip for 16+). Voiceover is not available on Quick Video orders. The minimum order is 5 clips. Orders of 15 or more clips are charged at standard package rates.
+            </p>
           </section>
 
           {/* 11 */}
