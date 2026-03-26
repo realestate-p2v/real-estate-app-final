@@ -844,12 +844,15 @@ export function OrderForm() {
                   <div className="flex items-center gap-3">
                     <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
                     <div>
-                      <p className="font-bold text-cyan-800">
-                        Subscriber Quick Video — {photoCount} clips × ${QUICK_VIDEO_RATE} = ${(photoCount * QUICK_VIDEO_RATE).toFixed(2)}
-                      </p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="font-bold text-cyan-800">
+                          Quick Video — {photoCount} clips × ${QUICK_VIDEO_RATE} = ${(photoCount * QUICK_VIDEO_RATE).toFixed(2)}
+                        </p>
+                        <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">LENS SUBSCRIBER</span>
+                      </div>
                       <p className="text-sm text-cyan-700 mt-1">
-                        Short-form video perfect for social media teasers and listing refreshers.
-                        {photoCount < 15 && ` Add ${15 - photoCount} more photo${15 - photoCount > 1 ? "s" : ""} for the Standard package ($79).`}
+                        Pay only for the clips you need — no minimum package required.
+                        {photoCount < 15 && ` Add ${15 - photoCount} more photo${15 - photoCount > 1 ? "s" : ""} for the Standard package ($79 with 1 free revision).`}
                       </p>
                     </div>
                   </div>
