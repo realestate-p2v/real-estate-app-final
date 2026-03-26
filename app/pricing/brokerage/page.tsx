@@ -461,7 +461,7 @@ export default function BrokeragePricingPage() {
                   <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">NEW</span>
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  Equip every agent with AI photography coaching. Better photos in = better videos out.
+                  Equip every agent with AI photography coaching. Better photos in = better videos out. Lens subscribers can also order short-form videos (5-14 clips) from $3.45 per clip — perfect for social media teasers and listing refreshers.
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3 mb-5">
                   {[
@@ -471,6 +471,7 @@ export default function BrokeragePricingPage() {
                     "Exclusive bulk video pricing included",
                     "AI Suggest — auto camera directions",
                     "Coming soon: Marketing Design Studio, AI Listing Descriptions & Virtual Staging",
+                    "Per-clip video ordering — from $3.45/clip for 5-14 clip short-form videos",
                   ].map((f, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-cyan-600 flex-shrink-0" />
