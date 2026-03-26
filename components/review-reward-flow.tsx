@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SpinWheel } from "@/components/spin-wheel";
+import type { WheelSegment } from "@/components/spin-wheel";
 
 interface ReviewRewardFlowProps {
   orderId: string;
@@ -27,6 +28,7 @@ interface PlatformState {
   screenshotUrl?: string;
   discountCode?: string;
   discountPercent?: number;
+  isJackpot?: boolean;
 }
 
 const PLATFORMS = [
@@ -85,6 +87,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
               screenshotUrl: review.screenshot_url || undefined,
               discountCode: review.discount_code || undefined,
               discountPercent: review.discount_percent || undefined,
+              isJackpot: review.is_jackpot || false,
             };
           }
           setPlatformStates(states);
@@ -195,7 +198,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
   // Spin wheel: find the 3rd-review discount data
   const verifiedStates = Object.values(platformStates).filter((s) => s.status === "verified");
   const thirdReviewState = verifiedStates.length >= 3
-    ? verifiedStates.find((s) => s.discountPercent && s.discountPercent >= 20)
+    ? verifiedStates.find((s) => (s.discountPercent && s.discountPercent >= 20) || s.isJackpot)
     : null;
   const [showWheelModal, setShowWheelModal] = useState(false);
 
@@ -224,17 +227,29 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
       const timer = setTimeout(() => setShowWheelModal(true), 800);
       return () => clearTimeout(timer);
     }
-  }, [canShowWheel]);
+  }, [canShowWheel, showWheelModal]);
 
   if (dismissed) return null;
   if (loading) return null;
+
+  // Determine what to pass to SpinWheel based on the 3rd review state
+  const spinWinningPercent = thirdReviewState?.isJackpot
+    ? undefined // Let the wheel use "jackpot" segment matching
+    : thirdReviewState?.discountPercent;
+
+  // Build the display label for jackpot wins in the verified card
+  const getVerifiedPrizeLabel = (state: PlatformState) => {
+    if (state.isJackpot) return "FREE VIDEO";
+    if (state.discountPercent) return `${state.discountPercent}%`;
+    return null;
+  };
 
   return (
     <>
       {/* Spin Wheel Modal */}
       {showWheelModal && thirdReviewState && (
         <SpinWheel
-          winningPercent={thirdReviewState.discountPercent!}
+          winningPercent={spinWinningPercent}
           promoCode={thirdReviewState.discountCode || ""}
           onComplete={() => markWheelSeen()}
           onClose={() => setShowWheelModal(false)}
@@ -309,28 +324,54 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
 
               // ── Verified ──
               if (status === "verified") {
+                const prizeLabel = getVerifiedPrizeLabel(state);
+                const isJackpotPrize = state?.isJackpot;
+
                 return (
                   <div
                     key={platform.key}
-                    className={`rounded-xl border-2 p-4 ${platform.verifiedColors} flex items-center justify-between gap-3`}
+                    className={`rounded-xl border-2 p-4 ${
+                      isJackpotPrize
+                        ? "bg-yellow-50 border-yellow-300"
+                        : platform.verifiedColors
+                    } flex items-center justify-between gap-3`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      <CheckCircle className={`h-5 w-5 flex-shrink-0 ${
+                        isJackpotPrize ? "text-yellow-600" : "text-green-600"
+                      }`} />
                       <div className="min-w-0">
-                        <span className="font-bold text-green-800 block">
+                        <span className={`font-bold block ${
+                          isJackpotPrize ? "text-yellow-800" : "text-green-800"
+                        }`}>
                           {platform.icon} {platform.label} — Verified ✓
                         </span>
                         {state?.discountCode && (
-                          <span className="text-xs text-green-600 font-mono font-bold">
+                          <span className={`text-xs font-mono font-bold ${
+                            isJackpotPrize ? "text-yellow-600" : "text-green-600"
+                          }`}>
                             {state.discountCode}
                           </span>
                         )}
                       </div>
                     </div>
-                    {state?.discountPercent && (
-                      <div className="flex-shrink-0 bg-green-600 text-white rounded-xl px-4 py-2 text-center shadow-md shadow-green-600/30">
-                        <div className="text-2xl font-black leading-none">{state.discountPercent}%</div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider opacity-90">OFF</div>
+                    {prizeLabel && (
+                      <div className={`flex-shrink-0 text-white rounded-xl px-4 py-2 text-center shadow-md ${
+                        isJackpotPrize
+                          ? "bg-yellow-500 shadow-yellow-500/30"
+                          : "bg-green-600 shadow-green-600/30"
+                      }`}>
+                        {isJackpotPrize ? (
+                          <>
+                            <div className="text-lg font-black leading-none">FREE</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider opacity-90">VIDEO</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-2xl font-black leading-none">{prizeLabel}</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider opacity-90">OFF</div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
