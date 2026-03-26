@@ -86,6 +86,7 @@ export async function POST(request: Request) {
     let brandingType = "unbranded";
     let voiceoverIncluded = "No";
     let includeEditedPhotos = "No";
+    let isQuickVideo = false;
 
     if (orderId && orderId !== "direct") {
       try {
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
           brandingType = orderData.branding?.type || "unbranded";
           voiceoverIncluded = orderData.voiceover ? "Yes" : "No";
           includeEditedPhotos = orderData.include_edited_photos ? "Yes" : "No";
+          isQuickVideo = orderData.is_quick_video || false;
 
           if (orderData.photos && orderData.photos.length > 0) {
             photoUrls = orderData.photos
@@ -127,6 +129,11 @@ export async function POST(request: Request) {
       }
     }
 
+    // ═══ DETERMINE DISCOUNT STRATEGY ═══
+    // Quick Video orders already have subscriber pricing baked in ($4.95/clip)
+    // so the 10% Lens coupon should NOT apply on top
+    const applyLensDiscount = isLensSubscriber && !isQuickVideo;
+
     // ═══ BUILD SESSION PARAMS ═══
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       payment_method_types: ["card"],
@@ -135,8 +142,12 @@ export async function POST(request: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Real Estate Walkthrough Video`,
-              description: `Professional HD walkthrough video with ${photoCount} photos`,
+              name: isQuickVideo
+                ? `Subscriber Quick Video — ${photoCount} clips`
+                : `Real Estate Walkthrough Video`,
+              description: isQuickVideo
+                ? `${photoCount} clips at $4.95/clip — Lens subscriber rate`
+                : `Professional HD walkthrough video with ${photoCount} photos`,
             },
             unit_amount: amountCents,
           },
@@ -158,13 +169,15 @@ export async function POST(request: Request) {
         brandingType,
         voiceoverIncluded,
         includeEditedPhotos,
-        lensSubscriberDiscount: isLensSubscriber ? "yes" : "no",
+        isQuickVideo: isQuickVideo ? "yes" : "no",
+        lensSubscriberDiscount: applyLensDiscount ? "yes" : "no",
         ...photoUrlChunks,
       },
     };
 
     // Apply 10% Lens subscriber discount OR allow manual promo codes — Stripe can't do both
-    if (isLensSubscriber) {
+    // Skip Lens discount for Quick Video orders (already at subscriber rate)
+    if (applyLensDiscount) {
       sessionParams.discounts = [{ coupon: LENS_COUPON_ID }];
     } else {
       sessionParams.allow_promotion_codes = true;
@@ -172,8 +185,11 @@ export async function POST(request: Request) {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    if (isLensSubscriber) {
+    if (applyLensDiscount) {
       console.log(`[Checkout] 🏷️ Applied Lens subscriber 10% discount for order ${orderId}`);
+    }
+    if (isQuickVideo) {
+      console.log(`[Checkout] ⚡ Quick Video order — subscriber rate already applied, no coupon needed for order ${orderId}`);
     }
 
     return NextResponse.json({
