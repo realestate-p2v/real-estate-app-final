@@ -54,6 +54,7 @@ interface Order {
   revision_count: number;
   revisions_allowed: number;
   clip_urls: any[];
+  is_quick_video: boolean;
 }
 
 function getAllVideos(order: Order): { label: string; url: string }[] {
@@ -439,12 +440,14 @@ export default function VideoDeliveryPage() {
   const isClosed = order.status === "closed";
   const isRevisionInProgress = REVISION_IN_PROGRESS_STATUSES.includes(order.status);
   const statusInfo = STATUS_DISPLAY[order.status];
+  const isQuickVideo = !!order.is_quick_video;
 
   const hasDeliveredAt = !!order.delivered_at;
   const reviewWindowExpired = timeRemaining?.expired ?? false;
   const freeRevisionUsed = (order.revision_count || 0) >= (order.revisions_allowed || 1);
-  const canRequestFreeRevision = isDelivered && !isClosed && !isRevisionInProgress && !freeRevisionUsed && !reviewWindowExpired;
-  const canRequestPaidRevision = (isClosed || reviewWindowExpired) && !isRevisionInProgress;
+  // Quick videos never get free revisions
+  const canRequestFreeRevision = !isQuickVideo && isDelivered && !isClosed && !isRevisionInProgress && !freeRevisionUsed && !reviewWindowExpired;
+  const canRequestPaidRevision = (isClosed || reviewWindowExpired || isQuickVideo) && !isRevisionInProgress;
 
   return (
     <div className="min-h-screen bg-background">
@@ -458,6 +461,9 @@ export default function VideoDeliveryPage() {
             <p className="text-muted-foreground mt-1">
               {isDelivered ? `Delivered ${formatDate(order.delivered_at || order.created_at)}` : `Ordered ${formatDate(order.created_at)}`}
               {hasMultipleVideos && ` · ${allVideos.length} video versions`}
+              {isQuickVideo && (
+                <span className="ml-2 text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full align-middle">QUICK VIDEO</span>
+              )}
             </p>
           </div>
           {isRevisionInProgress && statusInfo ? (
@@ -498,8 +504,8 @@ export default function VideoDeliveryPage() {
           </div>
         )}
 
-        {/* 5-Day Review Window Countdown */}
-        {isDelivered && !isClosed && !isRevisionInProgress && hasDeliveredAt && timeRemaining && (
+        {/* 5-Day Review Window Countdown — NOT shown for Quick Videos */}
+        {!isQuickVideo && isDelivered && !isClosed && !isRevisionInProgress && hasDeliveredAt && timeRemaining && (
           <div className={`rounded-2xl p-5 mb-6 border ${
             reviewWindowExpired
               ? "bg-red-50 border-red-200"
@@ -551,6 +557,45 @@ export default function VideoDeliveryPage() {
                       </Link>
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    onClick={handleAcceptClose}
+                    disabled={accepting}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {accepting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Accept & Download
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Video — paid revisions only banner */}
+        {isQuickVideo && isDelivered && !isClosed && !isRevisionInProgress && (
+          <div className="bg-cyan-50 border border-cyan-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-5 w-5 text-cyan-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground mb-1">Subscriber Quick Video</h3>
+                <p className="text-sm text-muted-foreground">
+                  Quick Video orders include paid revisions only.
+                  Request a revision anytime — pricing starts at $1.99/clip.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/video/${orderId}/revise`}>
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                      Request Paid Revision
+                    </Link>
+                  </Button>
                   <Button
                     size="sm"
                     onClick={handleAcceptClose}
@@ -622,8 +667,8 @@ export default function VideoDeliveryPage() {
             </Button>
           )}
 
-          {/* Accept button (delivered but not closed) */}
-          {isDelivered && !isClosed && !isRevisionInProgress && (
+          {/* Accept button (delivered but not closed, non-quick-video) */}
+          {isDelivered && !isClosed && !isRevisionInProgress && !isQuickVideo && (
             <Button
               onClick={handleAcceptClose}
               disabled={accepting}
@@ -638,8 +683,8 @@ export default function VideoDeliveryPage() {
             </Button>
           )}
 
-          {/* Revision button — not during revision processing */}
-          {!isRevisionInProgress && !isClosed && isDelivered && (
+          {/* Free revision button — not for quick videos, not during revision processing */}
+          {!isQuickVideo && !isRevisionInProgress && !isClosed && isDelivered && (
             <Button asChild variant="outline">
               <Link href={`/video/${orderId}/revise`}>
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -648,8 +693,8 @@ export default function VideoDeliveryPage() {
             </Button>
           )}
 
-          {/* Paid revision after closing */}
-          {isClosed && (
+          {/* Paid revision after closing OR for quick videos */}
+          {(isClosed || (isQuickVideo && isDelivered && !isRevisionInProgress)) && (
             <Button asChild variant="outline">
               <Link href={`/video/${orderId}/revise`}>
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -682,6 +727,12 @@ export default function VideoDeliveryPage() {
                 <span className="text-muted-foreground">Orientation</span>
                 <span className="text-foreground capitalize">{order.orientation || "landscape"}</span>
               </div>
+              {isQuickVideo && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Order Type</span>
+                  <span className="text-cyan-600 font-medium">Quick Video</span>
+                </div>
+              )}
               {hasMultipleVideos && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Video Versions</span>
@@ -708,6 +759,19 @@ export default function VideoDeliveryPage() {
                 <p className="text-sm text-muted-foreground">
                   Your revision is being processed. You'll receive an email when the updated video is ready.
                 </p>
+              </>
+            ) : isQuickVideo ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  This is a Subscriber Quick Video. Paid revisions are available at standard rates.
+                  We only regenerate the clips you flag — everything else stays the same.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/video/${orderId}/revise`}>
+                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                    Request Paid Revision
+                  </Link>
+                </Button>
               </>
             ) : isClosed ? (
               <>
