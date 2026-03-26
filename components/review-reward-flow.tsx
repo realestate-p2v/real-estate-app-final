@@ -198,48 +198,96 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
     ? verifiedStates.find((s) => s.discountPercent && s.discountPercent >= 20)
     : null;
   const [wheelSpun, setWheelSpun] = useState(false);
-  const showSpinWheel = verifiedCount >= 3 && thirdReviewState && !wheelSpun;
+  const [showWheelModal, setShowWheelModal] = useState(false);
+
+  // "All prizes won" = all 3 verified AND the 3rd has a discount code (wheel already spun)
+  const allPrizesWon = verifiedCount >= 3 && thirdReviewState?.discountCode;
+  // Can show wheel = 3 verified, has discount data, but user hasn't spun THIS session yet
+  // AND the wheel hasn't been spun before (no discount code yet means admin just approved, wheel not spun)
+  const canShowWheel = verifiedCount >= 3 && thirdReviewState && !wheelSpun && !allPrizesWon;
+
+  // Auto-show the wheel modal when 3rd review is newly verified
+  useEffect(() => {
+    if (canShowWheel && !showWheelModal) {
+      const timer = setTimeout(() => setShowWheelModal(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [canShowWheel]);
 
   if (dismissed) return null;
   if (loading) return null;
 
   return (
-    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
-      <div className="flex items-start gap-4">
-        <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-          <Star className="h-5 w-5 text-amber-600" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-foreground mb-1">Love your video? Share the love!</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Leave a review on any platform, upload a screenshot to verify, and earn a discount on your next order.
-          </p>
+    <>
+      {/* Spin Wheel Modal */}
+      {showWheelModal && thirdReviewState && (
+        <SpinWheel
+          winningPercent={thirdReviewState.discountPercent!}
+          promoCode={thirdReviewState.discountCode || ""}
+          onComplete={() => setWheelSpun(true)}
+          onClose={() => setShowWheelModal(false)}
+        />
+      )}
 
-          {/* Spin Wheel — shown when all 3 reviews verified */}
-          {showSpinWheel && (
-            <div className="mb-6 py-4">
-              <p className="text-center text-lg font-black text-foreground mb-4">
-                🎉 All 3 reviews verified! Spin for your discount!
-              </p>
-              <SpinWheel
-                winningPercent={thirdReviewState.discountPercent!}
-                promoCode={thirdReviewState.discountCode || ""}
-                onComplete={() => setWheelSpun(true)}
-              />
-            </div>
-          )}
+      <div className={`bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6 transition-opacity ${allPrizesWon ? "opacity-60" : ""}`}>
+        <div className="flex items-start gap-4">
+          <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <Star className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            {allPrizesWon ? (
+              <>
+                <h3 className="font-bold text-foreground mb-1">🏆 You&apos;ve won every review prize!</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Thanks for reviewing us on all 3 platforms — you&apos;re amazing. But there&apos;s more...
+                </p>
+                <div className="bg-white/70 rounded-xl border border-amber-200 p-4 mb-3">
+                  <p className="text-sm text-foreground font-semibold mb-1">
+                    ✨ Unlock surprise discounts with P2V Lens
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Every time you use any P2V Lens feature — Photo Coach, Design Studio, Description Writer, Virtual Staging — you have a chance to win exclusive discounts on all of our products. Subscribers win more often.
+                  </p>
+                  <a
+                    href="/lens"
+                    className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors"
+                  >
+                    Learn more about P2V Lens →
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="font-bold text-foreground mb-1">Love your video? Share the love!</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Leave a review on any platform, upload a screenshot to verify, and earn a discount on your next order.
+                </p>
+              </>
+            )}
 
-          {/* Discount progress */}
-          {!showSpinWheel && (
-            <p className="text-xs text-muted-foreground mb-3">
-              🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = spin the wheel!</strong>
-              {discountLabel && (
-                <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                  Current: {discountLabel}
-                </span>
-              )}
-            </p>
-          )}
+            {/* Discount progress — only show when not all prizes won */}
+            {!allPrizesWon && (
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs text-muted-foreground">
+                  🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = spin the wheel!</strong>
+                </p>
+                {discountLabel && (
+                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">
+                    Current: {discountLabel}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Spin again button — only if wheel was just spun this session (before page reload makes it allPrizesWon) */}
+            {wheelSpun && !allPrizesWon && thirdReviewState && (
+              <button
+                onClick={() => setShowWheelModal(true)}
+                className="mb-3 text-xs text-amber-700 hover:text-amber-900 font-bold underline underline-offset-2 transition-colors"
+              >
+                🎰 View your spin result again
+              </button>
+            )}
 
           {/* Platform cards */}
           <div className="space-y-3">
@@ -423,5 +471,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
         </div>
       </div>
     </div>
+    </>
   );
 }
