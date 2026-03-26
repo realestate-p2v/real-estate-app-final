@@ -10,7 +10,10 @@ interface OrderSummaryProps {
   resolution?: string;
   orientation?: string;
   isUrlMode?: boolean;
+  isQuickVideo?: boolean;
 }
+
+const QUICK_VIDEO_RATE = 4.95;
 
 export function OrderSummary({
   photoCount,
@@ -20,8 +23,13 @@ export function OrderSummary({
   resolution = "768P",
   orientation = "landscape",
   isUrlMode = false,
+  isQuickVideo = false,
 }: OrderSummaryProps) {
   const getPricing = () => {
+    if (isQuickVideo && photoCount > 0) {
+      const qvPrice = Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
+      return { price: qvPrice, originalPrice: 0, tier: `Quick Video (${photoCount} clips)` };
+    }
     if (photoCount === 0) {
       return { price: 0, originalPrice: 0, tier: "Select photos to see price" };
     }
@@ -38,10 +46,10 @@ export function OrderSummary({
   };
 
   const { price, originalPrice, tier } = getPricing();
-  const showContactUs = photoCount > 35;
+  const showContactUs = photoCount > 35 && !isQuickVideo;
 
   const brandingPrice = brandingOption === "custom" ? 0 : 0;
-  const voiceoverPrice = voiceoverOption === "voiceover" ? 25 : 0;
+  const voiceoverPrice = voiceoverOption === "voiceover" && !isQuickVideo ? 25 : 0;
   const editedPhotosPrice = includeEditedPhotos ? photoCount * 2.99 : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
   const orientationPrice = orientation === "both" ? 15 : 0;
@@ -55,7 +63,7 @@ export function OrderSummary({
   if (brandingOption === "custom") {
     features.push("Custom branded intro & outro");
   }
-  if (voiceoverOption === "voiceover") {
+  if (voiceoverOption === "voiceover" && !isQuickVideo) {
     features.push("Professional AI voiceover");
   }
   if (includeEditedPhotos) {
@@ -64,7 +72,11 @@ export function OrderSummary({
   features.push("AI-enhanced motion clips");
   features.push("Choice of music");
   features.push("48-hour delivery");
-  features.push("1 revision included");
+  if (isQuickVideo) {
+    features.push("Paid revisions available");
+  } else {
+    features.push("1 revision included");
+  }
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 sticky top-24">
@@ -99,19 +111,33 @@ export function OrderSummary({
           <>
             {/* Base Price */}
             <div className="py-4 border-b border-border">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Base price</span>
-                <div className="text-right">
-                  {originalPrice > 0 && (
-                    <span className="text-muted-foreground line-through text-sm mr-2">
-                      ${originalPrice}
+              {isQuickVideo ? (
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Quick Video ({photoCount} clips × ${QUICK_VIDEO_RATE})</span>
+                    <span className="font-semibold text-foreground">
+                      ${price.toFixed(2)}
                     </span>
-                  )}
-                  <span className="font-semibold text-foreground">
-                    {price > 0 ? `$${price}` : "--"}
-                  </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">LENS SUBSCRIBER</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Base price</span>
+                  <div className="text-right">
+                    {originalPrice > 0 && (
+                      <span className="text-muted-foreground line-through text-sm mr-2">
+                        ${originalPrice}
+                      </span>
+                    )}
+                    <span className="font-semibold text-foreground">
+                      {price > 0 ? `$${price}` : "--"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Add-ons */}
@@ -167,7 +193,7 @@ export function OrderSummary({
                   {totalPrice > 0 ? `$${totalPrice.toFixed(2)}` : "--"}
                 </span>
               </div>
-              {price > 0 && originalPrice > price && (
+              {!isQuickVideo && price > 0 && originalPrice > price && (
                 <div className="text-right mt-2">
                   <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-semibold">
                     Save ${originalPrice - price}
@@ -175,6 +201,13 @@ export function OrderSummary({
                 </div>
               )}
             </div>
+
+            {/* Quick Video note */}
+            {isQuickVideo && (
+              <p className="text-xs text-muted-foreground">
+                Quick Videos include branding and music. Paid revisions available after delivery.
+              </p>
+            )}
 
             <div className="space-y-3 pt-4 border-t border-border">
               <p className="text-sm font-semibold text-foreground">Includes:</p>
