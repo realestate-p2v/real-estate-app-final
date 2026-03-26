@@ -80,14 +80,14 @@ const steps = [
     step: "2",
     icon: Paintbrush,
     title: "Photo Enhancement",
-    description: "Our professional team cleans up and enhances your photos in Photoshop for the best quality if needed.",
+    description: "AI auto-enhancement corrects brightness, color balance, contrast, and white balance — so every frame looks its best.",
     type: "slider",
   },
   {
     step: "3",
     icon: Film,
     title: "Video Production",
-    description: "We bring your photos to life with a blend of smooth transitions, music, and professional editing.",
+    description: "AI generates cinematic camera movements for each photo, assembles the clips with your chosen music and branding, then a real editor reviews everything before delivery.",
     type: "video",
     src: "/images/p2v-library.mp4",
     label: "Video Rendering"
@@ -96,9 +96,9 @@ const steps = [
     step: "4",
     icon: CheckCircle,
     title: "HD Delivery",
-    description: "Receive your high-definition video file within 24 hours, ready for social media and presentations.",
-    type: "youtube",
-    src: "https://www.youtube.com/embed/OuzDikc2M7I?si=9nF9DEq5GxUUkEvO",
+    description: "Receive your high-definition video file in under 12 hours, ready for social media and presentations.",
+    type: "video",
+    src: "https://res.cloudinary.com/dh6ztnoue/video/upload/v1774477216/p2v-demo-720HD_zop75m.mp4",
     label: "Final HD File"
   },
 ];
