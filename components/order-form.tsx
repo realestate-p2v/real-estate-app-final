@@ -51,6 +51,11 @@ const LISTING_PACKAGES: ListingPackage[] = [
   { label: "Up to 35 Photos", photoCount: 35, price: 109 },
 ];
 
+// ── Quick Video constants ──
+const QUICK_VIDEO_RATE = 4.95;
+const QUICK_VIDEO_MIN = 5;
+const QUICK_VIDEO_MAX = 14;
+
 // ── Step definitions ──
 interface StepDef {
   label: string;
@@ -235,6 +240,34 @@ export function OrderForm() {
   const [propertyBathrooms, setPropertyBathrooms] = useState("");
   const [includeAddressOnCard, setIncludeAddressOnCard] = useState(true);
 
+  // ── Subscriber check ──
+  const [isSubscriber, setIsSubscriber] = useState(false);
+
+  useEffect(() => {
+    const checkSub = async () => {
+      try {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Admin always counts as subscriber for testing
+        const isAdmin = user.email === "realestatephoto2video@gmail.com";
+        if (isAdmin) { setIsSubscriber(true); return; }
+
+        const { data } = await supabase
+          .from("lens_usage")
+          .select("is_subscriber")
+          .eq("user_id", user.id)
+          .single();
+
+        if (data?.is_subscriber) setIsSubscriber(true);
+      } catch {
+        // Not logged in or query failed — not a subscriber
+      }
+    };
+    checkSub();
+  }, []);
+
   // ── Derived ──
   const isUrlMode = photoInputMode === "url";
   const isUploadMode = photoInputMode === "upload";
@@ -242,6 +275,9 @@ export function OrderForm() {
   const allUploadsComplete = photos.length > 0 && photos.every((p) => p.uploadStatus === "complete");
   const steps = isUrlMode ? URL_STEPS : UPLOAD_STEPS;
   const totalSteps = steps.length;
+
+  // ── Quick Video check ──
+  const isQuickVideo = isSubscriber && isUploadMode && photoCount >= QUICK_VIDEO_MIN && photoCount <= QUICK_VIDEO_MAX;
 
   // ── UTM capture on mount ──
   useEffect(() => {
@@ -438,6 +474,11 @@ export function OrderForm() {
   // ── Pricing ──
   const getBasePrice = () => {
     if (isUrlMode && listingPackage) return listingPackage.price;
+    // Subscriber per-clip rate for 5-14 clips
+    if (isQuickVideo) {
+      return Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
+    }
+    // Regular tiers
     if (photoCount <= 15) return 79;
     if (photoCount <= 25) return 99;
     if (photoCount <= 35) return 109;
@@ -445,7 +486,7 @@ export function OrderForm() {
   };
 
   const getBrandingPrice = () => 0;
-  const getVoiceoverPrice = () => (voiceoverSelection === "voiceover" ? 25 : 0);
+  const getVoiceoverPrice = () => (voiceoverSelection === "voiceover" && !isQuickVideo ? 25 : 0);
   const getEditedPhotosPrice = () => (includeEditedPhotos ? photos.length * 2.99 : 0);
   const getResolutionPrice = () => (resolution === "1080P" ? 10 : 0);
   const getOrientationPrice = () => (orientation === "both" ? 15 : 0);
@@ -470,7 +511,12 @@ export function OrderForm() {
   const canProceedFromCurrentStep = (): boolean => {
     switch (currentStepKey) {
       case "upload":
-        if (isUploadMode) return photos.length > 0 && photos.length <= 35 && allUploadsComplete;
+        if (isUploadMode) {
+          if (photos.length === 0 || photos.length > 35 || !allUploadsComplete) return false;
+          // Subscribers with 1-4 photos can't proceed (minimum 5 for quick video, or 15 for standard)
+          if (isSubscriber && photos.length > 0 && photos.length < QUICK_VIDEO_MIN) return false;
+          return true;
+        }
         if (isUrlMode)
           return listingUrl.trim() !== "" && listingPackage !== null && listingPermission;
         return false;
@@ -589,9 +635,9 @@ export function OrderForm() {
             email: brandingData.email,
             website: brandingData.website,
           },
-          voiceover: voiceoverSelection === "voiceover",
-          voiceoverScript,
-          voiceoverVoice: selectedVoice,
+          voiceover: voiceoverSelection === "voiceover" && !isQuickVideo,
+          voiceoverScript: isQuickVideo ? "" : voiceoverScript,
+          voiceoverVoice: isQuickVideo ? "" : selectedVoice,
           includeEditedPhotos,
           includeUnbranded: brandingSelection !== "unbranded" && includeUnbranded,
           customIntroCardUrl: brandingData.customIntroCardUrl || null,
@@ -599,6 +645,7 @@ export function OrderForm() {
           includeAddressOnCard,
           totalPrice: getTotalPrice(),
           specialInstructions: formData.notes,
+          is_quick_video: isQuickVideo,
           utm_source: utmData.utm_source || null,
           utm_medium: utmData.utm_medium || null,
           utm_campaign: utmData.utm_campaign || null,
@@ -616,10 +663,11 @@ export function OrderForm() {
         body: JSON.stringify({
           items: [
             {
-              name:
-                isUrlMode && listingPackage
-                  ? `${listingPackage.label} — Listing URL Order`
-                  : `${photoCount} Photo Video Package`,
+              name: isQuickVideo
+                ? `Quick Video — ${photoCount} clips × $${QUICK_VIDEO_RATE}`
+                : isUrlMode && listingPackage
+                ? `${listingPackage.label} — Listing URL Order`
+                : `${photoCount} Photo Video Package`,
               amount: getTotalPrice() * 100,
             },
           ],
@@ -788,6 +836,41 @@ export function OrderForm() {
               {/* Upload Mode */}
               {isUploadMode && (
                 <PhotoUploader photos={photos} onPhotosChange={setPhotos} orientation={orientation} />
+              )}
+
+              {/* ── Subscriber Quick Video Banner ── */}
+              {isQuickVideo && (
+                <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 mt-4">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-bold text-cyan-800">
+                        Subscriber Quick Video — {photoCount} clips × ${QUICK_VIDEO_RATE} = ${(photoCount * QUICK_VIDEO_RATE).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-cyan-700 mt-1">
+                        Short-form video perfect for social media teasers and listing refreshers.
+                        {photoCount < 15 && ` Add ${15 - photoCount} more photo${15 - photoCount > 1 ? "s" : ""} for the Standard package ($79).`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Standard tier note at exactly 15 photos for subscribers ── */}
+              {isSubscriber && isUploadMode && photoCount === 15 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mt-4">
+                  <p className="text-sm text-green-800">
+                    <strong>Standard Package — $79</strong> (with your 10% subscriber discount at checkout).
+                    Includes 1 free revision and voiceover option.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Minimum photo warning for subscribers with 1-4 photos ── */}
+              {isSubscriber && isUploadMode && photoCount > 0 && photoCount < QUICK_VIDEO_MIN && (
+                <p className="text-sm text-amber-600 mt-2">
+                  Minimum {QUICK_VIDEO_MIN} photos required for Quick Video. Upload {QUICK_VIDEO_MIN - photoCount} more.
+                </p>
               )}
 
               {/* URL Mode */}
@@ -1190,17 +1273,27 @@ export function OrderForm() {
                 </div>
               </div>
 
-              {/* Voiceover */}
-              <div className="border-t border-border pt-8">
-                <VoiceoverSelector
-                  selected={voiceoverSelection}
-                  onSelect={setVoiceoverSelection}
-                  script={voiceoverScript}
-                  onScriptChange={setVoiceoverScript}
-                  selectedVoice={selectedVoice}
-                  onVoiceSelect={setSelectedVoice}
-                />
-              </div>
+              {/* Voiceover — hidden for Quick Videos */}
+              {!isQuickVideo ? (
+                <div className="border-t border-border pt-8">
+                  <VoiceoverSelector
+                    selected={voiceoverSelection}
+                    onSelect={setVoiceoverSelection}
+                    script={voiceoverScript}
+                    onScriptChange={setVoiceoverScript}
+                    selectedVoice={selectedVoice}
+                    onVoiceSelect={setSelectedVoice}
+                  />
+                </div>
+              ) : (
+                <div className="border-t border-border pt-8">
+                  <div className="bg-muted/50 rounded-xl border border-border p-4">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Voiceover</strong> is available on Standard ($79) and above orders.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Photo Editing */}
               <div className="border-t border-border pt-8">
@@ -1399,11 +1492,12 @@ export function OrderForm() {
           <OrderSummary
             photoCount={isUrlMode && listingPackage ? listingPackage.photoCount : photoCount}
             brandingOption={brandingSelection}
-            voiceoverOption={voiceoverSelection}
+            voiceoverOption={isQuickVideo ? "none" : voiceoverSelection}
             includeEditedPhotos={includeEditedPhotos}
             resolution={resolution}
             orientation={orientation}
             isUrlMode={isUrlMode}
+            isQuickVideo={isQuickVideo}
           />
         </div>
       </div>
@@ -1432,11 +1526,12 @@ export function OrderForm() {
             <OrderSummary
               photoCount={isUrlMode && listingPackage ? listingPackage.photoCount : photoCount}
               brandingOption={brandingSelection}
-              voiceoverOption={voiceoverSelection}
+              voiceoverOption={isQuickVideo ? "none" : voiceoverSelection}
               includeEditedPhotos={includeEditedPhotos}
               resolution={resolution}
               orientation={orientation}
               isUrlMode={isUrlMode}
+              isQuickVideo={isQuickVideo}
             />
           </div>
         )}
