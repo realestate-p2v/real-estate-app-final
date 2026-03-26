@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SpinWheel } from "@/components/spin-wheel";
 
 interface ReviewRewardFlowProps {
   orderId: string;
@@ -25,6 +26,7 @@ interface PlatformState {
   status: PlatformStatus;
   screenshotUrl?: string;
   discountCode?: string;
+  discountPercent?: number;
 }
 
 const PLATFORMS = [
@@ -82,6 +84,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 : "not_started",
               screenshotUrl: review.screenshot_url || undefined,
               discountCode: review.discount_code || undefined,
+              discountPercent: review.discount_percent || undefined,
             };
           }
           setPlatformStates(states);
@@ -187,7 +190,15 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
 
   const verifiedCount = Object.values(platformStates).filter((s) => s.status === "verified").length;
   const discountLabel =
-    verifiedCount >= 3 ? "25% off" : verifiedCount >= 2 ? "15% off" : verifiedCount >= 1 ? "10% off" : null;
+    verifiedCount >= 3 ? "Spin result!" : verifiedCount >= 2 ? "15% off" : verifiedCount >= 1 ? "10% off" : null;
+
+  // Spin wheel: find the 3rd-review discount data
+  const verifiedStates = Object.values(platformStates).filter((s) => s.status === "verified");
+  const thirdReviewState = verifiedStates.length >= 3
+    ? verifiedStates.find((s) => s.discountPercent && s.discountPercent >= 20)
+    : null;
+  const [wheelSpun, setWheelSpun] = useState(false);
+  const showSpinWheel = verifiedCount >= 3 && thirdReviewState && !wheelSpun;
 
   if (dismissed) return null;
   if (loading) return null;
@@ -204,15 +215,31 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
             Leave a review on any platform, upload a screenshot to verify, and earn a discount on your next order.
           </p>
 
+          {/* Spin Wheel — shown when all 3 reviews verified */}
+          {showSpinWheel && (
+            <div className="mb-6 py-4">
+              <p className="text-center text-lg font-black text-foreground mb-4">
+                🎉 All 3 reviews verified! Spin for your discount!
+              </p>
+              <SpinWheel
+                winningPercent={thirdReviewState.discountPercent!}
+                promoCode={thirdReviewState.discountCode || ""}
+                onComplete={() => setWheelSpun(true)}
+              />
+            </div>
+          )}
+
           {/* Discount progress */}
-          <p className="text-xs text-muted-foreground mb-3">
-            🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = 25% off!</strong>
-            {discountLabel && (
-              <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                Current: {discountLabel}
-              </span>
-            )}
-          </p>
+          {!showSpinWheel && (
+            <p className="text-xs text-muted-foreground mb-3">
+              🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = spin the wheel!</strong>
+              {discountLabel && (
+                <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                  Current: {discountLabel}
+                </span>
+              )}
+            </p>
+          )}
 
           {/* Platform cards */}
           <div className="space-y-3">
