@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const adminDb = createAdminClient();
 
     // Check if review already submitted for this platform by this user
-    // Use .maybeSingle() to avoid throwing when no row exists
     const { data: existing, error: lookupError } = await adminDb
       .from("review_rewards")
       .select("id")
@@ -86,6 +85,7 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const adminDb = createAdminClient();
+
     const { data: reviews, error } = await adminDb
       .from("review_rewards")
       .select("*")
@@ -100,5 +100,40 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Review fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 });
+  }
+}
+
+// PATCH — mark wheel as seen (called after spin completes)
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { action } = await request.json();
+
+    if (action !== "wheel_seen") {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const adminDb = createAdminClient();
+
+    // Mark all of this user's review rewards as wheel_seen
+    const { error } = await adminDb
+      .from("review_rewards")
+      .update({ wheel_seen: true })
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Wheel seen update error:", error);
+      return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Wheel seen error:", error);
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }
