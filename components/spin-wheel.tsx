@@ -4,23 +4,42 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Gift, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface SpinWheelProps {
-  winningPercent: number;
-  promoCode: string;
-  onComplete?: () => void;
-  onClose?: () => void;
+// ─── SEGMENT TYPES ───
+export interface WheelSegment {
+  value: number | string;
+  label: string;
+  color: string;
+  angle: number; // degrees this segment spans
 }
 
-const SEGMENTS = [
-  { percent: 20, color: "#dc2626", label: "20%" },
-  { percent: 25, color: "#16a34a", label: "25%" },
-  { percent: 22, color: "#2563eb", label: "22%" },
-  { percent: 30, color: "#d946ef", label: "30%" },
-  { percent: 21, color: "#ea580c", label: "21%" },
-  { percent: 28, color: "#0d9488", label: "28%" },
-  { percent: 23, color: "#7c3aed", label: "23%" },
-  { percent: 26, color: "#e11d48", label: "26%" },
+// Default segments for review reward flow (9 segments, variable width)
+const DEFAULT_SEGMENTS: WheelSegment[] = [
+  { value: 20, label: "20%", color: "#dc2626", angle: 42 },
+  { value: 25, label: "25%", color: "#16a34a", angle: 42 },
+  { value: 30, label: "30%", color: "#2563eb", angle: 42 },
+  { value: 22, label: "22%", color: "#d946ef", angle: 42 },
+  { value: "jackpot", label: "FREE\nVIDEO", color: "#FFD700", angle: 24 },
+  { value: 28, label: "28%", color: "#0d9488", angle: 42 },
+  { value: 23, label: "23%", color: "#7c3aed", angle: 42 },
+  { value: 26, label: "26%", color: "#e11d48", angle: 42 },
+  { value: 21, label: "21%", color: "#ea580c", angle: 42 },
 ];
+// Total: 42×8 + 24 = 360°
+
+interface SpinWheelProps {
+  /** Pre-determined winning value — if provided, wheel lands on this segment */
+  winningPercent?: number;
+  /** Pre-determined promo code to display */
+  promoCode?: string;
+  /** Optional custom segments (for signup spin, etc.) */
+  segments?: WheelSegment[];
+  /** Called with the winning segment when spin completes */
+  onResult?: (segment: WheelSegment) => void;
+  /** Called when spin animation finishes (before result display) */
+  onComplete?: () => void;
+  /** Called when user closes the modal */
+  onClose?: () => void;
+}
 
 interface Particle {
   x: number; y: number; vx: number; vy: number;
@@ -39,13 +58,11 @@ class SoundEngine {
       this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
-    // Play a silent buffer to permanently unlock audio playback
     const silent = this.ctx.createBuffer(1, 1, 22050);
     const src = this.ctx.createBufferSource();
     src.buffer = silent;
     src.connect(this.ctx.destination);
     src.start(0);
-    // Pre-load applause
     if (!this.applauseAudio) {
       this.applauseAudio = new Audio("/crowd-applause.mp3");
       this.applauseAudio.load();
@@ -82,12 +99,15 @@ class SoundEngine {
     osc.stop(ctx.currentTime + 0.3);
   }
 
-  win() {
+  win(isJackpot = false) {
     if (this.muted || !this.ctx) return;
     const ctx = this.ctx;
     if (ctx.state === "suspended") ctx.resume();
 
-    const notes = [523, 659, 784, 1047];
+    // Fanfare notes — jackpot gets extra notes
+    const notes = isJackpot
+      ? [523, 659, 784, 1047, 1175, 1319, 1568]
+      : [523, 659, 784, 1047];
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -96,7 +116,7 @@ class SoundEngine {
       osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
       osc.type = "triangle";
       gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.15 + 0.02);
+      gain.gain.linearRampToValueAtTime(isJackpot ? 0.22 : 0.18, ctx.currentTime + i * 0.15 + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.4);
       osc.start(ctx.currentTime + i * 0.15);
       osc.stop(ctx.currentTime + i * 0.15 + 0.4);
@@ -104,7 +124,8 @@ class SoundEngine {
 
     setTimeout(() => {
       if (!ctx || this.muted) return;
-      for (let i = 0; i < 6; i++) {
+      const sparkleCount = isJackpot ? 12 : 6;
+      for (let i = 0; i < sparkleCount; i++) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
@@ -122,11 +143,11 @@ class SoundEngine {
       if (this.muted) return;
       if (this.applauseAudio) {
         this.applauseAudio.currentTime = 0;
-        this.applauseAudio.volume = 0.7;
+        this.applauseAudio.volume = isJackpot ? 0.85 : 0.7;
         this.applauseAudio.play().catch(() => {});
       } else {
         this.applauseAudio = new Audio("/crowd-applause.mp3");
-        this.applauseAudio.volume = 0.7;
+        this.applauseAudio.volume = isJackpot ? 0.85 : 0.7;
         this.applauseAudio.play().catch(() => {});
       }
     }, 300);
@@ -150,10 +171,70 @@ function darken(hex: string, pct: number) {
   return `rgb(${Math.max(0, (n >> 16) - Math.round(2.55 * pct))},${Math.max(0, ((n >> 8) & 0xff) - Math.round(2.55 * pct))},${Math.max(0, (n & 0xff) - Math.round(2.55 * pct))})`;
 }
 
+// ─── ANGLE HELPERS (variable-width segments) ───
+/** Get the start angle (in radians) of segment at index i */
+function getSegmentStartAngle(segments: WheelSegment[], index: number): number {
+  let deg = 0;
+  for (let i = 0; i < index; i++) {
+    deg += segments[i].angle;
+  }
+  return (deg * Math.PI) / 180;
+}
+
+/** Given a final rotation (radians), determine which segment the pointer (top, 12 o'clock) lands on */
+function getWinningIndex(segments: WheelSegment[], finalRotationRad: number): number {
+  // The wheel rotates clockwise. Pointer is at top (12 o'clock = -π/2 in canvas coords).
+  // After rotation, the angle under the pointer (in segment space, starting from 0 at the first segment's left edge):
+  const totalDeg = ((finalRotationRad * 180) / Math.PI) % 360;
+  // Normalize: the segment under the pointer at angle 0 is segment 0's start.
+  // As wheel rotates clockwise by totalDeg, the segment that moved under the pointer is at angle totalDeg from start.
+  const normalizedDeg = ((360 - totalDeg) % 360 + 360) % 360;
+
+  let cumulative = 0;
+  for (let i = 0; i < segments.length; i++) {
+    cumulative += segments[i].angle;
+    if (normalizedDeg < cumulative) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+/** Get rotation target (radians) to land on a specific segment index */
+function getTargetRotation(segments: WheelSegment[], targetIndex: number): number {
+  // Calculate the center angle of the target segment
+  let centerDeg = 0;
+  for (let i = 0; i < targetIndex; i++) {
+    centerDeg += segments[i].angle;
+  }
+  centerDeg += segments[targetIndex].angle / 2;
+
+  // To land on this segment, the wheel needs to rotate so this segment is at top (pointer)
+  // The segment at the pointer after rotation R is at (360 - R) % 360 degrees
+  // So R = (360 - centerDeg) % 360
+  const baseRotDeg = (360 - centerDeg + 360) % 360;
+  const fullSpins = 9 + Math.random() * 5;
+  // Add some randomness within the segment (don't always hit dead center)
+  const segHalfDeg = segments[targetIndex].angle / 2;
+  const jitter = (Math.random() - 0.5) * segHalfDeg * 0.7; // stay well within bounds
+
+  return (fullSpins * 360 + baseRotDeg + jitter) * (Math.PI / 180);
+}
+
+
 // ═══════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════
-export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: SpinWheelProps) {
+export function SpinWheel({
+  winningPercent,
+  promoCode,
+  segments: segmentsProp,
+  onResult,
+  onComplete,
+  onClose,
+}: SpinWheelProps) {
+  const segments = segmentsProp || DEFAULT_SEGMENTS;
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
   const soundRef = useRef(new SoundEngine());
@@ -161,17 +242,18 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
   const confettiAnimRef = useRef<number | null>(null);
   const startTimeRef = useRef(0);
   const targetRotRef = useRef(0);
-  const lastTickSegRef = useRef(-1);
-  const lastSpeedRef = useRef(0);
+  const lastTickAngleRef = useRef(-1);
+  const lastProgressRef = useRef(0);
   const particlesRef = useRef<Particle[]>([]);
+  const winningIndexRef = useRef(0);
 
   const [muted, setMuted] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [finished, setFinished] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [tickFlash, setTickFlash] = useState(0);
+  const [wonSegment, setWonSegment] = useState<WheelSegment | null>(null);
 
-  const segAngle = (2 * Math.PI) / SEGMENTS.length;
   const CANVAS = 420;
   const DURATION = 7500;
 
@@ -182,7 +264,6 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     }
   }, [muted]);
 
-  // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -220,16 +301,28 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     ctx.lineWidth = 9;
     ctx.stroke();
 
-    // Segments
-    SEGMENTS.forEach((seg, i) => {
-      const a1 = rotation + i * segAngle - Math.PI / 2;
-      const a2 = a1 + segAngle;
-      const mid = a1 + segAngle / 2;
+    // Segments (variable width)
+    let cumulativeAngle = 0;
+    segments.forEach((seg, i) => {
+      const segRad = (seg.angle * Math.PI) / 180;
+      const a1 = rotation + (cumulativeAngle * Math.PI) / 180 - Math.PI / 2;
+      const a2 = a1 + segRad;
+      const mid = a1 + segRad / 2;
 
+      const isJackpotSeg = seg.value === "jackpot";
+
+      // Gradient fill
       const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, r);
-      grad.addColorStop(0, lighten(seg.color, 35));
-      grad.addColorStop(0.35, seg.color);
-      grad.addColorStop(1, darken(seg.color, 25));
+      if (isJackpotSeg) {
+        grad.addColorStop(0, "#FFF8DC");
+        grad.addColorStop(0.35, "#FFD700");
+        grad.addColorStop(0.7, "#DAA520");
+        grad.addColorStop(1, "#B8860B");
+      } else {
+        grad.addColorStop(0, lighten(seg.color, 35));
+        grad.addColorStop(0.35, seg.color);
+        grad.addColorStop(1, darken(seg.color, 25));
+      }
 
       ctx.beginPath();
       ctx.moveTo(cx, cx);
@@ -241,32 +334,61 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
       ctx.lineWidth = 2;
       ctx.stroke();
 
+      // Jackpot sparkle effect — extra gold border
+      if (isJackpotSeg) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cx);
+        ctx.arc(cx, cx, r, a1, a2);
+        ctx.closePath();
+        ctx.strokeStyle = "rgba(255,215,0,0.6)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
       // Label
       ctx.save();
       ctx.translate(cx, cx);
       ctx.rotate(mid);
-      ctx.shadowColor = "rgba(0,0,0,0.6)";
-      ctx.shadowBlur = 5;
-      ctx.shadowOffsetY = 2;
-      ctx.fillStyle = "white";
-      ctx.font = `900 ${size * 0.07}px system-ui, -apple-system, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(seg.label, r * 0.6, 0);
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
-      ctx.font = `800 ${size * 0.03}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
-      ctx.fillText("OFF", r * 0.6, size * 0.042);
+
+      if (isJackpotSeg) {
+        // Two-line label for jackpot
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = "#78350f";
+        ctx.font = `900 ${size * 0.04}px system-ui, -apple-system, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("FREE", r * 0.65, -size * 0.018);
+        ctx.fillText("VIDEO", r * 0.65, size * 0.022);
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+      } else {
+        ctx.shadowColor = "rgba(0,0,0,0.6)";
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = "white";
+        ctx.font = `900 ${size * 0.07}px system-ui, -apple-system, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(seg.label, r * 0.6, 0);
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.font = `800 ${size * 0.03}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillText("OFF", r * 0.6, size * 0.042);
+      }
       ctx.restore();
 
-      // Edge dot
+      // Edge dot at segment boundary
       const dx = cx + Math.cos(a1) * (r - 7);
       const dy = cx + Math.sin(a1) * (r - 7);
       ctx.beginPath();
       ctx.arc(dx, dy, 3.5, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(255,255,255,0.7)";
       ctx.fill();
+
+      cumulativeAngle += seg.angle;
     });
 
     // Inner shadow
@@ -295,7 +417,7 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     ctx.textBaseline = "middle";
     ctx.fillText("🎁", cx, cx + 2);
 
-    // Pointer
+    // Pointer (top, 12 o'clock)
     const pw = size * 0.065;
     const ph = size * 0.09;
     ctx.beginPath();
@@ -315,10 +437,10 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     ctx.arc(cx, 9, 5.5, 0, 2 * Math.PI);
     ctx.fillStyle = "white";
     ctx.fill();
-  }, [segAngle]);
+  }, [segments]);
 
   // ─── CONFETTI ───
-  const launchConfetti = useCallback(() => {
+  const launchConfetti = useCallback((isJackpot = false) => {
     const canvas = confettiCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -328,17 +450,20 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     ctx.scale(2, 2);
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
-    const colors = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#fbbf24"];
+    const colors = isJackpot
+      ? ["#FFD700", "#FFA500", "#FF6347", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#fbbf24", "#DAA520", "#B8860B"]
+      : ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#fbbf24"];
+    const particleCount = isJackpot ? 300 : 150;
     const particles: Particle[] = [];
-    for (let i = 0; i < 150; i++) {
-      const angle = (Math.PI * 2 * i) / 150 + (Math.random() - 0.5) * 0.8;
-      const speed = 5 + Math.random() * 12;
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.8;
+      const speed = (isJackpot ? 7 : 5) + Math.random() * 12;
       particles.push({
         x: w / 2, y: h / 2,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 5,
         color: colors[Math.floor(Math.random() * colors.length)],
-        size: 3 + Math.random() * 8,
+        size: 3 + Math.random() * (isJackpot ? 10 : 8),
         rotation: Math.random() * 360,
         rotationSpeed: (Math.random() - 0.5) * 20,
         life: 1,
@@ -351,7 +476,7 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
       let alive = false;
       for (const p of particlesRef.current) {
         p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.vx *= 0.985;
-        p.rotation += p.rotationSpeed; p.life -= 0.006;
+        p.rotation += p.rotationSpeed; p.life -= (isJackpot ? 0.004 : 0.006);
         if (p.life <= 0) continue;
         alive = true;
         ctx.save();
@@ -377,16 +502,23 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     soundRef.current.init();
     setSpinning(true);
 
-    let winIdx = SEGMENTS.findIndex((s) => s.percent === winningPercent);
-    if (winIdx === -1) winIdx = 0;
+    // Determine which segment to land on
+    let winIdx: number;
+    if (winningPercent !== undefined) {
+      // Legacy mode: find segment by value
+      winIdx = segments.findIndex((s) => s.value === winningPercent);
+      if (winIdx === -1) winIdx = 0;
+    } else {
+      // Random mode — spin freely, calculate winner from final position
+      // For now, pick a random index (weighted equally) — caller can override via winningPercent
+      winIdx = Math.floor(Math.random() * segments.length);
+    }
 
-    const fullSpins = 9 + Math.random() * 5;
-    const segCenter = winIdx * segAngle + segAngle / 2;
-    const target = fullSpins * 2 * Math.PI + (2 * Math.PI - segCenter);
-
+    winningIndexRef.current = winIdx;
+    const target = getTargetRotation(segments, winIdx);
     targetRotRef.current = target;
     startTimeRef.current = performance.now();
-    lastTickSegRef.current = -1;
+    lastTickAngleRef.current = -1;
 
     const animate = (now: number) => {
       const elapsed = now - startTimeRef.current;
@@ -395,34 +527,58 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
       const rotation = eased * target;
       const speed = progress < 0.98 ? (1 - progress) : 0;
 
-      const curSeg = Math.floor(((rotation % (2 * Math.PI)) / segAngle)) % SEGMENTS.length;
-      if (curSeg !== lastTickSegRef.current) {
-        lastTickSegRef.current = curSeg;
+      // Tick sound: detect when pointer crosses a segment boundary
+      const rotDeg = ((rotation * 180 / Math.PI) % 360 + 360) % 360;
+      // Check cumulative segment boundaries
+      let cumDeg = 0;
+      let currentBoundaryCount = 0;
+      const totalSegDeg = 360;
+      for (let i = 0; i < segments.length; i++) {
+        cumDeg += segments[i].angle;
+        if (rotDeg % totalSegDeg >= (cumDeg - segments[i].angle) && rotDeg % totalSegDeg < cumDeg) {
+          currentBoundaryCount = i;
+          break;
+        }
+      }
+      // Use floor of rotation in segment units for tick detection
+      const tickIndex = Math.floor(rotDeg / (360 / segments.length));
+      if (tickIndex !== lastTickAngleRef.current) {
+        lastTickAngleRef.current = tickIndex;
         if (progress < 0.97) {
           soundRef.current.tick(speed);
           setTickFlash((c) => c + 1);
         }
       }
 
-      if (progress > 0.92 && progress < 0.93 && lastSpeedRef.current <= 0.92) {
+      if (progress > 0.92 && progress < 0.93 && lastProgressRef.current <= 0.92) {
         soundRef.current.nearStop();
       }
-      lastSpeedRef.current = progress;
+      lastProgressRef.current = progress;
 
       drawWheel(rotation);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
+        // Verify: calculate winning index from the final rotation
+        const verifiedIndex = getWinningIndex(segments, rotation);
+        winningIndexRef.current = verifiedIndex;
+        const winner = segments[verifiedIndex];
+        const isJackpot = winner.value === "jackpot";
+
+        setWonSegment(winner);
         setSpinning(false);
         setFinished(true);
+
         if (soundRef.current.ctx && soundRef.current.ctx.state === "suspended") {
           soundRef.current.ctx.resume();
         }
+
         setTimeout(() => {
-          soundRef.current.win();
-          launchConfetti();
+          soundRef.current.win(isJackpot);
+          launchConfetti(isJackpot);
           setShowResult(true);
+          onResult?.(winner);
           onComplete?.();
         }, 700);
       }
@@ -446,6 +602,27 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
     };
   }, []);
 
+  // ─── RESULT DISPLAY ───
+  const isJackpotWin = wonSegment?.value === "jackpot";
+  const displayPercent = wonSegment ? (typeof wonSegment.value === "number" ? wonSegment.value : null) : null;
+  const displayPromoCode = promoCode || "";
+
+  const resultTitle = isJackpotWin
+    ? "🎰 JACKPOT!"
+    : displayPercent
+    ? `YOU WON ${displayPercent}% OFF!`
+    : wonSegment
+    ? `YOU WON: ${wonSegment.label}!`
+    : "";
+
+  const resultSubtext = isJackpotWin
+    ? "You won a FREE listing video! (15 clips, $79 value)"
+    : displayPercent
+    ? `${displayPercent}% OFF YOUR NEXT ORDER`
+    : wonSegment
+    ? wonSegment.label
+    : "";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
       {/* Backdrop */}
@@ -460,7 +637,7 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
       {/* Mute button */}
       <button
         onClick={() => {
-          soundRef.current.init(); // Init audio on this user gesture too
+          soundRef.current.init();
           setMuted(!muted);
         }}
         className={`fixed top-5 right-5 z-50 h-12 w-12 rounded-full flex items-center justify-center text-white transition-all shadow-lg ${
@@ -553,17 +730,34 @@ export function SpinWheel({ winningPercent, promoCode, onComplete, onClose }: Sp
           </>
         ) : (
           <div className="text-center space-y-5 z-10">
-            <div className="text-8xl animate-bounce">🎉</div>
-            <h3 className="text-4xl sm:text-5xl font-black text-white tracking-tight">
-              YOU WON {winningPercent}% OFF!
+            <div className={`text-8xl ${isJackpotWin ? "animate-bounce" : "animate-bounce"}`}>
+              {isJackpotWin ? "🎰" : "🎉"}
+            </div>
+            <h3 className={`text-4xl sm:text-5xl font-black tracking-tight ${
+              isJackpotWin ? "text-yellow-300" : "text-white"
+            }`}>
+              {resultTitle}
             </h3>
-            <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-2 border-green-400/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-2xl shadow-green-500/20">
-              <p className="text-green-300 font-semibold text-sm mb-2">Your exclusive discount code:</p>
-              <p className="font-mono text-3xl sm:text-4xl font-black text-white tracking-widest mb-3">
-                {promoCode}
+            {isJackpotWin && (
+              <p className="text-xl text-yellow-200 font-bold">
+                You won a FREE listing video! (15 clips, $79 value)
               </p>
-              <div className="inline-flex items-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-full text-lg font-black shadow-lg">
-                🏷️ {winningPercent}% OFF YOUR NEXT ORDER
+            )}
+            <div className={`border-2 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-2xl ${
+              isJackpotWin
+                ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-400/60 shadow-yellow-500/20"
+                : "bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-green-400/60 shadow-green-500/20"
+            }`}>
+              <p className={`font-semibold text-sm mb-2 ${isJackpotWin ? "text-yellow-300" : "text-green-300"}`}>
+                Your exclusive {isJackpotWin ? "jackpot" : "discount"} code:
+              </p>
+              <p className="font-mono text-3xl sm:text-4xl font-black text-white tracking-widest mb-3">
+                {displayPromoCode}
+              </p>
+              <div className={`inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-full text-lg font-black shadow-lg ${
+                isJackpotWin ? "bg-yellow-500" : "bg-green-500"
+              }`}>
+                {isJackpotWin ? "🎰" : "🏷️"} {resultSubtext}
               </div>
             </div>
             <p className="text-white/40 text-sm">
