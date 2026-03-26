@@ -47,8 +47,8 @@ interface ListingPackage {
 
 const LISTING_PACKAGES: ListingPackage[] = [
   { label: "Up to 15 Photos", photoCount: 15, price: 79 },
-  { label: "Up to 25 Photos", photoCount: 25, price: 129 },
-  { label: "Up to 35 Photos", photoCount: 35, price: 179 },
+  { label: "Up to 25 Photos", photoCount: 25, price: 99 },
+  { label: "Up to 35 Photos", photoCount: 35, price: 109 },
 ];
 
 // ── Step definitions ──
@@ -439,8 +439,8 @@ export function OrderForm() {
   const getBasePrice = () => {
     if (isUrlMode && listingPackage) return listingPackage.price;
     if (photoCount <= 15) return 79;
-    if (photoCount <= 25) return 129;
-    if (photoCount <= 35) return 179;
+    if (photoCount <= 25) return 99;
+    if (photoCount <= 35) return 109;
     return 0;
   };
 
