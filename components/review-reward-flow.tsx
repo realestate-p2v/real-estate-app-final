@@ -160,7 +160,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
       return;
     }
 
-    // Save to API
     try {
       const res = await fetch("/api/reviews/submit", {
         method: "POST",
@@ -202,7 +201,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
     : null;
   const [showWheelModal, setShowWheelModal] = useState(false);
 
-  // Check if user has already seen the wheel (persisted across page loads)
   const [wheelSeen, setWheelSeen] = useState(() => {
     try {
       return sessionStorage.getItem("p2v_wheel_seen") === "true";
@@ -216,12 +214,9 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
     try { sessionStorage.setItem("p2v_wheel_seen", "true"); } catch {}
   };
 
-  // "All prizes won" = all 3 verified AND wheel has been seen
   const allPrizesWon = verifiedCount >= 3 && thirdReviewState && wheelSeen;
-  // Can show wheel = 3 verified, has discount data, but user hasn't seen it yet
   const canShowWheel = verifiedCount >= 3 && thirdReviewState && !wheelSeen;
 
-  // Auto-show the wheel modal when 3rd review is verified and user hasn't seen it
   useEffect(() => {
     if (canShowWheel && !showWheelModal) {
       const timer = setTimeout(() => setShowWheelModal(true), 800);
@@ -232,12 +227,11 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
   if (dismissed) return null;
   if (loading) return null;
 
-  // Determine what to pass to SpinWheel based on the 3rd review state
+  // Determine SpinWheel props based on jackpot vs percent win
   const spinWinningPercent = thirdReviewState?.isJackpot
-    ? undefined // Let the wheel use "jackpot" segment matching
+    ? undefined
     : thirdReviewState?.discountPercent;
 
-  // Build the display label for jackpot wins in the verified card
   const getVerifiedPrizeLabel = (state: PlatformState) => {
     if (state.isJackpot) return "FREE VIDEO";
     if (state.discountPercent) return `${state.discountPercent}%`;
@@ -246,7 +240,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
 
   return (
     <>
-      {/* Spin Wheel Modal */}
       {showWheelModal && thirdReviewState && (
         <SpinWheel
           winningPercent={spinWinningPercent}
@@ -292,7 +285,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
               </>
             )}
 
-            {/* Discount progress — only show when not all prizes won */}
             {!allPrizesWon && (
               <div className="flex items-center gap-2 mb-3">
                 <p className="text-xs text-muted-foreground">
@@ -306,7 +298,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
               </div>
             )}
 
-            {/* Spin again button — only if wheel was just spun this session (before page reload makes it allPrizesWon) */}
             {wheelSeen && !allPrizesWon && thirdReviewState && (
               <button
                 onClick={() => setShowWheelModal(true)}
@@ -322,7 +313,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
               const state = platformStates[platform.key];
               const status = state?.status || "not_started";
 
-              // ── Verified ──
               if (status === "verified") {
                 const prizeLabel = getVerifiedPrizeLabel(state);
                 const isJackpotPrize = state?.isJackpot;
@@ -378,7 +368,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 );
               }
 
-              // ── Pending ──
               if (status === "pending") {
                 return (
                   <div
@@ -398,7 +387,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 );
               }
 
-              // ── Uploading ──
               if (status === "uploading") {
                 return (
                   <div
@@ -415,7 +403,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 );
               }
 
-              // ── Review opened — show upload area ──
               if (status === "review_opened") {
                 return (
                   <div
@@ -464,7 +451,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 );
               }
 
-              // ── Rejected — allow retry ──
               if (status === "rejected") {
                 return (
                   <div
@@ -497,7 +483,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 );
               }
 
-              // ── Not started — clickable button ──
               return (
                 <button
                   key={platform.key}
@@ -512,7 +497,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
             })}
           </div>
 
-          {/* Maybe later */}
           <div className="mt-3 text-right">
             <button
               onClick={() => setDismissed(true)}
