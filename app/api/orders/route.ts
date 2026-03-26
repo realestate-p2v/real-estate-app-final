@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       customOutroCardUrl,
       totalPrice,
       specialInstructions,
+      is_quick_video,
       utm_source,
       utm_medium,
       utm_campaign,
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
         custom_outro_card_url: customOutroCardUrl || null,
         total_price: totalPrice || 0,
         special_instructions: specialInstructions || null,
+        is_quick_video: is_quick_video || false,
         referral_code: body.referral_code || null,
         utm_source: utm_source || null,
         utm_medium: utm_medium || null,
@@ -136,7 +138,7 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("[Orders] Created order:", orderId, userId ? `(user: ${userId.slice(0, 8)})` : "(no user)", includeUnbranded ? "(+unbranded copy)" : "")
+    console.log("[Orders] Created order:", orderId, userId ? `(user: ${userId.slice(0, 8)})` : "(no user)", includeUnbranded ? "(+unbranded copy)" : "", is_quick_video ? "(quick video)" : "")
 
     return NextResponse.json({
       success: true,
