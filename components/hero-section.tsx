@@ -109,7 +109,7 @@ export function HeroSection() {
                   <span>Create My Listing Video</span>
                   <span className="flex items-center">
                     <span className="line-through text-white/50 text-base mr-2 font-medium">
-                      $149
+                      $119
                     </span>
                     <span className="text-2xl">$79</span>
                   </span>
