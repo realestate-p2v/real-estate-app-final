@@ -16,6 +16,7 @@ import {
   ImageIcon,
   Shield,
   DollarSign,
+  Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasConsent } from "@/components/cookie-consent";
@@ -92,6 +93,12 @@ export default function LensLandingPage() {
       desc: "Subscribers go first in the production queue. Your listing videos are prioritized ahead of standard orders.",
       color: "bg-orange-500/10 text-orange-600",
     },
+    {
+      icon: Film,
+      title: "Quick Videos — $4.95/clip",
+      desc: "Order 5-14 clip videos for social media, listing refreshers, and open house promos. Full HD, branded, delivered in 12 hours.",
+      color: "bg-pink-500/10 text-pink-600",
+    },
   ];
 
   return (
@@ -136,7 +143,7 @@ export default function LensLandingPage() {
             </span>
           </h1>
           <p className="mt-5 text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Photo coaching, design studio, listing descriptions, and virtual staging — all in one subscription.
+            Photo coaching, design studio, listing descriptions, virtual staging, and short-form videos from $4.95/clip — all in one subscription.
           </p>
 
           {/* CTA */}
@@ -209,6 +216,7 @@ export default function LensLandingPage() {
                 "Priority video processing",
                 "Free photo editing on orders",
                 "10% off all video orders",
+                "Per-clip video ordering (5-14 clips @ $4.95)",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
