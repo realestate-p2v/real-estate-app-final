@@ -191,7 +191,7 @@ export function HeroSection() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold border border-white/30">
                 <Film className="w-4 h-4" />
               </span>
-              Per-Clip Pricing
+              10% Off Videos + Per-Clip Pricing
             </div>
           </div>
 
