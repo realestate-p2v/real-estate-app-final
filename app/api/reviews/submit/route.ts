@@ -19,16 +19,22 @@ export async function POST(request: Request) {
     const adminDb = createAdminClient();
 
     // Check if review already submitted for this platform by this user
-    const { data: existing } = await adminDb
+    // Use .maybeSingle() to avoid throwing when no row exists
+    const { data: existing, error: lookupError } = await adminDb
       .from("review_rewards")
       .select("id")
       .eq("user_id", user.id)
       .eq("platform", platform)
-      .single();
+      .maybeSingle();
+
+    if (lookupError) {
+      console.error("Review lookup error:", lookupError);
+      return NextResponse.json({ error: "Failed to check existing review" }, { status: 500 });
+    }
 
     if (existing) {
       // Update with new screenshot
-      await adminDb
+      const { error: updateError } = await adminDb
         .from("review_rewards")
         .update({
           screenshot_url: screenshotUrl,
@@ -37,9 +43,14 @@ export async function POST(request: Request) {
           submitted_at: new Date().toISOString(),
         })
         .eq("id", existing.id);
+
+      if (updateError) {
+        console.error("Review update error:", updateError);
+        return NextResponse.json({ error: "Failed to update review" }, { status: 500 });
+      }
     } else {
       // Insert new
-      await adminDb.from("review_rewards").insert({
+      const { error: insertError } = await adminDb.from("review_rewards").insert({
         user_id: user.id,
         order_id: orderId,
         platform,
@@ -47,6 +58,11 @@ export async function POST(request: Request) {
         verification_status: "pending",
         submitted_at: new Date().toISOString(),
       });
+
+      if (insertError) {
+        console.error("Review insert error:", insertError);
+        return NextResponse.json({ error: "Failed to save review" }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });
@@ -66,10 +82,15 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const adminDb = createAdminClient();
-    const { data: reviews } = await adminDb
+    const { data: reviews, error } = await adminDb
       .from("review_rewards")
       .select("*")
       .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Review fetch error:", error);
+      return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, reviews: reviews || [] });
   } catch (error) {
