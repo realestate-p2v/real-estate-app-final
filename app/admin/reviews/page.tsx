@@ -26,12 +26,16 @@ interface ReviewReward {
   verification_status: string;
   discount_code: string;
   discount_percent: number;
+  submitted_at: string;
   created_at: string;
+  verified_at: string | null;
+  user_email?: string;
 }
 
 const PLATFORM_INFO: Record<string, { label: string; icon: string }> = {
   google: { label: "Google", icon: "⭐" },
   facebook: { label: "Facebook", icon: "👍" },
+  trustpilot: { label: "Trustpilot", icon: "⭐" },
   zillow: { label: "Zillow", icon: "🏠" },
 };
 
@@ -76,12 +80,14 @@ export default function AdminReviewsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setReviews(reviews.map(r =>
-          r.id === reviewId ? { ...r, verification_status: status } : r
-        ));
+        // Refresh reviews to get updated data (discount codes, etc.)
+        await fetchReviews();
+      } else {
+        alert(data.error || "Failed to update review");
       }
     } catch (err) {
       console.error("Failed to update review:", err);
+      alert("Failed to update review. Check console for details.");
     } finally {
       setProcessing(null);
     }
@@ -155,8 +161,13 @@ export default function AdminReviewsPage() {
           <Star className="h-6 w-6 text-amber-400" />
           <div>
             <h1 className="text-2xl font-bold text-foreground">Review Verification</h1>
-            <p className="text-sm text-muted-foreground">Approve or reject customer review screenshots</p>
+            <p className="text-sm text-muted-foreground">Approve or reject customer review screenshots. Approving generates a Stripe promo code automatically.</p>
           </div>
+        </div>
+
+        {/* Discount info */}
+        <div className="bg-muted/50 rounded-xl border border-border p-4 mb-6 text-sm text-muted-foreground">
+          <strong className="text-foreground">Discount tiers:</strong> 1 verified review = 10% off · 2 verified reviews = 15% off · 3 verified reviews = 25% off. Promo codes are generated via Stripe and emailed to the customer automatically.
         </div>
 
         {/* Stats Bar */}
@@ -238,11 +249,20 @@ export default function AdminReviewsPage() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          User: {review.user_id.slice(0, 8)}... · {formatDate(review.created_at)}
+                          User: {review.user_email || review.user_id.slice(0, 8) + "..."}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Submitted: {formatDate(review.submitted_at || review.created_at)}
                         </p>
                         {review.order_id && (
                           <p className="text-xs text-muted-foreground">
-                            Order: {review.order_id.slice(0, 8)}...
+                            Order: <Link href={`/admin/orders/${review.order_id}`} className="text-primary hover:underline">{review.order_id.slice(0, 8)}...</Link>
+                          </p>
+                        )}
+                        {review.discount_code && (
+                          <p className="text-xs text-green-700 font-semibold mt-1">
+                            Code: <span className="font-mono bg-green-50 px-1.5 py-0.5 rounded">{review.discount_code}</span>
+                            {review.discount_percent && ` (${review.discount_percent}% off)`}
                           </p>
                         )}
                       </div>
