@@ -23,6 +23,7 @@ import {
   BarChart3,
   DollarSign,
   PenTool,
+  Film,
 } from "lucide-react";
 
 interface LensSubscription {
@@ -53,21 +54,18 @@ export default function DashboardLensPage() {
 
       const isAdmin = user.email === "realestatephoto2video@gmail.com";
 
-      // Load usage data — try lens_usage first, fallback to summing lens_sessions
       const { data: usage } = await supabase
         .from("lens_usage")
         .select("*")
         .eq("user_id", user.id)
         .single();
 
-      // Also get total analyses from sessions (more reliable since admin skips lens_usage)
       const { data: sessions } = await supabase
         .from("lens_sessions")
         .select("total_analyses")
         .eq("user_id", user.id);
       const totalFromSessions = (sessions || []).reduce((sum, s) => sum + (s.total_analyses || 0), 0);
 
-      // Use whichever is higher
       const totalAnalyses = Math.max(usage?.total_analyses || 0, totalFromSessions);
 
       if (isAdmin) {
@@ -88,7 +86,6 @@ export default function DashboardLensPage() {
         });
       }
 
-      // Load counts for live tools
       const { count: sessionCount } = await supabase
         .from("lens_sessions")
         .select("*", { count: "exact", head: true })
@@ -276,6 +273,31 @@ export default function DashboardLensPage() {
             </div>
           )}
         </div>
+
+        {/* ═══ QUICK VIDEO CTA — subscribers only ═══ */}
+        {subscription.active && (
+          <Link href="/order" className="block mb-10">
+            <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-2xl p-6 hover:border-cyan-400 hover:shadow-lg transition-all">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                  <Film className="h-6 w-6 text-cyan-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-foreground text-lg">Quick Video</h3>
+                    <span className="text-[10px] bg-cyan-500 text-white font-black px-2 py-0.5 rounded-full">NEW</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Order 5–14 clip videos at $4.95/clip. Perfect for social teasers, listing refreshers, and open house promos.
+                  </p>
+                  <p className="text-sm font-bold text-cyan-700 mt-2">
+                    Starting at just $24.75 →
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* ═══ FEATURES ═══ */}
         <div className="mb-14">
