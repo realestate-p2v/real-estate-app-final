@@ -16,6 +16,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Platform and screenshot required" }, { status: 400 });
     }
 
+    // order_id column is uuid type — only pass valid UUIDs, otherwise null
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const safeOrderId = orderId && uuidRegex.test(orderId) ? orderId : null;
+
     const adminDb = createAdminClient();
 
     // Check if review already submitted for this platform by this user
@@ -38,7 +42,7 @@ export async function POST(request: Request) {
         .from("review_rewards")
         .update({
           screenshot_url: screenshotUrl,
-          order_id: orderId,
+          order_id: safeOrderId,
           verification_status: "pending",
           submitted_at: new Date().toISOString(),
         })
@@ -52,7 +56,7 @@ export async function POST(request: Request) {
       // Insert new
       const { error: insertError } = await adminDb.from("review_rewards").insert({
         user_id: user.id,
-        order_id: orderId,
+        order_id: safeOrderId,
         platform,
         screenshot_url: screenshotUrl,
         verification_status: "pending",
