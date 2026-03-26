@@ -105,7 +105,7 @@ export default function LensPage() {
     },
     {
       q: "Do I need to be a P2V video customer to use Lens?",
-      a: "No — P2V Lens works as a standalone subscription. The AI Photo Coach helps you take better photos regardless of whether you order videos from us. But if you do order videos, your subscription includes free photo enhancement, 10% off every order, and priority 12-hour delivery.",
+      a: "No — P2V Lens works as a standalone subscription. The AI Photo Coach helps you take better photos regardless of whether you order videos from us. But if you do order videos, your subscription includes free photo enhancement, 10% off every order, and priority processing.",
     },
     {
       q: "What's included in Free Photo Enhancement?",
@@ -477,9 +477,9 @@ export default function LensPage() {
               <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4">
                 <Clock className="h-6 w-6 text-amber-600" />
               </div>
-              <h4 className="text-lg font-bold text-foreground mb-2">Priority 12-Hour Delivery</h4>
+              <h4 className="text-lg font-bold text-foreground mb-2">Priority Processing — First in Queue</h4>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Lens subscribers go first in the processing queue. Guaranteed delivery under 12 hours instead of the standard turnaround. When time is money, you get your video faster.
+                Lens subscribers go first in the processing queue. Your orders are processed before non-subscribers, so you get your video back faster every time.
               </p>
             </div>
             <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300">
@@ -526,7 +526,7 @@ export default function LensPage() {
               {
                 step: "3",
                 title: "Order Videos",
-                description: "When you need a listing video, get priority delivery, free photo editing, and 10% off — automatically.",
+                description: "When you need a listing video, get priority processing, free photo editing, and 10% off — automatically.",
                 icon: <Zap className="h-8 w-8" />,
               },
             ].map((s, i) => (
@@ -621,7 +621,7 @@ export default function LensPage() {
                   "Virtual Staging (8 styles)",
                   "Free photo enhancement on video orders",
                   "10% off all Photo 2 Video orders",
-                  "Priority 12-hour video delivery",
+                  "Priority processing — first in queue",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
                     <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
@@ -691,7 +691,7 @@ export default function LensPage() {
                   "Everything in Individual",
                   "200 analyses per agent / month",
                   "Centralized brokerage dashboard",
-                  "Exclusive bulk video pricing (from $2.99/clip)",
+                  "Exclusive bulk video pricing (from $1.99/clip)",
                   "Branded videos for every agent",
                   "Dedicated account support",
                 ].map((item, i) => (
