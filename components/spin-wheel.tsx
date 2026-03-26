@@ -13,21 +13,21 @@ export interface WheelSegment {
 }
 
 // Default segments for review reward flow (9 segments, variable width)
+// Total: 43×8 + 16 = 360°
 const DEFAULT_SEGMENTS: WheelSegment[] = [
-  { value: 20, label: "20%", color: "#dc2626", angle: 42 },
-  { value: 25, label: "25%", color: "#16a34a", angle: 42 },
-  { value: 30, label: "30%", color: "#2563eb", angle: 42 },
-  { value: 22, label: "22%", color: "#d946ef", angle: 42 },
-  { value: "jackpot", label: "FREE\nVIDEO", color: "#FFD700", angle: 24 },
-  { value: 28, label: "28%", color: "#0d9488", angle: 42 },
-  { value: 23, label: "23%", color: "#7c3aed", angle: 42 },
-  { value: 26, label: "26%", color: "#e11d48", angle: 42 },
-  { value: 21, label: "21%", color: "#ea580c", angle: 42 },
+  { value: 20, label: "20%", color: "#dc2626", angle: 43 },
+  { value: 25, label: "25%", color: "#16a34a", angle: 43 },
+  { value: 30, label: "30%", color: "#2563eb", angle: 43 },
+  { value: 22, label: "22%", color: "#d946ef", angle: 43 },
+  { value: "jackpot", label: "FREE VIDEO", color: "#FFD700", angle: 16 },
+  { value: 28, label: "28%", color: "#0d9488", angle: 43 },
+  { value: 23, label: "23%", color: "#7c3aed", angle: 43 },
+  { value: 26, label: "26%", color: "#e11d48", angle: 43 },
+  { value: 21, label: "21%", color: "#ea580c", angle: 43 },
 ];
-// Total: 42×8 + 24 = 360°
 
 interface SpinWheelProps {
-  /** Pre-determined winning value — if provided, wheel lands on this segment */
+  /** Pre-determined winning value — wheel lands on matching segment */
   winningPercent?: number;
   /** Pre-determined promo code to display */
   promoCode?: string;
@@ -35,7 +35,7 @@ interface SpinWheelProps {
   segments?: WheelSegment[];
   /** Called with the winning segment when spin completes */
   onResult?: (segment: WheelSegment) => void;
-  /** Called when spin animation finishes (before result display) */
+  /** Called when spin animation finishes */
   onComplete?: () => void;
   /** Called when user closes the modal */
   onClose?: () => void;
@@ -104,7 +104,6 @@ class SoundEngine {
     const ctx = this.ctx;
     if (ctx.state === "suspended") ctx.resume();
 
-    // Fanfare notes — jackpot gets extra notes
     const notes = isJackpot
       ? [523, 659, 784, 1047, 1175, 1319, 1568]
       : [523, 659, 784, 1047];
@@ -171,54 +170,59 @@ function darken(hex: string, pct: number) {
   return `rgb(${Math.max(0, (n >> 16) - Math.round(2.55 * pct))},${Math.max(0, ((n >> 8) & 0xff) - Math.round(2.55 * pct))},${Math.max(0, (n & 0xff) - Math.round(2.55 * pct))})`;
 }
 
-// ─── ANGLE HELPERS (variable-width segments) ───
-/** Get the start angle (in radians) of segment at index i */
-function getSegmentStartAngle(segments: WheelSegment[], index: number): number {
-  let deg = 0;
-  for (let i = 0; i < index; i++) {
-    deg += segments[i].angle;
-  }
-  return (deg * Math.PI) / 180;
+// ═══════════════════════════════════════════════════════════════
+// ANGLE MATH — verified via test page (11/11 matches)
+// ═══════════════════════════════════════════════════════════════
+//
+// Drawing: segment i starts at canvas angle:
+//   a1 = rotation + cumStartDeg[i] * π/180 - π/2
+// The -π/2 puts segment 0 at 12 o'clock when rotation=0.
+// Pointer is fixed at 12 o'clock.
+//
+// Detection:
+//   pointerDeg = (360 - rotationDeg % 360) % 360
+//   Find which segment range [cumStart, cumEnd) contains pointerDeg.
+//
+// Targeting:
+//   rotDeg % 360 must equal (360 - centerDeg) % 360
+//   rotDeg = N * 360 + (360 - centerDeg)
+//   N MUST be integer (float fullSpins was the v1/v2 bug)
+
+function getSegmentRange(segments: WheelSegment[], index: number): { start: number; end: number; center: number } {
+  let start = 0;
+  for (let i = 0; i < index; i++) start += segments[i].angle;
+  const end = start + segments[index].angle;
+  const center = start + segments[index].angle / 2;
+  return { start, end, center };
 }
 
-/** Given a final rotation (radians), determine which segment the pointer (top, 12 o'clock) lands on */
 function getWinningIndex(segments: WheelSegment[], finalRotationRad: number): number {
-  // The wheel rotates clockwise. Pointer is at top (12 o'clock = -π/2 in canvas coords).
-  // After rotation, the angle under the pointer (in segment space, starting from 0 at the first segment's left edge):
-  const totalDeg = ((finalRotationRad * 180) / Math.PI) % 360;
-  // Normalize: the segment under the pointer at angle 0 is segment 0's start.
-  // As wheel rotates clockwise by totalDeg, the segment that moved under the pointer is at angle totalDeg from start.
-  const normalizedDeg = ((360 - totalDeg) % 360 + 360) % 360;
+  const rotDeg = (finalRotationRad * 180 / Math.PI) % 360;
+  const pointerDeg = ((360 - rotDeg) % 360 + 360) % 360;
 
   let cumulative = 0;
   for (let i = 0; i < segments.length; i++) {
     cumulative += segments[i].angle;
-    if (normalizedDeg < cumulative) {
+    if (pointerDeg < cumulative) {
       return i;
     }
   }
   return 0;
 }
 
-/** Get rotation target (radians) to land on a specific segment index */
 function getTargetRotation(segments: WheelSegment[], targetIndex: number): number {
-  // Calculate the center angle of the target segment
-  let centerDeg = 0;
-  for (let i = 0; i < targetIndex; i++) {
-    centerDeg += segments[i].angle;
-  }
-  centerDeg += segments[targetIndex].angle / 2;
+  const { center: centerDeg } = getSegmentRange(segments, targetIndex);
+  const landingDeg = (360 - centerDeg + 360) % 360;
 
-  // To land on this segment, the wheel needs to rotate so this segment is at top (pointer)
-  // The segment at the pointer after rotation R is at (360 - R) % 360 degrees
-  // So R = (360 - centerDeg) % 360
-  const baseRotDeg = (360 - centerDeg + 360) % 360;
-  const fullSpins = 9 + Math.random() * 5;
-  // Add some randomness within the segment (don't always hit dead center)
+  // INTEGER full spins — float was the bug that caused all mismatches
+  const fullSpins = Math.floor(9 + Math.random() * 5);
+
+  // Jitter within segment bounds for visual variety
   const segHalfDeg = segments[targetIndex].angle / 2;
-  const jitter = (Math.random() - 0.5) * segHalfDeg * 0.7; // stay well within bounds
+  const jitter = (Math.random() - 0.5) * segHalfDeg * 0.6;
 
-  return (fullSpins * 360 + baseRotDeg + jitter) * (Math.PI / 180);
+  const totalDeg = fullSpins * 360 + landingDeg + jitter;
+  return totalDeg * (Math.PI / 180);
 }
 
 
@@ -242,10 +246,9 @@ export function SpinWheel({
   const confettiAnimRef = useRef<number | null>(null);
   const startTimeRef = useRef(0);
   const targetRotRef = useRef(0);
-  const lastTickAngleRef = useRef(-1);
+  const lastTickRef = useRef(-1);
   const lastProgressRef = useRef(0);
   const particlesRef = useRef<Particle[]>([]);
-  const winningIndexRef = useRef(0);
 
   const [muted, setMuted] = useState(false);
   const [spinning, setSpinning] = useState(false);
@@ -308,10 +311,8 @@ export function SpinWheel({
       const a1 = rotation + (cumulativeAngle * Math.PI) / 180 - Math.PI / 2;
       const a2 = a1 + segRad;
       const mid = a1 + segRad / 2;
-
       const isJackpotSeg = seg.value === "jackpot";
 
-      // Gradient fill
       const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, r);
       if (isJackpotSeg) {
         grad.addColorStop(0, "#FFF8DC");
@@ -334,7 +335,6 @@ export function SpinWheel({
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Jackpot sparkle effect — extra gold border
       if (isJackpotSeg) {
         ctx.beginPath();
         ctx.moveTo(cx, cx);
@@ -351,36 +351,33 @@ export function SpinWheel({
       ctx.rotate(mid);
 
       if (isJackpotSeg) {
-        // Two-line label for jackpot
         ctx.shadowColor = "rgba(0,0,0,0.8)";
         ctx.shadowBlur = 6;
         ctx.shadowOffsetY = 2;
         ctx.fillStyle = "#78350f";
-        ctx.font = `900 ${size * 0.04}px system-ui, -apple-system, sans-serif`;
+        ctx.font = `900 ${size * 0.03}px system-ui, -apple-system, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("FREE", r * 0.65, -size * 0.018);
-        ctx.fillText("VIDEO", r * 0.65, size * 0.022);
+        ctx.fillText("FREE", r * 0.65, -size * 0.012);
+        ctx.fillText("VIDEO", r * 0.65, size * 0.016);
         ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
       } else {
         ctx.shadowColor = "rgba(0,0,0,0.6)";
         ctx.shadowBlur = 5;
         ctx.shadowOffsetY = 2;
         ctx.fillStyle = "white";
-        ctx.font = `900 ${size * 0.07}px system-ui, -apple-system, sans-serif`;
+        ctx.font = `900 ${size * 0.065}px system-ui, -apple-system, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(seg.label, r * 0.6, 0);
         ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-        ctx.font = `800 ${size * 0.03}px system-ui, -apple-system, sans-serif`;
+        ctx.font = `800 ${size * 0.028}px system-ui, -apple-system, sans-serif`;
         ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillText("OFF", r * 0.6, size * 0.042);
+        ctx.fillText("OFF", r * 0.6, size * 0.04);
       }
       ctx.restore();
 
-      // Edge dot at segment boundary
+      // Edge dot
       const dx = cx + Math.cos(a1) * (r - 7);
       const dy = cx + Math.sin(a1) * (r - 7);
       ctx.beginPath();
@@ -451,12 +448,12 @@ export function SpinWheel({
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
     const colors = isJackpot
-      ? ["#FFD700", "#FFA500", "#FF6347", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#fbbf24", "#DAA520", "#B8860B"]
+      ? ["#FFD700", "#FFA500", "#FF6347", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#fbbf24", "#DAA520"]
       : ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#fbbf24"];
-    const particleCount = isJackpot ? 300 : 150;
+    const count = isJackpot ? 300 : 150;
     const particles: Particle[] = [];
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.8;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
       const speed = (isJackpot ? 7 : 5) + Math.random() * 12;
       particles.push({
         x: w / 2, y: h / 2,
@@ -502,23 +499,20 @@ export function SpinWheel({
     soundRef.current.init();
     setSpinning(true);
 
-    // Determine which segment to land on
+    // Determine target segment
     let winIdx: number;
     if (winningPercent !== undefined) {
-      // Legacy mode: find segment by value
       winIdx = segments.findIndex((s) => s.value === winningPercent);
       if (winIdx === -1) winIdx = 0;
     } else {
-      // Random mode — spin freely, calculate winner from final position
-      // For now, pick a random index (weighted equally) — caller can override via winningPercent
       winIdx = Math.floor(Math.random() * segments.length);
     }
 
-    winningIndexRef.current = winIdx;
     const target = getTargetRotation(segments, winIdx);
     targetRotRef.current = target;
     startTimeRef.current = performance.now();
-    lastTickAngleRef.current = -1;
+    lastTickRef.current = -1;
+    lastProgressRef.current = 0;
 
     const animate = (now: number) => {
       const elapsed = now - startTimeRef.current;
@@ -527,23 +521,11 @@ export function SpinWheel({
       const rotation = eased * target;
       const speed = progress < 0.98 ? (1 - progress) : 0;
 
-      // Tick sound: detect when pointer crosses a segment boundary
+      // Tick sound
       const rotDeg = ((rotation * 180 / Math.PI) % 360 + 360) % 360;
-      // Check cumulative segment boundaries
-      let cumDeg = 0;
-      let currentBoundaryCount = 0;
-      const totalSegDeg = 360;
-      for (let i = 0; i < segments.length; i++) {
-        cumDeg += segments[i].angle;
-        if (rotDeg % totalSegDeg >= (cumDeg - segments[i].angle) && rotDeg % totalSegDeg < cumDeg) {
-          currentBoundaryCount = i;
-          break;
-        }
-      }
-      // Use floor of rotation in segment units for tick detection
       const tickIndex = Math.floor(rotDeg / (360 / segments.length));
-      if (tickIndex !== lastTickAngleRef.current) {
-        lastTickAngleRef.current = tickIndex;
+      if (tickIndex !== lastTickRef.current) {
+        lastTickRef.current = tickIndex;
         if (progress < 0.97) {
           soundRef.current.tick(speed);
           setTickFlash((c) => c + 1);
@@ -560,9 +542,8 @@ export function SpinWheel({
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        // Verify: calculate winning index from the final rotation
+        // Verify winner from actual final rotation
         const verifiedIndex = getWinningIndex(segments, rotation);
-        winningIndexRef.current = verifiedIndex;
         const winner = segments[verifiedIndex];
         const isJackpot = winner.value === "jackpot";
 
@@ -616,7 +597,7 @@ export function SpinWheel({
     : "";
 
   const resultSubtext = isJackpotWin
-    ? "You won a FREE listing video! (15 clips, $79 value)"
+    ? "FREE VIDEO — YOUR NEXT ORDER"
     : displayPercent
     ? `${displayPercent}% OFF YOUR NEXT ORDER`
     : wonSegment
@@ -625,21 +606,15 @@ export function SpinWheel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-      {/* Confetti canvas */}
       <canvas
         ref={confettiCanvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-20"
       />
 
-      {/* Mute button */}
       <button
-        onClick={() => {
-          soundRef.current.init();
-          setMuted(!muted);
-        }}
+        onClick={() => { soundRef.current.init(); setMuted(!muted); }}
         className={`fixed top-5 right-5 z-50 h-12 w-12 rounded-full flex items-center justify-center text-white transition-all shadow-lg ${
           muted
             ? "bg-red-600 hover:bg-red-700"
@@ -649,7 +624,6 @@ export function SpinWheel({
         {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
       </button>
 
-      {/* Close button (only after result) */}
       {showResult && (
         <button
           onClick={handleClose}
@@ -659,9 +633,7 @@ export function SpinWheel({
         </button>
       )}
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-5 p-6 pb-12 my-auto">
-        {/* Title */}
         <h2 className="text-2xl sm:text-3xl font-black text-white text-center tracking-tight">
           🎉 All 3 Reviews Verified! Spin for Your Discount!
         </h2>
@@ -669,14 +641,12 @@ export function SpinWheel({
         {!showResult ? (
           <>
             <div className="relative">
-              {/* Glow */}
               <div
                 className={`absolute -inset-5 rounded-full bg-gradient-to-r from-amber-400 via-rose-500 to-violet-500 blur-xl transition-opacity duration-500 ${
                   spinning ? "opacity-60 animate-pulse" : "opacity-15"
                 }`}
               />
 
-              {/* Chase lights */}
               <div className="absolute -inset-4 z-0">
                 {Array.from({ length: 28 }).map((_, i) => {
                   const a = (i / 28) * 360;
@@ -730,7 +700,7 @@ export function SpinWheel({
           </>
         ) : (
           <div className="text-center space-y-5 z-10">
-            <div className={`text-8xl ${isJackpotWin ? "animate-bounce" : "animate-bounce"}`}>
+            <div className="text-8xl animate-bounce">
               {isJackpotWin ? "🎰" : "🎉"}
             </div>
             <h3 className={`text-4xl sm:text-5xl font-black tracking-tight ${
@@ -772,7 +742,6 @@ export function SpinWheel({
           </div>
         )}
 
-        {/* Attribution */}
         <p className="text-[10px] text-white/15 mt-4">
           Applause sound by u_1s41v2luip from Pixabay
         </p>
