@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Sparkles,
 } from "lucide-react";
 
 interface Order {
@@ -306,14 +307,23 @@ export default function VideoDeliveryPage() {
   const [accepting, setAccepting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<ReturnType<typeof getTimeRemaining> | null>(null);
   const [userId, setUserId] = useState<string>("");
+  const [isLensSubscriber, setIsLensSubscriber] = useState(false);
 
-  // Get user ID for review flow
+  // Get user ID + subscription status for review flow and upsell
   useEffect(() => {
     const getUser = async () => {
       try {
         const supabase = (await import("@/lib/supabase/client")).createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) setUserId(user.id);
+        if (user) {
+          setUserId(user.id);
+          const { data } = await supabase
+            .from("lens_usage")
+            .select("is_subscriber")
+            .eq("user_id", user.id)
+            .single();
+          if (data?.is_subscriber) setIsLensSubscriber(true);
+        }
       } catch {}
     };
     getUser();
@@ -825,6 +835,30 @@ export default function VideoDeliveryPage() {
             ))}
           </div>
         </div>
+
+        {/* Lens Upsell — non-subscribers only */}
+        {!isLensSubscriber && isDelivered && (
+          <Link href="/lens" className="block mb-8">
+            <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-2xl p-6 hover:border-cyan-400 hover:shadow-lg transition-all">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-6 w-6 text-cyan-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-foreground text-lg">Save on your next video with P2V Lens</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Subscribers get 10% off every video order, per-clip Quick Videos from $24.75, AI photo coaching, marketing design tools, and priority 12-hour delivery — all for $27.95/mo.
+                  </p>
+                  <p className="text-sm font-bold text-cyan-700 mt-2">
+                    See what&apos;s included →
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* Bottom CTAs */}
         <div className="grid sm:grid-cols-2 gap-4 mb-8">
