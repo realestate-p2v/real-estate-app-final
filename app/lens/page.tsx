@@ -26,6 +26,7 @@ import {
   Percent,
   Clock,
   Gift,
+  Film,
 } from "lucide-react";
 
 export default function LensPage() {
@@ -91,7 +92,6 @@ export default function LensPage() {
     }
   };
 
-  // Smart links: logged in → dashboard tools, logged out → login with redirect
   const toolLink = (path: string) => (user ? path : `/login?redirect=${path}`);
 
   const faqs = [
@@ -104,8 +104,12 @@ export default function LensPage() {
       a: "Each photo you upload for AI feedback counts as one analysis. You get 200 per month — enough for about 2 full listing shoots with coaching on every single photo (25 photos × 4 attempts each = 100 analyses per listing).",
     },
     {
+      q: "How does Quick Video pricing work?",
+      a: "Subscribers can order short-form videos with 5–14 clips at $4.95 per clip. This rate already includes your 10% subscriber savings. Quick Videos include branding and music but do not include a free revision — paid revisions are available at standard rates. Upload 15+ photos and you'll automatically get the Standard package ($79) with your 10% subscriber discount at checkout.",
+    },
+    {
       q: "Do I need to be a P2V video customer to use Lens?",
-      a: "No — P2V Lens works as a standalone subscription. The AI Photo Coach helps you take better photos regardless of whether you order videos from us. But if you do order videos, your subscription includes free photo enhancement, 10% off every order, and priority processing.",
+      a: "No — P2V Lens works as a standalone subscription. The AI Photo Coach helps you take better photos regardless of whether you order videos from us. But if you do order videos, your subscription includes free photo enhancement, 10% off every order, priority processing, and per-clip Quick Video pricing.",
     },
     {
       q: "What's included in Free Photo Enhancement?",
@@ -113,7 +117,7 @@ export default function LensPage() {
     },
     {
       q: "How does the 10% video discount work?",
-      a: "When you place a video order while subscribed to P2V Lens, the 10% discount is applied automatically at checkout. No coupon code needed — the system detects your active subscription and applies the savings.",
+      a: "When you place a video order while subscribed to P2V Lens, the 10% discount is applied automatically at checkout. No coupon code needed — the system detects your active subscription and applies the savings. Note: Quick Video orders already have subscriber pricing built in, so the 10% coupon doesn't apply on top.",
     },
     {
       q: "How does Virtual Staging work?",
@@ -152,7 +156,7 @@ export default function LensPage() {
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-primary-foreground/70 max-w-2xl mx-auto leading-relaxed">
-              Photo coaching, marketing design, listing descriptions, virtual staging — everything an agent needs to market listings professionally.
+              Photo coaching, marketing design, listing descriptions, virtual staging, and short-form videos from $4.95/clip — everything an agent needs to market listings professionally.
             </p>
 
             {/* Trust badges */}
@@ -163,6 +167,10 @@ export default function LensPage() {
               <span className="hidden sm:block">·</span>
               <span className="flex items-center gap-1.5">
                 <Camera className="h-4 w-4 text-accent" /> 200 Analyses/Month
+              </span>
+              <span className="hidden sm:block">·</span>
+              <span className="flex items-center gap-1.5">
+                <Film className="h-4 w-4 text-accent" /> Videos from $24.75
               </span>
               <span className="hidden sm:block">·</span>
               <span className="flex items-center gap-1.5">
@@ -235,6 +243,94 @@ export default function LensPage() {
       </section>
 
       {/* ═══════════════════════════════════════════ */}
+      {/* QUICK VIDEO SECTION — NEW */}
+      {/* ═══════════════════════════════════════════ */}
+      <section className="py-20 sm:py-24 bg-gradient-to-b from-cyan-50/50 to-background">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-cyan-100 text-cyan-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-5">
+              <Film className="h-3.5 w-3.5" />
+              Subscriber Exclusive
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">
+              Short-Form Videos Starting at $24.75
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Subscribers unlock per-clip video ordering. Order 5–14 clip videos at just $4.95/clip — already includes your subscriber savings.
+            </p>
+          </div>
+
+          {/* Use Case Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-cyan-300 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
+                <Film className="h-6 w-6 text-cyan-600" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1">Social Media Teaser</h3>
+              <p className="text-2xl font-extrabold text-cyan-700 mb-2">5–7 clips · $24.75–$34.65</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                30-second highlight reel perfect for Instagram Reels and TikTok. Hook buyers with the best angles of your listing.
+              </p>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-cyan-300 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
+                <Zap className="h-6 w-6 text-cyan-600" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1">Listing Refresher</h3>
+              <p className="text-2xl font-extrabold text-cyan-700 mb-2">8–10 clips · $39.60–$49.50</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Re-shoot a few rooms, get a fresh video for stale listings. New energy without the full order price.
+              </p>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-cyan-300 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
+                <Camera className="h-6 w-6 text-cyan-600" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1">Open House Promo</h3>
+              <p className="text-2xl font-extrabold text-cyan-700 mb-2">10–12 clips · $49.50–$59.40</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Promote your open house with a video walkthrough. Share on social media and MLS the day before.
+              </p>
+            </div>
+          </div>
+
+          {/* What's included + CTA */}
+          <div className="bg-card rounded-2xl border border-cyan-200 p-6 sm:p-8 max-w-2xl mx-auto text-center">
+            <p className="text-sm font-semibold text-foreground mb-4">Every Quick Video includes:</p>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6">
+              {["Custom branding", "Choice of music", "12h delivery", "HD quality"].map((item) => (
+                <span key={item} className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <CheckCircle className="h-3.5 w-3.5 text-cyan-600" />
+                  {item}
+                </span>
+              ))}
+            </div>
+            {isSubscriber ? (
+              <Button
+                asChild
+                className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"
+              >
+                <Link href="/order">
+                  Order a Quick Video
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                onClick={() =>
+                  document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"
+              >
+                Subscribe &amp; Start Creating — $27.95/mo
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════ */}
       {/* FEATURES DEEP DIVE */}
       {/* ═══════════════════════════════════════════ */}
       <section id="features" className="py-20 sm:py-24">
@@ -278,7 +374,6 @@ export default function LensPage() {
                 Try Photo Coach Free <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            {/* Sample feedback mockup */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -458,12 +553,24 @@ export default function LensPage() {
             </div>
           </div>
 
-          {/* Features 5-7: Subscriber Perks (cards) */}
+          {/* Features 5-8: Subscriber Perks (cards) */}
           <div className="text-center mb-10">
             <h3 className="text-2xl font-extrabold text-foreground">Subscriber Perks on Every Video Order</h3>
             <p className="mt-2 text-muted-foreground">Automatic benefits when you order listing videos</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300">
+              <div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
+                <Film className="h-6 w-6 text-cyan-600" />
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <h4 className="text-lg font-bold text-foreground">Quick Videos</h4>
+                <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">NEW</span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Order 5–14 clip videos at $4.95/clip. Perfect for social teasers, stale listings, and open house promos. Starting at just $24.75.
+              </p>
+            </div>
             <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300">
               <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4">
                 <ImageIcon className="h-6 w-6 text-emerald-600" />
@@ -477,7 +584,7 @@ export default function LensPage() {
               <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4">
                 <Clock className="h-6 w-6 text-amber-600" />
               </div>
-              <h4 className="text-lg font-bold text-foreground mb-2">Priority Processing — First in Queue</h4>
+              <h4 className="text-lg font-bold text-foreground mb-2">Priority Processing</h4>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Lens subscribers go first in the processing queue. Your orders are processed before non-subscribers, so you get your video back faster every time.
               </p>
@@ -526,7 +633,7 @@ export default function LensPage() {
               {
                 step: "3",
                 title: "Order Videos",
-                description: "When you need a listing video, get priority processing, free photo editing, and 10% off — automatically.",
+                description: "Quick Videos from $24.75, or full listings with priority processing, free photo editing, and 10% off — automatically.",
                 icon: <Zap className="h-8 w-8" />,
               },
             ].map((s, i) => (
@@ -628,6 +735,13 @@ export default function LensPage() {
                     {item}
                   </li>
                 ))}
+                <li className="flex items-start gap-2.5 text-sm text-foreground">
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Per-clip video ordering ($4.95/clip, 5–14 clips)
+                    <span className="ml-1.5 text-[10px] bg-cyan-100 text-cyan-700 font-bold px-1.5 py-0.5 rounded-full align-middle">NEW</span>
+                  </span>
+                </li>
               </ul>
 
               {isSubscriber ? (
