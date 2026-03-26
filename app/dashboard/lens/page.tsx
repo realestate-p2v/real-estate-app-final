@@ -274,30 +274,28 @@ export default function DashboardLensPage() {
           )}
         </div>
 
-        {/* ═══ QUICK VIDEO CTA — subscribers only ═══ */}
-        {subscription.active && (
-          <Link href="/order" className="block mb-10">
-            <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-2xl p-6 hover:border-cyan-400 hover:shadow-lg transition-all">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                  <Film className="h-6 w-6 text-cyan-600" />
+        {/* ═══ QUICK VIDEO CTA ═══ */}
+        <Link href={subscription.active ? "/order" : "/lens"} className="block mb-10">
+          <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-2xl p-6 hover:border-cyan-400 hover:shadow-lg transition-all">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                <Film className="h-6 w-6 text-cyan-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-foreground text-lg">Quick Video</h3>
+                  <span className="text-[10px] bg-cyan-500 text-white font-black px-2 py-0.5 rounded-full">NEW</span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-foreground text-lg">Quick Video</h3>
-                    <span className="text-[10px] bg-cyan-500 text-white font-black px-2 py-0.5 rounded-full">NEW</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Order 5–14 clip videos at $4.95/clip. Perfect for social teasers, listing refreshers, and open house promos.
-                  </p>
-                  <p className="text-sm font-bold text-cyan-700 mt-2">
-                    Starting at just $24.75 →
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Order 5–14 clip videos at just $4.95/clip. Perfect for social teasers, listing refreshers, and open house promos.
+                </p>
+                <p className="text-sm font-bold text-cyan-700 mt-2">
+                  {subscription.active ? "Starting at just $24.75 →" : "Subscribe to unlock per-clip pricing →"}
+                </p>
               </div>
             </div>
-          </Link>
-        )}
+          </div>
+        </Link>
 
         {/* ═══ FEATURES ═══ */}
         <div className="mb-14">
