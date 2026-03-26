@@ -6,6 +6,7 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { VideoPlayer, getDownloadUrl, getClipPlaybackUrl, getVideoThumbnail, isCloudinaryUrl } from "@/components/video-player";
+import { ReviewRewardFlow } from "@/components/review-reward-flow";
 import Link from "next/link";
 import {
   Download,
@@ -34,6 +35,7 @@ interface Order {
   order_id: string;
   status: string;
   customer_name: string;
+  customer_email: string;
   property_address: string;
   property_city: string;
   property_state: string;
@@ -232,30 +234,6 @@ function ClipReviewSection({ clips, orderId }: { clips: any[]; orderId: string }
   );
 }
 
-const REVIEW_PLATFORMS = [
-  {
-    key: "google",
-    label: "Google",
-    icon: "⭐",
-    color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
-    textColor: "text-blue-700",
-  },
-  {
-    key: "facebook",
-    label: "Facebook",
-    icon: "👍",
-    color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
-    textColor: "text-indigo-700",
-  },
-  {
-    key: "trustpilot",
-    label: "Trustpilot",
-    icon: "⭐",
-    color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
-    textColor: "text-emerald-700",
-  },
-];
-
 const REVISION_IN_PROGRESS_STATUSES = [
   "revision_requested",
   "client_revision_requested",
@@ -324,9 +302,21 @@ export default function VideoDeliveryPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [reviewDismissed, setReviewDismissed] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<ReturnType<typeof getTimeRemaining> | null>(null);
+  const [userId, setUserId] = useState<string>("");
+
+  // Get user ID for review flow
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setUserId(user.id);
+      } catch {}
+    };
+    getUser();
+  }, []);
 
   useEffect(() => {
     if (orderId) loadOrder();
@@ -580,52 +570,13 @@ export default function VideoDeliveryPage() {
           </div>
         )}
 
-        {/* Review Prompt Banner — only after customer has closed/accepted */}
-        {isClosed && !reviewDismissed && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-6">
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Star className="h-5 w-5 text-amber-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-foreground mb-1">Love your video? Share the love!</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  A quick review helps other agents find us. Pick any platform — each review unlocks a discount on your next order.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {REVIEW_PLATFORMS.map((platform) => (
-                    <button
-                      key={platform.key}
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${platform.color} ${platform.textColor}`}
-                      onClick={() => {
-                        const urls: Record<string, string> = {
-                          google: "https://g.page/r/CX6ne0m0RmqtEBM/review",
-                          facebook: "https://www.facebook.com/profile.php?id=61587039633673&sk=reviews",
-                          trustpilot: "https://www.trustpilot.com/review/realestatephoto2video.com",
-                        };
-                        window.open(urls[platform.key], "_blank");
-                      }}
-                    >
-                      <span>{platform.icon}</span>
-                      {platform.label}
-                      <ExternalLink className="h-3 w-3" />
-                    </button>
-                  ))}
-                </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-  <p className="text-xs text-muted-foreground">
-    🎁 <strong>1 review = 10% off</strong> · <strong>2 reviews = 15% off</strong> · <strong>All 3 = mystery spin!</strong>
-  </p>
-  <button
-    onClick={() => setReviewDismissed(true)}
-    className="text-xs text-muted-foreground hover:text-foreground transition-colors sm:ml-auto"
-  >
-    Maybe later
-  </button>
-</div>
-              </div>
-            </div>
-          </div>
+        {/* Review Reward Flow — shows after customer has closed/accepted */}
+        {isClosed && userId && (
+          <ReviewRewardFlow
+            orderId={orderId}
+            userEmail={order.customer_email || ""}
+            userId={userId}
+          />
         )}
 
         {/* ═══ VIDEO PLAYER — single or multi-version ═══ */}
