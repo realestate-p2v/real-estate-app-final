@@ -1,9 +1,7 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ShieldCheck, Clock, Lock, ChevronDown } from "lucide-react";
-
 export function GreenButton() {
   return (
     <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden py-20 px-6">
@@ -19,13 +17,12 @@ export function GreenButton() {
             <div className="flex items-center gap-3">
               <span>Create My Listing Video</span>
               <span className="flex items-center">
-                <span className="line-through text-white/50 text-base mr-2 font-medium">$149</span>
+                <span className="line-through text-white/50 text-base mr-2 font-medium">$119</span>
                 <span className="text-2xl">$79</span>
               </span>
             </div>
           </Button>
         </Link>
-
         {/* Trust Badges Row */}
         <div className="flex flex-wrap justify-center items-center gap-6 text-white/70">
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -42,7 +39,6 @@ export function GreenButton() {
           </div>
         </div>
       </div>
-
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
     </section>
   );
