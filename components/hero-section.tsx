@@ -12,6 +12,7 @@ import {
   Camera,
   PenTool,
   FileText,
+  Film,
 } from "lucide-react";
 
 export function HeroSection() {
@@ -167,7 +168,7 @@ export function HeroSection() {
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-center items-center gap-6 md:gap-12 text-white/90 my-10 text-lg font-medium">
+          <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-6 md:gap-12 text-white/90 my-10 text-lg font-medium">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold border border-white/30">
                 <Camera className="w-4 h-4" />
@@ -185,6 +186,12 @@ export function HeroSection() {
                 <FileText className="w-4 h-4" />
               </span>
               AI Description Writer
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold border border-white/30">
+                <Film className="w-4 h-4" />
+              </span>
+              Per-Clip Pricing
             </div>
           </div>
 
