@@ -50,8 +50,6 @@ export function SaleBanner() {
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
 
-        
-            
             {/* Standard Tier */}
             <a 
               href="https://realestatephoto2video.com/order#order-form" 
@@ -60,7 +58,7 @@ export function SaleBanner() {
             >
               <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Standard</span>
               <div className="flex items-center gap-3 mb-2 md:mb-4">
-                <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$149</span>
+                <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$119</span>
                 <span className="text-white text-3xl md:text-4xl font-black drop-shadow-[0_0_12px_rgba(52,211,153,0.9)] tracking-tighter">$79</span>
               </div>
               
@@ -77,17 +75,17 @@ export function SaleBanner() {
               </div>
             </a>
 
-            {/* Premium Tier */}
+            {/* Professional Tier (Most Popular) */}
             <a 
                href="/order#order-form" 
               
               className="flex flex-col items-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-blue-500/20 backdrop-blur-md border-2 border-emerald-400/50 transition-all hover:bg-blue-500/30 hover:scale-[1.07] active:scale-95 cursor-pointer shadow-2xl relative md:scale-105 z-20"
             >
               <div className="absolute -top-3 bg-emerald-400 text-slate-900 text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Most Popular</div>
-              <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Premium</span>
+              <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Professional</span>
               <div className="flex items-center gap-3 mb-2 md:mb-4">
-                <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$199</span>
-                <span className="text-white text-3xl md:text-4xl font-black drop-shadow-[0_0_12px_rgba(52,211,153,0.9)] tracking-tighter">$129</span>
+                <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$149</span>
+                <span className="text-white text-3xl md:text-4xl font-black drop-shadow-[0_0_12px_rgba(52,211,153,0.9)] tracking-tighter">$99</span>
               </div>
               
               <div className="flex flex-col gap-1 md:gap-2 text-center">
@@ -104,16 +102,16 @@ export function SaleBanner() {
               </div>
             </a>
 
-            {/* Professional Tier */}
+            {/* Premium Tier */}
             <a 
               href="/order#order-form" 
               
               className="flex flex-col items-center p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-900/40 backdrop-blur-md border border-white/10 transition-all hover:bg-slate-900/60 hover:scale-[1.02] active:scale-95 cursor-pointer shadow-lg"
             >
-              <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Professional</span>
+              <span className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-1 md:mb-2">Premium</span>
               <div className="flex items-center gap-3 mb-2 md:mb-4">
-                <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$249</span>
-                <span className="text-white text-3xl md:text-4xl font-black drop-shadow-[0_0_12px_rgba(52,211,153,0.9)] tracking-tighter">$179</span>
+                <span className="text-base md:text-lg text-slate-300 font-black line-through decoration-emerald-500/50 decoration-2">$179</span>
+                <span className="text-white text-3xl md:text-4xl font-black drop-shadow-[0_0_12px_rgba(52,211,153,0.9)] tracking-tighter">$109</span>
               </div>
               
               <div className="flex flex-col gap-1 md:gap-2 text-center">
