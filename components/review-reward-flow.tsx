@@ -29,6 +29,7 @@ interface PlatformState {
   discountCode?: string;
   discountPercent?: number;
   isJackpot?: boolean;
+  wheelSeen?: boolean;
 }
 
 const PLATFORMS = [
@@ -65,6 +66,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
   const [platformStates, setPlatformStates] = useState<Record<string, PlatformState>>({});
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
+  const [wheelSeenDB, setWheelSeenDB] = useState(false);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Load existing review statuses on mount
@@ -75,7 +77,9 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
         const data = await res.json();
         if (data.success && data.reviews) {
           const states: Record<string, PlatformState> = {};
+          let anyWheelSeen = false;
           for (const review of data.reviews) {
+            if (review.wheel_seen) anyWheelSeen = true;
             states[review.platform] = {
               status: review.verification_status === "verified" || review.verification_status === "approved"
                 ? "verified"
@@ -88,9 +92,11 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
               discountCode: review.discount_code || undefined,
               discountPercent: review.discount_percent || undefined,
               isJackpot: review.is_jackpot || false,
+              wheelSeen: review.wheel_seen || false,
             };
           }
           setPlatformStates(states);
+          setWheelSeenDB(anyWheelSeen);
         }
       } catch (err) {
         console.error("Failed to load reviews:", err);
@@ -190,6 +196,21 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
     }
   };
 
+  // Mark wheel as seen in the database — called once after spin completes
+  const markWheelSeenInDB = async () => {
+    setWheelSeenDB(true);
+    try {
+      await fetch("/api/reviews/submit", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "wheel_seen" }),
+      });
+    } catch (err) {
+      console.error("Failed to mark wheel seen:", err);
+      // State is already set locally — worst case they see it once more
+    }
+  };
+
   const verifiedCount = Object.values(platformStates).filter((s) => s.status === "verified").length;
   const discountLabel =
     verifiedCount >= 3 ? "Spin result!" : verifiedCount >= 2 ? "15% off" : verifiedCount >= 1 ? "10% off" : null;
@@ -201,22 +222,12 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
     : null;
   const [showWheelModal, setShowWheelModal] = useState(false);
 
-  const [wheelSeen, setWheelSeen] = useState(() => {
-    try {
-      return sessionStorage.getItem("p2v_wheel_seen") === "true";
-    } catch {
-      return false;
-    }
-  });
+  // "All prizes won" = all 3 verified AND wheel has been seen (from DB)
+  const allPrizesWon = verifiedCount >= 3 && thirdReviewState && wheelSeenDB;
+  // Can show wheel = 3 verified, has discount data, wheel NOT yet seen in DB
+  const canShowWheel = verifiedCount >= 3 && thirdReviewState && !wheelSeenDB;
 
-  const markWheelSeen = () => {
-    setWheelSeen(true);
-    try { sessionStorage.setItem("p2v_wheel_seen", "true"); } catch {}
-  };
-
-  const allPrizesWon = verifiedCount >= 3 && thirdReviewState && wheelSeen;
-  const canShowWheel = verifiedCount >= 3 && thirdReviewState && !wheelSeen;
-
+  // Auto-show the wheel modal when 3rd review is verified and user hasn't seen it
   useEffect(() => {
     if (canShowWheel && !showWheelModal) {
       const timer = setTimeout(() => setShowWheelModal(true), 800);
@@ -244,7 +255,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
         <SpinWheel
           winningPercent={spinWinningPercent}
           promoCode={thirdReviewState.discountCode || ""}
-          onComplete={() => markWheelSeen()}
+          onComplete={() => markWheelSeenInDB()}
           onClose={() => setShowWheelModal(false)}
         />
       )}
@@ -296,15 +307,6 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                   </span>
                 )}
               </div>
-            )}
-
-            {wheelSeen && !allPrizesWon && thirdReviewState && (
-              <button
-                onClick={() => setShowWheelModal(true)}
-                className="mb-3 text-xs text-amber-700 hover:text-amber-900 font-bold underline underline-offset-2 transition-colors"
-              >
-                🎰 View your spin result again
-              </button>
             )}
 
           {/* Platform cards */}
