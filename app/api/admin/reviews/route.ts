@@ -15,6 +15,16 @@ function getSupabase() {
   );
 }
 
+/** Generate a hard-to-guess promo code: PREFIX + 10 random alphanumeric chars */
+function generatePromoCode(prefix: string): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I to avoid confusion
+  let code = prefix;
+  for (let i = 0; i < 10; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 export async function GET() {
   try {
     const { isAdmin: admin } = await isAdmin();
@@ -101,28 +111,48 @@ export async function PATCH(request: Request) {
       const approvedCount = allApproved?.length || 0;
 
       // Determine discount tier
-      // 1 review = 10%, 2 reviews = 15%, 3 reviews = random 20-30% (spin wheel)
+      // 1 review = 10%, 2 reviews = 15%, 3 reviews = spin wheel (20-30% or rare jackpot)
       let discountPercent = 0;
+      let isJackpot = false;
+
       if (approvedCount >= 3) {
-        const wheelOptions = [20, 21, 22, 23, 25, 26, 28, 30];
-        discountPercent = wheelOptions[Math.floor(Math.random() * wheelOptions.length)];
+        // 1-in-50 chance of jackpot (free $79 video)
+        if (Math.random() < 0.02) {
+          isJackpot = true;
+          discountPercent = 0; // not a percent — it's a flat $79 off
+        } else {
+          const wheelOptions = [20, 21, 22, 23, 25, 26, 28, 30];
+          discountPercent = wheelOptions[Math.floor(Math.random() * wheelOptions.length)];
+        }
       } else if (approvedCount >= 2) {
         discountPercent = 15;
       } else if (approvedCount >= 1) {
         discountPercent = 10;
       }
 
-      if (discountPercent > 0) {
+      if (discountPercent > 0 || isJackpot) {
         // Generate Stripe coupon + promotion code
         let stripePromoCode = "";
         try {
-          const coupon = await stripe.coupons.create({
-            percent_off: discountPercent,
-            duration: "once",
-            name: `Review Reward - ${review.platform} (${discountPercent}% off)`,
-          });
+          let coupon;
+          if (isJackpot) {
+            coupon = await stripe.coupons.create({
+              amount_off: 7900,
+              currency: "usd",
+              duration: "once",
+              name: "Jackpot — Free Standard Video ($79)",
+            });
+          } else {
+            coupon = await stripe.coupons.create({
+              percent_off: discountPercent,
+              duration: "once",
+              name: `Review Reward - ${review.platform} (${discountPercent}% off)`,
+            });
+          }
 
-          const code = `REVIEW${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          const code = isJackpot
+            ? generatePromoCode("P2V")
+            : generatePromoCode("RW");
           const promoCode = await stripe.promotionCodes.create({
             coupon: coupon.id,
             code,
@@ -133,7 +163,9 @@ export async function PATCH(request: Request) {
         } catch (stripeError) {
           console.error("[Admin Reviews] Stripe promo code error:", stripeError);
           // Fall back to internal code if Stripe fails
-          stripePromoCode = `REVIEW${discountPercent}-${review.user_id.slice(0, 6).toUpperCase()}`;
+          stripePromoCode = isJackpot
+            ? generatePromoCode("P2V")
+            : generatePromoCode("RW");
         }
 
         // Upsert to promo_codes table
@@ -147,14 +179,17 @@ export async function PATCH(request: Request) {
         if (existingCode) {
           await supabase
             .from("promo_codes")
-            .update({ discount_percent: discountPercent, code: stripePromoCode })
+            .update({
+              discount_percent: isJackpot ? 100 : discountPercent,
+              code: stripePromoCode,
+            })
             .eq("id", existingCode.id);
         } else {
           await supabase
             .from("promo_codes")
             .insert({
               code: stripePromoCode,
-              discount_percent: discountPercent,
+              discount_percent: isJackpot ? 100 : discountPercent,
               max_uses: 3,
               user_id: review.user_id,
               source: "review",
@@ -166,21 +201,29 @@ export async function PATCH(request: Request) {
           .from("review_rewards")
           .update({
             discount_code: stripePromoCode,
-            discount_percent: discountPercent,
+            discount_percent: isJackpot ? 100 : discountPercent,
+            is_jackpot: isJackpot,
           })
           .eq("id", reviewId);
 
         // Notify the user
         const isSpinWheel = approvedCount >= 3;
+        const notifTitle = isJackpot
+          ? "🎰 JACKPOT! All 3 reviews verified — you won a FREE video! Spin the wheel on your delivery page!"
+          : isSpinWheel
+          ? `All 3 reviews verified! Spin the wheel on your delivery page for ${discountPercent}% off!`
+          : `Your review was approved! Here's your ${discountPercent}% discount code: ${stripePromoCode}`;
+        const notifMessage = isJackpot
+          ? `Thanks for all 3 reviews! You hit the jackpot — a free 15-clip Standard video ($79 value). Visit your delivery page to spin the wheel! Code: ${stripePromoCode}`
+          : isSpinWheel
+          ? `Thanks for all 3 reviews! Visit your delivery page to spin the wheel and reveal your discount. Code: ${stripePromoCode}`
+          : `Thanks for leaving a review! Use code ${stripePromoCode} on your next order for ${discountPercent}% off.`;
+
         await createNotification({
           userId: review.user_id,
           type: "review_approved",
-          title: isSpinWheel
-            ? `All 3 reviews verified! Spin the wheel on your delivery page for ${discountPercent}% off!`
-            : `Your review was approved! Here's your ${discountPercent}% discount code: ${stripePromoCode}`,
-          message: isSpinWheel
-            ? `Thanks for all 3 reviews! Visit your delivery page to spin the wheel and reveal your discount. Code: ${stripePromoCode}`
-            : `Thanks for leaving a review! Use code ${stripePromoCode} on your next order for ${discountPercent}% off.`,
+          title: notifTitle,
+          message: notifMessage,
           link: review.order_id ? `/video/${review.order_id}` : "/dashboard/reviews",
         });
 
@@ -198,6 +241,22 @@ export async function PATCH(request: Request) {
 
         if (userEmail && process.env.SENDGRID_API_KEY) {
           try {
+            const emailSubject = isJackpot
+              ? "🎰 JACKPOT! You Won a FREE Listing Video!"
+              : isSpinWheel
+              ? `🎡 Spin the Wheel — Your 3-Review Reward is Ready!`
+              : `Your ${discountPercent}% Review Discount is Ready! 🎉`;
+
+            const emailBody = isJackpot
+              ? `<p style="color: #555;">All 3 of your reviews have been verified, and you hit the <strong>JACKPOT</strong>! You won a free 15-clip Standard listing video ($79 value). Visit your delivery page to spin the wheel and celebrate!</p>`
+              : isSpinWheel
+              ? `<p style="color: #555;">All 3 of your reviews have been verified! Visit your delivery page to spin the wheel and reveal your discount (20-30% off).</p>`
+              : `<p style="color: #555;">Your review has been verified. Here's your discount code for your next order:</p>`;
+
+            const prizeLabel = isJackpot
+              ? "FREE Standard Video ($79 value)"
+              : `${discountPercent}% off your next order`;
+
             await fetch("https://api.sendgrid.com/v3/mail/send", {
               method: "POST",
               headers: {
@@ -210,30 +269,25 @@ export async function PATCH(request: Request) {
                   email: process.env.SENDGRID_FROM_EMAIL || "no-reply@realestatephoto2video.com",
                   name: "Photo 2 Video",
                 },
-                subject: isSpinWheel
-                  ? `🎡 Spin the Wheel — Your 3-Review Reward is Ready!`
-                  : `Your ${discountPercent}% Review Discount is Ready! 🎉`,
+                subject: emailSubject,
                 content: [
                   {
                     type: "text/html",
                     value: `
                       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
                         <h2 style="color: #1a1a1a;">Thanks for your ${review.platform} review! 🌟</h2>
-                        ${isSpinWheel
-                          ? `<p style="color: #555;">All 3 of your reviews have been verified! Visit your delivery page to spin the wheel and reveal your discount (20-30% off).</p>`
-                          : `<p style="color: #555;">Your review has been verified. Here's your discount code for your next order:</p>`
-                        }
-                        <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                          <p style="color: #166534; font-size: 14px; margin: 0 0 8px 0;">Your discount code:</p>
-                          <p style="font-family: monospace; font-size: 28px; font-weight: bold; color: #166534; margin: 0; letter-spacing: 2px;">${stripePromoCode}</p>
-                          <p style="color: #166534; font-size: 18px; font-weight: bold; margin: 8px 0 0 0;">${discountPercent}% off your next order</p>
+                        ${emailBody}
+                        <div style="background: ${isJackpot ? "#fffbeb" : "#f0fdf4"}; border: 2px solid ${isJackpot ? "#f59e0b" : "#22c55e"}; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                          <p style="color: ${isJackpot ? "#92400e" : "#166534"}; font-size: 14px; margin: 0 0 8px 0;">Your ${isJackpot ? "jackpot" : "discount"} code:</p>
+                          <p style="font-family: monospace; font-size: 28px; font-weight: bold; color: ${isJackpot ? "#92400e" : "#166534"}; margin: 0; letter-spacing: 2px;">${stripePromoCode}</p>
+                          <p style="color: ${isJackpot ? "#92400e" : "#166534"}; font-size: 18px; font-weight: bold; margin: 8px 0 0 0;">${prizeLabel}</p>
                         </div>
                         <p style="color: #555; font-size: 14px;">Use this code at checkout on your next listing video order. Code is valid for one use.</p>
                         ${approvedCount < 3
                           ? `<p style="color: #555; font-size: 14px;"><strong>Leave more reviews to unlock bigger discounts!</strong> ${approvedCount === 1 ? "2 reviews = 15% off · 3 reviews = spin the wheel for 20-30% off!" : "One more review = spin the wheel for 20-30% off!"}</p>`
-                          : `<p style="color: #555; font-size: 14px;"><strong>You unlocked the spin wheel!</strong> Visit your delivery page to spin and reveal your discount.</p>`
+                          : `<p style="color: #555; font-size: 14px;"><strong>${isJackpot ? "You hit the jackpot!" : "You unlocked the spin wheel!"}</strong> Visit your delivery page to spin and reveal your ${isJackpot ? "prize" : "discount"}.</p>`
                         }
-                        <a href="https://realestatephoto2video.com/order" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: bold; margin-top: 16px;">Create Your Next Video</a>
+                        <a href="https://realestatephoto2video.com/order" style="display: inline-block; background: ${isJackpot ? "#f59e0b" : "#22c55e"}; color: white; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: bold; margin-top: 16px;">${isJackpot ? "Use Your Free Video" : "Create Your Next Video"}</a>
                       </div>
                     `,
                   },
