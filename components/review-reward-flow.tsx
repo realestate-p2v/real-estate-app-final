@@ -252,21 +252,26 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
                 return (
                   <div
                     key={platform.key}
-                    className={`rounded-xl border p-4 ${platform.verifiedColors}`}
+                    className={`rounded-xl border-2 p-4 ${platform.verifiedColors} flex items-center justify-between gap-3`}
                   >
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-semibold text-green-800">
-                        {platform.icon} {platform.label} — Verified ✓
-                      </span>
-                    </div>
-                    {state?.discountCode && (
-                      <p className="text-sm text-green-700 mt-1">
-                        Discount code:{" "}
-                        <span className="font-mono font-bold bg-green-100 px-2 py-0.5 rounded">
-                          {state.discountCode}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <span className="font-bold text-green-800 block">
+                          {platform.icon} {platform.label} — Verified ✓
                         </span>
-                      </p>
+                        {state?.discountCode && (
+                          <span className="text-xs text-green-600 font-mono font-bold">
+                            {state.discountCode}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {state?.discountPercent && (
+                      <div className="flex-shrink-0 bg-green-600 text-white rounded-xl px-4 py-2 text-center shadow-md shadow-green-600/30">
+                        <div className="text-2xl font-black leading-none">{state.discountPercent}%</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider opacity-90">OFF</div>
+                      </div>
                     )}
                   </div>
                 );
