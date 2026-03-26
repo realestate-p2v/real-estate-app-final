@@ -120,8 +120,17 @@ export async function PATCH(request: Request) {
       ).length + 1; // +1 for the one we're approving now
 
     // Determine discount percentage
-    const discountPercent =
-      currentVerifiedCount >= 3 ? 25 : currentVerifiedCount >= 2 ? 15 : 10;
+    // 1 review = 10%, 2 reviews = 15%, 3 reviews = random 20-30% (spin wheel)
+    let discountPercent: number;
+    if (currentVerifiedCount >= 3) {
+      // Random between 20-30 for the spin wheel
+      const wheelOptions = [20, 21, 22, 23, 25, 26, 28, 30];
+      discountPercent = wheelOptions[Math.floor(Math.random() * wheelOptions.length)];
+    } else if (currentVerifiedCount >= 2) {
+      discountPercent = 15;
+    } else {
+      discountPercent = 10;
+    }
 
     // Generate Stripe coupon + promo code
     let promoCodeString = "";
@@ -198,7 +207,7 @@ export async function PATCH(request: Request) {
                       <p style="color: #166534; font-size: 18px; font-weight: bold; margin: 8px 0 0 0;">${discountPercent}% off your next order</p>
                     </div>
                     <p style="color: #555; font-size: 14px;">Use this code at checkout on your next listing video order. Code is valid for one use.</p>
-                    ${currentVerifiedCount < 3 ? `<p style="color: #555; font-size: 14px;"><strong>Leave more reviews to unlock bigger discounts!</strong> ${currentVerifiedCount === 1 ? "2 reviews = 15% off · 3 reviews = 25% off" : "One more review = 25% off!"}</p>` : ""}
+                    ${currentVerifiedCount < 3 ? `<p style="color: #555; font-size: 14px;"><strong>Leave more reviews to unlock bigger discounts!</strong> ${currentVerifiedCount === 1 ? "2 reviews = 15% off · 3 reviews = spin the wheel for 20-30% off!" : "One more review = spin the wheel for 20-30% off!"}</p>` : `<p style="color: #555; font-size: 14px;"><strong>You unlocked the spin wheel!</strong> Visit your delivery page to spin and reveal your ${discountPercent}% discount.</p>`}
                     <a href="https://realestatephoto2video.com/order" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: bold; margin-top: 16px;">Create Your Next Video</a>
                   </div>
                 `,
