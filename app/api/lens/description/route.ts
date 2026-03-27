@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -6,79 +12,6 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
-
-const SCORING_PROMPT = `You are a professional real estate photography coach reviewing a listing photo. 
-Score this photo 1-10 and provide specific, actionable feedback.
-
-EVALUATE:
-- Lighting: natural light usage, shadows, exposure, window light
-- Composition: angles, rule of thirds, room coverage, framing
-- Staging: clutter, personal items, distractions, doors (open fully or closed)
-- Technical: focus, white balance, blur
-
-CRITICAL RULES:
-- Only penalize things the agent can fix RIGHT NOW on-site: camera angle, position, 
-  opening/closing blinds, turning lights on/off, removing clutter, closing/opening doors,
-  removing stickers/items, stepping back/forward
-- Do NOT penalize and do NOT lower the score for things AI editing will fix after the shoot:
-  * Lens distortion / barrel distortion / non-vertical vertical lines (wide-angle lens effect)
-  * Slightly tilted horizon line
-  * Mixed lighting color temperatures (warm/cool mismatch from different bulbs)
-  * Minor white balance issues
-  * Mismatched light bulb colors, paint colors, furniture style, architectural features, 
-    countertop materials, backsplash design
-  FLAG all of the above as "noted for AI editing" in flagged_issues but do NOT lower the score.
-- ACCURACY RULES — do NOT give bad advice:
-  * DOORS: Not all doors are hinged. Sliding doors, pocket doors, barn doors, and bifold doors 
-    look different when fully open — they may still be visible in the frame. Do NOT tell the agent 
-    to "open or close" a door unless you are confident it is a standard hinged door that is 
-    clearly partially open. When in doubt, do not mention the door.
-  * LIGHTS — THIS IS CRITICAL, READ CAREFULLY: 
-    A lamp is ON if you can see ANY of these: a visible glow on the shade, warm light cast on 
-    nearby walls or surfaces, an illuminated bulb, a bright spot on the lampshade, or any light 
-    emanating from the fixture. Bedside lamps in real estate photos are almost always already 
-    turned on for staging. Do NOT suggest "turn on the lamp" or "turn on the bedside lamp" 
-    unless the lamp is clearly dark with zero glow and zero light cast on surrounding surfaces. 
-    When in doubt, assume the lamp is ON and do not mention it.
-  * CLUTTER vs DECOR — THIS IS CRITICAL: 
-    Do NOT tell agents to remove items that are clearly decorative staging. Vases, candles, 
-    styled books, small plants, artwork, decorative bowls, picture frames, and similar items 
-    on dressers, shelves, nightstands, and tables are INTENTIONAL STAGING — leave them alone.
-    Only flag actual clutter: shoes, bags, cables, mail, remotes scattered randomly, personal 
-    toiletries, clothing, toys on the floor, and items that are clearly not placed intentionally.
-    If items on a surface look arranged or styled, they are decor, not clutter.
-  * SPATIAL AWARENESS — do NOT suggest impossible movements:
-    Before suggesting "step back" or "back up," look for spatial cues that indicate the 
-    photographer is already against a wall or in a corner:
-    - If the headboard of a bed is visible at the very edge of the frame, there is almost 
-      certainly a wall directly behind the photographer. Do NOT suggest stepping back.
-    - If two walls are visible meeting at a corner near the camera position, the photographer 
-      is shooting FROM that corner. They cannot step back.
-    - If the frame shows a very wide-angle perspective with walls on both sides, the photographer 
-      is likely in a doorway or tight space. Do NOT suggest stepping back.
-    Instead of "step back," suggest alternative improvements like adjusting the angle, moving 
-    slightly left or right, or note that the composition is limited by the room layout.
-  * GENERAL: If you are not certain about the state of something (is that door open or closed? 
-    is that light on or off?), do NOT include it as a fixable issue. Only flag things you can 
-    clearly and confidently identify. False advice wastes the agent's time and erodes trust.
-- Be specific: "Back up 2 feet" not "consider adjusting your position"
-- Be encouraging but honest. This is a coach, not a critic.
-- If score is 8+, explain what would make it a 10
-
-Return ONLY valid JSON (no markdown, no backticks):
-{
-  "score": 8,
-  "summary": "Good shot! Strong natural light from the windows.",
-  "fixable_issues": ["Back up 2 feet to capture the full kitchen island"],
-  "flagged_issues": ["Slight warm/cool mismatch from different bulbs — AI Edit will fix"],
-  "what_would_make_10": "Capture the full island and show more of the window wall",
-  "approved": true
-}
-
-The "approved" field must be true if score >= 8, false otherwise.
-The "fixable_issues" array should list things the agent can fix right now.
-The "flagged_issues" array should list things that can't be fixed on-site but AI editing can handle later.
-If score is below 8, "what_would_make_10" should still be included but focus on the most impactful fix.`;
 
 async function callClaude(messages: any[], system?: string, maxTokens = 1024) {
   const body: any = {
@@ -107,17 +40,61 @@ async function callClaude(messages: any[], system?: string, maxTokens = 1024) {
   return data.content?.[0]?.text || "";
 }
 
-async function deleteFromCloudinary(url: string): Promise<void> {
+async function analyzePhoto(photoUrl: string): Promise<string | null> {
+  try {
+    const result = await callClaude(
+      [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "url",
+                url: photoUrl,
+              },
+            },
+            {
+              type: "text",
+              text: `You are a professional real estate photographer reviewing a listing photo. Describe ONLY what you can definitively see in this photo in 2-3 sentences.
+
+Rules:
+- State the room type and visible features
+- Describe colors, textures, and finishes as they APPEAR — do not guess the specific material. Say "dark wood-toned cabinetry" not "mahogany cabinetry." Say "tile flooring" not "travertine tile" unless you are 100% certain.
+- Do not invent features that are not clearly visible (e.g. do not say "exposed beams" unless beams are clearly visible, do not say "vaulted ceilings" unless the ceiling height is clearly visible)
+- Note lighting quality and condition
+- If the photo is too dark, blurry, or unidentifiable as a real estate photo, respond with exactly: SKIP`,
+            },
+          ],
+        },
+      ],
+      undefined,
+      300
+    );
+    if (result.trim().toUpperCase() === "SKIP") return null;
+    return result.trim();
+  } catch (err) {
+    console.error("Photo analysis error:", err);
+    return null;
+  }
+}
+
+// Extract Cloudinary public_id from a secure_url
+function extractPublicId(url: string): string | null {
+  try {
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function deleteFromCloudinary(publicId: string): Promise<void> {
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     console.warn("Cloudinary credentials not set — skipping photo deletion");
     return;
   }
   try {
-    // Extract public_id from Cloudinary URL
-    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
-    if (!match) return;
-
-    const publicId = match[1];
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const crypto = await import("crypto");
     const signature = crypto
@@ -140,155 +117,194 @@ async function deleteFromCloudinary(url: string): Promise<void> {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { photo_url, session_id, user_id, hdr_detected } = body;
+    const body = await req.json();
+    const { photoUrls, propertyData, style, userId, fromCoach } = body;
 
-    if (!photo_url) {
+    if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length === 0) {
+      return NextResponse.json({ error: "At least one photo URL is required" }, { status: 400 });
+    }
+    if (!propertyData) {
+      return NextResponse.json({ error: "Property data is required" }, { status: 400 });
+    }
+    if (!style) {
+      return NextResponse.json({ error: "Style is required" }, { status: 400 });
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    // Check if non-subscriber has already used their free trial
+    const { data: existingDescriptions, error: countError } = await supabaseAdmin
+      .from("lens_descriptions")
+      .select("id")
+      .eq("user_id", userId);
+
+    // Admin god mode — always treated as subscriber
+    const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const isSubscriber = ADMIN_EMAILS.includes(userData?.user?.email || "");
+    if (!isSubscriber && existingDescriptions && existingDescriptions.length >= 1) {
       return NextResponse.json(
-        { error: "photo_url is required" },
+        { error: "free_trial_used", message: "Subscribe to P2V Lens to generate more descriptions." },
+        { status: 403 }
+      );
+    }
+
+    // Step 1: Analyze each photo with Claude Vision (parallel, max 10)
+    const photosToAnalyze = photoUrls.slice(0, 10);
+    const analyses = await Promise.all(photosToAnalyze.map(analyzePhoto));
+
+    const validAnalyses = analyses.filter((a): a is string => a !== null);
+
+    if (validAnalyses.length === 0) {
+      return NextResponse.json(
+        { error: "None of the uploaded photos could be analyzed. Please upload clear listing photos." },
         { status: 400 }
       );
     }
 
-    // Build the prompt — add HDR note if not detected
-    let prompt = SCORING_PROMPT;
-    if (hdr_detected === false) {
-      prompt += `\n\nIMPORTANT: This photo was NOT shot in HDR mode. Add this to the flagged_issues array: "Enable HDR mode in your camera settings for better dynamic range — especially important for rooms with windows where inside is dark and outside is bright." Do NOT lower the score for missing HDR.`;
-    }
+    // Step 2: Build the room descriptions
+    const roomDescriptions = validAnalyses
+      .map((analysis, i) => `Photo ${i + 1}: ${analysis}`)
+      .join("\n");
 
-    // Call Claude Vision for scoring
-    const rawResult = await callClaude(
-      [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "url",
-                url: photo_url,
-              },
-            },
-            {
-              type: "text",
-              text: prompt,
-            },
-          ],
-        },
-      ],
-      undefined,
-      1024
+    // Step 3: Generate the listing description
+    const { beds, baths, sqft, lotSize, yearBuilt, price, neighborhood, specialFeatures, address } = propertyData;
+
+    const styleGuide: Record<string, string> = {
+      professional: "Write in a professional, polished tone suitable for MLS. Clear, factual, and appealing.",
+      luxury: "Write in an elevated luxury tone. Emphasize premium finishes, exclusivity, and lifestyle. Use sophisticated vocabulary.",
+      conversational: "Write in a warm, conversational tone as if a friendly agent is giving a tour. Approachable and engaging.",
+      concise: "Write in a brief, punchy style. Short sentences. Key facts up front. No fluff. Perfect for social media or quick listings.",
+    };
+
+    const descriptionPrompt = `You are an expert real estate listing agent. Write a ${style} MLS listing description for this property.
+
+Property Details:
+- Address: ${address || "Not provided"}
+- Bedrooms: ${beds || "N/A"}
+- Bathrooms: ${baths || "N/A"}
+- Square Feet: ${sqft || "N/A"}
+- Lot Size: ${lotSize || "N/A"}
+- Year Built: ${yearBuilt || "N/A"}
+- Price: ${price || "N/A"}
+- Neighborhood: ${neighborhood || "N/A"}
+- Special Features: ${specialFeatures || "None specified"}
+
+Room-by-Room Photo Analysis:
+${roomDescriptions}
+
+Style Guide: ${styleGuide[style] || styleGuide.professional}
+
+CRITICAL Requirements:
+- 150-250 words
+- Highlight the strongest selling points from the photos
+- ONLY mention materials, finishes, and features that are explicitly described in the photo analyses above. If the analysis says "dark wood-toned cabinetry," write "dark wood-toned cabinetry" — do NOT upgrade it to "mahogany" or "cherry" or any specific wood species unless the analysis explicitly names it.
+- Do NOT invent or embellish features. If the photo analyses do not mention exposed beams, vaulted ceilings, granite countertops, or any other feature, do NOT include it in the description. Stick strictly to what was observed.
+- Do NOT guess at materials. Say "tile flooring" not "marble tile" unless the analysis specifically says marble. Say "wood cabinetry" not "oak cabinetry" unless oak is explicitly stated.
+- You may use the property details (beds, baths, sqft, price, etc.) freely — those are facts provided by the agent.
+- Include a compelling opening line
+- End with a call to action`;
+
+    const description = await callClaude(
+      [{ role: "user", content: descriptionPrompt }],
+      "You are a top-producing real estate listing agent known for writing accurate, compelling property descriptions. You never fabricate or embellish features — you only describe what has been verified in the photos and property data. Accuracy builds trust with buyers.",
+      600
     );
 
-    // Parse the response
-    let result;
-    try {
-      const cleaned = rawResult
-        .replace(/```json\s*/g, "")
-        .replace(/```\s*/g, "")
-        .trim();
-      result = JSON.parse(cleaned);
-    } catch (parseErr) {
-      console.error("Failed to parse Claude response:", rawResult);
-      throw new Error("Failed to parse scoring response");
+    // Step 4: Save to Supabase (description + property data only, no photo URLs)
+    const { data: saved, error: saveError } = await supabaseAdmin
+      .from("lens_descriptions")
+      .insert({
+        user_id: userId,
+        property_data: propertyData,
+        photo_analyses: validAnalyses,
+        style,
+        description: description.trim(),
+        status: "complete",
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error("Save error:", saveError);
     }
 
-    // Validate and normalize
-    const score = Math.min(10, Math.max(1, Math.round(result.score || 1)));
-    const approved = score >= 8;
+    // Step 5: Delete freshly uploaded photos from Cloudinary (not Photo Coach photos)
+    const fromCoachFlags = fromCoach || new Array(photosToAnalyze.length).fill(false);
+    const deletePromises: Promise<void>[] = [];
 
-    const scoringResult = {
-      score,
-      summary: result.summary || "Photo analyzed.",
-      fixable_issues: Array.isArray(result.fixable_issues)
-        ? result.fixable_issues
-        : [],
-      flagged_issues: Array.isArray(result.flagged_issues)
-        ? result.flagged_issues
-        : [],
-      what_would_make_10: result.what_would_make_10 || "",
-      approved,
-    };
+    photosToAnalyze.forEach((url, i) => {
+      if (!fromCoachFlags[i]) {
+        const publicId = extractPublicId(url);
+        if (publicId) {
+          deletePromises.push(deleteFromCloudinary(publicId));
+        }
+      }
+    });
+
+    if (deletePromises.length > 0) {
+      Promise.all(deletePromises).catch((err) =>
+        console.error("Cloudinary cleanup error:", err)
+      );
+    }
 
     // ── Surprise discount — 1-in-500 chance for subscribers ──
     let surprise: { percent: number; code: string } | null = null;
     try {
-      if (user_id) {
-        const { createClient } = await import("@/lib/supabase/server");
-        const supabase = await createClient();
+      const { data: lensCheck } = await supabaseAdmin
+        .from("lens_usage")
+        .select("is_subscriber")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-        const { data: lensCheck } = await supabase
-          .from("lens_usage")
-          .select("is_subscriber")
-          .eq("user_id", user_id)
-          .maybeSingle();
+      if (lensCheck?.is_subscriber && Math.random() < 0.002) {
+        const surprisePercent = Math.floor(Math.random() * 6) + 5;
+        const Stripe = (await import("stripe")).default;
+        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+          apiVersion: "2024-04-10" as any,
+        });
 
-        if (lensCheck?.is_subscriber && Math.random() < 0.002) {
-          const surprisePercent = Math.floor(Math.random() * 6) + 5;
-          const Stripe = (await import("stripe")).default;
-          const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-            apiVersion: "2024-04-10" as any,
-          });
+        const coupon = await stripeClient.coupons.create({
+          percent_off: surprisePercent,
+          duration: "once",
+          name: `Surprise - ${surprisePercent}% Off Video`,
+        });
 
-          const coupon = await stripeClient.coupons.create({
-            percent_off: surprisePercent,
-            duration: "once",
-            name: `Surprise - ${surprisePercent}% Off Video`,
-          });
-
-          const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-          let surpriseCode = "SURPRISE";
-          for (let i = 0; i < 6; i++) {
-            surpriseCode += chars[Math.floor(Math.random() * chars.length)];
-          }
-
-          await stripeClient.promotionCodes.create({
-            coupon: coupon.id,
-            code: surpriseCode,
-            max_redemptions: 1,
-          });
-
-          surprise = { percent: surprisePercent, code: surpriseCode };
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let surpriseCode = "SURPRISE";
+        for (let i = 0; i < 6; i++) {
+          surpriseCode += chars[Math.floor(Math.random() * chars.length)];
         }
+
+        await stripeClient.promotionCodes.create({
+          coupon: coupon.id,
+          code: surpriseCode,
+          max_redemptions: 1,
+        });
+
+        surprise = { percent: surprisePercent, code: surpriseCode };
       }
     } catch (surpriseErr) {
       console.error("Surprise discount error:", surpriseErr);
     }
 
-    // NOTE: We do NOT auto-delete low-score photos. The client shows the user
-    // "Reshoot" vs "Keep Anyway" options. Deletion only happens if the user
-    // explicitly chooses to reshoot (via DELETE /api/lens/coach).
-    return NextResponse.json({ ...scoringResult, surprise });
+    return NextResponse.json({
+      success: true,
+      description: description.trim(),
+      photoAnalyses: validAnalyses,
+      photosAnalyzed: validAnalyses.length,
+      photosSkipped: photosToAnalyze.length - validAnalyses.length,
+      id: saved?.id || null,
+      surprise,
+    });
   } catch (err: any) {
-    console.error("Photo Coach API error:", err);
+    console.error("Description API error:", err);
     return NextResponse.json(
-      { error: err.message || "Failed to analyze photo" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE — called when user explicitly chooses "Reshoot" on a low-score photo
-export async function DELETE(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { photo_url } = body;
-
-    if (!photo_url) {
-      return NextResponse.json(
-        { error: "photo_url is required" },
-        { status: 400 }
-      );
-    }
-
-    await deleteFromCloudinary(photo_url);
-    return NextResponse.json({ deleted: true });
-  } catch (err: any) {
-    console.error("Photo deletion error:", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to delete photo" },
+      { error: "Failed to generate description. Please try again." },
       { status: 500 }
     );
   }
