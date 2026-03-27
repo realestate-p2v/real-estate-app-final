@@ -253,7 +253,7 @@ CRITICAL Requirements:
     }
 
     // ── Surprise discount — 1-in-500 chance for subscribers ──
-    let surprise: { percent: number; code: string } | null = null;
+    let surprise = false;
     try {
       const { data: lensCheck } = await supabaseAdmin
         .from("lens_usage")
@@ -262,31 +262,7 @@ CRITICAL Requirements:
         .maybeSingle();
 
       if (lensCheck?.is_subscriber && Math.random() < 0.002) {
-        const surprisePercent = Math.floor(Math.random() * 6) + 5;
-        const Stripe = (await import("stripe")).default;
-        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-          apiVersion: "2024-04-10" as any,
-        });
-
-        const coupon = await stripeClient.coupons.create({
-          percent_off: surprisePercent,
-          duration: "once",
-          name: `Surprise - ${surprisePercent}% Off Video`,
-        });
-
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        let surpriseCode = "SURPRISE";
-        for (let i = 0; i < 6; i++) {
-          surpriseCode += chars[Math.floor(Math.random() * chars.length)];
-        }
-
-        await stripeClient.promotionCodes.create({
-          coupon: coupon.id,
-          code: surpriseCode,
-          max_redemptions: 1,
-        });
-
-        surprise = { percent: surprisePercent, code: surpriseCode };
+        surprise = true;
       }
     } catch (surpriseErr) {
       console.error("Surprise discount error:", surpriseErr);
