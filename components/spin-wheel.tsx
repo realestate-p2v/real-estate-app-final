@@ -734,7 +734,7 @@ export function SpinWheel({
               </div>
             </div>
             <p className="text-white/40 text-sm">
-              We&apos;ve also emailed this code to you. Use it at checkout!
+              We&apos;ve emailed this code to you. Use it at checkout!
             </p>
             <button
               onClick={handleClose}
