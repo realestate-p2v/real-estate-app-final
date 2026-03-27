@@ -37,7 +37,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Already used" }, { status: 400 });
     }
 
-    // Determine coupon parameters based on prize value
+    // ── Free Lens month — direct subscription grant, no Stripe coupon ──
+    if (prize === "free_lens") {
+      const now = new Date();
+      const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      await supabase.from("lens_usage").upsert({
+        user_id: user.id,
+        is_subscriber: true,
+        subscription_tier: "free_prize",
+        free_lens_started_at: now.toISOString(),
+        free_lens_expires_at: expires.toISOString(),
+        signup_spin_used: true,
+        signup_prize_code: "FREE_LENS_30_DAYS",
+        email_opt_in: emailOptIn ?? false,
+      }, { onConflict: "user_id" });
+
+      return NextResponse.json({
+        success: true,
+        prizeLabel: "1 free month of P2V Lens — all features unlocked!",
+        promoCode: "FREE_LENS_30_DAYS",
+        redirectTo: "/dashboard/lens",
+      });
+    }
+
+    // ── All other prizes — create Stripe coupon ──
     let couponParams: any;
     let prizeLabel: string;
 
@@ -50,12 +74,6 @@ export async function POST(request: Request) {
     } else if (prize === 20) {
       couponParams = { percent_off: 20, duration: "once" as const, name: "Welcome - 20% Off" };
       prizeLabel = "20% off your first order";
-    } else if (prize === "free_lens") {
-      couponParams = { percent_off: 100, duration: "once" as const, name: "Welcome - Free Month Lens" };
-      prizeLabel = "1 free month of P2V Lens";
-    } else if (prize === "jackpot") {
-      couponParams = { amount_off: 7900, currency: "usd", duration: "once" as const, name: "Welcome - Free Video Jackpot" };
-      prizeLabel = "FREE 15-clip listing video ($79 value)";
     } else {
       return NextResponse.json({ error: "Invalid prize" }, { status: 400 });
     }
