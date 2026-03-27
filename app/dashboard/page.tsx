@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { SignupSpin } from "@/components/signup-spin";
 import {
   Video,
   FileText,
@@ -156,10 +158,14 @@ const PHOTOGRAPHER_FEATURES_HAS_LISTING = [
 ];
 
 export default function DashboardPage() {
-  const [hasListing, setHasListing] = useState<boolean | null>(null);
+  const [hasListing, setHasListing] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [signupPrizeCode, setSignupPrizeCode] = useState(null);
+  const [signupPrizeLabel, setSignupPrizeLabel] = useState("");
 
   useEffect(() => {
     checkListing();
+    loadUser();
   }, []);
 
   const checkListing = async () => {
@@ -172,6 +178,30 @@ export default function DashboardPage() {
     }
   };
 
+  const loadUser = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+
+        // Check for existing prize code
+        const { data: lensData } = await supabase
+          .from("lens_usage")
+          .select("signup_prize_code")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (lensData?.signup_prize_code) {
+          setSignupPrizeCode(lensData.signup_prize_code);
+          setSignupPrizeLabel("Discount on your first order");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load user:", err);
+    }
+  };
+
   const photographerFeatures = hasListing
     ? PHOTOGRAPHER_FEATURES_HAS_LISTING
     : PHOTOGRAPHER_FEATURES_NO_LISTING;
@@ -179,6 +209,8 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+
+      {userId && <SignupSpin userId={userId} />}
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero */}
@@ -190,6 +222,21 @@ export default function DashboardPage() {
             Manage your videos, track orders, and grow your business.
           </p>
         </div>
+
+        {/* Signup prize banner */}
+        {signupPrizeCode && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-center gap-3">
+              <Gift className="h-6 w-6 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-green-800">Your welcome gift: {signupPrizeLabel}</p>
+                <p className="text-sm text-green-700">
+                  Use code <span className="font-mono font-bold bg-green-100 px-2 py-0.5 rounded">{signupPrizeCode}</span> at checkout
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ═══ FOR REALTORS ═══ */}
         <div className="mb-14">
