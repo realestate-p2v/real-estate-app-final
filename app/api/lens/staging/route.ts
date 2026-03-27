@@ -255,10 +255,27 @@ The result should look like a professional interior design photograph, photoreal
       console.error("[Staging] Supabase insert error:", insertError);
     }
 
+    // ── Surprise discount — 1-in-500 chance for subscribers ──
+    let surprise = false;
+    try {
+      const { data: lensCheck } = await supabase
+        .from("lens_usage")
+        .select("is_subscriber")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      if (lensCheck?.is_subscriber && Math.random() < 0.002) {
+        surprise = true;
+      }
+    } catch (surpriseErr) {
+      console.error("Surprise discount error:", surpriseErr);
+    }
+
     return NextResponse.json({
       success: true,
       staged_url: stagedImageUrl,
       room_analysis: roomAnalysis,
+      surprise,
     });
   } catch (error: any) {
     console.error("[Staging] Error:", error);
