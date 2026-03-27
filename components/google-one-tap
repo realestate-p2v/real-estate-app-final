@@ -3,20 +3,6 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: any) => void;
-          prompt: (callback?: (notification: any) => void) => void;
-          cancel: () => void;
-        };
-      };
-    };
-  }
-}
-
 export function GoogleOneTap() {
   useEffect(() => {
     const init = async () => {
@@ -31,12 +17,13 @@ export function GoogleOneTap() {
       if (dismissed && (Date.now() - parseInt(dismissed)) < 86400000) return;
 
       const waitForGoogle = () => {
-        if (!window.google?.accounts?.id) {
+        const google = (window as any).google;
+        if (!google?.accounts?.id) {
           setTimeout(waitForGoogle, 100);
           return;
         }
 
-        window.google.accounts.id.initialize({
+        google.accounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
           callback: async (response: any) => {
             const { error } = await supabase.auth.signInWithIdToken({
@@ -49,7 +36,7 @@ export function GoogleOneTap() {
           cancel_on_tap_outside: true,
         });
 
-        window.google.accounts.id.prompt((notification: any) => {
+        google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
             localStorage.setItem("p2v_onetap_dismissed", Date.now().toString());
           }
