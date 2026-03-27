@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
           .eq("user_id", user_id)
           .maybeSingle();
 
-        if (lensCheck?.is_subscriber && Math.random() < 0.002) {
+        if (lensCheck?.is_subscriber && Math.random() < 0.5) {
           surprise = true;
         }
       }
