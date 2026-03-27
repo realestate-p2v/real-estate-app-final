@@ -522,8 +522,8 @@ export default function PhotoCoachPage() {
 
       setLastResult(result);
 
-      // Check for surprise discount
-      if (result.surprise) {
+      // Check for surprise discount (subscribers only)
+      if (result.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
 
