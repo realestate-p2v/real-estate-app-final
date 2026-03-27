@@ -255,21 +255,9 @@ The result should look like a professional interior design photograph, photoreal
       console.error("[Staging] Supabase insert error:", insertError);
     }
 
-    // ── Surprise discount — 1-in-500 chance for subscribers ──
-    let surprise = false;
-    try {
-      const { data: lensCheck } = await supabase
-        .from("lens_usage")
-        .select("is_subscriber")
-        .eq("user_id", user_id)
-        .maybeSingle();
-
-      if (lensCheck?.is_subscriber && Math.random() < 0.002) {
-        surprise = true;
-      }
-    } catch (surpriseErr) {
-      console.error("Surprise discount error:", surpriseErr);
-    }
+    // ── Surprise discount — 1-in-500 chance ──
+    // Subscriber check is done on the frontend before showing the wheel.
+    const surprise = Math.random() < 0.002;
 
     return NextResponse.json({
       success: true,
