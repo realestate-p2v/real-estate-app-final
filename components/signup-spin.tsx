@@ -7,15 +7,15 @@ import { Gift, Sparkles, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const SIGNUP_SEGMENTS = [
-  { value: 10,          label: "$10\nOFF",          color: "#3b82f6", angle: 54 },
-  { value: 15,          label: "15%\nOFF",          color: "#8b5cf6", angle: 50 },
-  { value: 10,          label: "$10\nOFF",          color: "#06b6d4", angle: 54 },
-  { value: 20,          label: "20%\nOFF",          color: "#f59e0b", angle: 46 },
-  { value: 10,          label: "$10\nOFF",          color: "#22c55e", angle: 54 },
-  { value: 15,          label: "15%\nOFF",          color: "#ec4899", angle: 50 },
-  { value: "free_lens", label: "FREE\nLENS\nMONTH", color: "#14b8a6", angle: 36 },
-  { value: "jackpot",   label: "FREE\nVIDEO",      color: "#FFD700", angle: 16 },
+  { value: 10,          label: "$10\nOFF",   color: "#3b82f6", angle: 56 },
+  { value: 15,          label: "15%\nOFF",   color: "#8b5cf6", angle: 52 },
+  { value: 10,          label: "$10\nOFF",   color: "#06b6d4", angle: 56 },
+  { value: 20,          label: "20%\nOFF",   color: "#f59e0b", angle: 63 },
+  { value: 10,          label: "$10\nOFF",   color: "#22c55e", angle: 56 },
+  { value: 15,          label: "15%\nOFF",   color: "#ec4899", angle: 52 },
+  { value: "free_lens", label: "FREE\nLENS", color: "#14b8a6", angle: 25 },
 ];
+// Total: 56+52+56+63+56+52+25 = 360 ✓
 
 export function SignupSpin({ userId }) {
   const [showWelcome, setShowWelcome] = useState(false);
@@ -114,6 +114,7 @@ export function SignupSpin({ userId }) {
   if (showWheel) {
     return (
       <SpinWheel
+        title="🎉 Welcome! Spin for Your Discount!"
         segments={SIGNUP_SEGMENTS}
         onResult={handlePrizeWon}
         onClose={() => setShowWheel(false)}
