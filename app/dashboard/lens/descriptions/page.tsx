@@ -23,6 +23,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { SpinWheel } from "@/components/spin-wheel";
 
 type Style = "professional" | "luxury" | "conversational" | "concise";
 
@@ -46,6 +47,16 @@ const STYLES: { value: Style; label: string; description: string }[] = [
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+const SURPRISE_SEGMENTS = [
+  { value: 5,  label: "5%\nOFF",  color: "#3b82f6", angle: 70 },
+  { value: 8,  label: "8%\nOFF",  color: "#8b5cf6", angle: 55 },
+  { value: 5,  label: "5%\nOFF",  color: "#06b6d4", angle: 70 },
+  { value: 10, label: "10%\nOFF", color: "#f59e0b", angle: 40 },
+  { value: 5,  label: "5%\nOFF",  color: "#22c55e", angle: 70 },
+  { value: 8,  label: "8%\nOFF",  color: "#ec4899", angle: 55 },
+];
+// Total: 70+55+70+40+70+55 = 360 ✓
 
 export default function DescriptionWriterPage() {
   const supabase = createClient();
@@ -81,8 +92,9 @@ export default function DescriptionWriterPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
 
-  // Surprise discount
-  const [surpriseDiscount, setSurpriseDiscount] = useState<{ percent: number; code: string } | null>(null);
+  // Surprise discount wheel
+  const [showSurpriseWheel, setShowSurpriseWheel] = useState(false);
+  const [surprisePromoCode, setSurprisePromoCode] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -261,7 +273,7 @@ export default function DescriptionWriterPage() {
 
       // Check for surprise discount
       if (data.surprise) {
-        setSurpriseDiscount(data.surprise);
+        setShowSurpriseWheel(true);
       }
     } catch (err) {
       setError("Something went wrong. Please try again.");
@@ -682,28 +694,29 @@ export default function DescriptionWriterPage() {
         </div>
       </div>
 
-      {/* Surprise discount modal */}
-      {surpriseDiscount && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full text-center space-y-5">
-            <div className="text-6xl">🎉</div>
-            <h2 className="text-2xl font-black text-foreground">Surprise Discount!</h2>
-            <p className="text-muted-foreground">
-              You just won <span className="font-bold text-green-600 text-xl">{surpriseDiscount.percent}% off</span> your next video order!
-            </p>
-            <div className="bg-muted rounded-xl p-4">
-              <p className="text-xs text-muted-foreground mb-1">Your code:</p>
-              <p className="text-3xl font-mono font-black text-foreground tracking-wider">{surpriseDiscount.code}</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Use this code at checkout. Valid for one use.</p>
-            <Button
-              onClick={() => setSurpriseDiscount(null)}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-4 text-base w-full"
-            >
-              Awesome, thanks!
-            </Button>
-          </div>
-        </div>
+      {/* Surprise discount wheel */}
+      {showSurpriseWheel && (
+        <SpinWheel
+          title="🎉 Surprise! Spin for a Video Discount!"
+          segments={SURPRISE_SEGMENTS}
+          promoCode={surprisePromoCode || ""}
+          onResult={async (segment) => {
+            try {
+              const res = await fetch("/api/surprise-spin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ percent: segment.value }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                setSurprisePromoCode(data.code);
+              }
+            } catch (err) {
+              console.error("Surprise spin error:", err);
+            }
+          }}
+          onClose={() => setShowSurpriseWheel(false)}
+        />
       )}
     </div>
   );
