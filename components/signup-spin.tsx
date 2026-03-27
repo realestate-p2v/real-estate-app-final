@@ -124,6 +124,7 @@ export function SignupSpin({ userId }) {
       <SpinWheel
         title="🎉 Welcome! Spin for Your Discount!"
         segments={SIGNUP_SEGMENTS}
+        promoCode={prizeResult?.code || ""}
         onResult={handlePrizeWon}
         onClose={handleWheelClose}
       />
