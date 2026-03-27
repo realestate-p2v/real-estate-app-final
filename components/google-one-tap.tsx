@@ -17,20 +17,17 @@ export function GoogleOneTap() {
       const dismissed = localStorage.getItem("p2v_onetap_dismissed");
       if (dismissed && (Date.now() - parseInt(dismissed)) < 86400000) return;
 
-      // Generate a random nonce and its SHA-256 hash
-      // Google gets the hash, Supabase gets the raw nonce
+      // Generate nonce: Google embeds the SHA-256 hash in the JWT,
+      // Supabase needs the raw nonce to hash and compare
       const generateNonce = async () => {
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
         const raw = Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+        // Hash for Google — must match what Supabase will compute from raw
         const encoder = new TextEncoder();
-        const data = encoder.encode(raw);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashed = btoa(String.fromCharCode(...hashArray))
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=+$/, "");
+        const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(raw));
+        const hashArray = new Uint8Array(hashBuffer);
+        const hashed = Array.from(hashArray, (b) => b.toString(16).padStart(2, "0")).join("");
         return { raw, hashed };
       };
 
@@ -54,8 +51,7 @@ export function GoogleOneTap() {
               nonce: raw,
             });
             if (error) {
-              console.error("[OneTap] Supabase signInWithIdToken error:", error.message);
-              console.error("[OneTap] Full error:", JSON.stringify(error));
+              console.error("[OneTap] Supabase error:", error.message);
             } else {
               console.log("[OneTap] Success! User:", data?.user?.email);
               window.location.reload();
@@ -79,6 +75,5 @@ export function GoogleOneTap() {
     init();
   }, []);
 
-  // This component renders nothing — Google handles the UI
   return null;
 }
