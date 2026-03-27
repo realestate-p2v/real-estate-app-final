@@ -22,6 +22,7 @@ export function SignupSpin({ userId }) {
   const [showWheel, setShowWheel] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(true);
   const [prizeResult, setPrizeResult] = useState(null);
+  const [wonPrize, setWonPrize] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -57,12 +58,19 @@ export function SignupSpin({ userId }) {
       const data = await res.json();
       if (data.success) {
         setPrizeResult({ label: data.prizeLabel, code: data.promoCode });
+        setWonPrize(segment.value);
       }
     } catch (err) {
       console.error("Signup spin error:", err);
     } finally {
       setSaving(false);
-      setShowWheel(false);
+    }
+  };
+
+  const handleWheelClose = () => {
+    setShowWheel(false);
+    if (wonPrize === "free_lens") {
+      window.location.href = "/dashboard/lens";
     }
   };
 
@@ -117,7 +125,7 @@ export function SignupSpin({ userId }) {
         title="🎉 Welcome! Spin for Your Discount!"
         segments={SIGNUP_SEGMENTS}
         onResult={handlePrizeWon}
-        onClose={() => setShowWheel(false)}
+        onClose={handleWheelClose}
       />
     );
   }
