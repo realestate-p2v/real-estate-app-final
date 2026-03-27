@@ -4,17 +4,16 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { TrackingScripts } from "@/components/tracking-scripts";
 import { CookieConsent } from "@/components/cookie-consent";
+import Script from "next/script";
+import { GoogleOneTap } from "@/components/google-one-tap";
 import "./globals.css";
-
 const geist = Geist({ subsets: ["latin"] });
 const geistMono = Geist_Mono({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
   title: "Real Estate Photo 2 Video | Professional Video Agency",
   description:
     "A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos.",
   generator: "v0.app",
-
   openGraph: {
     title: "Real Estate Photo 2 Video | Professional Video Agency",
     description:
@@ -46,7 +45,6 @@ export const metadata: Metadata = {
    apple: '/apple-icon.png?v=2',
   },
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -65,15 +63,14 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-
         {/* Consent-aware tracking scripts (GTM, GA, Meta Pixel) */}
         <TrackingScripts />
-
         {children}
-
         {/* Cookie consent banner */}
         <CookieConsent />
-
+        {/* Google One Tap sign-in for logged-out visitors */}
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+        <GoogleOneTap />
         {/* Vercel Analytics (first-party, no consent needed) */}
         <Analytics />
       </body>
