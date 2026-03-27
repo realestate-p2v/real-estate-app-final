@@ -245,6 +245,9 @@ export default function VirtualStagingPage() {
   const [previousStagings, setPreviousStagings] = useState<StagingResult[]>([]);
   const [selectedPrevious, setSelectedPrevious] = useState<StagingResult | null>(null);
 
+  // Surprise discount
+  const [surpriseDiscount, setSurpriseDiscount] = useState<{ percent: number; code: string } | null>(null);
+
   // ── Init: load user, check sub, load history ──
   useEffect(() => {
     const init = async () => {
@@ -422,6 +425,11 @@ export default function VirtualStagingPage() {
       setStagingCount((c) => c + 1);
       setMonthlyCount((c) => c + 1);
       setPreviousStagings((prev) => [newResult, ...prev]);
+
+      // Check for surprise discount
+      if (data.surprise) {
+        setSurpriseDiscount(data.surprise);
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -866,6 +874,30 @@ export default function VirtualStagingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Surprise discount modal */}
+      {surpriseDiscount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full text-center space-y-5">
+            <div className="text-6xl">🎉</div>
+            <h2 className="text-2xl font-black text-foreground">Surprise Discount!</h2>
+            <p className="text-muted-foreground">
+              You just won <span className="font-bold text-green-600 text-xl">{surpriseDiscount.percent}% off</span> your next video order!
+            </p>
+            <div className="bg-muted rounded-xl p-4">
+              <p className="text-xs text-muted-foreground mb-1">Your code:</p>
+              <p className="text-3xl font-mono font-black text-foreground tracking-wider">{surpriseDiscount.code}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">Use this code at checkout. Valid for one use.</p>
+            <Button
+              onClick={() => setSurpriseDiscount(null)}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-4 text-base w-full"
+            >
+              Awesome, thanks!
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
