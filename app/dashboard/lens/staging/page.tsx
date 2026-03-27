@@ -438,8 +438,8 @@ export default function VirtualStagingPage() {
       setMonthlyCount((c) => c + 1);
       setPreviousStagings((prev) => [newResult, ...prev]);
 
-      // Check for surprise discount
-      if (data.surprise) {
+      // Check for surprise discount (subscribers only)
+      if (data.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
     } catch {
