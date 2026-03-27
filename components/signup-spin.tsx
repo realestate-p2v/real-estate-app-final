@@ -23,6 +23,7 @@ export function SignupSpin({ userId }) {
   const [emailOptIn, setEmailOptIn] = useState(true);
   const [prizeResult, setPrizeResult] = useState(null);
   const [wonPrize, setWonPrize] = useState(null);
+  const [redirectAfterClose, setRedirectAfterClose] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -59,6 +60,11 @@ export function SignupSpin({ userId }) {
       if (data.success) {
         setPrizeResult({ label: data.prizeLabel, code: data.promoCode });
         setWonPrize(segment.value);
+
+        // If free Lens, redirect to Lens dashboard after user closes the wheel
+        if (data.redirectTo) {
+          setRedirectAfterClose(data.redirectTo);
+        }
       }
     } catch (err) {
       console.error("Signup spin error:", err);
@@ -69,8 +75,8 @@ export function SignupSpin({ userId }) {
 
   const handleWheelClose = () => {
     setShowWheel(false);
-    if (wonPrize === "free_lens") {
-      window.location.href = "/dashboard/lens";
+    if (redirectAfterClose) {
+      window.location.href = redirectAfterClose;
     }
   };
 
