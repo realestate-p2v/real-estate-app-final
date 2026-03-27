@@ -24,6 +24,7 @@ import {
   DollarSign,
   PenTool,
   Film,
+  Gift,
 } from "lucide-react";
 
 interface LensSubscription {
@@ -45,6 +46,11 @@ export default function DashboardLensPage() {
 
   const [coachSessionCount, setCoachSessionCount] = useState(0);
   const [descriptionCount, setDescriptionCount] = useState(0);
+
+  // Free Lens prize state
+  const [isFreePrize, setIsFreePrize] = useState(false);
+  const [freeLensDaysLeft, setFreeLensDaysLeft] = useState<number | null>(null);
+  const [freeLensExpired, setFreeLensExpired] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -77,13 +83,55 @@ export default function DashboardLensPage() {
           renewsAt: null,
         });
       } else if (usage?.is_subscriber) {
-        setSubscription({
-          active: true,
-          plan: usage.subscription_tier || "Individual",
-          analysesUsed: totalAnalyses,
-          analysesLimit: 200,
-          renewsAt: null,
-        });
+        // Check if this is a free prize that has expired
+        if (usage.subscription_tier === "free_prize" && usage.free_lens_expires_at) {
+          const expiresAt = new Date(usage.free_lens_expires_at);
+          const now = new Date();
+          const msLeft = expiresAt.getTime() - now.getTime();
+          const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+
+          if (daysLeft <= 0) {
+            // Free month has expired — revoke access
+            setFreeLensExpired(true);
+            setIsFreePrize(false);
+
+            // Update database to revoke subscriber status
+            await supabase.from("lens_usage").update({
+              is_subscriber: false,
+              subscription_tier: null,
+            }).eq("user_id", user.id);
+
+            // Set subscription as inactive
+            setSubscription({
+              active: false,
+              plan: null,
+              analysesUsed: totalAnalyses,
+              analysesLimit: 200,
+              renewsAt: null,
+            });
+          } else {
+            // Free prize still active
+            setIsFreePrize(true);
+            setFreeLensDaysLeft(daysLeft);
+
+            setSubscription({
+              active: true,
+              plan: "Free Month",
+              analysesUsed: totalAnalyses,
+              analysesLimit: 200,
+              renewsAt: null,
+            });
+          }
+        } else {
+          // Regular paying subscriber
+          setSubscription({
+            active: true,
+            plan: usage.subscription_tier || "Individual",
+            analysesUsed: totalAnalyses,
+            analysesLimit: 200,
+            renewsAt: null,
+          });
+        }
       }
 
       const { count: sessionCount } = await supabase
@@ -273,6 +321,61 @@ export default function DashboardLensPage() {
             </div>
           )}
         </div>
+
+        {/* ═══ FREE LENS PRIZE COUNTDOWN ═══ */}
+        {isFreePrize && freeLensDaysLeft !== null && (
+          <div className={`rounded-2xl p-5 mb-6 border ${
+            freeLensDaysLeft <= 5
+              ? "bg-amber-50 border-amber-200"
+              : "bg-cyan-50 border-cyan-200"
+          }`}>
+            <div className="flex items-start gap-4">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                freeLensDaysLeft <= 5 ? "bg-amber-100" : "bg-cyan-100"
+              }`}>
+                <Gift className="h-5 w-5 text-cyan-600" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-foreground">Free Lens Month</h3>
+                  <span className={`text-sm font-bold ${
+                    freeLensDaysLeft <= 5 ? "text-amber-700" : "text-cyan-700"
+                  }`}>
+                    {freeLensDaysLeft} day{freeLensDaysLeft !== 1 ? "s" : ""} remaining
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You have full access to all P2V Lens features. Subscribe before your free month ends to keep access.
+                </p>
+                {freeLensDaysLeft <= 5 && (
+                  <Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black">
+                    <Link href="/lens">Subscribe Now — $27.95/mo</Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ FREE LENS EXPIRED BANNER ═══ */}
+        {freeLensExpired && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Clock className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-red-800">Your free month has ended</h3>
+                <p className="text-sm text-red-700 mt-1">
+                  Subscribe to P2V Lens to continue using all features — Photo Coach, Design Studio, Description Writer, Virtual Staging, and $4.95/clip video ordering.
+                </p>
+                <Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black">
+                  <Link href="/lens">Subscribe — $27.95/mo</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ═══ QUICK VIDEO CTA ═══ */}
         <Link href={subscription.active ? "/order" : "/lens"} className="block mb-10">
