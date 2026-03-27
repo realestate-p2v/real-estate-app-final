@@ -212,8 +212,11 @@ export async function POST(request: NextRequest) {
       approved,
     };
 
-    // ── Surprise discount — FORCE TRUE for testing ──
-    const surprise = true;
+    // ── Surprise discount — 1-in-500 chance ──
+    // Subscriber check is done on the frontend before showing the wheel.
+    // Backend just rolls the dice.
+    const surprise = Math.random() < 0.002;
+
     // NOTE: We do NOT auto-delete low-score photos. The client shows the user
     // "Reshoot" vs "Keep Anyway" options. Deletion only happens if the user
     // explicitly chooses to reshoot (via DELETE /api/lens/coach).
