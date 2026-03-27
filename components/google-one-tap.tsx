@@ -54,7 +54,7 @@ export function GoogleOneTap() {
               console.error("[OneTap] Supabase error:", error.message);
             } else {
               console.log("[OneTap] Success! User:", data?.user?.email);
-              window.location.reload();
+              window.location.href = "/dashboard";
             }
           },
           auto_select: false,
