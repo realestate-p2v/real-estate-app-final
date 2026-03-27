@@ -212,10 +212,55 @@ export async function POST(request: NextRequest) {
       approved,
     };
 
+    // ── Surprise discount — 1-in-500 chance for subscribers ──
+    let surprise: { percent: number; code: string } | null = null;
+    try {
+      if (user_id) {
+        const { createClient } = await import("@/lib/supabase/server");
+        const supabase = await createClient();
+
+        const { data: lensCheck } = await supabase
+          .from("lens_usage")
+          .select("is_subscriber")
+          .eq("user_id", user_id)
+          .maybeSingle();
+
+        if (lensCheck?.is_subscriber && Math.random() < 0.002) {
+          const surprisePercent = Math.floor(Math.random() * 6) + 5;
+          const Stripe = (await import("stripe")).default;
+          const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+            apiVersion: "2024-04-10" as any,
+          });
+
+          const coupon = await stripeClient.coupons.create({
+            percent_off: surprisePercent,
+            duration: "once",
+            name: `Surprise - ${surprisePercent}% Off Video`,
+          });
+
+          const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let surpriseCode = "SURPRISE";
+          for (let i = 0; i < 6; i++) {
+            surpriseCode += chars[Math.floor(Math.random() * chars.length)];
+          }
+
+          await stripeClient.promotionCodes.create({
+            coupon: coupon.id,
+            code: surpriseCode,
+            max_redemptions: 1,
+          });
+
+          surprise = { percent: surprisePercent, code: surpriseCode };
+        }
+      }
+    } catch (surpriseErr) {
+      console.error("Surprise discount error:", surpriseErr);
+    }
+
     // NOTE: We do NOT auto-delete low-score photos. The client shows the user
     // "Reshoot" vs "Keep Anyway" options. Deletion only happens if the user
     // explicitly chooses to reshoot (via DELETE /api/lens/coach).
-    return NextResponse.json(scoringResult);
+    return NextResponse.json({ ...scoringResult, surprise });
   } catch (err: any) {
     console.error("Photo Coach API error:", err);
     return NextResponse.json(
