@@ -271,8 +271,8 @@ export default function DescriptionWriterPage() {
       setPhotoAnalyses(data.photoAnalyses || []);
       setPhotosSkipped(data.photosSkipped || 0);
 
-      // Check for surprise discount
-      if (data.surprise) {
+      // Check for surprise discount (subscribers only)
+      if (data.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
     } catch (err) {
