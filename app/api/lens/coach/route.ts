@@ -212,27 +212,8 @@ export async function POST(request: NextRequest) {
       approved,
     };
 
-    // ── Surprise discount — 1-in-500 chance for subscribers ──
-    let surprise = false;
-    try {
-      if (user_id) {
-        const { createClient } = await import("@/lib/supabase/server");
-        const supabase = await createClient();
-
-        const { data: lensCheck } = await supabase
-          .from("lens_usage")
-          .select("is_subscriber")
-          .eq("user_id", user_id)
-          .maybeSingle();
-
-        if (Math.random() < 0.5) {
-          surprise = true;
-        }
-      }
-    } catch (surpriseErr) {
-      console.error("Surprise discount error:", surpriseErr);
-    }
-
+    // ── Surprise discount — FORCE TRUE for testing ──
+    const surprise = true;
     // NOTE: We do NOT auto-delete low-score photos. The client shows the user
     // "Reshoot" vs "Keep Anyway" options. Deletion only happens if the user
     // explicitly chooses to reshoot (via DELETE /api/lens/coach).
