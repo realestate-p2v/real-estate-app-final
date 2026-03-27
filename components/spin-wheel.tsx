@@ -39,6 +39,8 @@ interface SpinWheelProps {
   onComplete?: () => void;
   /** Called when user closes the modal */
   onClose?: () => void;
+  /** Title displayed above the wheel */
+  title?: string;
 }
 
 interface Particle {
@@ -236,6 +238,7 @@ export function SpinWheel({
   onResult,
   onComplete,
   onClose,
+  title,
 }: SpinWheelProps) {
   const segments = segmentsProp || DEFAULT_SEGMENTS;
 
@@ -635,7 +638,7 @@ export function SpinWheel({
 
       <div className="relative z-10 flex flex-col items-center gap-5 p-6 pb-12 my-auto">
         <h2 className="text-2xl sm:text-3xl font-black text-white text-center tracking-tight">
-          🎉 All 3 Reviews Verified! Spin for Your Discount!
+          {title || "🎉 All 3 Reviews Verified! Spin for Your Discount!"}
         </h2>
 
         {!showResult ? (
