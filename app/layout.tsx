@@ -10,14 +10,12 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"] });
 const geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
-  title: "Real Estate Photo 2 Video | Professional Video Agency",
-  description:
-    "A professional video agency, not an app. We manually transform your listing photos into stunning, hand-edited walkthrough videos.",
-  generator: "v0.app",
+  title: "Real Estate Photo 2 Video | AI Marketing Tools That Sell Listings Faster",
+  description: "AI-powered listing videos, photo coaching, virtual staging, design studio, and listing descriptions — everything agents need to market listings professionally.",
   openGraph: {
-    title: "Real Estate Photo 2 Video | Professional Video Agency",
+    title: "Real Estate Photo 2 Video | AI Marketing Tools That Sell Listings Faster",
     description:
-      "Turn listing photos into professional walkthrough videos. Hand-edited by real editors for maximum impact.",
+      "AI-powered listing videos, photo coaching, virtual staging, design studio, and listing descriptions — everything agents need to market listings professionally.",
     url: "https://realestatephoto2video.com",
     siteName: "Real Estate Photo 2 Video",
     images: [
@@ -25,7 +23,7 @@ export const metadata: Metadata = {
         url: "https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2",
         width: 1200,
         height: 630,
-        alt: "Professional Real Estate Video Preview",
+        alt: "Real Estate Photo 2 Video — AI Marketing Tools for Agents",
       },
     ],
     locale: "en_US",
@@ -33,16 +31,16 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Real Estate Photo 2 Video",
+    title: "Real Estate Photo 2 Video | AI Marketing Tools That Sell Listings Faster",
     description:
-      "Hand-edited professional real estate videos from your listing photos.",
+      "AI-powered listing videos, photo coaching, virtual staging, design studio, and listing descriptions for real estate agents.",
     images: [
       "https://realestatephoto2video.com/real-estate-photo-to-video.jpg?v=2",
     ],
   },
   icons: {
-   icon: '/favicon.ico?v=2',
-   apple: '/apple-icon.png?v=2',
+    icon: '/favicon.ico?v=2',
+    apple: '/apple-icon.png?v=2',
   },
 };
 export default function RootLayout({
