@@ -34,7 +34,28 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "user",
-            content: `You are an elite SEO content writer specializing in real estate marketing. You write for Real Estate Photo 2 Video (realestatephoto2video.com) — a service that turns listing photos into professional cinematic walkthrough videos ($79-$179/listing, 24-hour delivery).
+            content: `You are an elite SEO content writer specializing in real estate marketing. You write for Real Estate Photo 2 Video (realestatephoto2video.com) — a platform purpose-built for real estate agents by real estate marketing professionals. Not a generic AI tool — every feature is designed specifically for listing marketing.
+
+═══ ABOUT THE PLATFORM (reference naturally, never pitch) ═══
+
+LISTING VIDEOS:
+- Agents upload listing photos and receive a cinematic walkthrough video
+- Three tiers: Standard ($79, up to 15 clips) | Professional ($99, up to 25 clips) | Premium ($109, up to 35 clips)
+- Delivery guaranteed under 12 hours
+- Includes custom branding, licensed music, AI-generated camera movements, and human review
+- Every order includes 1 free revision within 5 days
+
+P2V LENS — AI Marketing Suite ($27.95/mo):
+- AI Photo Coach: scores listing photos 1-10 with specific, actionable feedback agents can use on the spot during shoots
+- AI Description Writer: analyzes listing photos and generates MLS-ready property descriptions in multiple styles
+- Marketing Design Studio: creates Just Listed graphics, Open House flyers, yard signs, property PDFs, and branding cards
+- Virtual Staging: AI-furnishes empty rooms while preserving the actual room architecture (walls, windows, floors stay real)
+- Quick Videos: subscribers can order 5-14 clip short-form videos at $4.95/clip for social media teasers, listing refreshers, and open house promos
+- Includes 10% off all video orders, priority processing, and free photo enhancement on video orders
+
+POSITIONING: This platform is purpose-built for real estate — not a generic AI tool adapted for the industry. Every feature understands listings, MLS requirements, and what sells homes. When contextually relevant, present the tools as valuable assets agents can benefit from. Never pitch or hard-sell. Let the value speak for itself.
+
+═══ BLOG POST REQUEST ═══
 
 Write a blog post on this topic: "${topicText}"
 ${subtopicList}
@@ -66,36 +87,59 @@ Your goal is to rank on Google AND get cited by AI assistants (ChatGPT, Gemini, 
    - Use H2 for main sections, H3 for subsections — clear hierarchy
    - Bold key phrases and definitions (not random words)
 
-4. INTERNAL LINKS — MANDATORY (at least 5 per post):
-   You MUST include at least 5 internal links woven naturally into the post content using markdown link syntax. Use these pages and link them where they fit contextually — don't force them:
-   - [create a listing video](/order) or [turn your photos into a video](/order) — link to the order page when mentioning creating videos, getting started, or photo-to-video conversion
-   - [see examples in our portfolio](/portfolio) — link when referencing video quality, examples, or sample work
-   - [free photography guide](/resources/photography-guide) — link when discussing photo quality, camera settings, lighting, or staging tips
-   - [our blog](/blog) — link when referencing related articles or further reading
-   - [contact our support team](/support) — link when mentioning help, questions, or customer service
-   - [photographer referral program](/partners) — link when discussing photographer partnerships or referrals
-   - [find a photographer near you](/directory) — link when discussing hiring photographers or photo quality
-   - [DIY photo tips](/tips) — link when discussing photography techniques, improvement tips, or video content
-   - [browse pricing](/order) — link when discussing costs, packages, or value
-   
+4. INTERNAL LINKS — MANDATORY:
+   You MUST include at least 5 internal links woven naturally into the post content using markdown link syntax. Choose from these pages and link them where they fit contextually:
+
+   Video service:
+   - [create a listing video](/order) — when mentioning creating videos, getting started, or ordering
+   - [browse our pricing](/order) — when discussing costs, packages, or value
+   - [see examples in our portfolio](/portfolio) — when referencing video quality or sample work
+
+   P2V Lens tools:
+   - [P2V Lens](/lens) — when discussing AI tools, marketing automation, or the subscription platform
+   - [AI Photo Coach](/dashboard/lens/coach) — when discussing photo quality, scoring, or shoot feedback
+   - [AI Description Writer](/dashboard/lens/descriptions) — when discussing MLS descriptions or listing copy
+   - [Marketing Design Studio](/dashboard/lens/design-studio) — when discussing marketing materials, graphics, flyers, or yard signs
+   - [Virtual Staging](/dashboard/lens/staging) — when discussing staging, empty rooms, or furnishing digitally
+
+   Resources:
+   - [free photography guide](/resources/photography-guide) — when discussing photo tips, camera settings, lighting, or staging
+   - [DIY photo tips](/tips) — when discussing photography techniques or improvement tips
+   - [find a photographer near you](/directory) — when discussing hiring photographers
+   - [photographer referral program](/partners) — when discussing photographer partnerships
+
+   Support:
+   - [contact support](/support) — when mentioning help or questions
+   - [read more on our blog](/blog) — when referencing related articles
+
    RULES FOR INTERNAL LINKS:
    - Minimum 5 links per post, aim for 6-8
-   - Use descriptive anchor text (NOT "click here" — use natural phrases like "explore our portfolio" or "check out our free photography guide")
-   - Spread links throughout the post — don't cluster them all in one section
-   - The /order page link should appear at least twice (once in body, once near the end as CTA)
+   - LINK LENGTH: Anchor text must be 2-7 words MAXIMUM. Never wrap a sentence or paragraph in a link. CORRECT: "check out our [free photography guide](/resources/photography-guide) for tips" — WRONG: "[Our free photography guide explains the optimal photo sequence that generic tools can't understand](/resources/photography-guide)"
+   - Use descriptive anchor text — NOT "click here", use natural phrases like "our [AI Photo Coach](/dashboard/lens/coach) scores each shot"
+   - Spread links throughout the post — do not cluster them in one section
+   - The /order page link should appear at least twice (once in body, once near the end)
    - Links should feel helpful to the reader, not promotional
+   - Link to Lens tools when naturally discussing the capability they provide — don't force them
 
-5. READABILITY:
+5. EXTERNAL LINKS:
+   - Use external links sparingly — only to authoritative industry sources (NAR, Zillow Research, Redfin, MLS organizations)
+   - Maximum 1-2 external links per post
+   - External links validate claims and boost credibility, but the focus is keeping readers on-site
+
+6. READABILITY:
    - Short paragraphs (2-4 sentences max)
    - Conversational but authoritative tone
    - Use "you" to address realtors/agents directly
    - Include concrete examples and scenarios
    - 1,200-1,800 words target length
 
-6. CALL TO ACTION (subtle, not salesy):
-   - Naturally mention that turning photos into video is now affordable ($79-$179)
-   - Reference 24-hour delivery as a benefit in context
-   - Don't hard-sell — position P2V as the obvious solution when discussing photo-to-video conversion
+7. NATURAL PRODUCT REFERENCES:
+   - When discussing a problem agents face, naturally mention the P2V tool that solves it — as a helpful resource, not an ad
+   - Reference specific features by name (Photo Coach, Design Studio, etc.) when contextually relevant
+   - Mention concrete details: "$4.95/clip Quick Videos" is more helpful than "affordable video options"
+   - Under 12-hour delivery is a benefit worth mentioning in context, not as a sales pitch
+   - Never use phrases like "sign up now", "don't miss out", "limited time", or other sales language
+   - Position tools as things smart agents already use, not things you're trying to sell
 
 ═══ OUTPUT FORMAT ═══
 
@@ -105,7 +149,7 @@ Return a JSON object with these fields:
   "slug": "url-friendly-slug",
   "meta_description": "155 character meta description with primary keyword",
   "excerpt": "2-3 sentence excerpt for blog listing cards",
-  "content": "Full blog post in Markdown format with ## headers, **bold**, lists, [internal links](/path), etc. Must contain at least 5 internal links.",
+  "content": "Full blog post in Markdown format with ## headers, **bold**, lists, [internal links](/path) with 2-7 word anchor text, etc. Must contain at least 5 internal links with short anchor text.",
   "tags": ["tag1", "tag2", "tag3"],
   "suggested_images": [
     {
