@@ -256,7 +256,7 @@ export function ReviewRewardFlow({ orderId, userEmail, userId }: ReviewRewardFlo
           winningPercent={spinWinningPercent}
           promoCode={thirdReviewState.discountCode || ""}
           onComplete={() => markWheelSeenInDB()}
-          onClose={() => setShowWheelModal(false)}
+          onClose={() => { setShowWheelModal(false); markWheelSeenInDB(); }}
         />
       )}
 
