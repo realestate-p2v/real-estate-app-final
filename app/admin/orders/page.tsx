@@ -547,6 +547,108 @@ export default function AdminOrdersPage() {
                         </div>
                       )}
 
+                      {/* ═══ ADMIN CLIP REVISION SELECTOR (awaiting_approval only) ═══ */}
+                      {isAwaitingApproval && order.clip_urls && order.clip_urls.length > 0 && (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-3">
+                          <h4 className="font-semibold text-indigo-800 flex items-center gap-2">
+                            <RefreshCw className="h-4 w-4" />
+                            Select Clips to Revise (optional — review before approving)
+                          </h4>
+                          <p className="text-xs text-indigo-600">Check the clips that need regeneration. Add direction/notes for each. Only checked clips will be re-processed.</p>
+                          <div className="space-y-2">
+                            {order.clip_urls.map((clip: any, i: number) => {
+                              const adminNotes = (order as any)._adminRevisionClips || [];
+                              const isChecked = adminNotes.some((c: any) => c.position === (clip.position || i + 1));
+                              const clipNote = adminNotes.find((c: any) => c.position === (clip.position || i + 1)) || {};
+                              
+                              return (
+                                <div key={i} className={`rounded-lg p-3 text-sm border ${isChecked ? 'bg-amber-50 border-amber-300' : 'bg-white border-border'}`}>
+                                  <div className="flex items-start gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        let updated = [...adminNotes];
+                                        const pos = clip.position || i + 1;
+                                        if (e.target.checked) {
+                                          updated.push({ position: pos, action: "regenerate", camera_direction: "", camera_speed: "", custom_motion: "", problem_description: "" });
+                                        } else {
+                                          updated = updated.filter((c: any) => c.position !== pos);
+                                        }
+                                        setOrders(orders.map(o => o.id === order.id ? { ...o, _adminRevisionClips: updated } as any : o));
+                                      }}
+                                      className="mt-1 h-4 w-4 rounded border-gray-300"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-bold text-foreground">Clip {clip.position || i + 1}</span>
+                                      {clip.description && <span className="text-muted-foreground ml-2">— {clip.description}</span>}
+                                      
+                                      {isChecked && (
+                                        <div className="mt-2 grid grid-cols-3 gap-2">
+                                          <div>
+                                            <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Direction</p>
+                                            <select
+                                              value={clipNote.camera_direction || ""}
+                                              onChange={(e) => {
+                                                const updated = adminNotes.map((c: any) => c.position === (clip.position || i + 1) ? { ...c, camera_direction: e.target.value } : c);
+                                                setOrders(orders.map(o => o.id === order.id ? { ...o, _adminRevisionClips: updated } as any : o));
+                                              }}
+                                              className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                            >
+                                              <option value="">Auto</option>
+                                              <option value="push_in">Fwd</option>
+                                              <option value="pull_back">Back</option>
+                                              <option value="diagonal_top_left">Fwd + L</option>
+                                              <option value="diagonal_top_right">Fwd + R</option>
+                                              <option value="diagonal_bottom_left">Back + L</option>
+                                              <option value="diagonal_bottom_right">Back + R</option>
+                                              <option value="tilt_up">Look Up</option>
+                                              <option value="tilt_down">Look Down</option>
+                                              <option value="orbit_left">Orbit L</option>
+                                              <option value="orbit_right">Orbit R</option>
+                                              <option value="rise">Rise</option>
+                                              <option value="bring_to_life">Bring to Life</option>
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Speed</p>
+                                            <select
+                                              value={clipNote.camera_speed || ""}
+                                              onChange={(e) => {
+                                                const updated = adminNotes.map((c: any) => c.position === (clip.position || i + 1) ? { ...c, camera_speed: e.target.value } : c);
+                                                setOrders(orders.map(o => o.id === order.id ? { ...o, _adminRevisionClips: updated } as any : o));
+                                              }}
+                                              className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                            >
+                                              <option value="">Default</option>
+                                              <option value="slow">Slow</option>
+                                              <option value="medium">Medium</option>
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Problem</p>
+                                            <input
+                                              type="text"
+                                              value={clipNote.problem_description || ""}
+                                              onChange={(e) => {
+                                                const updated = adminNotes.map((c: any) => c.position === (clip.position || i + 1) ? { ...c, problem_description: e.target.value } : c);
+                                                setOrders(orders.map(o => o.id === order.id ? { ...o, _adminRevisionClips: updated } as any : o));
+                                              }}
+                                              placeholder="e.g. hallucinated objects"
+                                              className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                         {isAwaitingApproval && (
@@ -562,20 +664,33 @@ export default function AdminOrdersPage() {
                             </Button>
                             <div className="flex items-center gap-2">
                               <select
-                                value={(order as any).revision_orientations || "both"}
+                                value={(order as any).revision_orientations || order.orientation || "landscape"}
                                 onChange={(e) => {
                                   setOrders(orders.map(o => o.id === order.id ? { ...o, revision_orientations: e.target.value } as any : o));
                                 }}
                                 className="text-xs border rounded-lg px-2 py-1.5 bg-white"
                               >
-                                <option value="both">Revise Both Orientations</option>
-                                <option value="landscape">Revise Landscape Only</option>
-                                <option value="vertical">Revise Vertical Only</option>
+                                {order.orientation === "both" ? (
+                                  <>
+                                    <option value="both">Revise Both Orientations</option>
+                                    <option value="landscape">Revise Landscape Only</option>
+                                    <option value="vertical">Revise Vertical Only</option>
+                                  </>
+                                ) : (
+                                  <option value={order.orientation || "landscape"}>
+                                    Revise {(order.orientation || "landscape").charAt(0).toUpperCase() + (order.orientation || "landscape").slice(1)}
+                                  </option>
+                                )}
                               </select>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={async () => {
+                                  const adminClips = (order as any)._adminRevisionClips || [];
+                                  if (adminClips.length === 0) {
+                                    alert("Select at least 1 clip to revise before submitting.");
+                                    return;
+                                  }
                                   setActionLoading(order.id);
                                   try {
                                     const res = await fetch("/api/admin/orders", {
@@ -584,7 +699,8 @@ export default function AdminOrdersPage() {
                                       body: JSON.stringify({
                                         orderId: order.id,
                                         status: "revision_requested",
-                                        revisionOrientations: (order as any).revision_orientations || "both",
+                                        clientRevisionNotes: adminClips,
+                                        revisionOrientations: (order as any).revision_orientations || order.orientation || "landscape",
                                       }),
                                     });
                                     const data = await res.json();
@@ -597,10 +713,10 @@ export default function AdminOrdersPage() {
                                     setActionLoading(null);
                                   }
                                 }}
-                                disabled={isProcessing}
-                                className="text-amber-600 border-amber-200"
+                                disabled={isProcessing || !((order as any)._adminRevisionClips?.length > 0)}
+                                className={`${((order as any)._adminRevisionClips?.length > 0) ? 'text-amber-600 border-amber-300 hover:bg-amber-50' : 'text-muted-foreground border-border opacity-50 cursor-not-allowed'}`}
                               >
-                                <RefreshCw className="h-4 w-4 mr-1" /> Request My Revision
+                                <RefreshCw className="h-4 w-4 mr-1" /> Submit Revision ({(order as any)._adminRevisionClips?.length || 0} clips)
                               </Button>
                             </div>
                           </>
