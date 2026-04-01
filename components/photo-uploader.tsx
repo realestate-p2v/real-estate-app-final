@@ -170,18 +170,41 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   const [showPhotoTips, setShowPhotoTips] = useState(false);
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
 
-  const compressImage = (file: File, maxSizeMB: number = 8): Promise<Blob> => {
+  // Resize image to max 1920px on longest edge before uploading to Cloudinary.
+  // This reduces a 15MB photographer photo to ~300-600KB without visible quality loss.
+  // 1920px is sufficient — videos are 1080p max and crop offsets have headroom.
+  const resizeForUpload = (file: File): Promise<Blob> => {
     return new Promise((resolve) => {
       const img = document.createElement('img');
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        const maxDim = 3000;
-        if (width > maxDim || height > maxDim) {
-          const ratio = Math.min(maxDim / width, maxDim / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
+        const maxDim = 1920;
+
+        // If already within limits, just re-encode as JPEG to reduce file size
+        if (width <= maxDim && height <= maxDim) {
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => resolve(blob || file),
+            'image/jpeg',
+            0.85
+          );
+          URL.revokeObjectURL(img.src);
+          return;
         }
+
+        // Resize: scale down so longest edge = 1920px, maintain aspect ratio
+        if (width > height) {
+          height = Math.round((height / width) * maxDim);
+          width = maxDim;
+        } else {
+          width = Math.round((width / height) * maxDim);
+          height = maxDim;
+        }
+
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d')!;
@@ -191,6 +214,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           'image/jpeg',
           0.85
         );
+        URL.revokeObjectURL(img.src);
       };
       img.src = URL.createObjectURL(file);
     });
@@ -202,6 +226,12 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
       
       const validFiles: { file: File; width: number; height: number }[] = [];
       for (const file of files) {
+        // Max 20MB per file — generous limit since we resize before upload anyway
+        if (file.size > 20 * 1024 * 1024) {
+          alert(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum file size is 20MB.`);
+          continue;
+        }
+
         const dims = await new Promise<{ valid: boolean; width: number; height: number }>((resolve) => {
           const img = new window.Image();
           img.onload = () => {
@@ -249,8 +279,10 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
           const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
           const uploadData = new FormData();
-          const compressed = await compressImage(photo.file!);
-          uploadData.append("file", compressed, photo.file!.name);
+
+          // Resize to max 1920px on longest edge before uploading
+          const resized = await resizeForUpload(photo.file!);
+          uploadData.append("file", resized, photo.file!.name);
           uploadData.append("api_key", apiKey);
           uploadData.append("timestamp", timestamp.toString());
           uploadData.append("signature", signature);
@@ -378,7 +410,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           <p className="text-lg font-semibold">Upload your listing photos</p>
           <p className="text-muted-foreground">Drag and drop or click to select</p>
           <p className="text-xs text-muted-foreground mt-2">Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
-          <p className="text-xs text-muted-foreground mt-1">You can adjust the crop position after uploading.</p>
+          <p className="text-xs text-muted-foreground mt-1">Photos are automatically optimized for video. You can adjust the crop position after uploading.</p>
         </label>
       </div>
       
