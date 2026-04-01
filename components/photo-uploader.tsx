@@ -386,7 +386,23 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   };
 
   return (
-    <div className="space-y-6">
+    <div 
+      className="space-y-6"
+      onDragOver={(e) => { 
+        e.preventDefault(); 
+        e.stopPropagation(); 
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          const input = document.getElementById("photo-upload") as HTMLInputElement;
+          input.files = files;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }}
+    >
       <div
         className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors"
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
