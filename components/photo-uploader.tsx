@@ -1,21 +1,39 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Upload,
   X,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ImageIcon,
   AlertCircle,
   Phone,
   GripVertical,
   Loader2,
   Crop,
+  Check,
+  BedDouble,
+  Bath,
+  Sparkles,
+  Eye,
+  Home,
+  DoorOpen,
+  Sofa,
+  Trees,
+  Camera,
+  ListOrdered,
 } from "lucide-react";
+
+// ═══════════════════════════════════════════════════
+// TYPES — PhotoItem interface is UNCHANGED
+// ═══════════════════════════════════════════════════
 
 export interface PhotoItem {
   id: string;
@@ -39,16 +57,204 @@ interface PhotoUploaderProps {
   orientation?: string;
 }
 
-function CropPreview({ 
-  photo, 
-  targetAspect, 
-  offset, 
+// ═══════════════════════════════════════════════════
+// QUESTIONNAIRE TYPES
+// ═══════════════════════════════════════════════════
+
+interface QuestionnaireAnswers {
+  bedrooms: number;
+  bathrooms: number;
+  features: string[];
+  featureOther: string;
+  views: string[];
+  viewOther: string;
+}
+
+// ═══════════════════════════════════════════════════
+// UPLOAD STEP DEFINITION
+// ═══════════════════════════════════════════════════
+
+interface UploadStep {
+  id: string;
+  title: string;
+  instructions: string;
+  recommended: string;
+  defaultLabels: string[];
+  icon: React.ElementType;
+  viewNote?: string;
+}
+
+// ═══════════════════════════════════════════════════
+// SPECIAL FEATURES + VIEWS OPTIONS
+// ═══════════════════════════════════════════════════
+
+const SPECIAL_FEATURES = [
+  "Pool", "Garage", "Patio/Deck", "Garden", "Home Office",
+  "Gym", "Wine Cellar", "Theater", "Guest House", "Laundry",
+  "Balcony", "Rooftop",
+];
+
+const NOTABLE_VIEWS = [
+  "Ocean/Water", "Mountain", "City Skyline", "Garden/Nature",
+  "Golf Course", "Pool/Backyard",
+];
+
+// ═══════════════════════════════════════════════════
+// BUILD STEPS FROM QUESTIONNAIRE
+// ═══════════════════════════════════════════════════
+
+function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
+  const hasViews = answers.views.length > 0 || answers.viewOther.trim() !== "";
+  const viewsList = [
+    ...answers.views,
+    ...(answers.viewOther.trim() ? [answers.viewOther.trim()] : []),
+  ].join(", ");
+  const viewNote = hasViews ? `This property has notable views (${viewsList}). Include the view from the room if visible.` : undefined;
+
+  const steps: UploadStep[] = [];
+
+  // Step 1 — Exterior (always)
+  steps.push({
+    id: "exterior",
+    title: "Exterior",
+    instructions: "Start with the hero shot — the front of the property. Add 2-3 exterior angles.",
+    recommended: "2-3 photos",
+    defaultLabels: ["Front Exterior", "Side Exterior", "Rear Exterior"],
+    icon: Home,
+  });
+
+  // Step 2 — Front Door & Entryway (always)
+  steps.push({
+    id: "entryway",
+    title: "Front Door & Entryway",
+    instructions: "One photo from inside, looking toward the front door or entry.",
+    recommended: "1 photo",
+    defaultLabels: ["Entryway"],
+    icon: DoorOpen,
+  });
+
+  // Step 3 — Common Areas (always)
+  steps.push({
+    id: "common",
+    title: "Common Areas",
+    instructions: "Living room, kitchen, dining room. These are the most important interior shots.",
+    recommended: "3-5 photos",
+    defaultLabels: ["Living Room", "Kitchen", "Dining Room", "Family Room"],
+    icon: Sofa,
+    viewNote: viewNote,
+  });
+
+  // Step 4 — Bedrooms (dynamic count)
+  const bedroomLabels: string[] = [];
+  for (let i = 1; i <= answers.bedrooms; i++) {
+    bedroomLabels.push(i === 1 ? "Master Bedroom" : `Bedroom ${i}`);
+  }
+  steps.push({
+    id: "bedrooms",
+    title: `Bedrooms (${answers.bedrooms})`,
+    instructions: "Start with the master bedroom.",
+    recommended: `${answers.bedrooms} photo${answers.bedrooms !== 1 ? "s" : ""}`,
+    defaultLabels: bedroomLabels,
+    icon: BedDouble,
+    viewNote: viewNote,
+  });
+
+  // Step 5 — Bathrooms (dynamic count)
+  const bathroomLabels: string[] = [];
+  for (let i = 1; i <= answers.bathrooms; i++) {
+    bathroomLabels.push(i === 1 ? "Master Bath" : `Bathroom ${i}`);
+  }
+  steps.push({
+    id: "bathrooms",
+    title: `Bathrooms (${answers.bathrooms})`,
+    instructions: "Start with the master bath.",
+    recommended: `${answers.bathrooms} photo${answers.bathrooms !== 1 ? "s" : ""}`,
+    defaultLabels: bathroomLabels,
+    icon: Bath,
+  });
+
+  // Step 6 — Special Features (only if any selected)
+  const allFeatures = [
+    ...answers.features,
+    ...(answers.featureOther.trim() ? [answers.featureOther.trim()] : []),
+  ];
+  if (allFeatures.length > 0) {
+    steps.push({
+      id: "features",
+      title: "Special Features",
+      instructions: "One or two photos of each feature.",
+      recommended: `${allFeatures.length}-${allFeatures.length * 2} photos`,
+      defaultLabels: allFeatures,
+      icon: Sparkles,
+    });
+  }
+
+  // Step 7 — Backyard & Outdoor (always)
+  steps.push({
+    id: "backyard",
+    title: "Backyard & Outdoor",
+    instructions: "Closing shot — backyard, patio, pool area, or garden.",
+    recommended: "1-2 photos",
+    defaultLabels: ["Backyard", "Patio/Deck"],
+    icon: Trees,
+  });
+
+  return steps;
+}
+
+// ═══════════════════════════════════════════════════
+// GENERATE LABEL FOR NEW PHOTO IN A STEP
+// ═══════════════════════════════════════════════════
+
+function getNextLabel(step: UploadStep, existingPhotosInStep: PhotoItem[]): string {
+  const count = existingPhotosInStep.length;
+
+  // If we have predefined labels and haven't exceeded them, use the next one
+  if (count < step.defaultLabels.length) {
+    return step.defaultLabels[count];
+  }
+
+  // Beyond predefined labels: use step title + number
+  // e.g., "Common Areas 5", "Exterior 4"
+  const baseLabel = step.defaultLabels.length > 0 ? step.defaultLabels[0] : step.title;
+  return `${baseLabel} ${count + 1}`;
+}
+
+// When multiple photos are added at once, generate labels for all of them
+function getLabelsForBatch(step: UploadStep, existingPhotosInStep: PhotoItem[], batchSize: number): string[] {
+  const labels: string[] = [];
+  const existingCount = existingPhotosInStep.length;
+
+  for (let i = 0; i < batchSize; i++) {
+    const totalIndex = existingCount + i;
+    if (totalIndex < step.defaultLabels.length) {
+      labels.push(step.defaultLabels[totalIndex]);
+    } else {
+      // Auto-number: "Kitchen 1", "Kitchen 2" etc.
+      // But only number if there will be more than one with that base label
+      const baseLabel = step.defaultLabels.length > 0 ? step.defaultLabels[0] : step.title;
+      labels.push(`${baseLabel} ${totalIndex + 1}`);
+    }
+  }
+
+  return labels;
+}
+
+
+// ═══════════════════════════════════════════════════
+// CROP PREVIEW — PRESERVED EXACTLY FROM ORIGINAL
+// ═══════════════════════════════════════════════════
+
+function CropPreview({
+  photo,
+  targetAspect,
+  offset,
   onOffsetChange,
-  label 
-}: { 
-  photo: PhotoItem; 
-  targetAspect: '16:9' | '9:16'; 
-  offset: number; 
+  label,
+}: {
+  photo: PhotoItem;
+  targetAspect: '16:9' | '9:16';
+  offset: number;
   onOffsetChange: (val: number) => void;
   label: string;
 }) {
@@ -56,11 +262,11 @@ function CropPreview({
   const h = photo.original_height || 1;
   const currentRatio = w / h;
   const targetRatio = targetAspect === '16:9' ? 16 / 9 : 9 / 16;
-  
+
   const needsCrop = Math.abs(currentRatio - targetRatio) > 0.02;
   const cropsTopBottom = currentRatio < targetRatio;
   const cropsLeftRight = currentRatio > targetRatio;
-  
+
   if (!needsCrop) {
     return (
       <div className="text-xs text-green-600 flex items-center gap-1">
@@ -84,7 +290,7 @@ function CropPreview({
   const containerH = Math.round(containerW / photoRatio);
   const previewW = containerW;
   const previewH = Math.min(containerH, 350);
-  
+
   const getOverlayStyle = () => {
     if (cropsTopBottom) {
       const visibleRatio = (w / targetRatio) / h;
@@ -119,7 +325,7 @@ function CropPreview({
           {label}: {cropPercent}% will be cropped ({cropsTopBottom ? 'top/bottom' : 'left/right'})
         </span>
       </div>
-      
+
       <div className="relative rounded-lg overflow-hidden border border-border" style={{ width: previewW, height: previewH }}>
         <img
           src={photo.preview}
@@ -132,8 +338,8 @@ function CropPreview({
             alt=""
             className="w-full h-full object-cover"
             style={{
-              objectPosition: cropsTopBottom 
-                ? `center ${offset}%` 
+              objectPosition: cropsTopBottom
+                ? `center ${offset}%`
                 : `${offset}% center`
             }}
           />
@@ -164,15 +370,52 @@ function CropPreview({
   );
 }
 
+
+// ═══════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════
+
 export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape" }: PhotoUploaderProps) {
+  // ── Flow state ──
+  const [phase, setPhase] = useState<'questionnaire' | 'guided' | 'review'>(
+    photos.length > 0 ? 'review' : 'questionnaire'
+  );
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  // ── Questionnaire state ──
+  const [answers, setAnswers] = useState<QuestionnaireAnswers>({
+    bedrooms: 3,
+    bathrooms: 2,
+    features: [],
+    featureOther: "",
+    views: [],
+    viewOther: "",
+  });
+
+  // ── Upload steps (built from questionnaire) ──
+  const [uploadSteps, setUploadSteps] = useState<UploadStep[]>([]);
+
+  // ── Track which photos belong to which step ──
+  // Maps step.id → array of photo IDs in that step
+  const [stepPhotoIds, setStepPhotoIds] = useState<Record<string, string[]>>({});
+
+  // ── UI state ──
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [showPhotoTips, setShowPhotoTips] = useState(false);
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
 
-  // Resize image to max 1920px on longest edge before uploading to Cloudinary.
-  // This reduces a 15MB photographer photo to ~300-600KB without visible quality loss.
-  // 1920px is sufficient — videos are 1080p max and crop offsets have headroom.
+  // ── Current step ──
+  const currentStep = uploadSteps[currentStepIndex] || null;
+
+  // ── Photos for current step ──
+  const currentStepPhotos = useMemo(() => {
+    if (!currentStep) return [];
+    const ids = stepPhotoIds[currentStep.id] || [];
+    return ids.map(id => photos.find(p => p.id === id)).filter(Boolean) as PhotoItem[];
+  }, [currentStep, stepPhotoIds, photos]);
+
+  // ── Resize image to max 1920px — PRESERVED EXACTLY ──
   const resizeForUpload = (file: File): Promise<Blob> => {
     return new Promise((resolve) => {
       const img = document.createElement('img');
@@ -181,7 +424,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         let { width, height } = img;
         const maxDim = 1920;
 
-        // If already within limits, just re-encode as JPEG to reduce file size
         if (width <= maxDim && height <= maxDim) {
           canvas.width = width;
           canvas.height = height;
@@ -196,7 +438,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           return;
         }
 
-        // Resize: scale down so longest edge = 1920px, maintain aspect ratio
         if (width > height) {
           height = Math.round((height / width) * maxDim);
           width = maxDim;
@@ -220,13 +461,11 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     });
   };
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      
+  // ── File validation + upload — adapted for guided flow ──
+  const handleFilesForStep = useCallback(
+    async (files: File[], step: UploadStep) => {
       const validFiles: { file: File; width: number; height: number }[] = [];
       for (const file of files) {
-        // Max 20MB per file — generous limit since we resize before upload anyway
         if (file.size > 20 * 1024 * 1024) {
           alert(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum file size is 20MB.`);
           continue;
@@ -249,14 +488,19 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         });
         if (dims.valid) validFiles.push({ file, width: dims.width, height: dims.height });
       }
-      
+
       if (validFiles.length === 0) return;
-      
-      const newPhotos: PhotoItem[] = validFiles.map(({ file, width, height }) => ({
+
+      // Get current photos in this step for label generation
+      const currentIds = stepPhotoIds[step.id] || [];
+      const currentStepPhotosList = currentIds.map(id => photos.find(p => p.id === id)).filter(Boolean) as PhotoItem[];
+      const labels = getLabelsForBatch(step, currentStepPhotosList, validFiles.length);
+
+      const newPhotos: PhotoItem[] = validFiles.map(({ file, width, height }, i) => ({
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         file,
         preview: URL.createObjectURL(file),
-        description: "",
+        description: labels[i] || "",
         uploadStatus: 'uploading' as const,
         crop_offset_landscape: 50,
         crop_offset_vertical: 50,
@@ -264,9 +508,18 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         original_height: height,
       }));
 
+      // Update step tracking
+      const newIds = newPhotos.map(p => p.id);
+      setStepPhotoIds(prev => ({
+        ...prev,
+        [step.id]: [...(prev[step.id] || []), ...newIds],
+      }));
+
+      // Update flat photos array
       const allPhotos = [...photos, ...newPhotos];
       onPhotosChange(allPhotos);
 
+      // Upload each to Cloudinary
       newPhotos.forEach(async (photo) => {
         try {
           const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -280,7 +533,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
           const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
           const uploadData = new FormData();
 
-          // Resize to max 1920px on longest edge before uploading
           const resized = await resizeForUpload(photo.file!);
           uploadData.append("file", resized, photo.file!.name);
           uploadData.append("api_key", apiKey);
@@ -315,18 +567,42 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         }
       });
     },
-    [photos, onPhotosChange]
+    [photos, onPhotosChange, stepPhotoIds]
   );
 
+  // ── File input handler for current step ──
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!currentStep) return;
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+      await handleFilesForStep(files, currentStep);
+      // Reset input so the same file can be re-selected
+      e.target.value = "";
+    },
+    [currentStep, handleFilesForStep]
+  );
+
+  // ── Remove photo ──
   const handleRemove = useCallback(
     (id: string) => {
       const photo = photos.find((p) => p.id === id);
-      if (photo) URL.revokeObjectURL(photo.preview);
+      if (photo?.preview && photo.preview.startsWith('blob:')) URL.revokeObjectURL(photo.preview);
       onPhotosChange(photos.filter((p) => p.id !== id));
+
+      // Remove from step tracking
+      setStepPhotoIds(prev => {
+        const updated = { ...prev };
+        for (const stepId of Object.keys(updated)) {
+          updated[stepId] = updated[stepId].filter(pid => pid !== id);
+        }
+        return updated;
+      });
     },
     [photos, onPhotosChange]
   );
 
+  // ── Description change ──
   const handleDescriptionChange = useCallback(
     (id: string, description: string) => {
       if (description.length <= 30) {
@@ -336,6 +612,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange]
   );
 
+  // ── Crop offset change ──
   const handleCropOffsetChange = useCallback(
     (id: string, aspect: 'landscape' | 'vertical', value: number) => {
       const key = aspect === 'landscape' ? 'crop_offset_landscape' : 'crop_offset_vertical';
@@ -344,6 +621,20 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange]
   );
 
+  // ── Crop orientation check — PRESERVED EXACTLY ──
+  const needsCropForOrientation = (photo: PhotoItem, orient: string) => {
+    if (!photo.original_width || !photo.original_height) return false;
+    const ratio = photo.original_width / photo.original_height;
+    if (orient === 'landscape' || orient === 'both') {
+      if (Math.abs(ratio - 16 / 9) > 0.02) return true;
+    }
+    if (orient === 'vertical' || orient === 'both') {
+      if (Math.abs(ratio - 9 / 16) > 0.02) return true;
+    }
+    return false;
+  };
+
+  // ── Review drag-to-reorder ──
   const handleDragStart = (index: number) => setDraggedIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => { e.preventDefault(); setDragOverIndex(index); };
   const handleDrop = () => {
@@ -352,6 +643,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
       const [movedItem] = newPhotos.splice(draggedIndex, 1);
       newPhotos.splice(dragOverIndex, 0, movedItem);
       onPhotosChange(newPhotos);
+      setReviewConfirmed(false);
     }
     setDraggedIndex(null);
     setDragOverIndex(null);
@@ -362,6 +654,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     const newPhotos = [...photos];
     [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
     onPhotosChange(newPhotos);
+    setReviewConfirmed(false);
   }, [photos, onPhotosChange]);
 
   const moveDown = useCallback((index: number) => {
@@ -369,67 +662,507 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     const newPhotos = [...photos];
     [newPhotos[index], newPhotos[index + 1]] = [newPhotos[index + 1], newPhotos[index]];
     onPhotosChange(newPhotos);
+    setReviewConfirmed(false);
   }, [photos, onPhotosChange]);
 
-  const showTooManyPhotosWarning = photos.length > 35;
-
-  const needsCropForOrientation = (photo: PhotoItem, orient: string) => {
-    if (!photo.original_width || !photo.original_height) return false;
-    const ratio = photo.original_width / photo.original_height;
-    if (orient === 'landscape' || orient === 'both') {
-      if (Math.abs(ratio - 16/9) > 0.02) return true;
-    }
-    if (orient === 'vertical' || orient === 'both') {
-      if (Math.abs(ratio - 9/16) > 0.02) return true;
-    }
-    return false;
+  // ── Start guided flow from questionnaire ──
+  const handleStartGuided = () => {
+    const steps = buildUploadSteps(answers);
+    setUploadSteps(steps);
+    setCurrentStepIndex(0);
+    setPhase('guided');
   };
 
-  return (
-    <div 
-      className="space-y-6"
-      onDragOver={(e) => { 
-        e.preventDefault(); 
-        e.stopPropagation(); 
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          const input = document.getElementById("photo-upload") as HTMLInputElement;
-          input.files = files;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-      }}
-    >
+  // ── Navigate steps ──
+  const goToNextStep = () => {
+    if (currentStepIndex < uploadSteps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
+      setOpenCropIndex(null);
+    } else {
+      // Last step → go to review
+      setPhase('review');
+      setOpenCropIndex(null);
+    }
+  };
+
+  const goToPrevStep = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+      setOpenCropIndex(null);
+    }
+  };
+
+  const goBackToGuided = () => {
+    setPhase('guided');
+    setReviewConfirmed(false);
+  };
+
+  // ── Warning ──
+  const showTooManyPhotosWarning = photos.length > 35;
+
+  // ── Total photo count ──
+  const totalPhotoCount = photos.length;
+
+  // ═══════════════════════════════════════════════════
+  // RENDER — PHASE 1: QUESTIONNAIRE
+  // ═══════════════════════════════════════════════════
+
+  if (phase === 'questionnaire') {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h3 className="text-lg font-bold flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
+            Tell us about the property
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            We&apos;ll create a custom upload flow based on your answers — takes 15 seconds.
+          </p>
+        </div>
+
+        {/* Bedrooms */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">How many bedrooms?</label>
+          <div className="flex gap-2 flex-wrap">
+            {[1, 2, 3, 4, 5, 6].map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setAnswers(prev => ({ ...prev, bedrooms: n }))}
+                className={`h-11 w-14 rounded-xl border-2 font-bold text-sm transition-all ${
+                  answers.bedrooms === n
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {n === 6 ? "6+" : n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Bathrooms */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">How many bathrooms?</label>
+          <div className="flex gap-2 flex-wrap">
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setAnswers(prev => ({ ...prev, bathrooms: n }))}
+                className={`h-11 w-14 rounded-xl border-2 font-bold text-sm transition-all ${
+                  answers.bathrooms === n
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {n === 5 ? "5+" : n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Special Features */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">Special features? <span className="font-normal text-muted-foreground">(select all that apply)</span></label>
+          <div className="flex gap-2 flex-wrap">
+            {SPECIAL_FEATURES.map(feature => {
+              const isSelected = answers.features.includes(feature);
+              return (
+                <button
+                  key={feature}
+                  type="button"
+                  onClick={() => {
+                    setAnswers(prev => ({
+                      ...prev,
+                      features: isSelected
+                        ? prev.features.filter(f => f !== feature)
+                        : [...prev.features, feature],
+                    }));
+                  }}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  {isSelected && <Check className="h-3.5 w-3.5 inline mr-1.5" />}
+                  {feature}
+                </button>
+              );
+            })}
+          </div>
+          <Input
+            placeholder="Other feature (e.g., Sauna)"
+            value={answers.featureOther}
+            onChange={(e) => setAnswers(prev => ({ ...prev, featureOther: e.target.value }))}
+            className="mt-2 max-w-xs"
+          />
+        </div>
+
+        {/* Notable Views */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">Notable views? <span className="font-normal text-muted-foreground">(select all that apply)</span></label>
+          <div className="flex gap-2 flex-wrap">
+            {NOTABLE_VIEWS.map(view => {
+              const isSelected = answers.views.includes(view);
+              return (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => {
+                    setAnswers(prev => ({
+                      ...prev,
+                      views: isSelected
+                        ? prev.views.filter(v => v !== view)
+                        : [...prev.views, view],
+                    }));
+                  }}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  {isSelected && <Check className="h-3.5 w-3.5 inline mr-1.5" />}
+                  {view}
+                </button>
+              );
+            })}
+          </div>
+          <Input
+            placeholder="Other view (e.g., Lake)"
+            value={answers.viewOther}
+            onChange={(e) => setAnswers(prev => ({ ...prev, viewOther: e.target.value }))}
+            className="mt-2 max-w-xs"
+          />
+        </div>
+
+        {/* Continue Button */}
+        <Button
+          onClick={handleStartGuided}
+          className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg gap-2 w-full sm:w-auto"
+        >
+          Continue to Upload
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // RENDER — PHASE 2: GUIDED UPLOAD STEPS
+  // ═══════════════════════════════════════════════════
+
+  if (phase === 'guided' && currentStep) {
+    const StepIcon = currentStep.icon;
+    const stepNumber = currentStepIndex + 1;
+    const totalSteps = uploadSteps.length;
+    const inputId = `photo-upload-step-${currentStep.id}`;
+
+    return (
       <div
-        className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors"
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
-        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-primary", "bg-primary/5"); }}
+        className="space-y-6"
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
         onDrop={(e) => {
-          e.preventDefault(); e.stopPropagation();
-          e.currentTarget.classList.remove("border-primary", "bg-primary/5");
-          const files = e.dataTransfer.files;
-          if (files.length > 0) {
-            const input = document.getElementById("photo-upload") as HTMLInputElement;
-            input.files = files;
-            input.dispatchEvent(new Event("change", { bubbles: true }));
+          e.preventDefault();
+          e.stopPropagation();
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length > 0 && currentStep) {
+            handleFilesForStep(files, currentStep);
           }
         }}
       >
-        <input type="file" id="photo-upload" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
-        <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Upload className="h-8 w-8 text-primary" />
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold text-foreground">Step {stepNumber} of {totalSteps}</span>
+            <span className="text-muted-foreground">{totalPhotoCount} photo{totalPhotoCount !== 1 ? "s" : ""} total</span>
           </div>
-          <p className="text-lg font-semibold">Upload your listing photos</p>
-          <p className="text-muted-foreground">Drag and drop or click to select</p>
-          <p className="text-xs text-muted-foreground mt-2">Upload the highest quality photos you have — the quality you put in is the quality you get out!</p>
-          <p className="text-xs text-muted-foreground mt-1">Photos are automatically optimized for video. You can adjust the crop position after uploading.</p>
-        </label>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${(stepNumber / totalSteps) * 100}%` }}
+            />
+          </div>
+          {/* Step pills */}
+          <div className="flex gap-1.5 flex-wrap">
+            {uploadSteps.map((s, i) => {
+              const stepPhotos = (stepPhotoIds[s.id] || []).length;
+              const isCurrent = i === currentStepIndex;
+              const isPast = i < currentStepIndex;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => { setCurrentStepIndex(i); setOpenCropIndex(null); }}
+                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1 ${
+                    isCurrent
+                      ? "bg-primary text-primary-foreground"
+                      : isPast
+                      ? "bg-primary/10 text-primary hover:bg-primary/20"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {isPast && stepPhotos > 0 && <Check className="h-3 w-3" />}
+                  {s.title.replace(/ \(\d+\)/, '')}
+                  {stepPhotos > 0 && <span className="opacity-70">({stepPhotos})</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Step header */}
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+            <StepIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold">{currentStep.title}</h3>
+            <p className="text-sm text-muted-foreground">{currentStep.instructions}</p>
+          </div>
+        </div>
+
+        {/* Recommended count */}
+        <p className="text-xs text-muted-foreground">
+          Recommended: {currentStep.recommended} · Every step is optional — skip if you don&apos;t have these shots
+        </p>
+
+        {/* View note */}
+        {currentStep.viewNote && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
+            <Eye className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-800">{currentStep.viewNote}</p>
+          </div>
+        )}
+
+        {/* Drop zone */}
+        <div
+          className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors"
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
+          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-primary", "bg-primary/5"); }}
+          onDrop={(e) => {
+            e.preventDefault(); e.stopPropagation();
+            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0 && currentStep) {
+              handleFilesForStep(files, currentStep);
+            }
+          }}
+        >
+          <input type="file" id={inputId} multiple accept="image/*" onChange={handleFileChange} className="hidden" />
+          <label htmlFor={inputId} className="cursor-pointer flex flex-col items-center">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+              <Upload className="h-6 w-6 text-primary" />
+            </div>
+            <p className="font-semibold">Upload {currentStep.title.toLowerCase()} photos</p>
+            <p className="text-sm text-muted-foreground">Drag and drop or click to select</p>
+          </label>
+        </div>
+
+        {/* Photos in this step */}
+        {currentStepPhotos.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <ImageIcon className="h-4 w-4" />
+              <span className="text-sm">{currentStepPhotos.length} photo{currentStepPhotos.length !== 1 ? "s" : ""} in this step</span>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {currentStepPhotos.map((photo, index) => (
+                <div
+                  key={photo.id}
+                  className="relative bg-card border border-border rounded-xl transition-all p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary text-primary-foreground rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {index + 1}
+                    </div>
+
+                    <div className="h-20 w-28 sm:h-24 sm:w-36 relative rounded-lg overflow-hidden flex-shrink-0 border">
+                      <Image src={photo.preview || "/placeholder.svg"} alt="" fill className="object-cover" />
+                      {photo.uploadStatus === 'uploading' && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Input
+                        placeholder="Label (e.g. Kitchen)"
+                        value={photo.description}
+                        onChange={(e) => handleDescriptionChange(photo.id, e.target.value)}
+                        maxLength={30}
+                        className="text-sm h-9"
+                      />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {photo.uploadStatus === 'complete' && <span className="text-green-500 text-xs font-semibold">✓ Ready</span>}
+                        {photo.uploadStatus === 'uploading' && <span className="text-amber-500 text-xs font-semibold animate-pulse">Uploading...</span>}
+                        {photo.uploadStatus === 'failed' && <span className="text-red-500 text-xs font-semibold">✕ Failed</span>}
+
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); setOpenCropIndex(openCropIndex === index ? null : index); }}
+                          className={`text-xs py-1 px-2.5 rounded-lg border flex items-center gap-1 transition-colors ${
+                            openCropIndex === index ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+                          }`}>
+                          <Crop className="h-3 w-3" />
+                          <span>Crop</span>
+                        </button>
+                      </div>
+                      {photo.original_width && (
+                        <p className="text-xs text-muted-foreground">{photo.original_width} × {photo.original_height}px</p>
+                      )}
+                    </div>
+
+                    <button type="button" onClick={() => handleRemove(photo.id)}
+                      className="p-2 text-muted-foreground hover:text-destructive flex-shrink-0">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  {/* Crop panel */}
+                  {openCropIndex === index && (
+                    <div className="mt-3 pt-3 border-t border-border space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we&apos;ll auto-center the crop.
+                      </p>
+
+                      {!needsCropForOrientation(photo, orientation) ? (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                          <Crop className="h-5 w-5 text-green-600 mx-auto mb-2" />
+                          <p className="text-sm font-semibold text-green-800">No crop needed!</p>
+                          <p className="text-xs text-green-700 mt-1">This photo already matches your selected video format.</p>
+                        </div>
+                      ) : (
+                        <>
+                          {(orientation === 'landscape' || orientation === 'both') && (
+                            <CropPreview photo={photo} targetAspect="16:9"
+                              offset={photo.crop_offset_landscape ?? 50}
+                              onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'landscape', val)}
+                              label="Landscape (16:9)" />
+                          )}
+                          {(orientation === 'vertical' || orientation === 'both') && (
+                            <CropPreview photo={photo} targetAspect="9:16"
+                              offset={photo.crop_offset_vertical ?? 50}
+                              onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'vertical', val)}
+                              label="Vertical (9:16)" />
+                          )}
+
+                          <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-left">
+                            <p className="text-xs font-semibold text-foreground">Cropping tips:</p>
+                            <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don&apos;t crop too tight on the roofline</p>
+                            <p className="text-xs text-muted-foreground">• Front doors look best <span className="font-medium text-foreground">slightly below center</span></p>
+                            <p className="text-xs text-muted-foreground">• Keep <span className="font-medium text-foreground">key features visible</span> — landscaping, pools, driveways</p>
+                            <p className="text-xs text-muted-foreground">• For interiors, keep <span className="font-medium text-foreground">floors and ceilings balanced</span></p>
+                          </div>
+                        </>
+                      )}
+
+                      <button type="button" onClick={() => setOpenCropIndex(null)}
+                        className="text-sm text-primary font-semibold hover:underline">
+                        Done ✓
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Add more to this step */}
+            <div className="text-center pt-1">
+              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(inputId)?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Add More {currentStep.title} Photos
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Too many photos warning */}
+        {showTooManyPhotosWarning && (
+          <div className="bg-accent/10 border border-accent rounded-xl p-4 flex items-start gap-4">
+            <AlertCircle className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">More than 35 photos detected</p>
+              <a href="tel:+18455366954" className="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline">
+                <Phone className="h-4 w-4" />1 (845) 536-6954
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Step navigation */}
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          {currentStepIndex > 0 ? (
+            <Button variant="outline" onClick={goToPrevStep} className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => setPhase('questionnaire')} className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Edit Property
+            </Button>
+          )}
+          <Button
+            onClick={goToNextStep}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-6 py-5 text-base gap-2"
+          >
+            {currentStepIndex < uploadSteps.length - 1 ? (
+              <>
+                {currentStepPhotos.length === 0 ? "Skip Step" : "Next Step"}
+                <ChevronRight className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Review All Photos
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
-      
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // RENDER — PHASE 3: REVIEW & REORDER
+  // ═══════════════════════════════════════════════════
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+          <ListOrdered className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold">Recommended Professional Sequence</h3>
+          <p className="text-sm text-muted-foreground">
+            Your photos are ordered following the standard real estate walkthrough flow. Drag to reorder if needed.
+          </p>
+        </div>
+      </div>
+
+      {/* Walkthrough order guide */}
+      <div className="bg-muted/50 rounded-xl border border-border p-4">
+        <p className="text-xs font-semibold text-foreground mb-2">🏠 Professional walkthrough order:</p>
+        <p className="text-xs text-muted-foreground">
+          Exterior → Entryway → Common Areas → Bedrooms → Bathrooms → Special Features → Backyard
+        </p>
+      </div>
+
+      {/* Count + hint */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <ImageIcon className="h-5 w-5" />
+          <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} total</span>
+        </div>
+        <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
+      </div>
+
+      {/* Too many photos warning */}
       {showTooManyPhotosWarning && (
         <div className="bg-accent/10 border border-accent rounded-xl p-4 flex items-start gap-4">
           <AlertCircle className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
@@ -442,47 +1175,15 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         </div>
       )}
 
-      {/* Photo Sequencing Guide — collapsible tip */}
-      {photos.length > 0 && (
-        <div className="bg-muted/50 rounded-xl border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowPhotoTips(!showPhotoTips)}
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/80 transition-colors"
-          >
-            <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-              🏠 How to sequence your photos for the best walkthrough video
-            </span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showPhotoTips ? 'rotate-180' : ''}`} />
-          </button>
-          {showPhotoTips && (
-            <div className="px-4 pb-4 space-y-1.5">
-              <p className="text-xs text-muted-foreground">Order your photos as if the viewer is walking through the home:</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">1.</span> Best exterior shot first (hero shot — strongest first impression)</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">2.</span> Front door / entryway</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">3.</span> Living room / main living spaces</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">4.</span> Kitchen / dining</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">5.</span> Finish the main floor</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">6.</span> Staircase (if applicable)</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">7.</span> Upstairs bedrooms / bathrooms</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">8.</span> Backyard / outdoor spaces</p>
-              <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">9.</span> Best photo last (strong closing shot)</p>
-              <p className="text-xs text-muted-foreground mt-2 italic">Think of it as a real home tour — guide the viewer through the space naturally.</p>
-            </div>
-          )}
+      {photos.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p className="font-semibold">No photos uploaded yet</p>
+          <p className="text-sm mt-1">Go back to add photos to your listing.</p>
         </div>
       )}
 
-      {photos.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ImageIcon className="h-5 w-5" />
-            <span>{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</span>
-          </div>
-          <p className="text-sm text-muted-foreground">Drag the dots or use arrows to reorder</p>
-        </div>
-      )}
-
+      {/* Photo list with drag-to-reorder */}
       <div className="flex flex-col gap-3">
         {photos.map((photo, index) => (
           <div
@@ -491,6 +1192,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
             onDragStart={() => { if (openCropIndex === index) return; handleDragStart(index); }}
             onDragOver={(e) => handleDragOver(e, index)}
             onDrop={handleDrop}
+            onDragEnd={() => { setDraggedIndex(null); setDragOverIndex(null); }}
             className={`relative bg-card border rounded-xl transition-all p-3 cursor-move ${
               dragOverIndex === index ? "border-primary border-t-4" : "border-border"
             } ${draggedIndex === index ? "opacity-50" : "opacity-100"}`}
@@ -559,12 +1261,13 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
               </button>
             </div>
 
+            {/* Crop panel — identical to original */}
             {openCropIndex === index && (
               <div className="mt-3 pt-3 border-t border-border space-y-4">
                 <p className="text-xs text-muted-foreground">
                   <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we&apos;ll auto-center the crop. Drag the slider to adjust which part of your photo is visible in the video.
                 </p>
-                
+
                 {!needsCropForOrientation(photo, orientation) ? (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                     <Crop className="h-5 w-5 text-green-600 mx-auto mb-2" />
@@ -606,13 +1309,39 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         ))}
       </div>
 
-      {photos.length > 0 && !showTooManyPhotosWarning && (
-        <div className="text-center pt-2">
-          <Button type="button" variant="outline" onClick={() => document.getElementById("photo-upload")?.click()}>
-            <Upload className="mr-2 h-4 w-4" /> Add More Photos
-          </Button>
+      {/* Confirmation checkbox */}
+      {photos.length > 0 && (
+        <div
+          className={`rounded-2xl border-2 p-5 transition-colors ${
+            reviewConfirmed
+              ? "bg-green-50/50 border-green-500"
+              : "bg-red-50/50 border-red-400"
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <Checkbox
+              id="confirm-review-sequence"
+              checked={reviewConfirmed}
+              onCheckedChange={(checked) => setReviewConfirmed(checked === true)}
+              className="h-8 w-8 bg-white"
+            />
+            <label htmlFor="confirm-review-sequence" className="font-medium cursor-pointer">
+              I confirm these photos are in the correct walkthrough order for my video.
+            </label>
+          </div>
         </div>
       )}
+
+      {/* Navigation — back to guided steps or let parent handle continue */}
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <Button variant="outline" onClick={goBackToGuided} className="gap-2">
+          <ChevronLeft className="h-4 w-4" />
+          Back to Upload
+        </Button>
+        <p className="text-sm text-muted-foreground">
+          {reviewConfirmed ? "✓ Sequence confirmed — continue in the order form" : "Confirm your sequence to continue"}
+        </p>
+      </div>
     </div>
   );
 }
