@@ -226,6 +226,7 @@ export function OrderForm() {
   const [showMobileSummary, setShowMobileSummary] = useState(false);
   const [seqDraggedIndex, setSeqDraggedIndex] = useState<number | null>(null);
   const [seqDragOverIndex, setSeqDragOverIndex] = useState<number | null>(null);
+  const [uploaderReady, setUploaderReady] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -835,7 +836,7 @@ export function OrderForm() {
 
               {/* Upload Mode */}
               {isUploadMode && (
-                <PhotoUploader photos={photos} onPhotosChange={setPhotos} orientation={orientation} />
+                <PhotoUploader photos={photos} onPhotosChange={setPhotos} orientation={orientation} onReviewConfirmed={setUploaderReady} />
               )}
 
               {/* ── Subscriber Quick Video Banner ── */}
@@ -983,16 +984,32 @@ export function OrderForm() {
                 )}
               </div>
 
-              <StepNavigation
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-                canProceed={canProceedFromCurrentStep()}
-                onBack={() => setCurrentStep(currentStep - 1)}
-                onNext={() => setCurrentStep(currentStep + 1)}
-                onSubmit={handleSubmitOrder}
-                isSubmitting={isSubmitting}
-                canSubmit={canProceedFromCurrentStep()}
-              />
+              {/* Upload mode: only show Continue when uploader signals ready */}
+              {isUploadMode && uploaderReady && (
+                <StepNavigation
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                  canProceed={canProceedFromCurrentStep()}
+                  onBack={() => setCurrentStep(currentStep - 1)}
+                  onNext={() => setCurrentStep(currentStep + 1)}
+                  onSubmit={handleSubmitOrder}
+                  isSubmitting={isSubmitting}
+                  canSubmit={canProceedFromCurrentStep()}
+                />
+              )}
+              {/* URL mode: always show navigation */}
+              {isUrlMode && (
+                <StepNavigation
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                  canProceed={canProceedFromCurrentStep()}
+                  onBack={() => setCurrentStep(currentStep - 1)}
+                  onNext={() => setCurrentStep(currentStep + 1)}
+                  onSubmit={handleSubmitOrder}
+                  isSubmitting={isSubmitting}
+                  canSubmit={canProceedFromCurrentStep()}
+                />
+              )}
             </div>
           )}
 
