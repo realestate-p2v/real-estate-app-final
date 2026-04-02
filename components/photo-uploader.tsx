@@ -632,9 +632,13 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   // ── Notify parent when photos are ready (all uploaded) ──
   // The order form uses this to show/hide its Continue button
   const allUploadsComplete = photos.length > 0 && photos.every((p) => p.uploadStatus === 'complete');
+  const isOnLastStep = uploadSteps.length > 0 && currentStepIndex === uploadSteps.length - 1;
+  const isDraftRestore = photos.length > 0 && uploadSteps.length === 0;
   React.useEffect(() => {
-    onReviewConfirmed?.(allUploadsComplete);
-  }, [allUploadsComplete, onReviewConfirmed]);
+    // Draft restore: photos exist but no guided steps built — signal ready immediately
+    // Normal flow: only signal ready when agent has reached the last upload step
+    onReviewConfirmed?.(allUploadsComplete && (isOnLastStep || isDraftRestore));
+  }, [allUploadsComplete, isOnLastStep, isDraftRestore, onReviewConfirmed]);
 
   // ── Start guided flow from questionnaire ──
   const handleStartGuided = () => {
