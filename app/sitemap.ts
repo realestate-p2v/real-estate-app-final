@@ -14,5 +14,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/lp/video`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/lp/lens`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/login`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
+    { url: `${baseUrl}/dashboard/lens/coach`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+{ url: `${baseUrl}/dashboard/lens/descriptions`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+{ url: `${baseUrl}/dashboard/lens/staging`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+{ url: `${baseUrl}/dashboard/lens/design-studio`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
   ];
 }
