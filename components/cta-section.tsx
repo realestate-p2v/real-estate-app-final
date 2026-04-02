@@ -45,7 +45,7 @@ export function CTASection() {
             </div>
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
               <Clock className="h-5 w-5 text-[#FFDADA]" />
-              Fast 24h Delivery
+              Fast 12h Delivery
             </div>
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
               <CheckCircle2 className="h-5 w-5 text-[#FFDADA]" />
