@@ -1,7 +1,5 @@
 "use client";
-
-import { useEffect, useState, useMemo } from "react";
-
+import { useEffect, useState } from "react";
 interface TimeLeft {
   days: string;
   hours: string;
@@ -9,29 +7,42 @@ interface TimeLeft {
   seconds: string;
 }
 
-export function CountdownTimer() {
-  const targetDate = useMemo(() => new Date("2026-04-01T00:00:00").getTime(), []);
+function getEndOfMonth(): Date {
+  const now = new Date();
+  // First day of next month at midnight = end of current month
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+}
 
+function getCurrentMonthName(): string {
+  return new Date().toLocaleString("en-US", { month: "long" });
+}
+
+export function CountdownTimer() {
+  const [targetDate, setTargetDate] = useState<number>(getEndOfMonth().getTime());
+  const [monthName, setMonthName] = useState<string>(getCurrentMonthName());
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({
     days: "00", hours: "00", minutes: "00", seconds: "00",
   });
-
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const distance = targetDate - now;
-
+      let target = targetDate;
+      // If we've passed the target, roll to the next month's end
+      if (now >= target) {
+        const newEnd = getEndOfMonth();
+        target = newEnd.getTime();
+        setTargetDate(target);
+        setMonthName(getCurrentMonthName());
+      }
+      const distance = target - now;
       if (distance < 0) {
-        clearInterval(timer);
         setTimeLeft({ days: "00", hours: "00", minutes: "00", seconds: "00" });
         return;
       }
-
       const d = Math.floor(distance / (1000 * 60 * 60 * 24));
       const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const s = Math.floor((distance % (1000 * 60)) / 1000);
-
       setTimeLeft({
         days: d.toString().padStart(2, "0"),
         hours: h.toString().padStart(2, "0"),
@@ -39,14 +50,12 @@ export function CountdownTimer() {
         seconds: s.toString().padStart(2, "0"),
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [targetDate]);
-
   return (
     <div className="flex flex-col md:flex-row items-center gap-3">
       <span className="text-white font-bold text-md whitespace-nowrap">
-        March sale ends:
+        {monthName} sale ends:
       </span>
       <div className="px-4 py-1.5 rounded-lg border border-red-600/40 bg-black/20 shadow-[0_0_12px_rgba(220,38,38,0.3)] flex items-center gap-3">
         <div className="flex items-center gap-2 font-mono text-xl font-black text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.4)]">
