@@ -43,72 +43,73 @@ export default function TestP2VPage() {
           {/* Dark overlay */}
           <div className="absolute inset-0 bg-black/60" />
 
-          <div className="relative z-10 max-w-xl w-full text-center lg:text-left">
-            {/* Label */}
-            <div className="inline-flex items-center gap-2 bg-white/10 text-white text-sm font-bold px-4 py-1.5 rounded-full mb-6 border border-white/20">
-              <Video className="w-4 h-4 text-green-400" />
-              LISTING VIDEOS
-            </div>
+          <div className="relative z-10 max-w-xl w-full">
+            {/* Frosted card container */}
+            <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-3xl p-8 lg:p-10 text-center lg:text-left">
+              {/* Label */}
+              <div className="inline-flex items-center gap-2 bg-white/10 text-white text-sm font-bold px-4 py-1.5 rounded-full mb-6 border border-white/20">
+                <Video className="w-4 h-4 text-green-400" />
+                LISTING VIDEOS
+              </div>
 
-            {/* Headline — matching site gradient */}
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-white leading-tight">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-yellow-300 to-cyan-400">
+              {/* Headline — no gradient, clean white */}
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-white leading-tight">
                 Listing Photos to
-              </span>
-              <br />
-              Cinematic Video
-            </h2>
+                <br />
+                <span className="text-green-400">Cinematic Video</span>
+              </h2>
 
-            {/* Stat callout — matching site style */}
-            <div className="bg-primary/5 border border-primary/20 rounded-xl px-5 py-2.5 text-center lg:text-left max-w-md mx-auto lg:mx-0 mt-4 mb-6">
-              <p className="text-base font-bold text-white">
-                Listings with video get{" "}
-                <span className="text-green-300">400% more inquiries</span>
+              {/* Stat callout */}
+              <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-2.5 text-center lg:text-left max-w-md mx-auto lg:mx-0 mt-4 mb-6">
+                <p className="text-base font-bold text-white">
+                  Listings with video get{" "}
+                  <span className="text-green-300">400% more inquiries</span>
+                </p>
+                <p className="text-xs text-white/70 mt-0.5">
+                  — National Association of Realtors
+                </p>
+              </div>
+
+              <p className="text-white/80 text-base lg:text-lg mb-8 leading-relaxed max-w-md mx-auto lg:mx-0">
+                Upload your photos, pick your music, add your branding — professional walkthrough video delivered in under 12 hours. No videographer needed.
               </p>
-              <p className="text-xs text-white/70 mt-0.5">
-                — National Association of Realtors
-              </p>
-            </div>
 
-            <p className="text-white/80 text-base lg:text-lg mb-8 leading-relaxed max-w-md mx-auto lg:mx-0">
-              Upload your photos, pick your music, add your branding — professional walkthrough video delivered in under 12 hours. No videographer needed.
-            </p>
-
-            {/* CTA — matching exact green button style */}
-            <div className="flex flex-col items-center lg:items-start gap-6">
-              <Link href="/order" passHref>
-                <Button
-                  size="lg"
-                  className="group text-lg px-8 py-7 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
-                >
-                  <span className="text-[10px] uppercase tracking-widest opacity-90 mb-0.5 font-black">
-                    Limited Time Offer
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span>Create My Listing Video</span>
-                    <span className="flex items-center">
-                      <span className="line-through text-white/50 text-sm mr-2 font-medium">
-                        $119
-                      </span>
-                      <span className="text-xl">$79</span>
+              {/* CTA */}
+              <div className="flex flex-col items-center lg:items-start gap-6">
+                <Link href="/order" passHref>
+                  <Button
+                    size="lg"
+                    className="group text-lg px-8 py-7 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
+                  >
+                    <span className="text-[10px] uppercase tracking-widest opacity-90 mb-0.5 font-black">
+                      Limited Time Offer
                     </span>
-                  </div>
-                </Button>
-              </Link>
+                    <div className="flex items-center gap-3">
+                      <span>Create My Listing Video</span>
+                      <span className="flex items-center">
+                        <span className="line-through text-white/50 text-sm mr-2 font-medium">
+                          $119
+                        </span>
+                        <span className="text-xl">$79</span>
+                      </span>
+                    </div>
+                  </Button>
+                </Link>
 
-              {/* Trust badges */}
-              <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-white/70">
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <ShieldCheck className="w-4 h-4 text-green-400" />
-                  <span>Satisfaction Guarantee</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <Clock className="w-4 h-4 text-green-400" />
-                  <span>Under 12h Delivery</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <Lock className="w-4 h-4 text-green-400" />
-                  <span>Secure Checkout</span>
+                {/* Trust badges */}
+                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-white/70">
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <ShieldCheck className="w-4 h-4 text-green-400" />
+                    <span>Satisfaction Guarantee</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <Clock className="w-4 h-4 text-green-400" />
+                    <span>Under 12h Delivery</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <Lock className="w-4 h-4 text-green-400" />
+                    <span>Secure Checkout</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -131,85 +132,86 @@ export default function TestP2VPage() {
           <div className="absolute inset-0 bg-black/70" />
           <div className="absolute inset-0 bg-cyan-950/20" />
 
-          <div className="relative z-10 max-w-xl w-full text-center lg:text-left">
-            {/* Label */}
-            <div className="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-300 text-sm font-bold px-4 py-1.5 rounded-full mb-6 border border-cyan-500/20">
-              <Sparkles className="w-4 h-4" />
-              AI MARKETING SUITE
-            </div>
+          <div className="relative z-10 max-w-xl w-full">
+            {/* Frosted card container */}
+            <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-3xl p-8 lg:p-10 text-center lg:text-left">
+              {/* Label */}
+              <div className="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-300 text-sm font-bold px-4 py-1.5 rounded-full mb-6 border border-cyan-500/20">
+                <Sparkles className="w-4 h-4" />
+                AI MARKETING SUITE
+              </div>
 
-            {/* Headline */}
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-white leading-tight">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-yellow-300 to-cyan-400">
+              {/* Headline — no gradient, clean white with cyan accent */}
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-white leading-tight">
                 P2V Lens
-              </span>
-              <br />
-              Your Entire Marketing Team
-            </h2>
+                <br />
+                <span className="text-cyan-400">Your Entire Marketing Team</span>
+              </h2>
 
-            {/* Stat callout */}
-            <div className="bg-primary/5 border border-primary/20 rounded-xl px-5 py-2.5 text-center lg:text-left max-w-md mx-auto lg:mx-0 mt-4 mb-6">
-              <p className="text-base font-bold text-white">
-                Professional photos sell{" "}
-                <span className="text-green-300">32% faster</span>
-              </p>
-              <p className="text-xs text-white/70 mt-0.5">
-                — Real Estate Staging Association
-              </p>
-            </div>
+              {/* Stat callout */}
+              <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-2.5 text-center lg:text-left max-w-md mx-auto lg:mx-0 mt-4 mb-6">
+                <p className="text-base font-bold text-white">
+                  Professional photos sell{" "}
+                  <span className="text-green-300">32% faster</span>
+                </p>
+                <p className="text-xs text-white/70 mt-0.5">
+                  — Real Estate Staging Association
+                </p>
+              </div>
 
-            {/* Tool grid — uses same circular icon style as current hero */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 mb-8 max-w-md mx-auto lg:mx-0">
-              {[
-                { icon: Camera, label: "AI Photo Coach" },
-                { icon: PenTool, label: "Design Studio" },
-                { icon: FileText, label: "Description Writer" },
-                { icon: Sofa, label: "Virtual Staging" },
-                { icon: Globe, label: "Website Builder" },
-                { icon: Search, label: "Lead Finder" },
-              ].map((tool) => (
-                <div
-                  key={tool.label}
-                  className="flex items-center gap-2 text-white/90 text-sm font-medium"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 border border-white/20 flex-shrink-0">
-                    <tool.icon className="w-3.5 h-3.5 text-cyan-400" />
-                  </span>
-                  {tool.label}
-                </div>
-              ))}
-            </div>
-
-            {/* CTA — same green button for brand consistency */}
-            <div className="flex flex-col items-center lg:items-start gap-6">
-              <Link href="/lens" passHref>
-                <Button
-                  size="lg"
-                  className="group text-lg px-8 py-7 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
-                >
-                  <span className="text-[10px] uppercase tracking-widest opacity-90 mb-0.5 font-black">
-                    Built for Real Estate Agents
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span>Explore P2V Lens</span>
-                    <span className="text-xl">$27.95/mo</span>
+              {/* Tool grid */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 mb-8 max-w-md mx-auto lg:mx-0">
+                {[
+                  { icon: Camera, label: "AI Photo Coach" },
+                  { icon: PenTool, label: "Design Studio" },
+                  { icon: FileText, label: "Description Writer" },
+                  { icon: Sofa, label: "Virtual Staging" },
+                  { icon: Globe, label: "Website Builder" },
+                  { icon: Search, label: "Lead Finder" },
+                ].map((tool) => (
+                  <div
+                    key={tool.label}
+                    className="flex items-center gap-2 text-white/90 text-sm font-medium"
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 border border-white/20 flex-shrink-0">
+                      <tool.icon className="w-3.5 h-3.5 text-cyan-400" />
+                    </span>
+                    {tool.label}
                   </div>
-                </Button>
-              </Link>
+                ))}
+              </div>
 
-              {/* Trust badges */}
-              <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-white/70">
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <Sparkles className="w-4 h-4 text-green-400" />
-                  <span>AI-Powered</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <Camera className="w-4 h-4 text-green-400" />
-                  <span>200 Analyses/Month</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <ShieldCheck className="w-4 h-4 text-green-400" />
-                  <span>Cancel Anytime</span>
+              {/* CTA */}
+              <div className="flex flex-col items-center lg:items-start gap-6">
+                <Link href="/lens" passHref>
+                  <Button
+                    size="lg"
+                    className="group text-lg px-8 py-7 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
+                  >
+                    <span className="text-[10px] uppercase tracking-widest opacity-90 mb-0.5 font-black">
+                      Built for Real Estate Agents
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span>Explore P2V Lens</span>
+                      <span className="text-xl">$27.95/mo</span>
+                    </div>
+                  </Button>
+                </Link>
+
+                {/* Trust badges */}
+                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-white/70">
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <Sparkles className="w-4 h-4 text-green-400" />
+                    <span>AI-Powered</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <Camera className="w-4 h-4 text-green-400" />
+                    <span>200 Analyses/Month</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <ShieldCheck className="w-4 h-4 text-green-400" />
+                    <span>Cancel Anytime</span>
+                  </div>
                 </div>
               </div>
             </div>
