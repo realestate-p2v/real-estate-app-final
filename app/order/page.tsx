@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { OrderForm } from "@/components/order-form";
-import { WhatsAppButton } from "@/components/whatsapp-button";
 import { ArrowLeft, Shield, Clock, Award } from "lucide-react";
 import type { Metadata } from "next";
 import { SaleBanner } from "@/components/sale-banner"
