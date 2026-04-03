@@ -26,6 +26,7 @@ import {
   PenTool,
   Film,
   Gift,
+  Home,
 } from "lucide-react";
 
 interface LensSubscription {
@@ -47,6 +48,7 @@ export default function DashboardLensPage() {
 
   const [coachSessionCount, setCoachSessionCount] = useState(0);
   const [descriptionCount, setDescriptionCount] = useState(0);
+  const [propertyCount, setPropertyCount] = useState(0);
 
   // Free Lens prize state
   const [isFreePrize, setIsFreePrize] = useState(false);
@@ -146,6 +148,13 @@ export default function DashboardLensPage() {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
       setDescriptionCount(descCount || 0);
+
+      // Property count
+      const { count: propCount } = await supabase
+        .from("agent_properties")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setPropertyCount(propCount || 0);
     };
     init();
   }, []);
@@ -382,6 +391,33 @@ export default function DashboardLensPage() {
             </div>
           </div>
         )}
+
+        {/* ═══ MY PROPERTIES CTA ═══ */}
+        <Link href="/dashboard/properties" className="block mb-6">
+          <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200 rounded-2xl p-6 hover:border-emerald-400 hover:shadow-lg transition-all">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Home className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-foreground text-lg">My Properties</h3>
+                  {propertyCount > 0 && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
+                      {propertyCount} {propertyCount === 1 ? "property" : "properties"}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  All your listing materials organized by property — photos, videos, descriptions, staging, and marketing materials in one place.
+                </p>
+                <p className="text-sm font-bold text-emerald-700 mt-2">
+                  View all properties →
+                </p>
+              </div>
+            </div>
+          </div>
+        </Link>
 
         {/* ═══ QUICK VIDEO CTA ═══ */}
         <Link href={subscription.active ? "/order" : "/lens"} className="block mb-10">
