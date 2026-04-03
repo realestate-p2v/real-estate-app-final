@@ -763,10 +763,13 @@ export default function DesignStudioPage() {
 
       setVideoExportStatus("Loading encoder core...");
       const ffmpegBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm";
+      // Only the worker needs blob URL (cross-origin restriction).
+      // Core + wasm can load directly from CDN (much faster for the 30MB wasm).
+      const workerBlobURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, "text/javascript");
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, "application/wasm"),
-        classWorkerURL: await toBlobURL(`${ffmpegBaseURL}/worker.js`, "text/javascript"),
+        coreURL: `${coreBaseURL}/ffmpeg-core.js`,
+        wasmURL: `${coreBaseURL}/ffmpeg-core.wasm`,
+        classWorkerURL: workerBlobURL,
       });
 
       // 1. Fetch the source video
