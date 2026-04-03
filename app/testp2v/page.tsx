@@ -16,7 +16,6 @@ import {
   Search,
   Video,
   Play,
-  ArrowRight,
   CheckCircle2,
 } from "lucide-react";
 
@@ -36,16 +35,14 @@ export default function TestP2VPage() {
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-cyan-200/30 rounded-full blur-[150px] z-0" />
       <div className="absolute bottom-[-10%] left-[30%] w-[400px] h-[400px] bg-emerald-100/40 rounded-full blur-[120px] z-0" />
 
-      {/* Split Container — tighter gap */}
+      {/* Split Container — tight gap */}
       <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-[85vh] gap-3 lg:gap-4 px-3 lg:px-5 py-4 lg:py-6">
 
         {/* ═══════════════════════════════════════════
             LEFT — Photo 2 Video
-            Warm white / soft gray, green accents
             ═══════════════════════════════════════════ */}
         <div className="relative flex-1 flex items-center justify-center px-4 lg:px-10 py-10 lg:py-16">
-
-          <div className="relative z-10 max-w-xl w-full">
+          <div className="relative z-10 max-w-[600px] w-full">
             {/* Card */}
             <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-7 lg:p-9 shadow-2xl shadow-gray-300/40 text-center lg:text-left">
               {/* Label pill */}
@@ -138,11 +135,9 @@ export default function TestP2VPage() {
 
         {/* ═══════════════════════════════════════════
             RIGHT — P2V Lens
-            Cool white / slight blue tint, cyan accents
             ═══════════════════════════════════════════ */}
         <div className="relative flex-1 flex items-center justify-center px-4 lg:px-10 py-10 lg:py-16">
-
-          <div className="relative z-10 max-w-xl w-full">
+          <div className="relative z-10 max-w-[600px] w-full">
             {/* Card */}
             <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-7 lg:p-9 shadow-2xl shadow-gray-300/40 text-center lg:text-left">
               {/* Label pill */}
