@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, ShieldCheck, Clock, CheckCircle2 } from "lucide-react";
-
 export function CTASection() {
   return (
     <section className="bg-primary py-20 md:py-28 relative overflow-hidden">
       {/* Ultra-low saturation glow - almost white-pink */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#FFF0F0]/5 rounded-full blur-[140px] pointer-events-none" />
-
       <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
         <div className="flex justify-center mb-8">
           {/* Muted Icon Container */}
@@ -17,13 +15,12 @@ export function CTASection() {
         </div>
         
         <h2 className="text-4xl md:text-6xl font-black text-primary-foreground text-balance tracking-tight">
-          Ready to <span className="text-[#b95d5d]">Skyrocket</span> Your Sales?
+          Ready to <span className="text-[#b95d5d]">Sell Listings Faster</span>?
         </h2>
         
         <p className="mt-8 text-xl md:text-2xl text-primary-foreground/90 max-w-2xl mx-auto font-medium">
-          Get your professional walkthrough video hand-edited and delivered in under 12 hours. 
+          Professional listing videos built by real estate marketers — hand-edited and delivered in under 12 hours.
         </p>
-
         <div className="mt-12 flex flex-col items-center gap-6">
           {/* HIGH CONVERSION GREEN BUTTON */}
           <Button
@@ -36,7 +33,6 @@ export function CTASection() {
               <ArrowRight className="h-8 w-8 group-hover:translate-x-2 transition-transform" />
             </Link>
           </Button>
-
           {/* Muted Desaturated Icons */}
           <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-6">
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
@@ -45,7 +41,7 @@ export function CTASection() {
             </div>
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
               <Clock className="h-5 w-5 text-[#FFDADA]" />
-              Fast 12h Delivery
+              Under 12h Delivery
             </div>
             <div className="flex items-center gap-2 text-primary-foreground/70 text-sm font-bold uppercase tracking-wider">
               <CheckCircle2 className="h-5 w-5 text-[#FFDADA]" />
@@ -53,7 +49,6 @@ export function CTASection() {
             </div>
           </div>
         </div>
-
         <p className="mt-8 text-primary-foreground/50 text-sm">
           No subscription required. One-time payment per listing.
         </p>
