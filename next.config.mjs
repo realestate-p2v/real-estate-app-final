@@ -9,5 +9,5 @@ const nextConfig = {
   turbopack: {},
   serverExternalPackages: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
 }
- 
+
 export default nextConfig
