@@ -22,22 +22,32 @@ import {
 
 export default function TestP2VPage() {
   return (
-    <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-white">
-      {/* Split Container */}
-      <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-[85vh]">
+    <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-gray-50">
+      {/* Background pattern — subtle grid */}
+      <div
+        className="absolute inset-0 z-0 opacity-[0.4]"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgb(209 213 219) 1px, transparent 0)`,
+          backgroundSize: "32px 32px",
+        }}
+      />
+      {/* Large ambient blurs behind everything */}
+      <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-green-200/30 rounded-full blur-[150px] z-0" />
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-cyan-200/30 rounded-full blur-[150px] z-0" />
+      <div className="absolute bottom-[-10%] left-[30%] w-[400px] h-[400px] bg-emerald-100/40 rounded-full blur-[120px] z-0" />
+
+      {/* Split Container — tighter gap */}
+      <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-[85vh] gap-3 lg:gap-4 px-3 lg:px-5 py-4 lg:py-6">
 
         {/* ═══════════════════════════════════════════
             LEFT — Photo 2 Video
             Warm white / soft gray, green accents
             ═══════════════════════════════════════════ */}
-        <div className="relative flex-1 flex items-center justify-center px-6 lg:px-14 py-14 lg:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50">
-          {/* Subtle decorative elements */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-green-100/40 rounded-full blur-[100px]" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-50/60 rounded-full blur-[80px]" />
+        <div className="relative flex-1 flex items-center justify-center px-4 lg:px-10 py-10 lg:py-16">
 
           <div className="relative z-10 max-w-xl w-full">
             {/* Card */}
-            <div className="bg-white/80 backdrop-blur-sm border border-gray-200/80 rounded-3xl p-8 lg:p-10 shadow-xl shadow-gray-200/50 text-center lg:text-left">
+            <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-7 lg:p-9 shadow-2xl shadow-gray-300/40 text-center lg:text-left">
               {/* Label pill */}
               <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-bold px-3.5 py-1.5 rounded-full mb-6 border border-green-200">
                 <Video className="w-3.5 h-3.5" />
@@ -127,23 +137,14 @@ export default function TestP2VPage() {
         </div>
 
         {/* ═══════════════════════════════════════════
-            DIVIDER
-            ═══════════════════════════════════════════ */}
-        <div className="lg:hidden relative z-10 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-        <div className="hidden lg:block relative z-10 w-px bg-gradient-to-b from-green-200 via-gray-200 to-cyan-200" />
-
-        {/* ═══════════════════════════════════════════
             RIGHT — P2V Lens
             Cool white / slight blue tint, cyan accents
             ═══════════════════════════════════════════ */}
-        <div className="relative flex-1 flex items-center justify-center px-6 lg:px-14 py-14 lg:py-20 bg-gradient-to-br from-slate-50 via-white to-cyan-50/30">
-          {/* Subtle decorative elements */}
-          <div className="absolute top-0 left-0 w-80 h-80 bg-cyan-100/30 rounded-full blur-[100px]" />
-          <div className="absolute bottom-0 right-0 w-64 h-64 bg-teal-50/50 rounded-full blur-[80px]" />
+        <div className="relative flex-1 flex items-center justify-center px-4 lg:px-10 py-10 lg:py-16">
 
           <div className="relative z-10 max-w-xl w-full">
             {/* Card */}
-            <div className="bg-white/80 backdrop-blur-sm border border-gray-200/80 rounded-3xl p-8 lg:p-10 shadow-xl shadow-gray-200/50 text-center lg:text-left">
+            <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-7 lg:p-9 shadow-2xl shadow-gray-300/40 text-center lg:text-left">
               {/* Label pill */}
               <div className="inline-flex items-center gap-2 bg-cyan-50 text-cyan-700 text-xs font-bold px-3.5 py-1.5 rounded-full mb-6 border border-cyan-200">
                 <Sparkles className="w-3.5 h-3.5" />
