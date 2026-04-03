@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, MessageSquare, PenTool, Sofa, Settings } from "lucide-react";
+import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, MessageSquare, PenTool, Sofa, Settings, Home } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -257,6 +257,11 @@ export function Navigation() {
                       className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       My Dashboard
                     </Link>
+                    <Link href="/dashboard/properties" onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                      <Home className="h-3.5 w-3.5 text-muted-foreground" />
+                      My Properties
+                    </Link>
                     <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
                       className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       My Videos
@@ -427,6 +432,11 @@ export function Navigation() {
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                     <LayoutDashboard className="h-4 w-4 text-primary-foreground/60" />
                     My Dashboard
+                  </Link>
+                  <Link href="/dashboard/properties" onClick={() => setIsOpen(false)}
+                    className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                    <Home className="h-4 w-4 text-primary-foreground/60" />
+                    My Properties
                   </Link>
                   <Link href="/dashboard/videos" onClick={() => setIsOpen(false)}
                     className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
