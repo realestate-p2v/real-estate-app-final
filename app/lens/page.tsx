@@ -102,51 +102,60 @@ export default function LensPage() {
       <Navigation />
 
       {/* HERO */}
-      <section className="relative overflow-hidden bg-[#0c1220]">
-        {/* Gradient mesh background */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0c1220] via-[#162033] to-[#0c1220]" />
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent/[0.07] rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.05] rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4" />
+      <section className="relative overflow-hidden bg-gradient-to-b from-orange-50/80 via-white to-white">
+        {/* Fun gradient blobs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-gradient-to-br from-red-200/40 to-orange-200/30 rounded-full blur-[80px]" />
+          <div className="absolute top-1/3 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-cyan-200/30 to-blue-200/20 rounded-full blur-[80px]" />
+          <div className="absolute -bottom-20 right-1/4 w-[350px] h-[350px] bg-gradient-to-br from-purple-200/25 to-pink-200/20 rounded-full blur-[80px]" />
         </div>
-        {/* Subtle grid texture */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight">
-              Your AI-Powered<br /><span className="text-accent">Real Estate Marketing Suite</span>
-            </h1>
-            <p className="mt-6 text-lg sm:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
-              Photo coaching, marketing design, listing descriptions, virtual staging, agent websites, lead generation, and short-form videos — purpose-built for real estate agents, not a generic AI tool.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-white/45 text-sm font-medium">
-              <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4 text-accent" /> 15+ AI Tools</span>
-              <span className="hidden sm:block">·</span>
-              <span className="flex items-center gap-1.5"><Camera className="h-4 w-4 text-accent" /> 200 Analyses/Month</span>
-              <span className="hidden sm:block">·</span>
-              <span className="flex items-center gap-1.5"><Film className="h-4 w-4 text-accent" /> Videos from $24.75</span>
-              <span className="hidden sm:block">·</span>
-              <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-accent" /> Cancel Anytime</span>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent text-sm font-bold px-4 py-1.5 rounded-full mb-6">
+              <Sparkles className="w-4 h-4" />
+              Purpose-Built for Real Estate
             </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight tracking-tight">
+              The AI Marketing Suite<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-orange-500 to-purple-600">That Sells Homes</span>
+            </h1>
+
+            <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Photo coaching, marketing design, listing descriptions, virtual staging, agent websites, lead generation, and short-form videos — all in one subscription.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              {[
+                { icon: Camera, label: "15+ AI Tools" },
+                { icon: Sparkles, label: "200 Analyses/Mo" },
+                { icon: Film, label: "Videos from $24.75" },
+                { icon: CheckCircle, label: "Cancel Anytime" },
+              ].map((badge) => (
+                <span key={badge.label} className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 bg-white/80 border border-border/50 rounded-full px-3 py-1.5 shadow-sm">
+                  <badge.icon className="h-3.5 w-3.5 text-accent" />
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               {isSubscriber ? (
-                <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg">
+                <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
                   <Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
                 </Button>
               ) : (
-                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg">
+                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
                   Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
-              <Button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="bg-white/[0.08] border border-white/20 text-white hover:bg-white/[0.12] hover:text-white h-14 px-8 text-lg font-bold backdrop-blur-sm">
+              <Button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="bg-white border border-border text-foreground hover:bg-muted h-14 px-8 text-lg font-bold rounded-full shadow-sm">
                 See All Features
               </Button>
             </div>
           </div>
         </div>
-        {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
       </section>
 
       {/* SOCIAL PROOF */}
