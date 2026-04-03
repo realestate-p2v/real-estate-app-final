@@ -729,10 +729,9 @@ export default function DesignStudioPage() {
   const loadFFmpegUMD = async (): Promise<any> => {
     if ((window as any).__FFmpegClass) return (window as any).__FFmpegClass;
 
-    // The UMD build expects `exports` to exist. We provide it.
-    if (typeof (window as any).exports === "undefined") {
-      (window as any).exports = {};
-    }
+    // The UMD build expects `module.exports` to exist.
+    (window as any).module = { exports: {} };
+    (window as any).exports = {};
 
     // Fetch the ffmpeg UMD JS, evaluate it
     const resp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
@@ -740,8 +739,8 @@ export default function DesignStudioPage() {
     // eslint-disable-next-line no-eval
     (0, eval)(code);
 
-    // After eval, FFmpeg class should be on exports or window
-    const FFmpegClass = (window as any).exports?.FFmpeg || (window as any).FFmpeg;
+    // FFmpeg class lands on module.exports.FFmpeg
+    const FFmpegClass = (window as any).module?.exports?.FFmpeg;
     if (!FFmpegClass) throw new Error("Failed to load FFmpeg — class not found after eval");
 
     (window as any).__FFmpegClass = FFmpegClass;
