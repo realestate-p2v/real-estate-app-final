@@ -725,30 +725,26 @@ export default function DesignStudioPage() {
     return new Uint8Array(buf);
   };
 
-  // ── Load FFmpeg class by fetching the UMD source and evaluating it ──
-  const loadFFmpegUMD = async (): Promise<{ FFmpegClass: any; workerBlobURL: string }> => {
+  // ── Load FFmpeg class from ESM CDN ──
+  const loadFFmpegESM = async (): Promise<{ FFmpegClass: any; workerBlobURL: string }> => {
     if ((window as any).__FFmpegClass) {
       return { FFmpegClass: (window as any).__FFmpegClass, workerBlobURL: (window as any).__FFmpegWorkerURL };
     }
 
-    // The UMD build expects `module.exports` to exist.
-    (window as any).module = { exports: {} };
-    (window as any).exports = {};
-
-    // Fetch the worker chunk and turn it into a blob URL
-    const workerResp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/814.ffmpeg.js");
+    // Fetch the ESM worker and create a blob URL
+    const workerResp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js");
     const workerBlob = new Blob([await workerResp.arrayBuffer()], { type: "text/javascript" });
     const workerBlobURL = URL.createObjectURL(workerBlob);
 
-    // Fetch ffmpeg.js and eval it
+    // Use the UMD eval approach which we confirmed works for getting the FFmpeg class
+    (window as any).module = { exports: {} };
+    (window as any).exports = {};
     const resp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
     const code = await resp.text();
-    // eslint-disable-next-line no-eval
-    (0, eval)(code);
+    (0, eval)(code); // eslint-disable-line no-eval
 
-    // FFmpeg class lands on module.exports.FFmpeg
     const FFmpegClass = (window as any).module?.exports?.FFmpeg;
-    if (!FFmpegClass) throw new Error("Failed to load FFmpeg — class not found after eval");
+    if (!FFmpegClass) throw new Error("Failed to load FFmpeg class");
 
     (window as any).__FFmpegClass = FFmpegClass;
     (window as any).__FFmpegWorkerURL = workerBlobURL;
@@ -766,7 +762,7 @@ export default function DesignStudioPage() {
 
     try {
       // 0. Load FFmpeg class
-      const { FFmpegClass, workerBlobURL } = await loadFFmpegUMD();
+      const { FFmpegClass, workerBlobURL } = await loadFFmpegESM();
       const ffmpeg = new FFmpegClass();
 
       ffmpeg.on("progress", ({ progress: p }: { progress: number }) => {
