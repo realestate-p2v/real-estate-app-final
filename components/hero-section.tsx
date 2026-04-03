@@ -155,7 +155,7 @@ export function HeroSection() {
               Introducing P2V Lens
             </span>
             <br />
-            Your AI-Powered Marketing Suite
+            The AI Marketing Suite Built for Real Estate
           </h1>
 
           <div className="bg-primary/5 border border-primary/20 rounded-xl px-6 py-3 text-center max-w-xl mx-auto mt-6">
@@ -202,7 +202,7 @@ export function HeroSection() {
                 className="group text-xl px-10 py-9 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
               >
                 <span className="text-xs uppercase tracking-widest opacity-90 mb-1 font-black">
-                  AI-Powered Tools
+                  Built for Real Estate Agents
                 </span>
                 <div className="flex items-center gap-3">
                   <span>Explore P2V Lens</span>
