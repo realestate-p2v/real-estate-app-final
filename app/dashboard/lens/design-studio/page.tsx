@@ -32,6 +32,8 @@ import {
   Lock,
   Sparkles,
   Film,
+  Music,
+  Check,
 } from "lucide-react";
 import {
   InfoBarTemplate,
@@ -95,6 +97,18 @@ const FONT_OPTIONS = [
   { id: "sans", label: "Clean Sans", family: "'Helvetica Neue', Arial, sans-serif" },
   { id: "modern", label: "Modern", family: "'Trebuchet MS', 'Gill Sans', sans-serif" },
   { id: "elegant", label: "Elegant", family: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" },
+];
+
+const VIBE_FILTERS = [
+  { key: "", label: "All", emoji: "🎵" },
+  { key: "upbeat_modern", label: "Upbeat", emoji: "🎶" },
+  { key: "chill_tropical", label: "Chill", emoji: "🌴" },
+  { key: "energetic_pop", label: "Energetic", emoji: "⚡" },
+  { key: "elegant_classical", label: "Elegant", emoji: "🎹" },
+  { key: "warm_acoustic", label: "Acoustic", emoji: "🎸" },
+  { key: "bold_cinematic", label: "Cinematic", emoji: "🎬" },
+  { key: "smooth_jazz", label: "Jazz", emoji: "🎺" },
+  { key: "ambient", label: "Ambient", emoji: "🌙" },
 ];
 
 /* ═══════════════════════════════════════════════════════
@@ -180,6 +194,212 @@ function AccentSwatches({ currentColor, onSelect }: { currentColor: string; onSe
 }
 
 /* ═══════════════════════════════════════════════════════
+   COMPACT MUSIC SELECTOR  (visible only in Video Overlay)
+   ═══════════════════════════════════════════════════════ */
+
+function CompactMusicSelector({
+  selectedTrack,
+  onSelect,
+  customAudioFile,
+  onCustomAudioChange,
+}: {
+  selectedTrack: string;
+  onSelect: (selection: string) => void;
+  customAudioFile: File | null;
+  onCustomAudioChange: (file: File | null) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [vibeFilter, setVibeFilter] = useState("");
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [audioPermission, setAudioPermission] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const fetchTracks = async (vibe: string = "") => {
+    setLoading(true);
+    try {
+      const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
+      const data = await resp.json();
+      setTracks(data.tracks || []);
+    } catch (e) {
+      console.error("Library fetch error:", e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (expanded && tracks.length === 0) fetchTracks();
+  }, [expanded]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    };
+  }, []);
+
+  const handlePlay = (trackId: string, url: string) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (playingId === trackId) { setPlayingId(null); return; }
+    const audio = new Audio(url);
+    audio.play();
+    audio.onended = () => setPlayingId(null);
+    audioRef.current = audio;
+    setPlayingId(trackId);
+  };
+
+  const getSelectedName = (): string | null => {
+    if (customAudioFile) return customAudioFile.name;
+    if (!selectedTrack) return null;
+    const trackId = selectedTrack.split(":")[1];
+    const track = tracks.find((t) => t.id === trackId);
+    return track?.display_name || "Selected track";
+  };
+
+  const selectedName = getSelectedName();
+
+  return (
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      {/* Collapsed header */}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Music className="h-4 w-4 text-primary" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-bold text-foreground">Background Music</p>
+            {selectedName ? (
+              <p className="text-xs text-primary font-medium">♪ {selectedName}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Optional — add music to your video</p>
+            )}
+          </div>
+        </div>
+        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
+      </button>
+
+      {/* Expanded panel */}
+      {expanded && (
+        <div className="border-t border-border p-4 space-y-3">
+          {/* No-music option */}
+          <button
+            type="button"
+            onClick={() => { onSelect(""); onCustomAudioChange(null); }}
+            className={`w-full flex items-center gap-3 p-2.5 rounded-lg border text-left text-sm transition-all ${
+              !selectedTrack && !customAudioFile
+                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                : "border-border hover:bg-muted/50"
+            }`}
+          >
+            <X className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-muted-foreground">No music (keep original audio)</span>
+            {!selectedTrack && !customAudioFile && <Check className="h-4 w-4 text-primary ml-auto" />}
+          </button>
+
+          {/* Vibe filter chips */}
+          <div className="flex flex-wrap gap-1">
+            {VIBE_FILTERS.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                onClick={() => { setVibeFilter(v.key); fetchTracks(v.key); }}
+                className={`text-[11px] py-1 px-2.5 rounded-md border transition-all ${
+                  vibeFilter === v.key
+                    ? "bg-primary/10 border-primary text-primary font-semibold"
+                    : "border-border hover:bg-muted"
+                }`}
+              >
+                {v.emoji} {v.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Track list */}
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+              {tracks.map((track) => {
+                const isSelected = selectedTrack.includes(track.id);
+                return (
+                  <button
+                    key={track.id}
+                    type="button"
+                    onClick={() => onSelect(`library:${track.id}:${track.file_url}`)}
+                    className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:bg-muted/50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handlePlay(track.id, track.file_url); }}
+                      className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                        playingId === track.id ? "bg-primary text-white" : "bg-primary/10 hover:bg-primary/20"
+                      }`}
+                    >
+                      {playingId === track.id ? (
+                        <span className="text-[10px] font-bold">■</span>
+                      ) : (
+                        <span className="text-primary text-[10px] font-bold ml-0.5">▶</span>
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{track.display_name}</p>
+                      <p className="text-[11px] text-muted-foreground">{track.duration_seconds}s</p>
+                    </div>
+                    {isSelected && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Custom audio upload */}
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] text-muted-foreground mb-1.5">Or upload your own audio:</p>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                onCustomAudioChange(file);
+                if (file) { onSelect("custom"); setAudioPermission(false); }
+              }}
+              className="text-sm file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+            />
+            {customAudioFile && (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-xs text-green-600">✓ {customAudioFile.name}</p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={audioPermission}
+                    onChange={(e) => {
+                      setAudioPermission(e.target.checked);
+                      if (!e.target.checked) { onCustomAudioChange(null); onSelect(""); }
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
+                  />
+                  <span className="text-[11px] text-muted-foreground">I have permission to use this audio.</span>
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
    VIDEO EXPORT PROGRESS MODAL
    ═══════════════════════════════════════════════════════ */
 
@@ -251,6 +471,10 @@ export default function DesignStudioPage() {
   const [listingFont, setListingFont] = useState("sans");
   const [listingBarColor, setListingBarColor] = useState("#111827");
   const [listingAccentColor, setListingAccentColor] = useState("");
+
+  // Music state (video overlay mode)
+  const [overlayMusic, setOverlayMusic] = useState("");            // "library:<id>:<url>" | "custom" | ""
+  const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
 
   // Yard sign state
   const [yardSignSize, setYardSignSize] = useState<"18x24" | "24x36">("18x24");
@@ -471,7 +695,22 @@ export default function DesignStudioPage() {
     } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); }
   };
 
-  // Video Export with ffmpeg.wasm
+  /* ─────────────────────────────────────────────────────
+     Resolve the selected music to a fetchable URL or File
+     ───────────────────────────────────────────────────── */
+  const getMusicSource = (): { type: "url"; url: string } | { type: "file"; file: File } | null => {
+    if (overlayMusic.startsWith("library:")) {
+      const parts = overlayMusic.split(":");
+      const url = parts.slice(2).join(":");   // URL may contain colons
+      if (url) return { type: "url", url };
+    }
+    if (overlayMusic === "custom" && customAudioFile) {
+      return { type: "file", file: customAudioFile };
+    }
+    return null;
+  };
+
+  // Video Export with ffmpeg.wasm — now with optional music mixing
   const handleVideoExport = async () => {
     if (checkPaywall()) return;
     if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; }
@@ -503,7 +742,25 @@ export default function DesignStudioPage() {
       const videoData = await fetchFile(selectedVideo.url);
       await ffmpeg.writeFile("input.mp4", videoData);
 
-      // 2. Render the overlay as a PNG using html2canvas
+      // 2. Fetch / write the music file if a track was selected
+      const musicSource = getMusicSource();
+      let hasMusic = false;
+
+      if (musicSource) {
+        setVideoExportStatus("Loading music track...");
+        setVideoExportProgress(8);
+        if (musicSource.type === "url") {
+          const musicData = await fetchFile(musicSource.url);
+          await ffmpeg.writeFile("music.mp3", musicData);
+          hasMusic = true;
+        } else {
+          const buf = new Uint8Array(await musicSource.file.arrayBuffer());
+          await ffmpeg.writeFile("music.mp3", buf);
+          hasMusic = true;
+        }
+      }
+
+      // 3. Render the overlay as a PNG using html2canvas
       setVideoExportStatus("Rendering overlay...");
       setVideoExportProgress(10);
       const html2canvas = (await import("html2canvas-pro")).default;
@@ -513,7 +770,6 @@ export default function DesignStudioPage() {
       // Hide the video element temporarily so we only capture the overlay
       const videoEls = el.querySelectorAll("video");
       videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; });
-      // Also hide the placeholder icon area
       const placeholders = el.querySelectorAll("[data-video-area]");
       placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; });
 
@@ -531,34 +787,62 @@ export default function DesignStudioPage() {
       const overlayData = new Uint8Array(await overlayBlob.arrayBuffer());
       await ffmpeg.writeFile("overlay.png", overlayData);
 
-      // 3. Composite: overlay on top of video, limit to 45 seconds
-      setVideoExportStatus("Compositing video with overlay...");
+      // 4. Composite: overlay on video, limit 45s, optionally mix music
+      setVideoExportStatus(hasMusic ? "Compositing video with overlay & music..." : "Compositing video with overlay...");
       setVideoExportProgress(15);
 
       const outW = currentSize.width;
       const outH = currentSize.height;
 
-      await ffmpeg.exec([
-        "-i", "input.mp4",
-        "-i", "overlay.png",
-        "-t", "45",
-        "-filter_complex", `[0:v]scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black[bg];[bg][1:v]overlay=0:0`,
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-movflags", "+faststart",
-        "-y", "output.mp4"
-      ]);
+      if (hasMusic) {
+        // Mix music (louder) with original audio (ducked), composite overlay
+        await ffmpeg.exec([
+          "-i", "input.mp4",
+          "-i", "overlay.png",
+          "-i", "music.mp3",
+          "-t", "45",
+          "-filter_complex",
+          [
+            `[0:v]scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black[bg]`,
+            `[bg][1:v]overlay=0:0[vout]`,
+            `[0:a]volume=0.3[orig]`,
+            `[2:a]volume=0.85,atrim=0:45,apad[mus]`,
+            `[orig][mus]amix=inputs=2:duration=shortest[aout]`,
+          ].join(";"),
+          "-map", "[vout]",
+          "-map", "[aout]",
+          "-c:v", "libx264",
+          "-preset", "fast",
+          "-crf", "23",
+          "-c:a", "aac",
+          "-b:a", "128k",
+          "-movflags", "+faststart",
+          "-y", "output.mp4",
+        ]);
+      } else {
+        // No music — original behavior
+        await ffmpeg.exec([
+          "-i", "input.mp4",
+          "-i", "overlay.png",
+          "-t", "45",
+          "-filter_complex", `[0:v]scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black[bg];[bg][1:v]overlay=0:0`,
+          "-c:v", "libx264",
+          "-preset", "fast",
+          "-crf", "23",
+          "-c:a", "aac",
+          "-b:a", "128k",
+          "-movflags", "+faststart",
+          "-y", "output.mp4",
+        ]);
+      }
 
-      // 4. Read the output
+      // 5. Read the output
       setVideoExportStatus("Finalizing...");
       setVideoExportProgress(95);
       const outputData = await ffmpeg.readFile("output.mp4");
       const outputBlob = new Blob([outputData], { type: "video/mp4" });
 
-      // 5. Download locally
+      // 6. Download locally
       const downloadUrl = URL.createObjectURL(outputBlob);
       const link = document.createElement("a");
       link.download = `p2v-video-overlay-${Date.now()}.mp4`;
@@ -566,7 +850,7 @@ export default function DesignStudioPage() {
       link.click();
       URL.revokeObjectURL(downloadUrl);
 
-      // 6. Upload to Cloudinary and save to My Videos
+      // 7. Upload to Cloudinary and save to My Videos
       setVideoExportStatus("Saving to My Videos...");
       setVideoExportProgress(98);
       const uploadedUrl = await uploadToCloudinary(new File([outputBlob], "overlay-video.mp4", { type: "video/mp4" }), "design-studio/videos");
@@ -745,6 +1029,17 @@ export default function DesignStudioPage() {
                     </div>
                   )}
                 </div>
+
+                {/* ── Compact Music Selector — only visible in Video Overlay mode ── */}
+                {mediaMode === "video" && (
+                  <CompactMusicSelector
+                    selectedTrack={overlayMusic}
+                    onSelect={setOverlayMusic}
+                    customAudioFile={customAudioFile}
+                    onCustomAudioChange={setCustomAudioFile}
+                  />
+                )}
+
                 {/* Property Details */}
                 <div className="bg-card rounded-2xl border border-border p-6">
                   <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" />Property Details</h3>
@@ -798,6 +1093,15 @@ export default function DesignStudioPage() {
                   <div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Output Size</Label><div className="grid grid-cols-3 gap-2">{SIZES.map((s) => (<button key={s.id} onClick={() => setSelectedSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${selectedSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div>
                   {mediaMode === "video" && selectedVideo ? (
                     <div className="mt-5 space-y-3">
+                      {/* Music indicator in export area */}
+                      {overlayMusic && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                          <Music className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                          <p className="text-xs text-primary font-medium truncate">
+                            Music will be mixed into export
+                          </p>
+                        </div>
+                      )}
                       <Button onClick={handleVideoExport} disabled={exporting || videoExporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">
                         {videoExporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting Video...</> : <><Film className="mr-2 h-5 w-5" />Export as Video (MP4)</>}
                       </Button>
