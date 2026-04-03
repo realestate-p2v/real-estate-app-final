@@ -110,7 +110,7 @@ export default function LensPage() {
             loop
             muted
             playsInline
-            className="w-full h-full object-cover opacity-[0.16]"
+            className="w-full h-full object-cover opacity-[0.19]"
           >
             <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
           </video>
