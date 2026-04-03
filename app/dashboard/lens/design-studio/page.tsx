@@ -770,16 +770,14 @@ export default function DesignStudioPage() {
       });
 
       // Download core files as blob URLs (UMD build)
-      setVideoExportStatus("Downloading encoder (~30 MB)...");
+      setVideoExportStatus("Initializing encoder...");
       const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
-      const [coreURL, wasmURL] = await Promise.all([
-        makeBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
-        makeBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
-      ]);
-
-      setVideoExportStatus("Initializing encoder...");
-      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerBlobURL });
+      await ffmpeg.load({
+        coreURL: `${coreBase}/ffmpeg-core.js`,
+        wasmURL: `${coreBase}/ffmpeg-core.wasm`,
+        classWorkerURL: workerBlobURL,
+      });
 
       // 1. Fetch the source video
       setVideoExportStatus("Downloading source video...");
