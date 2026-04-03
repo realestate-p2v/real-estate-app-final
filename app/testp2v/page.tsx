@@ -1,274 +1,207 @@
 "use client";
 
+import { useState } from "react";
+import { Camera, MessageSquare, PenTool, Sofa, CheckCircle, Sparkles, Gift, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import {
-  ShieldCheck,
-  Clock,
-  Lock,
-  ChevronDown,
-  Sparkles,
-  Camera,
-  PenTool,
-  FileText,
-  Sofa,
-  Globe,
-  Search,
-  Video,
-  Play,
-  CheckCircle2,
-} from "lucide-react";
+import { SpinWheel, type WheelSegment } from "@/components/spin-wheel";
+
+const TRIAL_SPIN_SEGMENTS: WheelSegment[] = [
+  { value: 10, label: "10%", color: "#2563eb", angle: 90 },
+  { value: 15, label: "15%", color: "#16a34a", angle: 80 },
+  { value: 20, label: "20%", color: "#7c3aed", angle: 70 },
+  { value: 25, label: "25%", color: "#ea580c", angle: 50 },
+  { value: "free_lens", label: "1 MONTH FREE", color: "#0891b2", angle: 40 },
+  { value: 50, label: "50%", color: "#FFD700", angle: 30 },
+];
+
+interface MockFeature {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  tried: boolean;
+}
 
 export default function TestP2VPage() {
+  const [features, setFeatures] = useState<MockFeature[]>([
+    { key: "coach", label: "Photo Coach", icon: Camera, tried: false },
+    { key: "descriptions", label: "Description Writer", icon: MessageSquare, tried: false },
+    { key: "design", label: "Design Studio", icon: PenTool, tried: false },
+    { key: "staging", label: "Virtual Staging", icon: Sofa, tried: false },
+  ]);
+  const [showWheel, setShowWheel] = useState(false);
+  const [hasSpun, setHasSpun] = useState(false);
+  const [result, setResult] = useState<{ label: string; value: number | string } | null>(null);
+
+  const toggleFeature = (key: string) => {
+    if (hasSpun) return;
+    setFeatures((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, tried: !f.tried } : f))
+    );
+  };
+
+  const triedCount = features.filter((f) => f.tried).length;
+  const allTried = triedCount === 4;
+
+  const handleSpin = () => {
+    setShowWheel(true);
+  };
+
+  const handleWheelResult = (segment: WheelSegment) => {
+    setResult({ label: segment.label, value: segment.value });
+    setHasSpun(true);
+  };
+
+  const handleReset = () => {
+    setFeatures((prev) => prev.map((f) => ({ ...f, tried: false })));
+    setShowWheel(false);
+    setHasSpun(false);
+    setResult(null);
+  };
+
   return (
-    <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-white">
-      {/* Animated mesh gradient background */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 60% at 10% 20%, rgba(167, 243, 208, 0.35) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 80% at 90% 15%, rgba(165, 220, 255, 0.3) 0%, transparent 50%),
-            radial-gradient(ellipse 70% 50% at 50% 90%, rgba(253, 224, 138, 0.2) 0%, transparent 50%),
-            radial-gradient(ellipse 50% 60% at 80% 70%, rgba(196, 181, 253, 0.2) 0%, transparent 50%),
-            radial-gradient(ellipse 40% 40% at 20% 70%, rgba(110, 231, 183, 0.25) 0%, transparent 50%),
-            linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f0fdfa 100%)
-          `,
-        }}
-      />
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        {/* Page header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-extrabold text-foreground">Trial Gamification Demo</h1>
+          <p className="text-muted-foreground mt-2">
+            Toggle the checkboxes below to simulate trying each Lens tool. When all 4 are checked, the spin button unlocks.
+          </p>
+        </div>
 
-      {/* Floating geometric shapes */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Large ring — top right */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full border-[3px] border-green-200/40 opacity-60" />
-        <div className="absolute -top-10 -right-10 w-60 h-60 rounded-full border-[2px] border-cyan-200/30 opacity-50" />
-
-        {/* Small ring — bottom left */}
-        <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full border-[3px] border-emerald-200/40 opacity-50" />
-
-        {/* Floating dots */}
-        <div className="absolute top-[15%] left-[8%] w-3 h-3 rounded-full bg-green-300/50" />
-        <div className="absolute top-[25%] right-[12%] w-2 h-2 rounded-full bg-cyan-300/60" />
-        <div className="absolute top-[60%] left-[15%] w-2.5 h-2.5 rounded-full bg-emerald-300/40" />
-        <div className="absolute top-[45%] right-[8%] w-2 h-2 rounded-full bg-teal-300/50" />
-        <div className="absolute bottom-[20%] left-[40%] w-3 h-3 rounded-full bg-green-200/50" />
-        <div className="absolute top-[35%] left-[48%] w-1.5 h-1.5 rounded-full bg-cyan-400/40" />
-
-        {/* Diagonal accent lines */}
-        <div className="absolute top-0 left-[45%] w-px h-[30%] bg-gradient-to-b from-transparent via-green-200/30 to-transparent rotate-12 origin-top" />
-        <div className="absolute bottom-0 right-[40%] w-px h-[25%] bg-gradient-to-t from-transparent via-cyan-200/30 to-transparent -rotate-12 origin-bottom" />
-
-        {/* Soft cross shape — center */}
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-40 h-px bg-gradient-to-r from-transparent via-gray-200/50 to-transparent" />
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 h-40 w-px bg-gradient-to-b from-transparent via-gray-200/50 to-transparent" />
-      </div>
-
-      {/* Split Container — tight gap */}
-      <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-[85vh] gap-3 lg:gap-4 px-2 lg:px-4 py-4 lg:py-6">
-
-        {/* ═══════════════════════════════════════════
-            LEFT — Photo 2 Video
-            ═══════════════════════════════════════════ */}
-        <div className="relative flex-1 flex items-center justify-center px-2 lg:px-6 py-10 lg:py-16">
-          <div className="relative z-10 max-w-[680px] w-full">
-            {/* Card */}
-            <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-8 lg:p-10 shadow-2xl shadow-gray-300/40 text-center lg:text-left">
-              {/* Label pill */}
-              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-bold px-3.5 py-1.5 rounded-full mb-6 border border-green-200">
-                <Video className="w-3.5 h-3.5" />
-                LISTING VIDEOS
-              </div>
-
-              {/* Headline */}
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-gray-900 leading-tight">
-                Listing Photos to
-                <br />
-                <span className="text-green-600">Cinematic Video</span>
-              </h2>
-
-              <p className="text-gray-600 text-lg lg:text-xl mb-6 leading-relaxed max-w-lg mx-auto lg:mx-0">
-                Upload your photos, pick your music, add your branding — professional walkthrough video delivered in under 12 hours. No videographer needed.
+        {/* ═══ TRIAL BANNER (mock) ═══ */}
+        <div className="bg-gradient-to-r from-purple-50 to-cyan-50 border border-purple-200 rounded-2xl p-5 sm:p-6 mb-8">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+              <Gift className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-foreground text-lg">Try All 4 Features — Unlock a Reward</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {hasSpun
+                  ? "You've already spun! Your reward is below."
+                  : allTried
+                  ? "All features tried! Spin the wheel for your discount."
+                  : `${triedCount} of 4 features tried — try them all to unlock a reward!`}
               </p>
 
-              {/* Mini video preview */}
-              <div className="relative aspect-video max-w-md mx-auto lg:mx-0 rounded-2xl overflow-hidden mb-6 border border-gray-200 shadow-lg">
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                >
-                  <source src="/p2v-website-her-vid.mp4" type="video/mp4" />
-                </video>
-                <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                  <div className="h-10 w-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center">
-                    <Play className="h-4 w-4 text-gray-900 ml-0.5" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Stat callout */}
-              <div className="bg-green-50 border border-green-100 rounded-xl px-5 py-2.5 text-center lg:text-left max-w-md mx-auto lg:mx-0 mb-7">
-                <p className="text-sm font-bold text-gray-900">
-                  Listings with video get{" "}
-                  <span className="text-green-600">400% more inquiries</span>
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  — National Association of Realtors
-                </p>
-              </div>
-
-              {/* CTA */}
-              <div className="flex flex-col items-center lg:items-start gap-5">
-                <Link href="/order" passHref>
-                  <Button
-                    size="lg"
-                    className="group text-lg px-8 py-7 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-lg shadow-green-500/25 transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
-                  >
-                    <span className="text-[10px] uppercase tracking-widest opacity-90 mb-0.5 font-black">
-                      Limited Time Offer
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span>Create My Listing Video</span>
-                      <span className="flex items-center">
-                        <span className="line-through text-white/50 text-sm mr-2 font-medium">
-                          $119
+              {/* Feature checkboxes */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                {features.map((feature) => {
+                  const Icon = feature.icon;
+                  return (
+                    <button
+                      key={feature.key}
+                      type="button"
+                      onClick={() => toggleFeature(feature.key)}
+                      disabled={hasSpun}
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 border transition-all text-left ${
+                        feature.tried
+                          ? "bg-green-50 border-green-200"
+                          : "bg-white border-border hover:border-purple-300"
+                      } ${hasSpun ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      {feature.tried ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                      )}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Icon
+                          className={`h-3.5 w-3.5 flex-shrink-0 ${
+                            feature.tried ? "text-green-600" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span
+                          className={`text-xs font-medium truncate ${
+                            feature.tried ? "text-green-700" : "text-muted-foreground"
+                          }`}
+                        >
+                          {feature.label}
                         </span>
-                        <span className="text-xl">$79</span>
-                      </span>
-                    </div>
-                  </Button>
-                </Link>
-
-                {/* Trust badges */}
-                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-gray-500">
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <ShieldCheck className="w-4 h-4 text-green-500" />
-                    <span>Satisfaction Guarantee</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Clock className="w-4 h-4 text-green-500" />
-                    <span>Under 12h Delivery</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Lock className="w-4 h-4 text-green-500" />
-                    <span>Secure Checkout</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ═══════════════════════════════════════════
-            RIGHT — P2V Lens
-            ═══════════════════════════════════════════ */}
-        <div className="relative flex-1 flex items-center justify-center px-2 lg:px-6 py-10 lg:py-16">
-          <div className="relative z-10 max-w-[680px] w-full">
-            {/* Card */}
-            <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-8 lg:p-10 shadow-2xl shadow-gray-300/40 text-center lg:text-left">
-              {/* Label pill */}
-              <div className="inline-flex items-center gap-2 bg-cyan-50 text-cyan-700 text-xs font-bold px-3.5 py-1.5 rounded-full mb-6 border border-cyan-200">
-                <Sparkles className="w-3.5 h-3.5" />
-                AI MARKETING SUITE
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Headline */}
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-gray-900 leading-tight">
-                P2V Lens
-                <br />
-                <span className="text-cyan-600">Your Entire Marketing Team</span>
-              </h2>
-
-              <p className="text-gray-600 text-lg lg:text-xl mb-6 leading-relaxed max-w-lg mx-auto lg:mx-0">
-                Replace your graphic designer, copywriter, stager, and web developer. One subscription, every tool an agent needs.
-              </p>
-
-              {/* Tool grid */}
-              <div className="grid grid-cols-2 gap-2.5 mb-6 max-w-md mx-auto lg:mx-0">
-                {[
-                  { icon: Camera, label: "AI Photo Coach" },
-                  { icon: PenTool, label: "Design Studio" },
-                  { icon: FileText, label: "Description Writer" },
-                  { icon: Sofa, label: "Virtual Staging" },
-                  { icon: Globe, label: "Website Builder" },
-                  { icon: Search, label: "Lead Finder" },
-                ].map((tool) => (
+              {/* Progress bar */}
+              <div className="mt-4">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    key={tool.label}
-                    className="flex items-center gap-2.5 text-gray-700 text-sm font-medium bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 hover:border-cyan-200 hover:bg-cyan-50/50 transition-colors"
-                  >
-                    <tool.icon className="w-4 h-4 text-cyan-600 flex-shrink-0" />
-                    {tool.label}
-                  </div>
-                ))}
-              </div>
-
-              {/* Benefits list */}
-              <div className="flex flex-col gap-1.5 mb-7 max-w-md mx-auto lg:mx-0">
-                {[
-                  "10% off every video order",
-                  "Priority processing — first in queue",
-                  "Per-clip Quick Videos from $4.95",
-                ].map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-2 text-sm text-gray-600">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    {benefit}
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA */}
-              <div className="flex flex-col items-center lg:items-start gap-5">
-                <Link href="/lens" passHref>
-                  <Button
-                    size="lg"
-                    className="group text-lg px-8 py-7 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-lg shadow-green-500/25 transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
-                  >
-                    <span className="text-[10px] uppercase tracking-widest opacity-90 mb-0.5 font-black">
-                      Built for Real Estate Agents
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span>Explore P2V Lens</span>
-                      <span className="text-xl">$27.95/mo</span>
-                    </div>
-                  </Button>
-                </Link>
-
-                {/* Trust badges */}
-                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4 text-gray-500">
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Sparkles className="w-4 h-4 text-cyan-500" />
-                    <span>AI-Powered</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Camera className="w-4 h-4 text-cyan-500" />
-                    <span>200 Analyses/Month</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <ShieldCheck className="w-4 h-4 text-cyan-500" />
-                    <span>Cancel Anytime</span>
-                  </div>
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 transition-all duration-500"
+                    style={{ width: `${(triedCount / 4) * 100}%` }}
+                  />
                 </div>
               </div>
+
+              {/* Spin button */}
+              {allTried && !hasSpun && (
+                <Button
+                  onClick={handleSpin}
+                  className="mt-4 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-black px-6 py-5 text-base rounded-full shadow-lg animate-pulse"
+                >
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  Spin for Your Reward
+                </Button>
+              )}
             </div>
+          </div>
+        </div>
+
+        {/* ═══ RESULT DISPLAY ═══ */}
+        {hasSpun && result && (
+          <div className="bg-card rounded-2xl border border-green-200 p-6 sm:p-8 mb-8 text-center">
+            <div className="text-5xl mb-4">
+              {result.value === "free_lens" ? "🎰" : "🎉"}
+            </div>
+            <h2 className="text-2xl font-extrabold text-foreground mb-2">
+              {result.value === "free_lens"
+                ? "You Won 1 Month Free!"
+                : `You Won ${result.label} Off!`}
+            </h2>
+            <p className="text-muted-foreground">
+              {result.value === "free_lens"
+                ? "In production, this grants 30 days of free P2V Lens access."
+                : `In production, this creates a single-use Stripe coupon for ${result.label} off the first month.`}
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 bg-green-100 text-green-800 font-mono font-bold text-lg px-4 py-2 rounded-xl">
+              {result.value === "free_lens" ? "FREE-LENS-30DAY" : `TRIAL${result.value}-DEMO`}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ RESET BUTTON ═══ */}
+        <div className="text-center">
+          <Button variant="outline" onClick={handleReset} className="font-bold">
+            Reset Demo
+          </Button>
+        </div>
+
+        {/* ═══ IMPLEMENTATION NOTES ═══ */}
+        <div className="mt-12 bg-muted/50 rounded-2xl border border-border p-6">
+          <h3 className="font-bold text-foreground mb-3">Implementation Notes</h3>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p><strong>In production:</strong> Checkboxes are replaced by real database queries — each feature is marked as &ldquo;tried&rdquo; when the user has at least one row in the corresponding table.</p>
+            <p><strong>Photo Coach:</strong> <code>lens_sessions</code> table has a row for this user</p>
+            <p><strong>Description Writer:</strong> <code>lens_descriptions</code> table has a row for this user</p>
+            <p><strong>Design Studio:</strong> <code>lens_usage.free_design_exports_used &gt; 0</code></p>
+            <p><strong>Virtual Staging:</strong> <code>lens_staging</code> table has a row for this user</p>
+            <p><strong>Spin prevention:</strong> <code>lens_usage.trial_spin_used = true</code> after spinning</p>
+            <p><strong>Visibility:</strong> Banner only shows for non-subscribers with <code>trial_spin_used = false</code></p>
           </div>
         </div>
       </div>
 
-      {/* Bottom credibility bar */}
-      <div className="relative z-10 bg-gray-900 px-6 py-3">
-        <p className="text-center text-sm text-gray-400 font-medium">
-          Built for real estate agents by marketers with{" "}
-          <span className="text-white font-bold">20+ years of experience</span>
-        </p>
-      </div>
-
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 opacity-40 animate-bounce">
-        <ChevronDown className="w-6 h-6 text-gray-400" />
-      </div>
-    </section>
+      {/* Spin wheel modal */}
+      {showWheel && (
+        <SpinWheel
+          segments={TRIAL_SPIN_SEGMENTS}
+          title="🎉 All Features Tried! Spin for Your Reward!"
+          onResult={handleWheelResult}
+          onClose={() => setShowWheel(false)}
+        />
+      )}
+    </div>
   );
 }
