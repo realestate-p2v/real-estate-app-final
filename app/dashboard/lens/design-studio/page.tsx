@@ -921,7 +921,28 @@ export default function DesignStudioPage() {
       const html2canvas = (await import("html2canvas-pro")).default;
       const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
       if (!el) return;
-      const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: false, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
+      // Temporarily render at full size for export
+const wrapper = el.parentElement as HTMLElement;
+const originalTransform = el.style.transform;
+const originalWrapperOverflow = wrapper?.style.overflow;
+const originalWrapperWidth = wrapper?.style.width;
+const originalWrapperHeight = wrapper?.style.height;
+el.style.transform = "none";
+if (wrapper) {
+  wrapper.style.overflow = "visible";
+  wrapper.style.width = `${rawW}px`;
+  wrapper.style.height = `${rawH}px`;
+}
+
+const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
+
+// Restore preview scale
+el.style.transform = originalTransform;
+if (wrapper) {
+  wrapper.style.overflow = originalWrapperOverflow || "";
+  wrapper.style.width = originalWrapperWidth || "";
+  wrapper.style.height = originalWrapperHeight || "";
+}
       const link = document.createElement("a");
       link.download = `p2v-${tab}-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
