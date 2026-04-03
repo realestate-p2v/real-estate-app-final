@@ -934,7 +934,26 @@ if (wrapper) {
   wrapper.style.height = `${rawH}px`;
 }
 
-const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
+const wrapper = el.parentElement as HTMLElement;
+const originalTransform = el.style.transform;
+const originalWrapperOverflow = wrapper?.style.overflow;
+const originalWrapperWidth = wrapper?.style.width;
+const originalWrapperHeight = wrapper?.style.height;
+el.style.transform = "none";
+if (wrapper) {
+  wrapper.style.overflow = "visible";
+  wrapper.style.width = "2550px";
+  wrapper.style.height = "3300px";
+}
+
+const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 });
+
+el.style.transform = originalTransform;
+if (wrapper) {
+  wrapper.style.overflow = originalWrapperOverflow || "";
+  wrapper.style.width = originalWrapperWidth || "";
+  wrapper.style.height = originalWrapperHeight || "";
+}
 
 // Restore preview scale
 el.style.transform = originalTransform;
