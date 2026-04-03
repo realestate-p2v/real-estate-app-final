@@ -710,36 +710,42 @@ export default function DesignStudioPage() {
     return null;
   };
 
-  // ── Load ffmpeg + util from CDN (bypasses Next.js bundler) ──
-  const loadFFmpegFromCDN = async (): Promise<{ FFmpeg: any; fetchFile: any; toBlobURL: any }> => {
-    // @ts-ignore — loaded via CDN at runtime
-    if ((window as any).__ffmpegModule && (window as any).__ffmpegUtilModule) {
-      return {
-        FFmpeg: (window as any).__ffmpegModule.FFmpeg,
-        fetchFile: (window as any).__ffmpegUtilModule.fetchFile,
-        toBlobURL: (window as any).__ffmpegUtilModule.toBlobURL,
-      };
+  // ── Helper: fetch a URL and return a blob URL ──
+  const makeBlobURL = async (url: string, mimeType: string): Promise<string> => {
+    const resp = await fetch(url);
+    const buf = await resp.arrayBuffer();
+    const blob = new Blob([buf], { type: mimeType });
+    return URL.createObjectURL(blob);
+  };
+
+  // ── Helper: fetch a file as Uint8Array ──
+  const fetchAsUint8 = async (url: string): Promise<Uint8Array> => {
+    const resp = await fetch(url);
+    const buf = await resp.arrayBuffer();
+    return new Uint8Array(buf);
+  };
+
+  // ── Load FFmpeg class by fetching the UMD source and evaluating it ──
+  const loadFFmpegUMD = async (): Promise<any> => {
+    if ((window as any).__FFmpegClass) return (window as any).__FFmpegClass;
+
+    // The UMD build expects `exports` to exist. We provide it.
+    if (typeof (window as any).exports === "undefined") {
+      (window as any).exports = {};
     }
 
-    // Load @ffmpeg/ffmpeg ESM from jsdelivr
-    const ffmpegMod = await import(
-      /* webpackIgnore: true */
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"
-    );
-    // Load @ffmpeg/util ESM from jsdelivr
-    const utilMod = await import(
-      /* webpackIgnore: true */
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"
-    );
+    // Fetch the ffmpeg UMD JS, evaluate it
+    const resp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
+    const code = await resp.text();
+    // eslint-disable-next-line no-eval
+    (0, eval)(code);
 
-    (window as any).__ffmpegModule = ffmpegMod;
-    (window as any).__ffmpegUtilModule = utilMod;
+    // After eval, FFmpeg class should be on exports or window
+    const FFmpegClass = (window as any).exports?.FFmpeg || (window as any).FFmpeg;
+    if (!FFmpegClass) throw new Error("Failed to load FFmpeg — class not found after eval");
 
-    return {
-      FFmpeg: ffmpegMod.FFmpeg,
-      fetchFile: utilMod.fetchFile,
-      toBlobURL: utilMod.toBlobURL,
-    };
+    (window as any).__FFmpegClass = FFmpegClass;
+    return FFmpegClass;
   };
 
   // Video Export with ffmpeg.wasm — now with optional music mixing
@@ -752,35 +758,32 @@ export default function DesignStudioPage() {
     setVideoExportStatus("Loading video encoder...");
 
     try {
-      const { FFmpeg, fetchFile, toBlobURL } = await loadFFmpegFromCDN();
-
-      const ffmpeg = new FFmpeg();
+      // 0. Load FFmpeg class
+      const FFmpegClass = await loadFFmpegUMD();
+      const ffmpeg = new FFmpegClass();
 
       ffmpeg.on("progress", ({ progress: p }: { progress: number }) => {
         setVideoExportProgress(Math.min(Math.round(p * 100), 99));
       });
 
+      // Download core files as blob URLs (UMD build)
       setVideoExportStatus("Downloading encoder (~30 MB)...");
-      const ffmpegBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm";
-      const coreUmdURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      const ffmpegBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd";
 
-      // UMD build works with blob workers (ESM doesn't).
-      // All three must be blob URLs to avoid cross-origin issues.
-      const coreURL = await toBlobURL(`${coreUmdURL}/ffmpeg-core.js`, "text/javascript");
-      const wasmURL = await toBlobURL(`${coreUmdURL}/ffmpeg-core.wasm`, "application/wasm");
-      const workerURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, "text/javascript");
+      const [coreURL, wasmURL, workerURL] = await Promise.all([
+        makeBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
+        makeBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
+        makeBlobURL(`${ffmpegBase}/814.ffmpeg.js`, "text/javascript"),
+      ]);
 
       setVideoExportStatus("Initializing encoder...");
-      await ffmpeg.load({
-        coreURL,
-        wasmURL,
-        classWorkerURL: workerURL,
-      });
+      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerURL });
 
       // 1. Fetch the source video
       setVideoExportStatus("Downloading source video...");
       setVideoExportProgress(5);
-      const videoData = await fetchFile(selectedVideo.url);
+      const videoData = await fetchAsUint8(selectedVideo.url);
       await ffmpeg.writeFile("input.mp4", videoData);
 
       // 2. Fetch / write the music file if a track was selected
@@ -791,7 +794,7 @@ export default function DesignStudioPage() {
         setVideoExportStatus("Loading music track...");
         setVideoExportProgress(8);
         if (musicSource.type === "url") {
-          const musicData = await fetchFile(musicSource.url);
+          const musicData = await fetchAsUint8(musicSource.url);
           await ffmpeg.writeFile("music.mp3", musicData);
           hasMusic = true;
         } else {
