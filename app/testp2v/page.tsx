@@ -21,19 +21,47 @@ import {
 
 export default function TestP2VPage() {
   return (
-    <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-gray-50">
-      {/* Background pattern — subtle grid */}
+    <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-white">
+      {/* Animated mesh gradient background */}
       <div
-        className="absolute inset-0 z-0 opacity-[0.4]"
+        className="absolute inset-0 z-0"
         style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgb(209 213 219) 1px, transparent 0)`,
-          backgroundSize: "32px 32px",
+          background: `
+            radial-gradient(ellipse 80% 60% at 10% 20%, rgba(167, 243, 208, 0.35) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 80% at 90% 15%, rgba(165, 220, 255, 0.3) 0%, transparent 50%),
+            radial-gradient(ellipse 70% 50% at 50% 90%, rgba(253, 224, 138, 0.2) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 60% at 80% 70%, rgba(196, 181, 253, 0.2) 0%, transparent 50%),
+            radial-gradient(ellipse 40% 40% at 20% 70%, rgba(110, 231, 183, 0.25) 0%, transparent 50%),
+            linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f0fdfa 100%)
+          `,
         }}
       />
-      {/* Large ambient blurs behind everything */}
-      <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-green-200/30 rounded-full blur-[150px] z-0" />
-      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-cyan-200/30 rounded-full blur-[150px] z-0" />
-      <div className="absolute bottom-[-10%] left-[30%] w-[400px] h-[400px] bg-emerald-100/40 rounded-full blur-[120px] z-0" />
+
+      {/* Floating geometric shapes */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Large ring — top right */}
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full border-[3px] border-green-200/40 opacity-60" />
+        <div className="absolute -top-10 -right-10 w-60 h-60 rounded-full border-[2px] border-cyan-200/30 opacity-50" />
+
+        {/* Small ring — bottom left */}
+        <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full border-[3px] border-emerald-200/40 opacity-50" />
+
+        {/* Floating dots */}
+        <div className="absolute top-[15%] left-[8%] w-3 h-3 rounded-full bg-green-300/50" />
+        <div className="absolute top-[25%] right-[12%] w-2 h-2 rounded-full bg-cyan-300/60" />
+        <div className="absolute top-[60%] left-[15%] w-2.5 h-2.5 rounded-full bg-emerald-300/40" />
+        <div className="absolute top-[45%] right-[8%] w-2 h-2 rounded-full bg-teal-300/50" />
+        <div className="absolute bottom-[20%] left-[40%] w-3 h-3 rounded-full bg-green-200/50" />
+        <div className="absolute top-[35%] left-[48%] w-1.5 h-1.5 rounded-full bg-cyan-400/40" />
+
+        {/* Diagonal accent lines */}
+        <div className="absolute top-0 left-[45%] w-px h-[30%] bg-gradient-to-b from-transparent via-green-200/30 to-transparent rotate-12 origin-top" />
+        <div className="absolute bottom-0 right-[40%] w-px h-[25%] bg-gradient-to-t from-transparent via-cyan-200/30 to-transparent -rotate-12 origin-bottom" />
+
+        {/* Soft cross shape — center */}
+        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-40 h-px bg-gradient-to-r from-transparent via-gray-200/50 to-transparent" />
+        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 h-40 w-px bg-gradient-to-b from-transparent via-gray-200/50 to-transparent" />
+      </div>
 
       {/* Split Container — tight gap */}
       <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-[85vh] gap-3 lg:gap-4 px-2 lg:px-4 py-4 lg:py-6">
