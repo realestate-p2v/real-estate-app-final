@@ -12,6 +12,8 @@
     "@aws-sdk/credential-providers": "latest",
     "@hookform/resolvers": "^3.10.0",
     "@mongodb-js/zstd": "latest",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
