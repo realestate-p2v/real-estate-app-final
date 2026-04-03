@@ -918,7 +918,7 @@ export default function DesignStudioPage() {
     if (!previewRef.current) return;
     setExporting(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      const html2canvas = (await import("html2canvas-pro")).default;
       const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
       if (!el) return;
       const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: false, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
