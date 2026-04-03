@@ -100,6 +100,10 @@ export default function LensPage() {
       a: "Upload any listing photo and our AI (powered by Claude Vision) analyzes it instantly. You get specific, actionable feedback — not vague tips, but exactly what to fix: \"The kitchen is underexposed. Open the blinds on the east wall, turn on the overhead light, and retake from the doorway at chest height.\" Use it during your photo shoot to coach yourself room by room.",
     },
     {
+      q: "How is P2V Lens different from other AI tools?",
+      a: "P2V Lens is built specifically for real estate listing marketing — not repurposed from a generic AI platform. Every tool understands MLS requirements, listing photography standards, and what actually sells homes. The Photo Coach scores photos based on real estate criteria. The Description Writer knows MLS formatting rules. The Design Studio has templates for Just Listed, Open House, and Price Reduced — not generic flyer makers. This is the difference between a tool built by real estate marketers and one built by a tech company.",
+    },
+    {
       q: "What counts as one \"analysis\"?",
       a: "Each photo you upload for AI feedback counts as one analysis. You get 200 per month — enough for about 2 full listing shoots with coaching on every single photo (25 photos × 4 attempts each = 100 analyses per listing).",
     },
@@ -156,7 +160,7 @@ export default function LensPage() {
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-primary-foreground/70 max-w-2xl mx-auto leading-relaxed">
-              Photo coaching, marketing design, listing descriptions, virtual staging, and short-form videos from $4.95/clip — everything an agent needs to market listings professionally.
+              Photo coaching, marketing design, listing descriptions, virtual staging, and short-form videos from $4.95/clip — purpose-built for real estate agents, not a generic AI tool.
             </p>
 
             {/* Trust badges */}
@@ -340,7 +344,7 @@ export default function LensPage() {
               Everything You Need to Market Your Listings
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Seven powerful tools — all included in your subscription. No limits, no add-on fees.
+              Seven AI tools built specifically for listing marketing — all included in your subscription. No add-on fees.
             </p>
           </div>
 
