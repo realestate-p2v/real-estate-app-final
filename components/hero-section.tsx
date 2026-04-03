@@ -258,8 +258,8 @@ export function HeroSection() {
       </div>
 
       {/* Bottom credibility bar */}
-      <div className="relative z-10 bg-gray-900 px-6 py-3">
-        <p className="text-center text-sm text-gray-400 font-medium">
+      <div className="relative z-10 bg-blue-900 px-6 py-3">
+        <p className="text-center text-md text-gray-300 font-medium">
           Built for real estate agents by marketers with{" "}
           <span className="text-white font-bold">20+ years of experience</span>
         </p>
