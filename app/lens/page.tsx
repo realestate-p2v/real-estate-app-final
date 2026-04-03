@@ -241,7 +241,7 @@ export default function LensPage() {
                 <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center"><Camera className="h-6 w-6 text-blue-600" /></div>
                 <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">Never Miss a Shot</h3>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Never Miss a Shot with <span className="text-blue-600">AI Photo Coach</span></h3>
               <p className="text-muted-foreground leading-relaxed mb-4">Open a session per property, and the smart checklist makes sure you never forget a room. Snap a photo and get instant AI scoring with specific feedback — &ldquo;move 3 feet left, turn on the overhead light&rdquo; — then reshoot on the spot until it&apos;s perfect.</p>
               <div className="space-y-2 mb-5">
                 {["Room-by-room checklist so you never miss a shot", "Instant 1-10 scoring with specific actionable feedback", "AI Edit: auto brightness, color, contrast correction", "HDR detection and horizon straightening", "Gallery management — approved photos ready for video orders"].map((point, i) => (
@@ -275,7 +275,7 @@ export default function LensPage() {
                 <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center"><PenTool className="h-6 w-6 text-orange-600" /></div>
                 <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">Professional Marketing in 60 Seconds</h3>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Professional Marketing in 60 Seconds with <span className="text-orange-600">Design Studio</span></h3>
               <p className="text-muted-foreground leading-relaxed mb-4">Just Listed, Open House, Price Reduced, Just Sold graphics. Yard signs for print shops. Property PDF sheets. Video branding cards. Upload your headshot and logo once — they&apos;re saved for next time.</p>
               <div className="space-y-2 mb-5">
                 {["7 template types for every listing stage", "Brokerage brand colors built in", "Saved headshot & logo auto-populate", "PNG + PDF export for print and social", "Video branding card designer for your orders"].map((point, i) => (
@@ -293,7 +293,7 @@ export default function LensPage() {
                 <div className="h-12 w-12 rounded-xl bg-teal-500/10 flex items-center justify-center"><MessageSquare className="h-6 w-6 text-teal-600" /></div>
                 <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">MLS Descriptions That Sell</h3>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">MLS Descriptions That Sell with <span className="text-teal-600">Description Writer</span></h3>
               <p className="text-muted-foreground leading-relaxed mb-4">Upload listing photos, enter property details, pick a writing style. AI analyzes every room then writes a polished, MLS-ready description.</p>
               <div className="space-y-2 mb-5">
                 {["Claude Vision photo analysis — sees what's in every room", "4 styles: Professional, Luxury, Conversational, Concise", "Edit in-place, then copy to clipboard", "Works with Photo Coach gallery photos"].map((point, i) => (
@@ -327,7 +327,7 @@ export default function LensPage() {
                 <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center"><Sofa className="h-6 w-6 text-indigo-600" /></div>
                 <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">Furnish Empty Rooms Instantly</h3>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Furnish Empty Rooms Instantly with <span className="text-indigo-600">Virtual Staging</span></h3>
               <p className="text-muted-foreground leading-relaxed mb-4">Upload a photo of an empty room, choose a style, and AI adds furniture while preserving the actual room architecture. Before/after comparison slider. 8 styles from Modern to Farmhouse.</p>
               <div className="space-y-2 mb-5">
                 {["Preserves real room structure (not text-to-image)", "8 furniture styles × 8 room types", "Before/after comparison slider", "~$0.07 per staging — pennies per room"].map((point, i) => (
