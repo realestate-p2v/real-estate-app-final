@@ -710,6 +710,38 @@ export default function DesignStudioPage() {
     return null;
   };
 
+  // ── Load ffmpeg + util from CDN (bypasses Next.js bundler) ──
+  const loadFFmpegFromCDN = async (): Promise<{ FFmpeg: any; fetchFile: any; toBlobURL: any }> => {
+    // @ts-ignore — loaded via CDN at runtime
+    if ((window as any).__ffmpegModule && (window as any).__ffmpegUtilModule) {
+      return {
+        FFmpeg: (window as any).__ffmpegModule.FFmpeg,
+        fetchFile: (window as any).__ffmpegUtilModule.fetchFile,
+        toBlobURL: (window as any).__ffmpegUtilModule.toBlobURL,
+      };
+    }
+
+    // Load @ffmpeg/ffmpeg ESM from jsdelivr
+    const ffmpegMod = await import(
+      /* webpackIgnore: true */
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"
+    );
+    // Load @ffmpeg/util ESM from jsdelivr
+    const utilMod = await import(
+      /* webpackIgnore: true */
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"
+    );
+
+    (window as any).__ffmpegModule = ffmpegMod;
+    (window as any).__ffmpegUtilModule = utilMod;
+
+    return {
+      FFmpeg: ffmpegMod.FFmpeg,
+      fetchFile: utilMod.fetchFile,
+      toBlobURL: utilMod.toBlobURL,
+    };
+  };
+
   // Video Export with ffmpeg.wasm — now with optional music mixing
   const handleVideoExport = async () => {
     if (checkPaywall()) return;
@@ -720,19 +752,19 @@ export default function DesignStudioPage() {
     setVideoExportStatus("Loading video encoder...");
 
     try {
-      const ffmpegModule = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/ffmpeg.min.js");
-const utilModule = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/utils.min.js");
+      const { FFmpeg, fetchFile, toBlobURL } = await loadFFmpegFromCDN();
 
       const ffmpeg = new FFmpeg();
-      const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
-      ffmpeg.on("progress", ({ progress: p }) => {
+      const coreBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+
+      ffmpeg.on("progress", ({ progress: p }: { progress: number }) => {
         setVideoExportProgress(Math.min(Math.round(p * 100), 99));
       });
 
       setVideoExportStatus("Loading encoder core...");
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, "application/wasm"),
       });
 
       // 1. Fetch the source video
