@@ -1,15 +1,12 @@
-import { MetadataRoute } from "next"; 
+import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      User-Agent: *
-Allow: /dashboard/lens/
-Disallow: /dashboard/
-Disallow: /admin/
-Disallow: /api/
-Disallow: /video/
+      allow: ["/", "/dashboard/lens/"],
+      disallow: ["/dashboard/", "/admin/", "/api/", "/video/"],
+    },
     sitemap: "https://realestatephoto2video.com/sitemap.xml",
   };
 }
