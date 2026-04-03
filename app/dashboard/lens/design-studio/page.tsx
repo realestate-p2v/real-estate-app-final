@@ -762,9 +762,11 @@ export default function DesignStudioPage() {
       });
 
       setVideoExportStatus("Loading encoder core...");
+      const ffmpegBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm";
       await ffmpeg.load({
         coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, "text/javascript"),
         wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        classWorkerURL: await toBlobURL(`${ffmpegBaseURL}/worker.js`, "text/javascript"),
       });
 
       // 1. Fetch the source video
