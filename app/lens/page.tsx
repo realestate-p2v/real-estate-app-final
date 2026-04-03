@@ -110,7 +110,7 @@ export default function LensPage() {
             loop
             muted
             playsInline
-            className="w-full h-full object-cover opacity-[0.08]"
+            className="w-full h-full object-cover opacity-[0.16]"
           >
             <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
           </video>
@@ -124,7 +124,7 @@ export default function LensPage() {
         </div>
 
         <div className="relative z-[2] mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="max-w-3xl mx-auto bg-white/60 backdrop-blur-xl border border-white/80 rounded-3xl shadow-xl p-8 sm:p-12 text-center">
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent text-sm font-bold px-4 py-1.5 rounded-full mb-6">
               <Sparkles className="w-4 h-4" />
               Purpose-Built for Real Estate
