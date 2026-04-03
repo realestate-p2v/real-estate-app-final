@@ -56,7 +56,7 @@ export default function OrderPage() {
         <OrderForm />
       </div>
 
-      <WhatsAppButton />
+      
     </main>
   );
 }
