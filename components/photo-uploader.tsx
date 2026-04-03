@@ -886,13 +886,13 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
             <StepIcon className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">{currentStep.title}</h3>
-            <p className="text-sm text-muted-foreground">{currentStep.instructions}</p>
+            <h3 className="text-xl font-bold">{currentStep.title}</h3>
+            <p className="text-base text-muted-foreground">{currentStep.instructions}</p>
           </div>
         </div>
 
         {/* Recommended count */}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Recommended: {currentStep.recommended} · Every step is optional — skip if you don&apos;t have these shots
         </p>
 
