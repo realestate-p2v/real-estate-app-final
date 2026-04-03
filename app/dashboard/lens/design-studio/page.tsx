@@ -733,9 +733,17 @@ export default function DesignStudioPage() {
     (window as any).module = { exports: {} };
     (window as any).exports = {};
 
-    // Fetch the ffmpeg UMD JS, evaluate it
+    // Fetch the worker chunk and turn it into a blob URL
+    const workerResp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/814.ffmpeg.js");
+    const workerBlob = new Blob([await workerResp.arrayBuffer()], { type: "text/javascript" });
+    const workerBlobURL = URL.createObjectURL(workerBlob);
+
+    // Fetch ffmpeg.js and patch the worker path to use our blob URL
     const resp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
-    const code = await resp.text();
+    let code = await resp.text();
+    // The UMD code creates a worker via new Worker(new URL("814.ffmpeg.js", import.meta.url))
+    // or similar. We replace any reference to 814.ffmpeg.js with our blob URL.
+    code = code.replace(/814\.ffmpeg\.js/g, workerBlobURL);
     // eslint-disable-next-line no-eval
     (0, eval)(code);
 
@@ -768,16 +776,14 @@ export default function DesignStudioPage() {
       // Download core files as blob URLs (UMD build)
       setVideoExportStatus("Downloading encoder (~30 MB)...");
       const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-      const ffmpegBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd";
 
-      const [coreURL, wasmURL, workerURL] = await Promise.all([
+      const [coreURL, wasmURL] = await Promise.all([
         makeBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
         makeBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
-        makeBlobURL(`${ffmpegBase}/814.ffmpeg.js`, "text/javascript"),
       ]);
 
       setVideoExportStatus("Initializing encoder...");
-      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerURL });
+      await ffmpeg.load({ coreURL, wasmURL });
 
       // 1. Fetch the source video
       setVideoExportStatus("Downloading source video...");
