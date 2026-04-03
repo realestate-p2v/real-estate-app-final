@@ -1,4 +1,4 @@
-"use client"; 
+"use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
@@ -31,24 +31,29 @@ import {
   LogIn,
   Lock,
   Sparkles,
+  Film,
 } from "lucide-react";
+import {
+  InfoBarTemplate,
+  OpenHouseTemplate,
+  YardSignSplitBar,
+  YardSignSidebar,
+  YardSignTopHeavy,
+  PropertyPdfPage,
+  BrandingCardTemplate,
+  getBadgeConfig,
+  isLightColor,
+  type TemplateType,
+  type SizeConfig,
+} from "@/components/design-templates";
 
 /* ═══════════════════════════════════════════════════════
    TYPES & CONFIG
    ═══════════════════════════════════════════════════════ */
 
-type TemplateType = "just-listed" | "open-house" | "price-reduced" | "just-sold";
 type SizeOption = "square" | "story" | "postcard";
 type StudioTab = "templates" | "branding-card" | "yard-sign" | "property-pdf";
 type YardSignDesign = "split-bar" | "sidebar" | "top-heavy";
-
-interface SizeConfig {
-  id: SizeOption;
-  label: string;
-  sublabel: string;
-  width: number;
-  height: number;
-}
 
 const TEMPLATES = [
   { id: "just-listed" as TemplateType, label: "Just Listed", icon: Home },
@@ -79,41 +84,11 @@ const BRANDING_ORIENTATIONS = [
   { id: "vertical" as const, label: "Vertical", sublabel: "1080×1920", width: 1080, height: 1920 },
 ];
 
-/* ═══════════════════════════════════════════════════════
-   BROKERAGE COLORS — abbreviated labels
-   ═══════════════════════════════════════════════════════ */
-
 const BROKERAGE_COLORS = [
-  { hex: "#b40101", label: "KW Red" },
-  { hex: "#666666", label: "KW Gray" },
-  { hex: "#003399", label: "CB Blue" },
-  { hex: "#012169", label: "CB Navy" },
-  { hex: "#003da5", label: "RM Blue" },
-  { hex: "#dc1c2e", label: "RM Red" },
-  { hex: "#b5985a", label: "C21 Gold" },
-  { hex: "#1c1c1c", label: "C21 Black" },
-  { hex: "#000000", label: "CMP Black" },
-  { hex: "#333333", label: "CMP Dark" },
-  { hex: "#002349", label: "SIR Blue" },
-  { hex: "#1a1a1a", label: "SIR Black" },
-  { hex: "#552448", label: "BH Purple" },
-  { hex: "#2d1a33", label: "BH Dark" },
-  { hex: "#1c3f6e", label: "EXP Blue" },
-  { hex: "#006341", label: "HH Green" },
-  { hex: "#003d28", label: "HH Dk Green" },
-  { hex: "#4c8c2b", label: "BHG Green" },
-  { hex: "#d4272e", label: "EXT Red" },
-  { hex: "#e31937", label: "ERA Red" },
-  { hex: "#273691", label: "ERA Blue" },
-  { hex: "#a02021", label: "RF Red" },
-  { hex: "#ffffff", label: "White" },
+  { hex: "#b40101", label: "KW Red" },{ hex: "#666666", label: "KW Gray" },{ hex: "#003399", label: "CB Blue" },{ hex: "#012169", label: "CB Navy" },{ hex: "#003da5", label: "RM Blue" },{ hex: "#dc1c2e", label: "RM Red" },{ hex: "#b5985a", label: "C21 Gold" },{ hex: "#1c1c1c", label: "C21 Black" },{ hex: "#000000", label: "CMP Black" },{ hex: "#333333", label: "CMP Dark" },{ hex: "#002349", label: "SIR Blue" },{ hex: "#1a1a1a", label: "SIR Black" },{ hex: "#552448", label: "BH Purple" },{ hex: "#2d1a33", label: "BH Dark" },{ hex: "#1c3f6e", label: "EXP Blue" },{ hex: "#006341", label: "HH Green" },{ hex: "#003d28", label: "HH Dk Green" },{ hex: "#4c8c2b", label: "BHG Green" },{ hex: "#d4272e", label: "EXT Red" },{ hex: "#e31937", label: "ERA Red" },{ hex: "#273691", label: "ERA Blue" },{ hex: "#a02021", label: "RF Red" },{ hex: "#ffffff", label: "White" },
 ];
 
-const ACCENT_COLORS = [
-  "#f59e0b", "#ef4444", "#3b82f6", "#10b981", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#f97316", "#d4af37", "#c0c0c0",
-  "#ffffff", "#000000",
-];
+const ACCENT_COLORS = ["#f59e0b","#ef4444","#3b82f6","#10b981","#8b5cf6","#ec4899","#06b6d4","#f97316","#d4af37","#c0c0c0","#ffffff","#000000"];
 
 const FONT_OPTIONS = [
   { id: "serif", label: "Classic Serif", family: "Georgia, 'Times New Roman', serif" },
@@ -126,16 +101,7 @@ const FONT_OPTIONS = [
    HELPERS
    ═══════════════════════════════════════════════════════ */
 
-function isLightColor(hex: string): boolean {
-  const c = hex.replace("#", "");
-  if (c.length < 6) return true;
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
-}
-
-async function uploadToCloudinary(file: File, folder: string): Promise<string | null> {
+async function uploadToCloudinary(file: File | Blob, folder: string): Promise<string | null> {
   try {
     const sigResponse = await fetch("/api/cloudinary-signature", {
       method: "POST",
@@ -151,6 +117,7 @@ async function uploadToCloudinary(file: File, folder: string): Promise<string | 
     fd.append("timestamp", timestamp.toString());
     fd.append("signature", signature);
     fd.append("folder", folderPath);
+    fd.append("resource_type", "auto");
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
     const result = await res.json();
     return result.secure_url || null;
@@ -213,471 +180,25 @@ function AccentSwatches({ currentColor, onSelect }: { currentColor: string; onSe
 }
 
 /* ═══════════════════════════════════════════════════════
-   BADGE CONFIG
+   VIDEO EXPORT PROGRESS MODAL
    ═══════════════════════════════════════════════════════ */
 
-function getBadgeConfig(templateId: TemplateType) {
-  switch (templateId) {
-    case "just-listed": return { text: "JUST LISTED", color: "#2563eb" };
-    case "open-house": return { text: "OPEN HOUSE", color: "#059669" };
-    case "price-reduced": return { text: "PRICE REDUCED", color: "#dc2626" };
-    case "just-sold": return { text: "JUST SOLD", color: "#d97706" };
-  }
-}
-
-/* ═══════════════════════════════════════════════════════
-   LISTING TEMPLATE — INFO BAR STYLE
-   ═══════════════════════════════════════════════════════ */
-
-function InfoBarTemplate({ size, listingPhoto, headshot, logo, address, beds, baths, sqft, price, agentName, phone, brokerage, badgeText, badgeColor, fontFamily, barColor, accentColor }: {
-  size: SizeConfig; listingPhoto: string | null; headshot: string | null; logo: string | null; address: string; beds: string; baths: string; sqft: string; price: string; agentName: string; phone: string; brokerage: string; badgeText: string; badgeColor: string; fontFamily: string; barColor: string; accentColor: string;
-}) {
-  const w = size.width, h = size.height, isStory = size.id === "story", unit = w / 1080;
-  const photoPercent = isStory ? 62 : 55;
-  const barH = h * (1 - photoPercent / 100);
-  const barPadX = Math.round(40 * unit), barPadY = Math.round(24 * unit);
-  const headshotSize = Math.round(barH * 0.55);
-  const agentNameFontSize = Math.round(barH * 0.075);
-  const agentDetailFontSize = Math.round(barH * 0.055);
-  const badgeFontSize = Math.round(barH * 0.06);
-  const addressFontSize = Math.round(barH * 0.075);
-  const detailsFontSize = Math.round(barH * 0.055);
-  const priceFontSize = Math.round(barH * 0.11);
-  const accent = accentColor || "#ffffff";
-  const usedBadgeColor = accentColor || badgeColor;
-
+function VideoExportModal({ progress, status, onCancel }: { progress: number; status: string; onCancel?: () => void }) {
   return (
-    <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
-      <div className="absolute inset-x-0 top-0" style={{ height: `${photoPercent}%` }}>
-        {listingPhoto ? <img src={listingPhoto} alt="Listing" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700 flex items-center justify-center"><ImageIcon className="text-gray-500" style={{ width: 80 * unit, height: 80 * unit }} /></div>}
-        <div className="absolute inset-x-0 bottom-0" style={{ height: Math.round(80 * unit), backgroundImage: `linear-gradient(to top, ${barColor}, transparent)` }} />
-      </div>
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between" style={{ height: `${100 - photoPercent}%`, padding: `${barPadY}px ${barPadX}px`, backgroundColor: barColor }}>
-        <div className="flex items-center flex-shrink-0" style={{ gap: Math.round(16 * unit), maxWidth: "48%" }}>
-            {headshot ? <img src={headshot} alt="Agent" className="rounded-full object-cover flex-shrink-0" style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }} /> : <div className="rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0" style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.25)` }}><User className="text-gray-500" style={{ width: 36 * unit, height: 36 * unit }} /></div>}
-          <div className="min-w-0">
-            <p className="text-white font-bold truncate" style={{ fontSize: agentNameFontSize, lineHeight: 1.2 }}>{agentName || "Agent Name"}</p>
-            <p className="text-gray-400 truncate" style={{ fontSize: agentDetailFontSize, lineHeight: 1.3 }}>{brokerage || "Brokerage"}</p>
-            <p className="text-gray-400 truncate" style={{ fontSize: agentDetailFontSize, lineHeight: 1.3 }}>{phone || "(555) 000-0000"}</p>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full mx-4 text-center space-y-5">
+        <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center">
+          <Film className="h-8 w-8 text-accent animate-pulse" />
         </div>
-        <div className="text-right flex-shrink-0" style={{ maxWidth: "50%" }}>
-          <div className="inline-block text-white font-black uppercase tracking-wider rounded-sm" style={{ fontSize: badgeFontSize, backgroundColor: usedBadgeColor, padding: `${Math.round(5 * unit)}px ${Math.round(14 * unit)}px`, marginBottom: Math.round(8 * unit) }}>{badgeText}</div>
-          <p className="text-white font-bold leading-tight truncate" style={{ fontSize: addressFontSize }}>{address || "123 Main Street"}</p>
-          <p className="text-gray-300" style={{ fontSize: detailsFontSize, marginTop: Math.round(3 * unit) }}>{[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}</p>
-          <p className="font-black" style={{ fontSize: priceFontSize, marginTop: Math.round(4 * unit), lineHeight: 1.1, color: accent }}>{price ? `$${price}` : "$000,000"}</p>
+        <h3 className="text-xl font-extrabold text-foreground">Exporting Video</h3>
+        <p className="text-sm text-muted-foreground">{status}</p>
+        <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+          <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${Math.max(progress, 2)}%` }} />
         </div>
-        {logo && <img src={logo} alt="Logo" className="absolute object-contain" style={{ top: barPadY, left: barPadX, maxWidth: Math.round(barH * 0.40), maxHeight: Math.round(barH * 0.22), opacity: 0.8 }} />}
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   LISTING TEMPLATE — OPEN HOUSE
-   ═══════════════════════════════════════════════════════ */
-
-function OpenHouseTemplate({ size, listingPhoto, headshot, logo, address, beds, baths, sqft, price, date, time, agentName, phone, brokerage, fontFamily, barColor, accentColor }: {
-  size: SizeConfig; listingPhoto: string | null; headshot: string | null; logo: string | null; address: string; beds: string; baths: string; sqft: string; price: string; date: string; time: string; agentName: string; phone: string; brokerage: string; fontFamily: string; barColor: string; accentColor: string;
-}) {
-  const w = size.width, h = size.height, isStory = size.id === "story", unit = w / 1080;
-  const accent = accentColor || "#ffffff";
-  const badgeBg = accentColor || "#059669";
-  const pad = Math.round(40 * unit);
-
-  return (
-    <div className="relative overflow-hidden bg-gray-900" style={{ width: w, height: h, fontFamily }}>
-      {listingPhoto ? <img src={listingPhoto} alt="Listing" className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-gray-700 flex items-center justify-center"><ImageIcon className="text-gray-500" style={{ width: 100 * unit, height: 100 * unit }} /></div>}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
-      <div className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center text-white" style={{ height: isStory ? "28%" : "36%", padding: `0 ${pad}px` }}>
-        <div className="inline-block text-white font-black uppercase tracking-[0.15em] rounded-sm" style={{ fontSize: Math.round(36 * unit), padding: `${Math.round(8 * unit)}px ${Math.round(24 * unit)}px`, backgroundColor: badgeBg }}>Open House</div>
-        <p className="font-bold text-white" style={{ fontSize: Math.round(32 * unit), marginTop: Math.round(16 * unit) }}>{date || "Saturday, March 22"}</p>
-        <p className="text-white/80 font-semibold" style={{ fontSize: Math.round(26 * unit), marginTop: Math.round(4 * unit) }}>{time || "1:00 PM – 4:00 PM"}</p>
-      </div>
-      <div className="absolute inset-x-0 bottom-0" style={{ padding: `0 ${pad}px` }}>
-        <div className="text-center text-white" style={{ marginBottom: Math.round(12 * unit) }}>
-          <p className="font-bold leading-tight" style={{ fontSize: Math.round(30 * unit) }}>{address || "123 Main Street"}</p>
-          <p className="text-white/80" style={{ fontSize: Math.round(24 * unit), marginTop: Math.round(4 * unit) }}>{[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}</p>
-          <p className="font-black" style={{ fontSize: Math.round(44 * unit), marginTop: Math.round(8 * unit), lineHeight: 1.1, color: accent }}>{price ? `$${price}` : "$000,000"}</p>
-        </div>
-        <div className="flex items-center justify-center backdrop-blur-sm rounded-t-xl" style={{ padding: `${Math.round(14 * unit)}px ${Math.round(20 * unit)}px`, gap: Math.round(14 * unit), backgroundColor: barColor + "cc" }}>
-          {headshot ? <img src={headshot} alt="Agent" className="rounded-full object-cover flex-shrink-0" style={{ width: Math.round(90 * unit), height: Math.round(90 * unit), border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }} /> : <div className="rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0" style={{ width: Math.round(90 * unit), height: Math.round(90 * unit) }}><User className="text-gray-400" style={{ width: 32 * unit, height: 32 * unit }} /></div>}
-          <div className="text-white min-w-0">
-            <p className="font-bold truncate" style={{ fontSize: Math.round(24 * unit) }}>{agentName || "Agent Name"}</p>
-            <p className="text-white/60 truncate" style={{ fontSize: Math.round(20 * unit) }}>{[brokerage, phone].filter(Boolean).join("  ·  ") || "Brokerage  ·  (555) 000-0000"}</p>
-          </div>
-          {logo && <img src={logo} alt="Logo" className="object-contain flex-shrink-0 ml-auto" style={{ maxWidth: Math.round(120 * unit), maxHeight: Math.round(56 * unit), opacity: 0.9 }} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   YARD SIGN — DESIGN 1: SPLIT BAR (RE/MAX style)
-   ═══════════════════════════════════════════════════════ */
-
-function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, email, brokerage, officeName, officePhone, headerText, topColor, bottomColor, fontFamily, qrDataUrl }: {
-  width: number; height: number; headshot: string | null; logo: string | null; agentName: string; phone: string; email: string; brokerage: string; officeName: string; officePhone: string; headerText: string; topColor: string; bottomColor: string; fontFamily: string; qrDataUrl: string | null;
-}) {
-  const topH = Math.round(height * 0.18);
-  const bottomH = Math.round(height * 0.18);
-  const centerH = height - topH - bottomH;
-  const headerSz = Math.round(topH * 0.50);
-  const nameSz = Math.round(centerH * 0.12);
-  const phoneSz = Math.round(centerH * 0.10);
-  const detailSz = Math.round(centerH * 0.055);
-  const bottomNameSz = Math.round(bottomH * 0.28);
-  const bottomPhoneSz = Math.round(bottomH * 0.24);
-  const headshotSz = Math.round(centerH * 0.55);
-  const topLight = isLightColor(topColor);
-  const bottomLight = isLightColor(bottomColor);
-
-  return (
-    <div style={{ width, height, fontFamily, display: "flex", flexDirection: "column" }}>
-      <div style={{ height: topH, backgroundColor: topColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ fontSize: headerSz, fontWeight: 900, color: topLight ? "#000" : "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>{headerText || "FOR SALE"}</p>
-      </div>
-      <div style={{ height: centerH, backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.05), gap: Math.round(width * 0.05) }}>
-        <div style={{ flexShrink: 0 }}>
-          {headshot ? (
-            <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} />
-          ) : (
-            <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "#f3f4f6", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <User style={{ width: headshotSz * 0.4, height: headshotSz * 0.4, color: "#9ca3af" }} />
-            </div>
-          )}
-        </div>
-        <div style={{ textAlign: "left" }}>
-          <p style={{ fontSize: nameSz, fontWeight: 800, color: "#111", lineHeight: 1.15 }}>{agentName || "AGENT NAME"}</p>
-          <p style={{ fontSize: phoneSz, fontWeight: 700, color: "#111", marginTop: Math.round(height * 0.012) }}>{phone || "321-555-4321"}</p>
-          {email && <p style={{ fontSize: detailSz, color: "#555", marginTop: Math.round(height * 0.006) }}>{email}</p>}
-          <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.02), marginTop: Math.round(height * 0.015) }}>
-            {logo && <img src={logo} alt="Logo" style={{ maxHeight: Math.round(centerH * 0.15), maxWidth: Math.round(width * 0.2), objectFit: "contain" }} />}
-            {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(centerH * 0.15), height: Math.round(centerH * 0.15), borderRadius: 4 }} />}
-          </div>
-        </div>
-      </div>
-      <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.04), padding: `0 ${Math.round(width * 0.06)}px` }}>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: bottomNameSz, fontWeight: 800, color: bottomLight ? "#000" : "#fff" }}>{officeName || brokerage || "OFFICE NAME"}</p>
-          {officePhone && <p style={{ fontSize: bottomPhoneSz, fontWeight: 700, color: bottomLight ? "#000" : "#fff", marginTop: 4 }}>{officePhone}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   YARD SIGN — DESIGN 2: SIDEBAR (Century 21 style)
-   ═══════════════════════════════════════════════════════ */
-
-function YardSignSidebar({ width, height, headshot, logo, agentName, phone, email, brokerage, website, headerText, sidebarColor, mainBgColor, fontFamily, qrDataUrl }: {
-  width: number; height: number; headshot: string | null; logo: string | null; agentName: string; phone: string; email: string; brokerage: string; website: string; headerText: string; sidebarColor: string; mainBgColor: string; fontFamily: string; qrDataUrl: string | null;
-}) {
-  const sideW = Math.round(width * 0.18);
-  const mainW = width - sideW;
-  const sideLight = isLightColor(sidebarColor);
-  const mainLight = isLightColor(mainBgColor);
-  const mainText = mainLight ? "#111" : "#fff";
-  const mainMuted = mainLight ? "#555" : "rgba(255,255,255,0.65)";
-  const headshotSz = Math.round(mainW * 0.52);
-  const nameSz = Math.round(height * 0.048);
-  const phoneSz = Math.round(height * 0.038);
-  const detailSz = Math.round(height * 0.024);
-  const headerSz = Math.round(height * 0.04);
-  const logoSz = Math.round(sideW * 0.6);
-
-  return (
-    <div style={{ width, height, fontFamily, display: "flex" }}>
-      <div style={{ width: sideW, height, backgroundColor: sidebarColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: `${Math.round(height * 0.04)}px ${Math.round(sideW * 0.1)}px` }}>
-        {logo && <img src={logo} alt="Logo" style={{ width: logoSz, height: logoSz, objectFit: "contain" }} />}
-        <p style={{ fontSize: Math.round(sideW * 0.22), fontWeight: 800, color: sideLight ? "#000" : "#fff", writingMode: "vertical-rl", textOrientation: "mixed", letterSpacing: "0.12em", textTransform: "uppercase" }}>{brokerage || "BROKERAGE"}</p>
-        {logo && <img src={logo} alt="Logo" style={{ width: logoSz, height: logoSz, objectFit: "contain" }} />}
-      </div>
-      <div style={{ width: mainW, height, backgroundColor: mainBgColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.04), textAlign: "center" }}>
-        {headshot ? (
-          <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", border: `${Math.round(width * 0.01)}px solid ${sidebarColor}` }} />
-        ) : (
-          <div style={{ width: headshotSz, height: headshotSz, borderRadius: "50%", backgroundColor: mainLight ? "#e5e7eb" : "rgba(255,255,255,0.1)", border: `${Math.round(width * 0.01)}px solid ${sidebarColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <User style={{ width: headshotSz * 0.35, height: headshotSz * 0.35, color: mainMuted }} />
-          </div>
+        <p className="text-sm font-bold text-foreground">{Math.round(progress)}%</p>
+        {progress < 100 && onCancel && (
+          <button onClick={onCancel} className="text-sm text-muted-foreground hover:text-foreground underline">Cancel</button>
         )}
-        <p style={{ fontSize: nameSz, fontWeight: 800, color: mainText, marginTop: Math.round(height * 0.025) }}>{agentName || "AGENT NAME"}</p>
-        <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.005), textTransform: "uppercase", letterSpacing: "0.05em" }}>Real Estate Agent</p>
-        <p style={{ fontSize: phoneSz, fontWeight: 700, color: mainText, marginTop: Math.round(height * 0.02) }}>{phone || "206.866.6678"}</p>
-        {website && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.008) }}>{website}</p>}
-        {email && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.005) }}>{email}</p>}
-        {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(height * 0.08), height: Math.round(height * 0.08), marginTop: Math.round(height * 0.015), borderRadius: 4 }} />}
-        <div style={{ marginTop: Math.round(height * 0.03), backgroundColor: sidebarColor, padding: `${Math.round(height * 0.012)}px ${Math.round(width * 0.06)}px`, borderRadius: 4 }}>
-          <p style={{ fontSize: headerSz, fontWeight: 900, color: sideLight ? "#000" : "#fff", letterSpacing: "0.06em", textTransform: "uppercase" }}>{headerText || "FOR SALE"}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   YARD SIGN — DESIGN 3: TOP HEAVY (Coldwell Banker style)
-   ═══════════════════════════════════════════════════════ */
-
-function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, email, brokerage, headerText, topColor, bottomColor, fontFamily, qrDataUrl }: {
-  width: number; height: number; headshot: string | null; logo: string | null; agentName: string; phone: string; email: string; brokerage: string; headerText: string; topColor: string; bottomColor: string; fontFamily: string; qrDataUrl: string | null;
-}) {
-  const topH = Math.round(height * 0.42);
-  const bottomH = height - topH;
-  const topLight = isLightColor(topColor);
-  const bottomLight = isLightColor(bottomColor);
-  const headerSz = Math.round(topH * 0.28);
-  const logoMaxH = Math.round(topH * 0.22);
-  const logoMaxW = Math.round(width * 0.45);
-  const nameSz = Math.round(bottomH * 0.10);
-  const phoneSz = Math.round(bottomH * 0.075);
-  const detailSz = Math.round(bottomH * 0.05);
-  const headshotSz = Math.round(bottomH * 0.50);
-  const bottomText = bottomLight ? "#111" : "#fff";
-  const bottomMuted = bottomLight ? "#555" : "rgba(255,255,255,0.65)";
-
-  return (
-    <div style={{ width, height, fontFamily, display: "flex", flexDirection: "column" }}>
-      <div style={{ height: topH, backgroundColor: topColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.06), textAlign: "center" }}>
-        <p style={{ fontSize: headerSz, fontWeight: 900, color: topLight ? "#000" : "#fff", letterSpacing: "0.05em", textTransform: "uppercase", lineHeight: 1.0 }}>{headerText || "FOR SALE"}</p>
-        {logo && <img src={logo} alt="Logo" style={{ maxHeight: logoMaxH, maxWidth: logoMaxW, objectFit: "contain", marginTop: Math.round(topH * 0.08) }} />}
-        {!logo && brokerage && <p style={{ fontSize: Math.round(topH * 0.10), fontWeight: 700, color: topLight ? "#000" : "#fff", marginTop: Math.round(topH * 0.06), textTransform: "uppercase", letterSpacing: "0.08em" }}>{brokerage}</p>}
-      </div>
-      <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.06), textAlign: "center" }}>
-        {headshot ? (
-          <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} />
-        ) : (
-          <div style={{ width: headshotSz, height: headshotSz, backgroundColor: bottomLight ? "#e5e7eb" : "rgba(255,255,255,0.08)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <User style={{ width: headshotSz * 0.35, height: headshotSz * 0.35, color: bottomMuted }} />
-          </div>
-        )}
-        <p style={{ fontSize: nameSz, fontWeight: 800, color: bottomText, marginTop: Math.round(bottomH * 0.04), lineHeight: 1.1 }}>{agentName || "Agent Name"}</p>
-        <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01), textTransform: "uppercase", letterSpacing: "0.05em" }}>Real Estate Agent</p>
-        <p style={{ fontSize: phoneSz, fontWeight: 700, color: bottomText, marginTop: Math.round(bottomH * 0.025) }}>{phone || "305.555.7315"}</p>
-        {email && <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01) }}>{email}</p>}
-        <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.04), marginTop: Math.round(bottomH * 0.025) }}>
-          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(bottomH * 0.12), height: Math.round(bottomH * 0.12), borderRadius: 4 }} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   PROPERTY PDF TEMPLATE
-   ═══════════════════════════════════════════════════════ */
-
-function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths, sqft, description, features, photos, accentColor, fontFamily }: {
-  pageNumber: number; address: string; cityStateZip: string; price: string; beds: string; baths: string; sqft: string; description: string; features: string; photos: string[]; accentColor: string; fontFamily: string;
-}) {
-  const W = 2550;
-  const H = 3300;
-  const accent = accentColor || "#1a8a8a";
-
-  if (pageNumber === 0) {
-    const heroPhoto = photos[0] || null;
-    const photo2 = photos[1] || null;
-    const photo3 = photos[2] || null;
-    const leftW = Math.round(W * 0.45);
-    const rightW = W - leftW;
-    const pad = 120;
-
-    return (
-      <div style={{ width: W, height: H, backgroundColor: "#f8f7f2", fontFamily, display: "flex" }}>
-        <div style={{ width: leftW, padding: pad, display: "flex", flexDirection: "column" }}>
-          <p style={{ fontSize: 72, color: accent, fontWeight: 700, fontStyle: "italic", lineHeight: 1.1 }}>Introducing</p>
-          <p style={{ fontSize: 130, color: accent, fontStyle: "italic", lineHeight: 0.95, marginTop: 4 }}>{address || "Property Name"}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
-            <span style={{ fontSize: 40, color: accent }}>📍</span>
-            <p style={{ fontSize: 40, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
-          </div>
-          <p style={{ fontSize: 44, fontWeight: 800, color: "#333", letterSpacing: "0.04em", marginTop: 50 }}>OFFERED AT:</p>
-          <div style={{ backgroundColor: accent, display: "inline-block", padding: "16px 60px 16px 30px", marginTop: 12, marginLeft: -30, clipPath: "polygon(0 0, 100% 0, 92% 100%, 0 100%)" }}>
-            <p style={{ fontSize: 120, fontWeight: 300, color: "#ffffff", lineHeight: 1.0 }}>{price ? `$${price}` : "$000,000"}</p>
-          </div>
-          {(beds || baths || sqft) && (
-            <p style={{ fontSize: 40, color: "#555", marginTop: 16, fontWeight: 600 }}>
-              {[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ")}
-            </p>
-          )}
-          {features && (
-            <div>
-              <p style={{ fontSize: 44, fontWeight: 800, color: "#333", marginTop: 44, marginBottom: 20 }}>
-                {address ? `${address.toUpperCase()} FEATURES:` : "FEATURES:"}
-              </p>
-              <div style={{ fontSize: 38, color: "#444", lineHeight: 2.0 }}>
-                {features.split("\n").filter(Boolean).map((f, i) => (
-                  <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                    <span style={{ color: "#444", flexShrink: 0 }}>•</span>
-                    <span>{f.replace(/^[•\-*]\s*/, "")}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {description && (
-            <div>
-             <p style={{ fontSize: 44, fontWeight: 800, color: accent, marginTop: 44, marginBottom: 20 }}>ABOUT THIS PROPERTY:</p>
-              <div style={{ fontSize: 36, color: "#444", lineHeight: 1.8, wordBreak: "break-word", overflowWrap: "break-word" }}>
-                {description.split("\n").filter(Boolean).map((p, i) => (
-                  <p key={i} style={{ marginBottom: 14 }}>{p}</p>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={{ width: rightW, display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 55, overflow: "hidden" }}>
-            {heroPhoto ? (
-              <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <div style={{ width: "100%", height: "100%", backgroundColor: "#e8e6e0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#bbb", fontSize: 48 }}>Photo 1</span>
-              </div>
-            )}
-          </div>
-          <div style={{ flex: 45, display: "flex" }}>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              {photo2 ? (
-                <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <div style={{ width: "100%", height: "100%", backgroundColor: "#e0ded8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "#bbb", fontSize: 44 }}>Photo 2</span>
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              {photo3 ? (
-                <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <div style={{ width: "100%", height: "100%", backgroundColor: "#e8e6e0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "#bbb", fontSize: 44 }}>Photo 3</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const startIdx = 3 + (pageNumber - 1) * 6;
-  const pagePhotos = photos.slice(startIdx, startIdx + 6);
-  const pgPad = 120;
-  const pgGap = 30;
-  const colW = Math.round((W - pgPad * 2 - pgGap) / 2);
-  const photoH = Math.round((H - pgPad * 2 - pgGap * 2 - 80) / 3);
-
-  return (
-    <div style={{ width: W, height: H, backgroundColor: "#f8f7f2", fontFamily, padding: pgPad, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", gap: pgGap }}>
-        <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
-          {[0, 2, 4].map((idx) => {
-            const photo = pagePhotos[idx];
-            return (
-              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f8f7f2" }}>
-                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
-          {[1, 3, 5].map((idx) => {
-            const photo = pagePhotos[idx];
-            return (
-              <div key={idx} style={{ height: photoH, borderRadius: 12, overflow: "hidden", backgroundColor: photo ? undefined : "#f8f7f2" }}>
-                {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <p style={{ fontSize: 36, color: "#9ca3af", textAlign: "center", marginTop: 30 }}>
-        {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
-      </p>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════
-   BRANDING CARD TEMPLATE
-   ═══════════════════════════════════════════════════════ */
-
-function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
-  orientation: { width: number; height: number; id: string }; logo: string | null; headshot: string | null; agentName: string; phone: string; email: string; brokerage: string; tagline: string; address: string; cityState: string; price: string; features: string; bgColor: string; accentColor: string; bgPhoto: string | null; fontFamily: string;
-}) {
-  const w = orientation.width, h = orientation.height, isVertical = orientation.id === "vertical";
-  const isLightBg = bgColor && !bgPhoto ? isLightColor(bgColor) : false;
-  const textColor = isLightBg ? "#1a1a2e" : "#ffffff";
-  const textMuted = isLightBg ? "rgba(26,26,46,0.6)" : "rgba(255,255,255,0.7)";
-  const borderColor = isLightBg ? "rgba(0,0,0,0.2)" : "rgba(180,180,180,0.5)";
-  const accent = accentColor || textColor;
-
-  if (isVertical) {
-    const u = w / 1080;
-    const inset = Math.round(24 * u), radius = Math.round(30 * u), border = Math.round(4 * u), pad = Math.round(56 * u);
-    const headshotSz = Math.round(520 * u), frameBorder = Math.round(10 * u);
-
-    return (
-      <div style={{ width: w, height: h, background: "transparent" }}>
-        <div style={{ position: "absolute", inset, borderRadius: radius, border: `${border}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: pad, fontFamily }}>
-          {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
-          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%" }}>
-            {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", border: `${frameBorder}px solid white`, margin: "0 auto", display: "block" }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.08)", border: `${frameBorder}px solid ${borderColor}`, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: 100 * u, height: 100 * u, color: textMuted }} /></div>}
-            <p style={{ fontSize: Math.round(52 * u), fontWeight: 700, color: accent, marginTop: Math.round(20 * u) }}>{agentName || "Agent Name"}</p>
-            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(400 * u), maxHeight: Math.round(180 * u), objectFit: "contain", margin: `${Math.round(32 * u)}px auto`, display: "block" }} />}
-            {address && <p style={{ fontSize: Math.round(80 * u), fontWeight: 800, color: textColor, marginTop: Math.round(28 * u), lineHeight: 1.05 }}>{address}</p>}
-            {cityState && <p style={{ fontSize: Math.round(48 * u), fontWeight: 600, color: textColor, marginTop: Math.round(10 * u) }}>{cityState}</p>}
-            {price && <p style={{ fontSize: Math.round(68 * u), fontWeight: 800, color: accent, marginTop: Math.round(24 * u) }}>${price}</p>}
-            {features && <div style={{ marginTop: Math.round(22 * u), color: textMuted, fontSize: Math.round(40 * u), lineHeight: 1.6 }}>{features.split("\n").map((f, i) => <div key={i}>{f}</div>)}</div>}
-            <div style={{ marginTop: Math.round(36 * u), display: "flex", justifyContent: "center", gap: Math.round(28 * u), flexWrap: "wrap" }}>
-              {phone && <span style={{ fontSize: Math.round(34 * u), color: textMuted }}>{phone}</span>}
-              {email && <span style={{ fontSize: Math.round(34 * u), color: textMuted }}>{email}</span>}
-            </div>
-            {brokerage && <p style={{ fontSize: Math.round(34 * u), color: textMuted, marginTop: Math.round(8 * u) }}>{brokerage}</p>}
-            {tagline && <p style={{ fontSize: Math.round(32 * u), color: accentColor || textMuted, fontStyle: "italic", marginTop: Math.round(10 * u) }}>{tagline}</p>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Landscape
-  const u = w / 1920, uh = h / 1080;
-  const inset = Math.round(48 * u), radius = Math.round(48 * u), borderW = Math.round(7 * u);
-  const contentPadX = Math.round(72 * u), contentPadY = Math.round(52 * uh);
-  const innerH = h - inset * 2 - borderW * 2, innerW = w - inset * 2 - borderW * 2;
-  const frameH = Math.round(innerH * 0.82), frameW = Math.round(innerW * 0.237), frameBorder = Math.round(10 * u);
-
-  return (
-    <div style={{ width: w, height: h, background: "transparent" }}>
-      <div style={{ position: "absolute", inset, borderRadius: radius, border: `${borderW}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", fontFamily }}>
-        {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
-        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "stretch", width: "100%", height: "100%", padding: `${contentPadY}px ${contentPadX}px` }}>
-          <div style={{ flex: "0 0 38%", display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: Math.round(20 * u), minWidth: 0 }}>
-            {address ? <p style={{ fontSize: Math.round(h * 0.11), fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0 }}>{address}</p> : <p style={{ fontSize: Math.round(h * 0.11), fontWeight: 800, color: accent, lineHeight: 1.05, margin: 0 }}>{agentName || "Your Name"}</p>}
-            {cityState && <p style={{ fontSize: Math.round(h * 0.067), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(h * 0.035) }}>{cityState}</p>}
-            {price && <p style={{ fontSize: Math.round(h * 0.089), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(h * 0.045) }}>${price}</p>}
-            {features && <div style={{ marginTop: Math.round(h * 0.04), color: textMuted, fontSize: Math.round(h * 0.050), lineHeight: 1.55 }}>{features.split("\n").map((f, i) => <div key={i}>{f}</div>)}</div>}
-            {!address && tagline && <p style={{ fontSize: Math.round(h * 0.067), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(h * 0.03) }}>{tagline}</p>}
-            {!address && brokerage && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.02) }}>{brokerage}</p>}
-            {!address && phone && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.015) }}>{phone}</p>}
-            {!address && email && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.010) }}>{email}</p>}
-          </div>
-          <div style={{ flex: "0 0 24%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            {logo ? <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.18), maxHeight: Math.round(innerH * 0.50), objectFit: "contain" }} /> : <div style={{ width: Math.round(120 * u), height: Math.round(120 * u), borderRadius: "50%", border: `3px dashed ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><ImageIcon style={{ width: 40 * u, height: 40 * u, color: textMuted }} /></div>}
-            {brokerage && address && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(16 * u), textAlign: "center" }}>{brokerage}</p>}
-            {tagline && address && <p style={{ fontSize: Math.round(h * 0.032), color: accentColor || textMuted, fontStyle: "italic", marginTop: Math.round(10 * u), textAlign: "center", maxWidth: Math.round(innerW * 0.18) }}>{tagline}</p>}
-          </div>
-          <div style={{ flex: "0 0 38%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            {headshot ? <img src={headshot} alt="Agent" style={{ width: frameW, height: frameH, objectFit: "cover", border: `${frameBorder}px solid white` }} /> : <div style={{ width: frameW, height: frameH, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: 80 * u, height: 80 * u, color: textMuted }} /></div>}
-            <p style={{ fontSize: Math.round(h * 0.055), fontWeight: 600, color: accent, marginTop: Math.round(10 * uh), textAlign: "center" }}>{address ? (agentName || "Agent Name") : ""}</p>
-            {address && phone && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(4 * uh), textAlign: "center" }}>{phone}</p>}
-            {address && email && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(2 * uh), textAlign: "center" }}>{email}</p>}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -692,7 +213,7 @@ export default function DesignStudioPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("just-listed");
   const [selectedSize, setSelectedSize] = useState<SizeOption>("square");
 
-  /* ─── Auth + Paywall state (Task 2) ─── */
+  // Auth + Paywall
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -701,7 +222,7 @@ export default function DesignStudioPage() {
   const [paywallHit, setPaywallHit] = useState(false);
   const FREE_EXPORT_LIMIT = 3;
 
-  /* ─── Saved headshot/logo persistence (Task 1) ─── */
+  // Saved headshot/logo
   const [savedHeadshot, setSavedHeadshot] = useState<string | null>(null);
   const [savedLogo, setSavedLogo] = useState<string | null>(null);
 
@@ -739,7 +260,6 @@ export default function DesignStudioPage() {
   const [yardBottomColor, setYardBottomColor] = useState("#003da5");
   const [yardSidebarColor, setYardSidebarColor] = useState("#1c1c1c");
   const [yardMainBgColor, setYardMainBgColor] = useState("#ffffff");
-  const [yardAccentColor, setYardAccentColor] = useState("");
   const [yardWebsite, setYardWebsite] = useState("");
   const [yardOfficeName, setYardOfficeName] = useState("");
   const [yardOfficePhone, setYardOfficePhone] = useState("");
@@ -781,8 +301,13 @@ export default function DesignStudioPage() {
   const [uploadingBrandHeadshot, setUploadingBrandHeadshot] = useState(false);
   const [uploadingBrandBg, setUploadingBrandBg] = useState(false);
 
+  // Export state
   const [exporting, setExporting] = useState(false);
+  const [videoExporting, setVideoExporting] = useState(false);
+  const [videoExportProgress, setVideoExportProgress] = useState(0);
+  const [videoExportStatus, setVideoExportStatus] = useState("");
   const previewRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const currentSize = SIZES.find((s) => s.id === selectedSize)!;
   const currentBrandOrientation = BRANDING_ORIENTATIONS.find((o) => o.id === brandOrientation)!;
@@ -790,7 +315,7 @@ export default function DesignStudioPage() {
   const listingFontFamily = FONT_OPTIONS.find((f) => f.id === listingFont)?.family || FONT_OPTIONS[1].family;
   const currentYardSize = YARD_SIGN_SIZES.find((s) => s.id === yardSignSize)!;
 
-  /* ─── Merged init: auth + subscription + saved assets + export counter ─── */
+  // Init: auth + subscription + saved assets
   useEffect(() => {
     const init = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
@@ -798,56 +323,32 @@ export default function DesignStudioPage() {
       setAuthLoading(false);
       if (!authUser) return;
       setUser(authUser);
-
       const admin = authUser.email === "realestatephoto2video@gmail.com";
       setIsAdmin(admin);
-
-      const { data } = await supabase
-        .from("lens_usage")
-        .select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used")
-        .eq("user_id", authUser.id)
-        .single();
-
+      const { data } = await supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used").eq("user_id", authUser.id).single();
       if (data) {
-        // Saved assets (Task 1)
-        if (data.saved_headshot_url) {
-          setSavedHeadshot(data.saved_headshot_url);
-          setHeadshot(data.saved_headshot_url);
-          setBrandHeadshot(data.saved_headshot_url);
-        }
-        if (data.saved_logo_url) {
-          setSavedLogo(data.saved_logo_url);
-          setLogo(data.saved_logo_url);
-          setBrandLogo(data.saved_logo_url);
-        }
-        // Subscription (Task 2)
-        if (admin || data.is_subscriber) {
-          setIsSubscriber(true);
-        }
+        if (data.saved_headshot_url) { setSavedHeadshot(data.saved_headshot_url); setHeadshot(data.saved_headshot_url); setBrandHeadshot(data.saved_headshot_url); }
+        if (data.saved_logo_url) { setSavedLogo(data.saved_logo_url); setLogo(data.saved_logo_url); setBrandLogo(data.saved_logo_url); }
+        if (admin || data.is_subscriber) setIsSubscriber(true);
         setFreeExportsUsed(data.free_design_exports_used || 0);
       }
-
       if (admin) setIsSubscriber(true);
     };
     init();
   }, []);
 
-  /* ─── Save asset to DB helper (Task 1) ─── */
+  // Save asset to DB
   const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => {
     if (!user) return;
     const supabase = (await import("@/lib/supabase/client")).createClient();
-    await supabase
-      .from("lens_usage")
-      .upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" });
+    await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" });
   };
 
   // QR code
   useEffect(() => {
     if (!yardQrUrl) { setYardQrDataUrl(null); return; }
     let c = false;
-    (async () => {
-      try { const QR = (await import("qrcode")).default; const u = await QR.toDataURL(yardQrUrl, { width: 600, margin: 2, errorCorrectionLevel: "M" }); if (!c) setYardQrDataUrl(u); } catch { if (!c) setYardQrDataUrl(null); }
-    })();
+    (async () => { try { const QR = (await import("qrcode")).default; const u = await QR.toDataURL(yardQrUrl, { width: 600, margin: 2, errorCorrectionLevel: "M" }); if (!c) setYardQrDataUrl(u); } catch { if (!c) setYardQrDataUrl(null); } })();
     return () => { c = true; };
   }, [yardQrUrl]);
 
@@ -866,36 +367,20 @@ export default function DesignStudioPage() {
 
   const { scale, width: previewW, height: previewH, rawW, rawH } = getScaledDimensions();
 
-  /* ─── Upload handlers with persistence + cross-tab sync (Task 1) ─── */
+  // Upload handlers with persistence
   const handleUpload = async (file: File, folder: string, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, folder); setUrl(url); setLoading(false); };
 
   const handleHeadshotUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => {
     setLoading(true);
     const url = await uploadToCloudinary(file, "design-studio");
-    if (url) {
-      setUrl(url);
-      // Cross-tab sync
-      setHeadshot(url);
-      setBrandHeadshot(url);
-      // Persist
-      saveAssetToDb("saved_headshot_url", url);
-      setSavedHeadshot(url);
-    }
+    if (url) { setUrl(url); setHeadshot(url); setBrandHeadshot(url); saveAssetToDb("saved_headshot_url", url); setSavedHeadshot(url); }
     setLoading(false);
   };
 
   const handleLogoUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => {
     setLoading(true);
     const url = await uploadToCloudinary(file, "design-studio");
-    if (url) {
-      setUrl(url);
-      // Cross-tab sync
-      setLogo(url);
-      setBrandLogo(url);
-      // Persist
-      saveAssetToDb("saved_logo_url", url);
-      setSavedLogo(url);
-    }
+    if (url) { setUrl(url); setLogo(url); setBrandLogo(url); saveAssetToDb("saved_logo_url", url); setSavedLogo(url); }
     setLoading(false);
   };
 
@@ -907,163 +392,241 @@ export default function DesignStudioPage() {
     try { const supabase = (await import("@/lib/supabase/client")).createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: orders } = await supabase.from("orders").select("order_id, delivery_url, unbranded_delivery_url, photos, created_at").eq("user_id", user.id).in("status", ["complete", "delivered", "closed"]).order("created_at", { ascending: false }); setUserVideos((orders || []).filter((o: any) => o.unbranded_delivery_url || o.delivery_url).map((o: any) => ({ orderId: o.order_id, url: o.unbranded_delivery_url || o.delivery_url, thumbnail: o.photos?.[0]?.secure_url || null, hasUnbranded: !!o.unbranded_delivery_url, date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) }))); } catch (err) { console.error(err); } finally { setLoadingVideos(false); }
   };
 
-  /* ─── Export with paywall gate (Task 2) ─── */
-  const handleExport = async () => {
-    // Paywall check for free users
-    if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) {
-      setPaywallHit(true);
-      return;
+  // Increment export counter for free users
+  const incrementExportCounter = async () => {
+    if (!isSubscriber && !isAdmin && user) {
+      const newCount = freeExportsUsed + 1;
+      setFreeExportsUsed(newCount);
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      await supabase.from("lens_usage").upsert({ user_id: user.id, free_design_exports_used: newCount }, { onConflict: "user_id" });
     }
+  };
 
+  // Paywall check
+  const checkPaywall = (): boolean => {
+    if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) { setPaywallHit(true); return true; }
+    return false;
+  };
+
+  // Prepare element for export — remove scale transform temporarily
+  const prepareForExport = (el: HTMLElement): { restore: () => void } => {
+    const parent = el.parentElement as HTMLElement;
+    const savedTransform = el.style.transform;
+    const savedOverflow = parent?.style.overflow;
+    const savedWidth = parent?.style.width;
+    const savedHeight = parent?.style.height;
+    el.style.transform = "none";
+    if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; }
+    return {
+      restore: () => {
+        el.style.transform = savedTransform;
+        if (parent) { parent.style.overflow = savedOverflow || ""; parent.style.width = savedWidth || ""; parent.style.height = savedHeight || ""; }
+      }
+    };
+  };
+
+  // PNG Export
+  const handleExport = async () => {
+    if (checkPaywall()) return;
     if (!previewRef.current) return;
     setExporting(true);
     try {
       const html2canvas = (await import("html2canvas-pro")).default;
       const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
       if (!el) return;
-      // Temporarily render at full size for export
-const wrapper = el.parentElement as HTMLElement;
-const originalTransform = el.style.transform;
-const originalWrapperOverflow = wrapper?.style.overflow;
-const originalWrapperWidth = wrapper?.style.width;
-const originalWrapperHeight = wrapper?.style.height;
-el.style.transform = "none";
-if (wrapper) {
-  wrapper.style.overflow = "visible";
-  wrapper.style.width = `${rawW}px`;
-  wrapper.style.height = `${rawH}px`;
-}
-
-const wrapper = el.parentElement as HTMLElement;
-const originalTransform = el.style.transform;
-const originalWrapperOverflow = wrapper?.style.overflow;
-const originalWrapperWidth = wrapper?.style.width;
-const originalWrapperHeight = wrapper?.style.height;
-el.style.transform = "none";
-if (wrapper) {
-  wrapper.style.overflow = "visible";
-  wrapper.style.width = "2550px";
-  wrapper.style.height = "3300px";
-}
-
-const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 });
-
-el.style.transform = originalTransform;
-if (wrapper) {
-  wrapper.style.overflow = originalWrapperOverflow || "";
-  wrapper.style.width = originalWrapperWidth || "";
-  wrapper.style.height = originalWrapperHeight || "";
-}
-
-// Restore preview scale
-el.style.transform = originalTransform;
-if (wrapper) {
-  wrapper.style.overflow = originalWrapperOverflow || "";
-  wrapper.style.width = originalWrapperWidth || "";
-  wrapper.style.height = originalWrapperHeight || "";
-}
+      const { restore } = prepareForExport(el);
+      const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
+      restore();
       const link = document.createElement("a");
       link.download = `p2v-${tab}-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-
-      // Increment counter for free users after successful export
-      if (!isSubscriber && !isAdmin && user) {
-        const newCount = freeExportsUsed + 1;
-        setFreeExportsUsed(newCount);
-        const supabase = (await import("@/lib/supabase/client")).createClient();
-        await supabase
-          .from("lens_usage")
-          .upsert({
-            user_id: user.id,
-            free_design_exports_used: newCount,
-          }, { onConflict: "user_id" });
-      }
+      await incrementExportCounter();
     } catch (err) { console.error(err); alert("Export failed."); } finally { setExporting(false); }
   };
 
+  // PDF Export
   const handlePdfExport = async () => {
-    // Paywall check for free users
-    if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) {
-      setPaywallHit(true);
-      return;
-    }
-
+    if (checkPaywall()) return;
     if (!previewRef.current) return;
     setExporting(true);
     try {
       const jsPDF = (await import("jspdf")).default;
-      const html2canvas = (await import("html2canvas")).default;
+      const html2canvas = (await import("html2canvas-pro")).default;
       const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
       for (let page = 0; page < pdfTotalPages; page++) {
         setPdfPreviewPage(page);
         await new Promise(r => setTimeout(r, 400));
         const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement;
         if (!el) continue;
-        const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: false, backgroundColor: "#ffffff", width: 2550, height: 3300 });
+        const { restore } = prepareForExport(el);
+        const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 });
+        restore();
         if (page > 0) pdf.addPage();
         pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11);
       }
       pdf.save(`${pdfAddress.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "property"}_sheet.pdf`);
       setPdfPreviewPage(0);
-
-      // Increment counter for free users after successful export
-      if (!isSubscriber && !isAdmin && user) {
-        const newCount = freeExportsUsed + 1;
-        setFreeExportsUsed(newCount);
-        const supabase = (await import("@/lib/supabase/client")).createClient();
-        await supabase
-          .from("lens_usage")
-          .upsert({
-            user_id: user.id,
-            free_design_exports_used: newCount,
-          }, { onConflict: "user_id" });
-      }
+      await incrementExportCounter();
     } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); }
+  };
+
+  // Video Export with ffmpeg.wasm
+  const handleVideoExport = async () => {
+    if (checkPaywall()) return;
+    if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; }
+
+    setVideoExporting(true);
+    setVideoExportProgress(0);
+    setVideoExportStatus("Loading video encoder...");
+
+    try {
+      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+      const { fetchFile, toBlobURL } = await import("@ffmpeg/util");
+
+      const ffmpeg = new FFmpeg();
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+
+      ffmpeg.on("progress", ({ progress: p }) => {
+        setVideoExportProgress(Math.min(Math.round(p * 100), 99));
+      });
+
+      setVideoExportStatus("Loading encoder core...");
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      });
+
+      // 1. Fetch the source video
+      setVideoExportStatus("Downloading source video...");
+      setVideoExportProgress(5);
+      const videoData = await fetchFile(selectedVideo.url);
+      await ffmpeg.writeFile("input.mp4", videoData);
+
+      // 2. Render the overlay as a PNG using html2canvas
+      setVideoExportStatus("Rendering overlay...");
+      setVideoExportProgress(10);
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+      if (!el) throw new Error("Export target not found");
+
+      // Hide the video element temporarily so we only capture the overlay
+      const videoEls = el.querySelectorAll("video");
+      videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; });
+      // Also hide the placeholder icon area
+      const placeholders = el.querySelectorAll("[data-video-area]");
+      placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; });
+
+      const { restore } = prepareForExport(el);
+      const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
+      restore();
+
+      // Restore video visibility
+      videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; });
+      placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; });
+
+      const overlayBlob = await new Promise<Blob>((resolve) => {
+        overlayCanvas.toBlob((b) => resolve(b!), "image/png");
+      });
+      const overlayData = new Uint8Array(await overlayBlob.arrayBuffer());
+      await ffmpeg.writeFile("overlay.png", overlayData);
+
+      // 3. Composite: overlay on top of video, limit to 45 seconds
+      setVideoExportStatus("Compositing video with overlay...");
+      setVideoExportProgress(15);
+
+      const outW = currentSize.width;
+      const outH = currentSize.height;
+
+      await ffmpeg.exec([
+        "-i", "input.mp4",
+        "-i", "overlay.png",
+        "-t", "45",
+        "-filter_complex", `[0:v]scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black[bg];[bg][1:v]overlay=0:0`,
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        "-y", "output.mp4"
+      ]);
+
+      // 4. Read the output
+      setVideoExportStatus("Finalizing...");
+      setVideoExportProgress(95);
+      const outputData = await ffmpeg.readFile("output.mp4");
+      const outputBlob = new Blob([outputData], { type: "video/mp4" });
+
+      // 5. Download locally
+      const downloadUrl = URL.createObjectURL(outputBlob);
+      const link = document.createElement("a");
+      link.download = `p2v-video-overlay-${Date.now()}.mp4`;
+      link.href = downloadUrl;
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+
+      // 6. Upload to Cloudinary and save to My Videos
+      setVideoExportStatus("Saving to My Videos...");
+      setVideoExportProgress(98);
+      const uploadedUrl = await uploadToCloudinary(new File([outputBlob], "overlay-video.mp4", { type: "video/mp4" }), "design-studio/videos");
+
+      if (uploadedUrl && user) {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        await supabase.from("orders").update({
+          overlay_video_url: uploadedUrl,
+        }).eq("order_id", selectedVideo.orderId);
+      }
+
+      setVideoExportProgress(100);
+      setVideoExportStatus("Done!");
+      await incrementExportCounter();
+
+      setTimeout(() => { setVideoExporting(false); }, 1500);
+    } catch (err: any) {
+      console.error("Video export error:", err);
+      alert("Video export failed: " + (err.message || "Unknown error"));
+      setVideoExporting(false);
+    }
   };
 
   const badge = getBadgeConfig(selectedTemplate);
 
+  // Video element for preview
+  const videoPreviewElement = selectedVideo ? (
+    <div className="w-full h-full relative" data-video-area>
+      <video
+        ref={videoRef}
+        src={selectedVideo.url}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="w-full h-full object-cover"
+        crossOrigin="anonymous"
+      />
+    </div>
+  ) : undefined;
+
   /* ═══════════════════════════════════════════════════════
-     AUTH GATES (Task 2)
+     AUTH GATES
      ═══════════════════════════════════════════════════════ */
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
+    return (<div className="min-h-screen bg-background"><Navigation /><div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div></div>);
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <div className="min-h-screen bg-background"><Navigation />
         <div className="mx-auto max-w-2xl px-4 py-24 text-center">
           <div className="bg-card rounded-2xl border border-border p-10 space-y-5">
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
-              <LogIn className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-foreground">
-              Sign In to Use the Design Studio
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Create a free account to try the Marketing Design Studio. Your first 3 exports are free — no subscription required.
-            </p>
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center"><LogIn className="h-8 w-8 text-muted-foreground" /></div>
+            <h1 className="text-2xl font-extrabold text-foreground">Sign In to Use the Design Studio</h1>
+            <p className="text-muted-foreground max-w-md mx-auto">Create a free account to try the Marketing Design Studio. Your first 3 exports are free — no subscription required.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base">
-                <Link href="/login?redirect=/dashboard/lens/design-studio">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign In
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="px-8 py-6 text-base">
-                <Link href="/lens">Learn About P2V Lens</Link>
-              </Button>
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/login?redirect=/dashboard/lens/design-studio"><LogIn className="mr-2 h-4 w-4" />Sign In</Link></Button>
+              <Button asChild variant="outline" className="px-8 py-6 text-base"><Link href="/lens">Learn About P2V Lens</Link></Button>
             </div>
           </div>
         </div>
@@ -1073,33 +636,15 @@ if (wrapper) {
 
   if (paywallHit) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <div className="min-h-screen bg-background"><Navigation />
         <div className="mx-auto max-w-2xl px-4 py-24 text-center">
           <div className="bg-card rounded-2xl border border-border p-10 space-y-5">
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center">
-              <Lock className="h-8 w-8 text-accent" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-foreground">
-              You&apos;ve Used Your 3 Free Exports
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Subscribe to P2V Lens for unlimited design exports, plus AI photo coaching, listing descriptions, virtual staging, and more — starting at $27.95/month.
-            </p>
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center"><Lock className="h-8 w-8 text-accent" /></div>
+            <h1 className="text-2xl font-extrabold text-foreground">You&apos;ve Used Your 3 Free Exports</h1>
+            <p className="text-muted-foreground max-w-md mx-auto">Subscribe to P2V Lens for unlimited design exports, plus AI photo coaching, listing descriptions, virtual staging, and more — starting at $27.95/month.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base">
-                <Link href="/lens">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Subscribe to P2V Lens
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                className="px-8 py-6 text-base"
-                onClick={() => setPaywallHit(false)}
-              >
-                Back to Design Studio
-              </Button>
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/lens"><Sparkles className="mr-2 h-4 w-4" />Subscribe to P2V Lens</Link></Button>
+              <Button variant="outline" className="px-8 py-6 text-base" onClick={() => setPaywallHit(false)}>Back to Design Studio</Button>
             </div>
           </div>
         </div>
@@ -1110,6 +655,10 @@ if (wrapper) {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+
+      {/* Video export progress modal */}
+      {videoExporting && <VideoExportModal progress={videoExportProgress} status={videoExportStatus} onCancel={() => setVideoExporting(false)} />}
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
@@ -1120,29 +669,16 @@ if (wrapper) {
           </div>
         </div>
 
-        {/* ═══ Free trial / subscription badge (Task 2) ═══ */}
+        {/* Subscription badge */}
         {isAdmin ? (
-          <div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" />
-            <p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p>
-          </div>
+          <div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" /><p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p></div>
         ) : isSubscriber ? (
-          <div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
-            <p className="text-sm text-foreground">
-              <span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited exports
-            </p>
-          </div>
+          <div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited exports</p></div>
         ) : (
-          <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-accent flex-shrink-0" />
-            <p className="text-sm text-foreground">
-              <span className="font-bold">Free trial:</span> {FREE_EXPORT_LIMIT - freeExportsUsed} of {FREE_EXPORT_LIMIT} exports remaining. Subscribe for unlimited access.
-            </p>
-          </div>
+          <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-accent flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold">Free trial:</span> {FREE_EXPORT_LIMIT - freeExportsUsed} of {FREE_EXPORT_LIMIT} exports remaining.</p></div>
         )}
 
-        {/* ═══ 4 TOP-LEVEL TABS ═══ */}
+        {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-8">
           {([
             { id: "templates" as StudioTab, label: "Listing Graphics", icon: PenTool },
@@ -1151,8 +687,7 @@ if (wrapper) {
             { id: "property-pdf" as StudioTab, label: "Property Sheet", icon: FileText },
           ]).map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all ${tab === t.id ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-              <t.icon className="h-4 w-4" />
-              {t.label}
+              <t.icon className="h-4 w-4" />{t.label}
             </button>
           ))}
         </div>
@@ -1174,20 +709,19 @@ if (wrapper) {
                     <button onClick={() => { setMediaMode("image"); setSelectedVideo(null); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mediaMode === "image" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"}`}><ImageIcon className="h-4 w-4" />Image</button>
                     <button onClick={() => { setMediaMode("video"); setListingPhoto(null); loadUserVideos(); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mediaMode === "video" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"}`}><Play className="h-4 w-4" />Video Overlay</button>
                   </div>
+                  {mediaMode === "video" && (
+                    <p className="text-xs text-amber-600 font-medium mb-3 flex items-center gap-1">* Video overlay exports are limited to 45 seconds max</p>
+                  )}
                   {mediaMode === "image" ? (
                     <div className="grid grid-cols-3 gap-4">
                       <ImageUploadBox label="Listing Photo *" imageUrl={listingPhoto} onUpload={(f) => handleUpload(f, "design-studio", setListingPhoto, setUploadingListing)} onClear={() => setListingPhoto(null)} uploading={uploadingListing} />
                       <div>
                         <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
-                        {!headshot && savedHeadshot && (
-                          <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
-                        )}
+                        {!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}
                       </div>
                       <div>
                         <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
-                        {!logo && savedLogo && (
-                          <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
-                        )}
+                        {!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}
                       </div>
                     </div>
                   ) : (
@@ -1201,15 +735,11 @@ if (wrapper) {
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
                           <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
-                          {!headshot && savedHeadshot && (
-                            <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
-                          )}
+                          {!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}
                         </div>
                         <div>
                           <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
-                          {!logo && savedLogo && (
-                            <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
-                          )}
+                          {!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}
                         </div>
                       </div>
                     </div>
@@ -1257,12 +787,27 @@ if (wrapper) {
                   <div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}>
                     <div style={{ width: previewW, height: previewH, overflow: "hidden" }}>
                       <div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: rawW, height: rawH }}>
-                        {selectedTemplate === "open-house" ? <OpenHouseTemplate size={currentSize} listingPhoto={listingPhoto} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} /> : <InfoBarTemplate size={currentSize} listingPhoto={listingPhoto} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />}
+                        {selectedTemplate === "open-house" ? (
+                          <OpenHouseTemplate size={currentSize} listingPhoto={mediaMode === "video" ? null : listingPhoto} videoElement={mediaMode === "video" ? videoPreviewElement : undefined} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />
+                        ) : (
+                          <InfoBarTemplate size={currentSize} listingPhoto={mediaMode === "video" ? null : listingPhoto} videoElement={mediaMode === "video" ? videoPreviewElement : undefined} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Output Size</Label><div className="grid grid-cols-3 gap-2">{SIZES.map((s) => (<button key={s.id} onClick={() => setSelectedSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${selectedSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div>
-                  <Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Exporting...</> : <><Download className="mr-2 h-5 w-5" /> Download PNG</>}</Button>
+                  {mediaMode === "video" && selectedVideo ? (
+                    <div className="mt-5 space-y-3">
+                      <Button onClick={handleVideoExport} disabled={exporting || videoExporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">
+                        {videoExporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting Video...</> : <><Film className="mr-2 h-5 w-5" />Export as Video (MP4)</>}
+                      </Button>
+                      <Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4">
+                        <Download className="mr-2 h-4 w-4" />Download Thumbnail (PNG)
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1275,80 +820,36 @@ if (wrapper) {
         {tab === "yard-sign" && (
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="space-y-6">
-              {/* Design Selector */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold text-foreground mb-4">Choose a Design</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {YARD_SIGN_DESIGNS.map((d) => (<button key={d.id} onClick={() => setYardDesign(d.id)} className={`p-4 rounded-xl border-2 text-center transition-all ${yardDesign === d.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-bold">{d.label}</p><p className="text-[11px] text-muted-foreground mt-1">{d.description}</p></button>))}
-                </div>
+                <div className="grid grid-cols-3 gap-3">{YARD_SIGN_DESIGNS.map((d) => (<button key={d.id} onClick={() => setYardDesign(d.id)} className={`p-4 rounded-xl border-2 text-center transition-all ${yardDesign === d.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-bold">{d.label}</p><p className="text-[11px] text-muted-foreground mt-1">{d.description}</p></button>))}</div>
               </div>
-              {/* Uploads */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />
-                    {!headshot && savedHeadshot && (
-                      <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
-                    )}
-                  </div>
-                  <div>
-                    <ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />
-                    {!logo && savedLogo && (
-                      <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
-                    )}
-                  </div>
+                  <div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div>
+                  <div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div>
                 </div>
               </div>
-              {/* Details */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Sign Details</h3>
                 <div className="grid gap-4">
                   <div className="space-y-1.5"><Label className="text-sm">Header Text</Label><Input value={yardHeaderText} onChange={(e) => setYardHeaderText(e.target.value)} placeholder="FOR SALE" /></div>
                   <div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Jane Smith" /></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" /></div>
-                    <div className="space-y-1.5"><Label className="text-sm">Email</Label><Input value={agentEmail} onChange={(e) => setAgentEmail(e.target.value)} placeholder="jane@email.com" /></div>
-                  </div>
+                  <div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Email</Label><Input value={agentEmail} onChange={(e) => setAgentEmail(e.target.value)} placeholder="jane@email.com" /></div></div>
                   <div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="Coldwell Banker" /></div>
-                  {yardDesign === "split-bar" && <>
-                    <div className="space-y-1.5"><Label className="text-sm">Office Name</Label><Input value={yardOfficeName} onChange={(e) => setYardOfficeName(e.target.value)} placeholder="Main Street Office" /></div>
-                    <div className="space-y-1.5"><Label className="text-sm">Office Phone</Label><Input value={yardOfficePhone} onChange={(e) => setYardOfficePhone(e.target.value)} placeholder="800-555-4321" /></div>
-                  </>}
+                  {yardDesign === "split-bar" && <><div className="space-y-1.5"><Label className="text-sm">Office Name</Label><Input value={yardOfficeName} onChange={(e) => setYardOfficeName(e.target.value)} placeholder="Main Street Office" /></div><div className="space-y-1.5"><Label className="text-sm">Office Phone</Label><Input value={yardOfficePhone} onChange={(e) => setYardOfficePhone(e.target.value)} placeholder="800-555-4321" /></div></>}
                   {yardDesign === "sidebar" && <div className="space-y-1.5"><Label className="text-sm">Website</Label><Input value={yardWebsite} onChange={(e) => setYardWebsite(e.target.value)} placeholder="www.janesmith.com" /></div>}
                   <div className="space-y-1.5"><Label className="text-sm">QR Code URL <span className="text-muted-foreground font-normal">(optional)</span></Label><Input value={yardQrUrl} onChange={(e) => setYardQrUrl(e.target.value)} placeholder="https://janesmith.com" /></div>
                 </div>
               </div>
-              {/* Colors */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Colors</h3>
-                {yardDesign === "split-bar" && <>
-                  <Label className="text-sm font-semibold mb-2 block">Top Bar Color</Label>
-                  <div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div>
-                  <BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} />
-                  <Label className="text-sm font-semibold mb-2 block mt-4">Bottom Bar Color</Label>
-                  <div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div>
-                  <BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} />
-                </>}
-                {yardDesign === "sidebar" && <>
-                  <Label className="text-sm font-semibold mb-2 block">Sidebar Color</Label>
-                  <div className="flex items-center gap-3 mb-2"><input type="color" value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-28 font-mono text-sm" /></div>
-                  <BrokerageSwatches currentColor={yardSidebarColor} onSelect={setYardSidebarColor} />
-                  <Label className="text-sm font-semibold mb-2 block mt-4">Main Background</Label>
-                  <div className="flex items-center gap-3 mb-2"><input type="color" value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-28 font-mono text-sm" /></div>
-                  <BrokerageSwatches currentColor={yardMainBgColor} onSelect={setYardMainBgColor} />
-                </>}
-                {yardDesign === "top-heavy" && <>
-                  <Label className="text-sm font-semibold mb-2 block">Top Section Color</Label>
-                  <div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div>
-                  <BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} />
-                  <Label className="text-sm font-semibold mb-2 block mt-4">Bottom Section Color</Label>
-                  <div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div>
-                  <BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} />
-                </>}
+                {yardDesign === "split-bar" && <><Label className="text-sm font-semibold mb-2 block">Top Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Bottom Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} /></>}
+                {yardDesign === "sidebar" && <><Label className="text-sm font-semibold mb-2 block">Sidebar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardSidebarColor} onSelect={setYardSidebarColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Main Background</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardMainBgColor} onSelect={setYardMainBgColor} /></>}
+                {yardDesign === "top-heavy" && <><Label className="text-sm font-semibold mb-2 block">Top Section Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Bottom Section Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} /></>}
               </div>
             </div>
-            {/* Preview */}
             <div className="space-y-4">
               <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
                 <h3 className="font-bold text-foreground mb-4">Live Preview</h3>
@@ -1362,7 +863,7 @@ if (wrapper) {
                   </div>
                 </div>
                 <div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Sign Size</Label><div className="grid grid-cols-2 gap-2">{YARD_SIGN_SIZES.map((s) => (<button key={s.id} onClick={() => setYardSignSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${yardSignSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div>
-                <Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating print-ready image...</> : <><Download className="mr-2 h-5 w-5" /> Download PNG</>}</Button>
+                <Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button>
               </div>
             </div>
           </div>
@@ -1381,33 +882,18 @@ if (wrapper) {
                   <div className="space-y-1.5"><Label className="text-sm">City, State, Zip</Label><Input value={pdfCityStateZip} onChange={(e) => setPdfCityStateZip(e.target.value)} placeholder="Playas Del Coco, Guanacaste" /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={pdfPrice} onChange={(e) => setPdfPrice(e.target.value)} placeholder="129,000" /></div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1.5"><Label className="text-sm">Beds</Label><Input value={pdfBeds} onChange={(e) => setPdfBeds(e.target.value)} placeholder="1" /></div>
-                      <div className="space-y-1.5"><Label className="text-sm">Baths</Label><Input value={pdfBaths} onChange={(e) => setPdfBaths(e.target.value)} placeholder="1" /></div>
-                      <div className="space-y-1.5"><Label className="text-sm">Sq Ft</Label><Input value={pdfSqft} onChange={(e) => setPdfSqft(e.target.value)} placeholder="750" /></div>
-                    </div>
+                    <div className="grid grid-cols-3 gap-2"><div className="space-y-1.5"><Label className="text-sm">Beds</Label><Input value={pdfBeds} onChange={(e) => setPdfBeds(e.target.value)} placeholder="1" /></div><div className="space-y-1.5"><Label className="text-sm">Baths</Label><Input value={pdfBaths} onChange={(e) => setPdfBaths(e.target.value)} placeholder="1" /></div><div className="space-y-1.5"><Label className="text-sm">Sq Ft</Label><Input value={pdfSqft} onChange={(e) => setPdfSqft(e.target.value)} placeholder="750" /></div></div>
                   </div>
-                  <div className="space-y-1.5"><Label className="text-sm">Key Features (one per line — bullet list)</Label><textarea value={pdfFeatures} onChange={(e) => setPdfFeatures(e.target.value)} placeholder={"1 bedroom with built-in closets\n1 bathroom\nBright and inviting interiors\nFully furnished"} rows={6} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
-                  <div className="space-y-1.5"><Label className="text-sm">Description <span className="text-muted-foreground font-normal">(optional — shown on page 2)</span></Label><textarea value={pdfDescription} onChange={(e) => setPdfDescription(e.target.value)} placeholder="Investment opportunity details, rental information, etc." rows={4} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                  <div className="space-y-1.5"><Label className="text-sm">Key Features (one per line)</Label><textarea value={pdfFeatures} onChange={(e) => setPdfFeatures(e.target.value)} placeholder={"1 bedroom with built-in closets\n1 bathroom\nBright and inviting interiors"} rows={6} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
+                  <div className="space-y-1.5"><Label className="text-sm">Description <span className="text-muted-foreground font-normal">(optional)</span></Label><textarea value={pdfDescription} onChange={(e) => setPdfDescription(e.target.value)} placeholder="Investment opportunity details..." rows={4} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
                 </div>
               </div>
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-accent" />Photos ({pdfPhotos.length}/25)</h3>
-                <p className="text-xs text-muted-foreground mb-4">First 3 photos appear on page 1 (1 large + 2 small). Remaining photos fill grids on additional pages.</p>
+                <p className="text-xs text-muted-foreground mb-4">First 3 photos appear on page 1. Remaining fill grids on additional pages.</p>
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 mb-4">
-                  {pdfPhotos.map((url, i) => (
-                    <div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square">
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                      <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{i < 3 ? `★ ${i + 1}` : i + 1}</div>
-                      <button onClick={() => setPdfPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button>
-                    </div>
-                  ))}
-                  {pdfPhotos.length < 25 && (
-                    <label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer">
-                      {uploadingPdfPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Upload className="h-5 w-5" /><span className="text-[10px] font-medium">Add</span></>}
-                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const files = Array.from(e.target.files || []); files.forEach(f => handlePdfPhotoUpload(f)); e.target.value = ""; }} />
-                    </label>
-                  )}
+                  {pdfPhotos.map((url, i) => (<div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square"><img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" /><div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{i < 3 ? `★ ${i + 1}` : i + 1}</div><button onClick={() => setPdfPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button></div>))}
+                  {pdfPhotos.length < 25 && (<label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer">{uploadingPdfPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Upload className="h-5 w-5" /><span className="text-[10px] font-medium">Add</span></>}<input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const files = Array.from(e.target.files || []); files.forEach(f => handlePdfPhotoUpload(f)); e.target.value = ""; }} /></label>)}
                 </div>
               </div>
               <div className="bg-card rounded-2xl border border-border p-6">
@@ -1416,7 +902,6 @@ if (wrapper) {
                 <AccentSwatches currentColor={pdfAccentColor} onSelect={setPdfAccentColor} />
               </div>
             </div>
-            {/* Preview */}
             <div className="space-y-4">
               <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
                 <h3 className="font-bold text-foreground mb-4">Live Preview</h3>
@@ -1427,16 +912,10 @@ if (wrapper) {
                     </div>
                   </div>
                 </div>
-                {pdfTotalPages > 1 && (
-                  <div className="flex items-center justify-center gap-3 mt-3">
-                    <button onClick={() => setPdfPreviewPage(Math.max(0, pdfPreviewPage - 1))} disabled={pdfPreviewPage === 0} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-                    <span className="text-sm font-semibold">Page {pdfPreviewPage + 1} of {pdfTotalPages}</span>
-                    <button onClick={() => setPdfPreviewPage(Math.min(pdfTotalPages - 1, pdfPreviewPage + 1))} disabled={pdfPreviewPage >= pdfTotalPages - 1} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button>
-                  </div>
-                )}
+                {pdfTotalPages > 1 && (<div className="flex items-center justify-center gap-3 mt-3"><button onClick={() => setPdfPreviewPage(Math.max(0, pdfPreviewPage - 1))} disabled={pdfPreviewPage === 0} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button><span className="text-sm font-semibold">Page {pdfPreviewPage + 1} of {pdfTotalPages}</span><button onClick={() => setPdfPreviewPage(Math.min(pdfTotalPages - 1, pdfPreviewPage + 1))} disabled={pdfPreviewPage >= pdfTotalPages - 1} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button></div>)}
                 <div className="mt-5 space-y-3">
-                  <Button onClick={handlePdfExport} disabled={exporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating PDF...</> : <><Download className="mr-2 h-5 w-5" /> Download PDF</>}</Button>
-                  <Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4"><Download className="mr-2 h-4 w-4" /> Download Current Page as PNG</Button>
+                  <Button onClick={handlePdfExport} disabled={exporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating PDF...</> : <><Download className="mr-2 h-5 w-5" />Download PDF</>}</Button>
+                  <Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4"><Download className="mr-2 h-4 w-4" />Download Current Page as PNG</Button>
                 </div>
               </div>
             </div>
@@ -1454,18 +933,8 @@ if (wrapper) {
                 <div className="bg-card rounded-2xl border border-border p-6">
                   <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3>
                   <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <ImageUploadBox label="Headshot" imageUrl={brandHeadshot} onUpload={(f) => handleHeadshotUpload(f, setBrandHeadshot, setUploadingBrandHeadshot)} onClear={() => setBrandHeadshot(null)} uploading={uploadingBrandHeadshot} />
-                      {!brandHeadshot && savedHeadshot && (
-                        <button onClick={() => { setBrandHeadshot(savedHeadshot); setHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>
-                      )}
-                    </div>
-                    <div>
-                      <ImageUploadBox label="Logo" imageUrl={brandLogo} onUpload={(f) => handleLogoUpload(f, setBrandLogo, setUploadingBrandLogo)} onClear={() => setBrandLogo(null)} uploading={uploadingBrandLogo} />
-                      {!brandLogo && savedLogo && (
-                        <button onClick={() => { setBrandLogo(savedLogo); setLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>
-                      )}
-                    </div>
+                    <div><ImageUploadBox label="Headshot" imageUrl={brandHeadshot} onUpload={(f) => handleHeadshotUpload(f, setBrandHeadshot, setUploadingBrandHeadshot)} onClear={() => setBrandHeadshot(null)} uploading={uploadingBrandHeadshot} />{!brandHeadshot && savedHeadshot && <button onClick={() => { setBrandHeadshot(savedHeadshot); setHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div>
+                    <div><ImageUploadBox label="Logo" imageUrl={brandLogo} onUpload={(f) => handleLogoUpload(f, setBrandLogo, setUploadingBrandLogo)} onClear={() => setBrandLogo(null)} uploading={uploadingBrandLogo} />{!brandLogo && savedLogo && <button onClick={() => { setBrandLogo(savedLogo); setLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div>
                     <ImageUploadBox label="Background Photo" imageUrl={brandBgPhoto} onUpload={(f) => handleUpload(f, "design-studio", setBrandBgPhoto, setUploadingBrandBg)} onClear={() => setBrandBgPhoto(null)} uploading={uploadingBrandBg} hint="Optional — overrides color" />
                   </div>
                 </div>
@@ -1508,7 +977,7 @@ if (wrapper) {
                     </div>
                   </div>
                   <div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Orientation</Label><div className="grid grid-cols-2 gap-2">{BRANDING_ORIENTATIONS.map((o) => (<button key={o.id} onClick={() => setBrandOrientation(o.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${brandOrientation === o.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{o.label}</p><p className="text-[11px] text-muted-foreground">{o.sublabel}</p></button>))}</div></div>
-                  <Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Exporting...</> : <><Download className="mr-2 h-5 w-5" /> Download PNG</>}</Button>
+                  <Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button>
                 </div>
               </div>
             </div>
