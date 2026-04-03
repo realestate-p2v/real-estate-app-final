@@ -710,47 +710,6 @@ export default function DesignStudioPage() {
     return null;
   };
 
-  // ── Helper: fetch a URL and return a blob URL ──
-  const makeBlobURL = async (url: string, mimeType: string): Promise<string> => {
-    const resp = await fetch(url);
-    const buf = await resp.arrayBuffer();
-    const blob = new Blob([buf], { type: mimeType });
-    return URL.createObjectURL(blob);
-  };
-
-  // ── Helper: fetch a file as Uint8Array ──
-  const fetchAsUint8 = async (url: string): Promise<Uint8Array> => {
-    const resp = await fetch(url);
-    const buf = await resp.arrayBuffer();
-    return new Uint8Array(buf);
-  };
-
-  // ── Load FFmpeg class from ESM CDN ──
-  const loadFFmpegESM = async (): Promise<{ FFmpegClass: any; workerBlobURL: string }> => {
-    if ((window as any).__FFmpegClass) {
-      return { FFmpegClass: (window as any).__FFmpegClass, workerBlobURL: (window as any).__FFmpegWorkerURL };
-    }
-
-    // Fetch the ESM worker and create a blob URL
-    const workerResp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js");
-    const workerBlob = new Blob([await workerResp.arrayBuffer()], { type: "text/javascript" });
-    const workerBlobURL = URL.createObjectURL(workerBlob);
-
-    // Use the UMD eval approach which we confirmed works for getting the FFmpeg class
-    (window as any).module = { exports: {} };
-    (window as any).exports = {};
-    const resp = await fetch("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
-    const code = await resp.text();
-    (0, eval)(code); // eslint-disable-line no-eval
-
-    const FFmpegClass = (window as any).module?.exports?.FFmpeg;
-    if (!FFmpegClass) throw new Error("Failed to load FFmpeg class");
-
-    (window as any).__FFmpegClass = FFmpegClass;
-    (window as any).__FFmpegWorkerURL = workerBlobURL;
-    return { FFmpegClass, workerBlobURL };
-  };
-
   // Video Export with ffmpeg.wasm — now with optional music mixing
   const handleVideoExport = async () => {
     if (checkPaywall()) return;
@@ -761,28 +720,27 @@ export default function DesignStudioPage() {
     setVideoExportStatus("Loading video encoder...");
 
     try {
-      // 0. Load FFmpeg class
-      const { FFmpegClass, workerBlobURL } = await loadFFmpegESM();
-      const ffmpeg = new FFmpegClass();
+      // Dynamic import of ffmpeg packages (installed via npm)
+      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+      const { toBlobURL, fetchFile } = await import("@ffmpeg/util");
 
-      ffmpeg.on("progress", ({ progress: p }: { progress: number }) => {
+      const ffmpeg = new FFmpeg();
+      ffmpeg.on("progress", ({ progress: p }) => {
         setVideoExportProgress(Math.min(Math.round(p * 100), 99));
       });
 
-      // Download core files as blob URLs (UMD build)
-      setVideoExportStatus("Initializing encoder...");
+      // Load core from CDN via blob URLs (avoids bundling the 30MB wasm)
+      setVideoExportStatus("Downloading encoder (~30 MB)...");
       const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-
       await ffmpeg.load({
-        coreURL: `${coreBase}/ffmpeg-core.js`,
-        wasmURL: `${coreBase}/ffmpeg-core.wasm`,
-        classWorkerURL: workerBlobURL,
+        coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
       });
 
       // 1. Fetch the source video
       setVideoExportStatus("Downloading source video...");
       setVideoExportProgress(5);
-      const videoData = await fetchAsUint8(selectedVideo.url);
+      const videoData = await fetchFile(selectedVideo.url);
       await ffmpeg.writeFile("input.mp4", videoData);
 
       // 2. Fetch / write the music file if a track was selected
@@ -793,7 +751,7 @@ export default function DesignStudioPage() {
         setVideoExportStatus("Loading music track...");
         setVideoExportProgress(8);
         if (musicSource.type === "url") {
-          const musicData = await fetchAsUint8(musicSource.url);
+          const musicData = await fetchFile(musicSource.url);
           await ffmpeg.writeFile("music.mp3", musicData);
           hasMusic = true;
         } else {
