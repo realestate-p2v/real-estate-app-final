@@ -921,7 +921,7 @@ export default function DesignStudioPage() {
       const html2canvas = (await import("html2canvas")).default;
       const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
       if (!el) return;
-      const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
+      const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: false, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH });
       const link = document.createElement("a");
       link.download = `p2v-${tab}-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
@@ -960,7 +960,7 @@ export default function DesignStudioPage() {
         await new Promise(r => setTimeout(r, 400));
         const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement;
         if (!el) continue;
-        const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 });
+        const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: false, backgroundColor: "#ffffff", width: 2550, height: 3300 });
         if (page > 0) pdf.addPage();
         pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11);
       }
