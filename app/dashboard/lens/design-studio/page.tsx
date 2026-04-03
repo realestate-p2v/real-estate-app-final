@@ -755,21 +755,26 @@ export default function DesignStudioPage() {
       const { FFmpeg, fetchFile, toBlobURL } = await loadFFmpegFromCDN();
 
       const ffmpeg = new FFmpeg();
-      const coreBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
 
       ffmpeg.on("progress", ({ progress: p }: { progress: number }) => {
         setVideoExportProgress(Math.min(Math.round(p * 100), 99));
       });
 
-      setVideoExportStatus("Loading encoder core...");
+      setVideoExportStatus("Downloading encoder (~30 MB)...");
       const ffmpegBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm";
-      // Only the worker needs blob URL (cross-origin restriction).
-      // Core + wasm can load directly from CDN (much faster for the 30MB wasm).
-      const workerBlobURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, "text/javascript");
+      const coreUmdURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+
+      // UMD build works with blob workers (ESM doesn't).
+      // All three must be blob URLs to avoid cross-origin issues.
+      const coreURL = await toBlobURL(`${coreUmdURL}/ffmpeg-core.js`, "text/javascript");
+      const wasmURL = await toBlobURL(`${coreUmdURL}/ffmpeg-core.wasm`, "application/wasm");
+      const workerURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, "text/javascript");
+
+      setVideoExportStatus("Initializing encoder...");
       await ffmpeg.load({
-        coreURL: `${coreBaseURL}/ffmpeg-core.js`,
-        wasmURL: `${coreBaseURL}/ffmpeg-core.wasm`,
-        classWorkerURL: workerBlobURL,
+        coreURL,
+        wasmURL,
+        classWorkerURL: workerURL,
       });
 
       // 1. Fetch the source video
