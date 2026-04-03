@@ -6,17 +6,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        crypto: false,
-      };
-    }
-    return config;
-  },
+  turbopack: {},
+  serverExternalPackages: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
 }
 
 export default nextConfig
