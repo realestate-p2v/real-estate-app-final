@@ -388,7 +388,12 @@ export default function LensPage() {
                 { icon: Search, title: "Lead Finder", desc: "Search public records for motivated sellers — pre-foreclosures, divorces, probate, tax liens. 100 searches/mo + 50 skip traces included." },
               ].map((tool, i) => (
                 <div key={i} className="bg-card rounded-2xl border border-border p-6 hover:border-purple-300 hover:shadow-lg transition-all duration-300">
-                  <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4"><tool.icon className="h-6 w-6 text-purple-600" /></div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center"><tool.icon className="h-6 w-6 text-purple-600" /></div>
+                    <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                      Coming Soon
+                    </span>
+                  </div>
                   <h4 className="text-lg font-bold text-foreground mb-2">{tool.title}</h4>
                   <p className="text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
                 </div>
