@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { randomUUID } from "crypto"
+import { ensurePropertyExists } from "@/lib/utils/portfolio"
 
 // GET all orders for admin dashboard
 export async function GET() {
@@ -136,6 +137,21 @@ export async function POST(request: Request) {
         { success: false, error: error.message },
         { status: 500 }
       )
+    }
+
+    // Auto-create property portfolio entry
+    if (propertyAddress && userId) {
+      try {
+        await ensurePropertyExists(supabase, userId, propertyAddress, {
+          city: propertyCity,
+          state: propertyState,
+          bedrooms: propertyBedrooms ? parseInt(propertyBedrooms) : undefined,
+          bathrooms: propertyBathrooms ? parseInt(propertyBathrooms) : undefined,
+        });
+      } catch (err) {
+        console.error("Portfolio auto-create failed:", err);
+        // Don't fail the order if portfolio creation fails
+      }
     }
 
     console.log("[Orders] Created order:", orderId, userId ? `(user: ${userId.slice(0, 8)})` : "(no user)", includeUnbranded ? "(+unbranded copy)" : "", is_quick_video ? "(quick video)" : "")
