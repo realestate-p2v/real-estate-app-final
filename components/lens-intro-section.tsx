@@ -47,7 +47,7 @@ const features = [
     icon: Sparkles,
     title: "Priority Delivery",
     description:
-      "Lens subscribers get 12-hour video delivery instead of 24 hours. Your listings go live faster.",
+      "Lens subscribers jump the queue. Your video orders are processed first and delivered in under 12 hours.",
   },
 ];
 
@@ -68,12 +68,10 @@ export function LensIntroSection() {
             Introducing P2V Lens
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
-            Your AI-Powered Real Estate Marketing Suite
+            The AI Marketing Suite Built for Real Estate Agents
           </p>
           <p className="text-base text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            You already trust us for your listing videos. Now we&apos;re helping you
-            take better photos, write better descriptions, and create stunning
-            marketing materials — all powered by AI.
+            Built by real estate marketing professionals — not a generic AI company. Every tool understands listings, MLS requirements, and what sells homes. Better photos, better descriptions, stunning marketing materials — purpose-built for how agents actually work.
           </p>
         </div>
 
