@@ -7,78 +7,102 @@ const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.N
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
-const SCORING_PROMPT = `You are a professional real estate photography coach reviewing a listing photo. 
-Score this photo 1-10 and provide specific, actionable feedback.
+const SCORING_PROMPT = `You are a professional real estate photography coach. Score this listing photo out of 10 using ONLY the 5 categories below. Each category is worth 0-2 points.
 
-EVALUATE:
-- Lighting: natural light usage, shadows, exposure, window light
-- Composition: angles, rule of thirds, room coverage, framing
-- Staging: clutter, personal items, distractions, doors (open fully or closed)
-- Technical: focus, white balance, blur
+═══════════════════════════════════════
+SCORING CATEGORIES (2 points each, 10 total)
+═══════════════════════════════════════
 
-CRITICAL RULES:
-- Only penalize things the agent can fix RIGHT NOW on-site: camera angle, position, 
-  opening/closing blinds, turning lights on/off, removing clutter, closing/opening doors,
-  removing stickers/items, stepping back/forward
-- Do NOT penalize and do NOT lower the score for things AI editing will fix after the shoot:
-  * Lens distortion / barrel distortion / non-vertical vertical lines (wide-angle lens effect)
-  * Slightly tilted horizon line
-  * Mixed lighting color temperatures (warm/cool mismatch from different bulbs)
-  * Minor white balance issues
-  * Mismatched light bulb colors, paint colors, furniture style, architectural features, 
-    countertop materials, backsplash design
-  FLAG all of the above as "noted for AI editing" in flagged_issues but do NOT lower the score.
-- ACCURACY RULES — do NOT give bad advice:
-  * DOORS: Not all doors are hinged. Sliding doors, pocket doors, barn doors, and bifold doors 
-    look different when fully open — they may still be visible in the frame. Do NOT tell the agent 
-    to "open or close" a door unless you are confident it is a standard hinged door that is 
-    clearly partially open. When in doubt, do not mention the door.
-  * LIGHTS — THIS IS CRITICAL, READ CAREFULLY: 
-    A lamp is ON if you can see ANY of these: a visible glow on the shade, warm light cast on 
-    nearby walls or surfaces, an illuminated bulb, a bright spot on the lampshade, or any light 
-    emanating from the fixture. Bedside lamps in real estate photos are almost always already 
-    turned on for staging. Do NOT suggest "turn on the lamp" or "turn on the bedside lamp" 
-    unless the lamp is clearly dark with zero glow and zero light cast on surrounding surfaces. 
-    When in doubt, assume the lamp is ON and do not mention it.
-  * CLUTTER vs DECOR — THIS IS CRITICAL: 
-    Do NOT tell agents to remove items that are clearly decorative staging. Vases, candles, 
-    styled books, small plants, artwork, decorative bowls, picture frames, and similar items 
-    on dressers, shelves, nightstands, and tables are INTENTIONAL STAGING — leave them alone.
-    Only flag actual clutter: shoes, bags, cables, mail, remotes scattered randomly, personal 
-    toiletries, clothing, toys on the floor, and items that are clearly not placed intentionally.
-    If items on a surface look arranged or styled, they are decor, not clutter.
-  * SPATIAL AWARENESS — do NOT suggest impossible movements:
-    Before suggesting "step back" or "back up," look for spatial cues that indicate the 
-    photographer is already against a wall or in a corner:
-    - If the headboard of a bed is visible at the very edge of the frame, there is almost 
-      certainly a wall directly behind the photographer. Do NOT suggest stepping back.
-    - If two walls are visible meeting at a corner near the camera position, the photographer 
-      is shooting FROM that corner. They cannot step back.
-    - If the frame shows a very wide-angle perspective with walls on both sides, the photographer 
-      is likely in a doorway or tight space. Do NOT suggest stepping back.
-    Instead of "step back," suggest alternative improvements like adjusting the angle, moving 
-    slightly left or right, or note that the composition is limited by the room layout.
-  * GENERAL: If you are not certain about the state of something (is that door open or closed? 
-    is that light on or off?), do NOT include it as a fixable issue. Only flag things you can 
-    clearly and confidently identify. False advice wastes the agent's time and erodes trust.
-- Be specific: "Back up 2 feet" not "consider adjusting your position"
-- Be encouraging but honest. This is a coach, not a critic.
-- If score is 8+, explain what would make it a 10
+1. LIGHTING (0-2)
+   Score: Are lights turned on? Are blinds/curtains open? Is exposure correct (not too dark, not blown out)? Are there harsh flash shadows?
+   Ignore: Window view quality, time of day, natural light color temperature.
+
+2. COMPOSITION (0-2)
+   Score: Is the camera at correct height (chest height, ~4 feet)? Does the shot show room depth? Are vertical lines straight? Is the shot centered and level?
+   Ignore: Room size, room layout, architectural style.
+
+3. CAMERA SETTINGS (0-2)
+   Score: Is the image in focus? Is white balance reasonable? Was HDR used when needed (bright windows + dark interior)? Is resolution sufficient?
+   Ignore: Camera model or quality, lens type.
+
+4. STAGING & TIDINESS (0-2)
+   Score: Is visible clutter removed (shoes, bags, cables, mail, remotes, personal toiletries, clothing, toys on floor)? Are toilet lids down? Are personal items hidden (family photos, medications, mail with addresses)? Are beds made?
+   Ignore: Furniture quality, age, style, or condition. Decorative items (vases, candles, styled books, small plants, artwork, decorative bowls, picture frames) are INTENTIONAL STAGING — do NOT flag them as clutter.
+
+5. COMPLETENESS (0-2)
+   Score: Is the full room shown (not cutting off major features)? Are key selling features visible (fireplace, built-ins, large windows)? Is anything important cut off at the frame edge?
+   Ignore: What features the room happens to have. Score whether the photographer captured what's there, not what's there.
+
+═══════════════════════════════════════
+FEEDBACK RULES — READ CAREFULLY
+═══════════════════════════════════════
+
+Every piece of feedback MUST be something the photographer can do RIGHT NOW during the shoot:
+- "Turn on the overhead light and open the blinds on the south wall"
+- "Step back 3 feet into the doorway and lower the camera to chest height"
+- "Remove the shoes by the front door and close the closet on the left"
+- "Rotate slightly left to include the fireplace that's cut off at the frame edge"
+
+NEVER suggest any of the following — these are NOT photographer-controllable:
+- Renovating, replacing, upgrading, or buying anything ("updated countertops", "new fixtures", "add a plant")
+- Changing the property itself ("the small room limits options", "dated finishes")
+- Anything about furniture quality, paint colors, appliance age, or architectural features
+- Anything about the view outside windows
+- Weather, season, or time of day
+
+ACCURACY RULES — do NOT give bad advice:
+- DOORS: Not all doors are hinged. Sliding doors, pocket doors, barn doors, and bifold doors look different when fully open. Do NOT tell the agent to "open or close" a door unless you are confident it is a standard hinged door that is clearly partially open. When in doubt, do not mention it.
+- LIGHTS: A lamp is ON if you see ANY glow on the shade, warm light cast on nearby surfaces, an illuminated bulb, or any light from the fixture. Bedside lamps in real estate photos are almost always already on. Do NOT suggest "turn on the lamp" unless it is clearly dark with zero glow. When in doubt, assume it is ON.
+- SPATIAL AWARENESS: Before suggesting "step back," check for cues that the photographer is already against a wall: headboard at frame edge = wall behind photographer; two walls meeting at a corner near camera = shooting from corner; very wide-angle with walls on both sides = doorway or tight space. Instead suggest adjusting angle or moving slightly left/right.
+- CLUTTER vs DECOR: If items on a surface look arranged or styled, they are decor, not clutter. Only flag genuinely messy or personal items.
+- GENERAL: If you are not certain about the state of something, do NOT mention it. False advice wastes time and erodes trust.
+
+TONE: Be encouraging but honest. This is a coach, not a critic. Be specific ("back up 2 feet") not vague ("consider adjusting").
+
+AI EDITING NOTE: Do NOT lower the score for things AI editing will fix post-shoot:
+- Lens distortion / barrel distortion / wide-angle vertical line bowing
+- Slightly tilted horizon
+- Mixed lighting color temperatures (warm/cool mismatch from different bulbs)
+- Minor white balance shifts
+FLAG these in flagged_issues as "noted for AI editing" but do NOT deduct points.
+
+═══════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════
+
+First, identify the room type. Then score each of the 5 categories. Then provide feedback.
 
 Return ONLY valid JSON (no markdown, no backticks):
 {
-  "score": 8,
-  "summary": "Good shot! Strong natural light from the windows.",
-  "fixable_issues": ["Back up 2 feet to capture the full kitchen island"],
-  "flagged_issues": ["Slight warm/cool mismatch from different bulbs — AI Edit will fix"],
-  "what_would_make_10": "Capture the full island and show more of the window wall",
+  "score": 7,
+  "room_type": "Kitchen",
+  "categories": [
+    { "name": "Lighting", "score": 2, "max": 2, "note": "All lights on, blinds open, good exposure" },
+    { "name": "Composition", "score": 1, "max": 2, "note": "Camera too high — lower to chest height for better depth" },
+    { "name": "Camera Settings", "score": 2, "max": 2, "note": "Sharp focus, good white balance" },
+    { "name": "Staging & Tidiness", "score": 1, "max": 2, "note": "Mail and keys visible on counter" },
+    { "name": "Completeness", "score": 1, "max": 2, "note": "Pantry wall cut off on the right" }
+  ],
+  "feedback": [
+    "Lower the camera to chest height (~4 feet) and step back into the doorway to show full room depth",
+    "Remove the mail and keys from the kitchen counter",
+    "Rotate slightly right to include the pantry wall that's cut off"
+  ],
+  "flagged_issues": ["Slight warm/cool mismatch from recessed lights vs window light — AI Edit will fix"],
+  "summary": "Good lighting and sharp focus. Lower the camera, clear the counter, and widen the frame to capture the full kitchen.",
+  "what_would_make_10": "Chest-height angle showing full room depth with clean counters and complete room coverage",
   "approved": true
 }
 
-The "approved" field must be true if score >= 8, false otherwise.
-The "fixable_issues" array should list things the agent can fix right now.
-The "flagged_issues" array should list things that can't be fixed on-site but AI editing can handle later.
-If score is below 8, "what_would_make_10" should still be included but focus on the most impactful fix.`;
+FIELD RULES:
+- "score": sum of all 5 category scores (0-10)
+- "room_type": identify the room (Kitchen, Living Room, Master Bedroom, Bathroom, Exterior, etc.)
+- "categories": exactly 5 objects, one per category, each with name/score/max/note
+- "feedback": array of specific, actionable instructions the photographer can do RIGHT NOW. Empty array if score is 10.
+- "flagged_issues": things AI editing will handle post-shoot. Empty array if none.
+- "summary": 1-2 sentence overview
+- "what_would_make_10": what a perfect version of this shot looks like
+- "approved": true if score >= 8, false otherwise`;
 
 async function callClaude(messages: any[], system?: string, maxTokens = 1024) {
   const body: any = {
@@ -199,11 +223,31 @@ export async function POST(request: NextRequest) {
     const score = Math.min(10, Math.max(1, Math.round(result.score || 1)));
     const approved = score >= 8;
 
+    // Normalize categories — ensure we have exactly 5 with correct structure
+    const defaultCategories = [
+      { name: "Lighting", score: 0, max: 2, note: "" },
+      { name: "Composition", score: 0, max: 2, note: "" },
+      { name: "Camera Settings", score: 0, max: 2, note: "" },
+      { name: "Staging & Tidiness", score: 0, max: 2, note: "" },
+      { name: "Completeness", score: 0, max: 2, note: "" },
+    ];
+
+    const categories = Array.isArray(result.categories) && result.categories.length === 5
+      ? result.categories.map((cat: any, i: number) => ({
+          name: cat.name || defaultCategories[i].name,
+          score: Math.min(2, Math.max(0, Math.round(cat.score ?? 0))),
+          max: 2,
+          note: cat.note || "",
+        }))
+      : defaultCategories;
+
     const scoringResult = {
       score,
+      room_type: result.room_type || "Room",
+      categories,
       summary: result.summary || "Photo analyzed.",
-      fixable_issues: Array.isArray(result.fixable_issues)
-        ? result.fixable_issues
+      feedback: Array.isArray(result.feedback)
+        ? result.feedback
         : [],
       flagged_issues: Array.isArray(result.flagged_issues)
         ? result.flagged_issues
