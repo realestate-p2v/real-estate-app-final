@@ -1,11 +1,8 @@
 "use client";
-
 import Image from "next/image";
 import { ShieldCheck, Lock, CreditCard } from "lucide-react";
-
 export function TrustSection() {
   return (
-
    
     
     <section className="py-12 bg-white border-t border-gray-100">
@@ -32,7 +29,7 @@ export function TrustSection() {
               ))}
             </div>
             <p className="text-lg font-semibold text-gray-800 leading-snug italic mb-3">
-              "Photo 2 Video has completely changed how I market my listings. The quality is exceptional, the delivery is fast—my clients are always impressed!"
+              &ldquo;Photo 2 Video has completely changed how I market my listings. The quality is exceptional, the delivery is fast—my clients are always impressed!&rdquo;
             </p>
             <div className="text-sm">
               <span className="font-bold text-gray-900">Timothy Wolfe</span>
@@ -40,6 +37,10 @@ export function TrustSection() {
             </div>
           </div>
         </div>
+
+        <p className="text-center text-sm font-semibold text-muted-foreground mb-8">
+          Purpose-built for real estate agents by real estate marketing professionals
+        </p>
 
         {/* Streamlined Security Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 border-t border-gray-100 pt-8">
@@ -56,7 +57,6 @@ export function TrustSection() {
             <span className="text-sm font-bold text-gray-700">100% Satisfaction Guaranteed</span>
           </div>
         </div>
-
         {/* Mini Payment Logos */}
         <div className="mt-8 flex justify-center items-center gap-6 opacity-30 grayscale filter scale-90">
           <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-4" />
