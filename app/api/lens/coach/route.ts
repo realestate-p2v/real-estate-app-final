@@ -22,7 +22,8 @@ SCORING CATEGORIES (2 points each, 10 total)
    Ignore: Room size, room layout, architectural style.
 
 3. CAMERA SETTINGS (0-2)
-   Score: Is the image in focus? Is white balance reasonable? Was HDR used when needed (bright windows + dark interior)? Is resolution sufficient?
+   Score: Is the image in focus? Is white balance reasonable? Is resolution sufficient?
+   HDR assessment: Only flag missing HDR if BOTH of these are true: (a) there are windows visible in the shot, AND (b) the windows are blown out to pure white OR the interior is noticeably underexposed/dark relative to the windows. If you can see detail through the windows (trees, sky, buildings, scenery) AND the interior is properly exposed, then HDR IS working correctly — give full marks and do NOT flag HDR as missing. Many modern phones apply HDR automatically and the result is balanced exposure between interior and exterior — this is the ideal outcome.
    Ignore: Camera model or quality, lens type.
 
 4. STAGING & TIDINESS (0-2)
@@ -31,6 +32,13 @@ SCORING CATEGORIES (2 points each, 10 total)
 
 5. COMPLETENESS (0-2)
    Score: Is the full room shown (not cutting off major features)? Are key selling features visible (fireplace, built-ins, large windows)? Is anything important cut off at the frame edge?
+   
+   CRITICAL — "cut off" means something is MISSING, not that a wall is near the frame edge:
+   - If the photographer is shooting FROM or ALONG a wall, that wall will naturally appear at the extreme left or right edge of the frame. This is CORRECT technique — it means the photographer positioned themselves at the wall to maximize room coverage. Do NOT say the room is "cut off" in that direction.
+   - A room is only "cut off" if there is clearly MORE room continuing beyond the frame edge that SHOULD have been captured — for example, you can see furniture or a doorway partially visible and abruptly cropped at the edge.
+   - Shooting along a wall or from a corner is standard real estate photography positioning. The wall at the edge IS the boundary of the room.
+   - When in doubt about whether something is cut off, assume the photographer has captured the full room from their vantage point and give the benefit of the doubt.
+   
    Ignore: What features the room happens to have. Score whether the photographer captured what's there, not what's there.
 
 ═══════════════════════════════════════
@@ -54,6 +62,8 @@ ACCURACY RULES — do NOT give bad advice:
 - DOORS: Not all doors are hinged. Sliding doors, pocket doors, barn doors, and bifold doors look different when fully open. Do NOT tell the agent to "open or close" a door unless you are confident it is a standard hinged door that is clearly partially open. When in doubt, do not mention it.
 - LIGHTS: A lamp is ON if you see ANY glow on the shade, warm light cast on nearby surfaces, an illuminated bulb, or any light from the fixture. Bedside lamps in real estate photos are almost always already on. Do NOT suggest "turn on the lamp" unless it is clearly dark with zero glow. When in doubt, assume it is ON.
 - SPATIAL AWARENESS: Before suggesting "step back," check for cues that the photographer is already against a wall: headboard at frame edge = wall behind photographer; two walls meeting at a corner near camera = shooting from corner; very wide-angle with walls on both sides = doorway or tight space. Instead suggest adjusting angle or moving slightly left/right.
+- WALL AT FRAME EDGE: If a wall runs along the left or right edge of the frame, the photographer is shooting FROM that wall or along it. This is correct positioning. Do NOT say the room is "cut off" on that side. The wall IS the room boundary.
+- HDR: If you can see detail through windows (outdoor scenery visible, not blown out white) and the interior is not dark, HDR IS active and working. Do NOT flag it as missing. Only flag missing HDR when windows are completely blown out to white with zero visible detail AND the interior appears underexposed.
 - CLUTTER vs DECOR: If items on a surface look arranged or styled, they are decor, not clutter. Only flag genuinely messy or personal items.
 - GENERAL: If you are not certain about the state of something, do NOT mention it. False advice wastes time and erodes trust.
 
