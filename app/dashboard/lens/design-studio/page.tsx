@@ -485,7 +485,7 @@ export default function DesignStudioPage() {
       const { fetchFile, toBlobURL } = await import("@ffmpeg/util");
 
       const ffmpeg = new FFmpeg();
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+      const baseURL = "https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/esm";
 
       ffmpeg.on("progress", ({ progress: p }) => {
         setVideoExportProgress(Math.min(Math.round(p * 100), 99));
