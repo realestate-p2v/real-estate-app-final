@@ -55,7 +55,7 @@ export function HeroSection() {
       </div>
 
       {/* Split Container */}
-      <div className="relative z-10 flex flex-col lg:flex-row flex-1 min-h-[85vh] gap-3 lg:gap-4 px-2 lg:px-4 py-4 lg:py-6">
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-start flex-1 min-h-[85vh] gap-3 lg:gap-4 px-2 lg:px-4 py-4 lg:py-6">
 
         {/* ═══════════════════════════════════════════
             LEFT — Photo 2 Video
@@ -193,6 +193,17 @@ export function HeroSection() {
                       {tool.label}
                     </div>
                   ))}
+                </div>
+
+                {/* Stat callout — matches video card height */}
+                <div className="bg-cyan-50 border border-cyan-100 rounded-xl px-5 py-3 max-w-md w-full mb-6">
+                  <p className="text-sm font-bold text-gray-900">
+                    Professional photos sell homes{" "}
+                    <span className="text-cyan-600">32% faster</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    — Real Estate Staging Association
+                  </p>
                 </div>
 
                 {/* Benefits list */}
