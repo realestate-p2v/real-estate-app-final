@@ -28,7 +28,8 @@ SCORING CATEGORIES (2 points each, 10 total)
 
 4. STAGING & TIDINESS (0-2)
    Score: Is visible clutter removed (shoes, bags, cables, mail, remotes, personal toiletries, clothing, toys on floor)? Are toilet lids down? Are personal items hidden (family photos, medications, mail with addresses)? Are beds made?
-   Ignore: Furniture quality, age, style, or condition. Decorative items (vases, candles, styled books, small plants, artwork, decorative bowls, picture frames) are INTENTIONAL STAGING — do NOT flag them as clutter.
+   VACANT/EMPTY ROOMS: If a room is unfurnished or empty, that is NOT a staging problem — it is a vacant listing. An empty, clean room scores 2/2. The photographer cannot furnish a property during a shoot. Do NOT suggest adding furniture, staging items, or décor. Do NOT penalize for emptiness. Only deduct points if there is actual clutter, mess, or personal items visible.
+   Ignore: Furniture quality, age, style, or condition. Whether the room has furniture at all. Decorative items (vases, candles, styled books, small plants, artwork, decorative bowls, picture frames) are INTENTIONAL STAGING — do NOT flag them as clutter.
 
 5. COMPLETENESS (0-2)
    Score: Is the full room shown (not cutting off major features)? Are key selling features visible (fireplace, built-ins, large windows)? Is anything important cut off at the frame edge?
