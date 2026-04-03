@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
 import { LensConversionTracker } from "@/components/lens-conversion-tracker";
+import { LensTrialBanner } from "@/components/lens-trial-banner";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -241,8 +242,13 @@ export default function DashboardLensPage() {
           </div>
         </div>
 
+        {/* ═══ TRIAL GAMIFICATION BANNER ═══ */}
+        <div className="mt-8">
+          <LensTrialBanner />
+        </div>
+
         {/* ═══ SUBSCRIPTION STATUS ═══ */}
-        <div className="mt-8 mb-10">
+        <div className="mb-10">
           {subscription.active ? (
             <div className="bg-card rounded-2xl border border-green-200 p-6 sm:p-8">
               <div className="flex items-start justify-between flex-wrap gap-4">
