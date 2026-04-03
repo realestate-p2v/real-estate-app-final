@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Navigation } from "@/components/navigation";
@@ -56,21 +56,19 @@ interface SessionPhoto {
   analyzed_at: string;
 }
 
-interface Session {
-  id: string;
-  property_address: string;
-  status: string;
-  photos: SessionPhoto[];
-  checklist: Record<string, string>; // room_key -> "pending" | "next" | "done"
-  total_analyses: number;
-  approved_count: number;
-  created_at: string;
+interface CategoryScore {
+  name: string;
+  score: number;
+  max: number;
+  note: string;
 }
 
 interface ScoringResult {
   score: number;
+  room_type: string;
+  categories: CategoryScore[];
   summary: string;
-  fixable_issues: string[];
+  feedback: string[];
   flagged_issues: string[];
   what_would_make_10: string;
   approved: boolean;
@@ -550,8 +548,10 @@ export default function PhotoCoachPage() {
       console.error("Photo Coach error:", err);
       setLastResult({
         score: 0,
+        room_type: "",
+        categories: [],
         summary: err.message || "Failed to analyze photo. Please try again.",
-        fixable_issues: [],
+        feedback: [],
         flagged_issues: [],
         what_would_make_10: "",
         approved: false,
@@ -591,12 +591,11 @@ export default function PhotoCoachPage() {
         const model = String(basicExif.Model || "").toLowerCase();
 
         // iPhone 12 and newer: HDR is always on, no toggle exists
-        // Models: iPhone 12, 12 mini, 12 Pro, 12 Pro Max, 13, 14, 15, 16 series
         if (make.includes("apple") && model.includes("iphone")) {
           const modelMatch = model.match(/iphone\s*(\d+)/);
           if (modelMatch) {
             const modelNum = parseInt(modelMatch[1]);
-            if (modelNum >= 12) return true; // iPhone 12+ always has Smart HDR
+            if (modelNum >= 12) return true;
           }
         }
 
@@ -628,16 +627,12 @@ export default function PhotoCoachPage() {
 
       return false;
     } catch (e) {
-      // EXIF parsing failed — can't determine HDR status, assume it's fine
-      // rather than showing a potentially incorrect warning
       return true;
     }
   };
 
   /* ─── AI Edit via Cloudinary URL transformations ─── */
   const getEditedUrl = (originalUrl: string) => {
-    // Insert Cloudinary auto-enhancement transformations into the URL
-    // URL format: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{path}
     if (!originalUrl.includes("/upload/")) return originalUrl;
     return originalUrl.replace(
       "/upload/",
@@ -660,7 +655,7 @@ export default function PhotoCoachPage() {
       room: roomLbl,
       score: lastResult.score,
       feedback: lastResult.summary,
-      fixable_issues: lastResult.fixable_issues,
+      fixable_issues: lastResult.feedback,
       flagged_issues: lastResult.flagged_issues,
       approved: true,
       edited: !!editedUrl,
@@ -1740,6 +1735,45 @@ export default function PhotoCoachPage() {
                   </div>
                 </div>
 
+                {/* Category breakdown */}
+                {lastResult.categories && lastResult.categories.length > 0 && (
+                  <div className="space-y-2">
+                    {lastResult.categories.map((cat, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-semibold text-foreground">{cat.name}</span>
+                            <span className={`text-xs font-bold ${
+                              cat.score === cat.max
+                                ? "text-green-600"
+                                : cat.score > 0
+                                ? "text-amber-600"
+                                : "text-red-600"
+                            }`}>
+                              {cat.score}/{cat.max}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                cat.score === cat.max
+                                  ? "bg-green-500"
+                                  : cat.score > 0
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                              }`}
+                              style={{ width: `${(cat.score / cat.max) * 100}%` }}
+                            />
+                          </div>
+                          {cat.note && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{cat.note}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Photo preview with watermark overlay */}
                 {lastPhotoUrl && (
                   <div className="relative rounded-xl overflow-hidden bg-black/5">
@@ -1756,19 +1790,19 @@ export default function PhotoCoachPage() {
                   </div>
                 )}
 
-                {/* Fixable issues */}
-                {lastResult.fixable_issues.length > 0 && (
+                {/* Feedback (actionable coaching tips — was fixable_issues) */}
+                {lastResult.feedback.length > 0 && (
                   <div>
                     <p className="text-sm font-bold text-foreground mb-2">
                       {lastResult.approved ? "What would make it better:" : "Fix these before reshooting:"}
                     </p>
                     <div className="space-y-1.5">
-                      {lastResult.fixable_issues.map((issue, i) => (
+                      {lastResult.feedback.map((item, i) => (
                         <div key={i} className="flex items-start gap-2 text-sm">
                           <AlertTriangle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
                             lastResult.approved ? "text-green-600" : "text-amber-500"
                           }`} />
-                          <span className="text-foreground">{issue}</span>
+                          <span className="text-foreground">{item}</span>
                         </div>
                       ))}
                     </div>
@@ -1912,7 +1946,7 @@ export default function PhotoCoachPage() {
                             room: roomLbl,
                             score: lastResult.score,
                             feedback: lastResult.summary,
-                            fixable_issues: lastResult.fixable_issues,
+                            fixable_issues: lastResult.feedback,
                             flagged_issues: lastResult.flagged_issues,
                             approved: true, // User accepted it
                             edited: false,
