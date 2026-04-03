@@ -103,14 +103,27 @@ export default function LensPage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-b from-orange-50/80 via-white to-white">
-        {/* Fun gradient blobs */}
-        <div className="absolute inset-0 overflow-hidden">
+        {/* Background video — low opacity over the white/cream base */}
+        <div className="absolute inset-0 z-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-[0.08]"
+          >
+            <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
+          </video>
+        </div>
+
+        {/* Fun gradient blobs — sit on top of video */}
+        <div className="absolute inset-0 overflow-hidden z-[1]">
           <div className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-gradient-to-br from-red-200/40 to-orange-200/30 rounded-full blur-[80px]" />
           <div className="absolute top-1/3 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-cyan-200/30 to-blue-200/20 rounded-full blur-[80px]" />
           <div className="absolute -bottom-20 right-1/4 w-[350px] h-[350px] bg-gradient-to-br from-purple-200/25 to-pink-200/20 rounded-full blur-[80px]" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
+        <div className="relative z-[2] mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent text-sm font-bold px-4 py-1.5 rounded-full mb-6">
               <Sparkles className="w-4 h-4" />
