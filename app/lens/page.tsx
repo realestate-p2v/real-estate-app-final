@@ -160,7 +160,7 @@ export default function LensPage() {
                 </Button>
               ) : (
                 <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
-                  Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+                  See Plans & Pricing <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
               <Button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="bg-white border border-border text-foreground hover:bg-muted h-14 px-8 text-lg font-bold rounded-full shadow-sm">
