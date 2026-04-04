@@ -447,23 +447,23 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
   const priceText = price ? `$${price}` : "$000,000";
   const contactLine = [brokerage, phone].filter(Boolean).join("  ·  ") || "Brokerage  ·  (555) 000-0000";
 
-  // Size-aware scaling
-  const badgeFontSize = Math.round((isPostcard ? 42 : 36) * unit);
-  const badgePadY = Math.round((isPostcard ? 12 : 8) * unit);
-  const badgePadX = Math.round((isPostcard ? 32 : 24) * unit);
-  const dateFontSize = Math.round((isPostcard ? 36 : 32) * unit);
-  const timeFontSize = Math.round((isPostcard ? 28 : 24) * unit);
-  const addressFontSize = responsiveSize(Math.round((isPostcard ? 36 : 32) * unit), addressText, 22);
-  const detailsFontSz = Math.round((isPostcard ? 28 : 24) * unit);
-  const priceFontSize = Math.round((isPostcard ? 52 : 46) * unit);
-  const agentFontSize = responsiveSize(Math.round((isPostcard ? 34 : isStory ? 34 : 30) * unit), agentNameText, 20);
-  const contactFontSize = responsiveSize(Math.round((isPostcard ? 26 : isStory ? 26 : 22) * unit), contactLine, 35);
-  const headshotSz = Math.round((isPostcard ? 120 : isStory ? 120 : 110) * unit);
-  const logoMaxW = Math.round((isPostcard ? 160 : isStory ? 160 : 150) * unit);
-  const logoMaxH = Math.round((isPostcard ? 72 : isStory ? 72 : 64) * unit);
+  // Size-aware scaling — story gets ~2x to fill the tall frame
+  const badgeFontSize = Math.round((isStory ? 68 : isPostcard ? 42 : 36) * unit);
+  const badgePadY = Math.round((isStory ? 16 : isPostcard ? 12 : 8) * unit);
+  const badgePadX = Math.round((isStory ? 44 : isPostcard ? 32 : 24) * unit);
+  const dateFontSize = Math.round((isStory ? 58 : isPostcard ? 36 : 32) * unit);
+  const timeFontSize = Math.round((isStory ? 44 : isPostcard ? 28 : 24) * unit);
+  const addressFontSize = responsiveSize(Math.round((isStory ? 58 : isPostcard ? 36 : 32) * unit), addressText, 22);
+  const detailsFontSz = Math.round((isStory ? 44 : isPostcard ? 28 : 24) * unit);
+  const priceFontSize = Math.round((isStory ? 86 : isPostcard ? 52 : 46) * unit);
+  const agentFontSize = responsiveSize(Math.round((isStory ? 52 : isPostcard ? 34 : 30) * unit), agentNameText, 20);
+  const contactFontSize = responsiveSize(Math.round((isStory ? 40 : isPostcard ? 26 : 22) * unit), contactLine, 35);
+  const headshotSz = Math.round((isStory ? 180 : isPostcard ? 120 : 110) * unit);
+  const logoMaxW = Math.round((isStory ? 260 : isPostcard ? 160 : 150) * unit);
+  const logoMaxH = Math.round((isStory ? 110 : isPostcard ? 72 : 64) * unit);
 
   // Agent bar height
-  const agentBarH = Math.round((isPostcard ? 140 : isStory ? 140 : 130) * unit);
+  const agentBarH = Math.round((isStory ? 220 : isPostcard ? 140 : 130) * unit);
   const agentBarRadius = Math.round(14 * unit);
 
   const textShadow = `0 ${Math.round(2 * unit)}px ${Math.round(8 * unit)}px rgba(0,0,0,0.5)`;
@@ -485,18 +485,18 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
         </div>
       )}
 
-      {/* ── GRADIENT OVERLAYS — multi-layer for depth ── */}
+      {/* ── GRADIENT OVERLAYS — lighter for more photo visibility ── */}
       {/* Top gradient for badge/date readability */}
       <div className="absolute inset-0" style={{
-        backgroundImage: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 28%, transparent 45%)",
+        backgroundImage: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 25%, transparent 40%)",
       }} />
       {/* Bottom gradient for property info + agent bar */}
       <div className="absolute inset-0" style={{
-        backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.50) 25%, transparent 50%)",
+        backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 20%, transparent 45%)",
       }} />
-      {/* Radial vignette for cinematic depth */}
+      {/* Radial vignette — subtle */}
       <div className="absolute inset-0" style={{
-        backgroundImage: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35) 100%)",
+        backgroundImage: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.20) 100%)",
       }} />
 
       {/* ── TOP SECTION: Badge + Date/Time ── */}
