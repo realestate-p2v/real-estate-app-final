@@ -14,15 +14,23 @@ export async function ensurePropertyExists(
   const normalized = normalizeAddress(address);
   if (!normalized) throw new Error("Address is required");
 
+  console.log("[Portfolio] ensurePropertyExists called:", { userId: userId?.slice(0, 8), address, normalized });
+
   // Check if property already exists for this user
-  const { data: existing } = await supabase
+  // Use .maybeSingle() instead of .single() — .single() throws an error when 0 rows found
+  const { data: existing, error: lookupError } = await supabase
     .from("agent_properties")
     .select("id")
     .eq("user_id", userId)
     .eq("address_normalized", normalized)
-    .single();
+    .maybeSingle();
+
+  if (lookupError) {
+    console.error("[Portfolio] Lookup error:", lookupError);
+  }
 
   if (existing) {
+    console.log("[Portfolio] Found existing property:", existing.id);
     // Update with any new details if provided
     if (extras && (extras.city || extras.state || extras.bedrooms || extras.bathrooms)) {
       await supabase
@@ -40,6 +48,7 @@ export async function ensurePropertyExists(
   }
 
   // Create new property
+  console.log("[Portfolio] Creating new property for:", normalized);
   const { data: newProp, error } = await supabase
     .from("agent_properties")
     .insert({
@@ -54,6 +63,11 @@ export async function ensurePropertyExists(
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("[Portfolio] Insert error:", error);
+    throw error;
+  }
+
+  console.log("[Portfolio] Created property:", newProp.id);
   return newProp.id;
 }
