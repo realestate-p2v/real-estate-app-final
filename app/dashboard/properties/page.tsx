@@ -1,39 +1,51 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
-  Plus,
-  Home,
+  ArrowRight,
   Camera,
   Film,
   FileText,
+  Sofa,
   PenTool,
+  Pencil,
   X,
+  Check,
   Loader2,
+  Lock,
+  Copy,
+  Download,
+  ExternalLink,
+  Home,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { normalizeAddress } from "@/lib/utils/address";
 
 interface Property {
   id: string;
   address: string;
+  address_normalized: string;
   city: string | null;
   state: string | null;
   zip: string | null;
   status: string;
-  property_type: string;
+  listing_type: string;
+  price: number | null;
+  price_period: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
+  sqft: number | null;
+  lot_size: string | null;
+  year_built: number | null;
+  property_type: string;
+  unit_count: number | null;
+  special_features: string[] | null;
   created_at: string;
   updated_at: string;
-  photo_count?: number;
-  video_count?: number;
-  description_count?: number;
-  export_count?: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -53,454 +65,299 @@ const PROPERTY_TYPES: Record<string, string> = {
   commercial: "Commercial",
 };
 
-function timeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d ago`;
-  const diffMo = Math.floor(diffDay / 30);
-  return `${diffMo}mo ago`;
-}
+export default function SinglePropertyPage() {
+  const params = useParams();
+  const router = useRouter();
+  const propertyId = params.id as string;
 
-export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isSubscriber, setIsSubscriber] = useState(false);
 
-  const [formAddress, setFormAddress] = useState("");
-  const [formCity, setFormCity] = useState("");
-  const [formState, setFormState] = useState("");
-  const [formZip, setFormZip] = useState("");
-  const [formBedrooms, setFormBedrooms] = useState("");
-  const [formBathrooms, setFormBathrooms] = useState("");
-  const [formPropertyType, setFormPropertyType] = useState("single_family");
-  const [formStatus, setFormStatus] = useState("active");
+  // Asset data
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [descriptions, setDescriptions] = useState<any[]>([]);
+  const [exports, setExports] = useState<any[]>([]);
+
+  // Edit form state
+  const [editForm, setEditForm] = useState<Partial<Property>>({});
 
   const supabase = createClient();
 
-  // Client-side upsert
-  const ensurePropertyClient = async (
-    uid: string,
-    address: string,
-    extras?: { city?: string; state?: string; bedrooms?: number; bathrooms?: number }
-  ): Promise<string | null> => {
-    const normalized = normalizeAddress(address);
-    if (!normalized) return null;
+  // Build query string from property data for pre-filling tools
+  const propertyQueryString = useMemo(() => {
+    if (!property) return "";
+    const params = new URLSearchParams();
+    if (property.address) params.set("propertyAddress", property.address);
+    if (property.city) params.set("propertyCity", property.city);
+    if (property.state) params.set("propertyState", property.state);
+    if (property.zip) params.set("propertyZip", property.zip);
+    if (property.bedrooms != null) params.set("propertyBedrooms", String(property.bedrooms));
+    if (property.bathrooms != null) params.set("propertyBathrooms", String(property.bathrooms));
+    if (property.sqft != null) params.set("propertySqft", String(property.sqft));
+    if (property.property_type) params.set("propertyType", property.property_type);
+    if (property.price != null) params.set("propertyPrice", String(property.price));
+    if (property.year_built != null) params.set("propertyYearBuilt", String(property.year_built));
+    if (property.lot_size) params.set("propertyLotSize", property.lot_size);
+    if (property.listing_type) params.set("propertyListingType", property.listing_type);
+    params.set("propertyId", property.id);
+    return params.toString();
+  }, [property]);
 
-    const { data: existing } = await supabase
-      .from("agent_properties")
-      .select("id")
-      .eq("user_id", uid)
-      .eq("address_normalized", normalized)
-      .maybeSingle();
-
-    if (existing) return existing.id;
-
-    const { data: newProp, error } = await supabase
-      .from("agent_properties")
-      .insert({
-        user_id: uid,
-        address: address.trim(),
-        address_normalized: normalized,
-        city: extras?.city || null,
-        state: extras?.state || null,
-        bedrooms: extras?.bedrooms || null,
-        bathrooms: extras?.bathrooms || null,
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      console.error("[Properties] Failed to create property:", error);
-      return null;
-    }
-    return newProp.id;
+  const toolHref = (basePath: string) => {
+    const qs = propertyQueryString;
+    return qs ? `${basePath}?${qs}` : basePath;
   };
 
-  // Backfill from existing orders
-  const backfillFromOrders = async (uid: string) => {
-    try {
-      // First: get ALL orders for this user to see what's there
-      const { data: allOrders, error: allOrdersError } = await supabase
-        .from("orders")
-        .select("id, order_id, property_address, property_city, property_state, property_bedrooms, property_bathrooms, user_id")
-        .eq("user_id", uid);
-
-      console.log("[Properties] Backfill - user_id:", uid);
-      console.log("[Properties] Backfill - all orders for user:", allOrders?.length, allOrders);
-      if (allOrdersError) console.error("[Properties] Backfill - orders query error:", allOrdersError);
-
-      // Also try without user_id filter to see if orders exist but with different user_id
-      const { data: allOrdersByEmail } = await supabase
-        .from("orders")
-        .select("id, order_id, property_address, user_id")
-        .limit(10);
-      console.log("[Properties] Backfill - sample orders (no user filter):", allOrdersByEmail);
-
-      if (!allOrders || allOrders.length === 0) {
-        console.log("[Properties] Backfill - no orders found for this user");
-        return;
-      }
-
-      // Filter to orders that have an address
-      const ordersWithAddress = allOrders.filter((o: any) => o.property_address && o.property_address.trim() !== "");
-      console.log("[Properties] Backfill - orders with address:", ordersWithAddress.length, ordersWithAddress.map((o: any) => o.property_address));
-
-      if (ordersWithAddress.length === 0) {
-        console.log("[Properties] Backfill - no orders have a property_address");
-        return;
-      }
-
-      // Get existing properties
-      const { data: existingProps } = await supabase
-        .from("agent_properties")
-        .select("address_normalized")
-        .eq("user_id", uid);
-
-      const existingNorms = new Set(
-        (existingProps || []).map((p: any) => p.address_normalized)
-      );
-      console.log("[Properties] Backfill - existing normalized addresses:", Array.from(existingNorms));
-
-      const seen = new Set<string>();
-      for (const order of ordersWithAddress) {
-        const norm = normalizeAddress(order.property_address);
-        console.log("[Properties] Backfill - processing:", order.property_address, "→ normalized:", norm);
-
-        if (!norm || seen.has(norm) || existingNorms.has(norm)) {
-          console.log("[Properties] Backfill - skipping (already exists or empty)");
-          continue;
-        }
-        seen.add(norm);
-
-        console.log("[Properties] Backfill - creating property for:", order.property_address);
-        const id = await ensurePropertyClient(uid, order.property_address, {
-          city: order.property_city || undefined,
-          state: order.property_state || undefined,
-          bedrooms: order.property_bedrooms ? Number(order.property_bedrooms) : undefined,
-          bathrooms: order.property_bathrooms ? Number(order.property_bathrooms) : undefined,
-        });
-        console.log("[Properties] Backfill - created property id:", id);
-      }
-    } catch (err) {
-      console.error("[Properties] Backfill error:", err);
-    }
-  };
-
-  const loadProperties = useCallback(async () => {
+  const loadProperty = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.log("[Properties] No user found");
-      return;
-    }
-    console.log("[Properties] Logged in as:", user.id, user.email);
+    if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
     setUserId(user.id);
 
-    // Backfill from existing orders first
-    await backfillFromOrders(user.id);
+    // Check subscription
+    const isAdmin = user.email === "realestatephoto2video@gmail.com";
+    if (isAdmin) {
+      setIsSubscriber(true);
+    } else {
+      const { data: usage } = await supabase
+        .from("lens_usage")
+        .select("is_subscriber")
+        .eq("user_id", user.id)
+        .single();
+      if (usage?.is_subscriber) setIsSubscriber(true);
+    }
 
-    // Fetch properties
-    const { data: props, error: propsError } = await supabase
+    // Fetch property
+    const { data: prop, error } = await supabase
       .from("agent_properties")
       .select("*")
+      .eq("id", propertyId)
       .eq("user_id", user.id)
-      .order("updated_at", { ascending: false });
+      .single();
 
-    console.log("[Properties] Fetched properties:", props?.length, props, "error:", propsError);
-
-    if (propsError) {
-      console.error("[Properties] Error fetching properties:", propsError);
-      setProperties([]);
-      setLoading(false);
+    if (error || !prop) {
+      router.push("/dashboard/properties");
       return;
     }
 
-    if (!props || props.length === 0) {
-      setProperties([]);
-      setLoading(false);
-      return;
-    }
+    setProperty(prop);
+    setEditForm(prop);
 
-    // Load asset counts
-    const enriched = await Promise.all(
-      props.map(async (p: any) => {
-        const norm = p.address_normalized;
+    const norm = prop.address_normalized;
 
-        // Video count — match normalized addresses client-side
-        const { data: userOrders } = await supabase
-          .from("orders")
-          .select("id, property_address")
-          .eq("user_id", user.id)
-          .not("property_address", "is", null);
+    // Load photos (lens_sessions matched by address)
+    const { data: sessionData } = await supabase
+      .from("lens_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .ilike("property_address", `${norm}%`)
+      .order("created_at", { ascending: false });
+    setPhotos(sessionData || []);
 
-        const videoCount = (userOrders || []).filter((o: any) => {
-          if (!o.property_address) return false;
-          const orderNorm = normalizeAddress(o.property_address);
-          return orderNorm === norm || orderNorm.startsWith(norm) || norm.startsWith(orderNorm);
-        }).length;
+    // Load videos (orders matched by address)
+    const { data: orderData } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", user.id)
+      .ilike("property_address", `${norm}%`)
+      .order("created_at", { ascending: false });
+    setVideos(orderData || []);
 
-        // Photo count
-        const { count: photoCount } = await supabase
-          .from("lens_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id);
+    // Load descriptions
+    const { data: descData } = await supabase
+      .from("lens_descriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setDescriptions(descData || []);
 
-        // Description count
-        const { count: descCount } = await supabase
-          .from("lens_descriptions")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id);
+    // Load design exports
+    const { data: exportData } = await supabase
+      .from("design_exports")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: false });
+    setExports(exportData || []);
 
-        // Export count
-        const { count: exportCount } = await supabase
-          .from("design_exports")
-          .select("*", { count: "exact", head: true })
-          .eq("property_id", p.id);
-
-        return {
-          ...p,
-          photo_count: photoCount || 0,
-          video_count: videoCount || 0,
-          description_count: descCount || 0,
-          export_count: exportCount || 0,
-        };
-      })
-    );
-
-    setProperties(enriched);
     setLoading(false);
-  }, []);
+  }, [supabase, propertyId, router]);
 
   useEffect(() => {
-    loadProperties();
-  }, [loadProperties]);
+    loadProperty();
+  }, [loadProperty]);
 
-  const handleAddProperty = async () => {
-    if (!formAddress.trim() || !userId) return;
+  const handleSave = async () => {
+    if (!property) return;
     setSaving(true);
 
-    try {
-      const propId = await ensurePropertyClient(userId, formAddress.trim(), {
-        city: formCity.trim() || undefined,
-        state: formState.trim() || undefined,
-        bedrooms: formBedrooms ? parseInt(formBedrooms) : undefined,
-        bathrooms: formBathrooms ? parseFloat(formBathrooms) : undefined,
-      });
+    const { error } = await supabase
+      .from("agent_properties")
+      .update({
+        address: editForm.address || property.address,
+        city: editForm.city || null,
+        state: editForm.state || null,
+        zip: editForm.zip || null,
+        status: editForm.status || "active",
+        listing_type: editForm.listing_type || "sale",
+        price: editForm.price || null,
+        bedrooms: editForm.bedrooms || null,
+        bathrooms: editForm.bathrooms || null,
+        sqft: editForm.sqft || null,
+        lot_size: editForm.lot_size || null,
+        year_built: editForm.year_built || null,
+        property_type: editForm.property_type || "single_family",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", property.id);
 
-      if (!propId) {
-        alert("Failed to add property. Please try again.");
-        setSaving(false);
-        return;
-      }
-
-      const updates: any = {};
-      if (formZip.trim()) updates.zip = formZip.trim();
-      if (formPropertyType !== "single_family") updates.property_type = formPropertyType;
-      if (formStatus !== "active") updates.status = formStatus;
-
-      if (Object.keys(updates).length > 0) {
-        await supabase
-          .from("agent_properties")
-          .update(updates)
-          .eq("id", propId);
-      }
-
-      setFormAddress("");
-      setFormCity("");
-      setFormState("");
-      setFormZip("");
-      setFormBedrooms("");
-      setFormBathrooms("");
-      setFormPropertyType("single_family");
-      setFormStatus("active");
-      setShowAddModal(false);
-
-      setLoading(true);
-      await loadProperties();
-    } catch (err) {
-      console.error("Failed to add property:", err);
-      alert("Failed to add property. Please try again.");
-    } finally {
-      setSaving(false);
+    if (!error) {
+      setProperty({ ...property, ...editForm, updated_at: new Date().toISOString() } as Property);
+      setEditing(false);
     }
+    setSaving(false);
   };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  // Quick action button — shows lock for non-subscribers on Lens tools
+  const QuickAction = ({ href, icon: Icon, label, requiresSub }: { href: string; icon: any; label: string; requiresSub?: boolean }) => {
+    if (requiresSub && !isSubscriber) {
+      return (
+        <Link
+          href="/lens"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-muted/50 border border-border text-sm font-semibold text-muted-foreground hover:border-accent/40 transition-all"
+        >
+          <Lock className="h-3.5 w-3.5" />
+          {label}
+        </Link>
+      );
+    }
+    return (
+      <Link
+        href={href}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-sm font-semibold text-accent hover:bg-accent/20 transition-all"
+      >
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </Link>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!property) return null;
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-                My Properties
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
+        {/* Back + Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <Link href="/dashboard/properties" className="text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
+                {property.address}
               </h1>
-              <p className="text-muted-foreground mt-1">All your listing materials organized by property</p>
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${STATUS_COLORS[property.status] || STATUS_COLORS.active}`}>
+                {property.status}
+              </span>
             </div>
+            <p className="text-muted-foreground mt-0.5">
+              {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
+              {property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}
+            </p>
           </div>
           <Button
-            onClick={() => setShowAddModal(true)}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
+            onClick={() => setEditing(!editing)}
+            variant="outline"
+            size="sm"
+            className="font-semibold flex-shrink-0"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Property
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />
+            Edit
           </Button>
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        {/* Quick Actions Bar — links pre-fill property data */}
+        <div className="flex flex-wrap gap-2 mt-6 mb-8">
+          <QuickAction href={toolHref("/order")} icon={Film} label="Order Video" />
+          <QuickAction href={toolHref("/dashboard/lens/coach")} icon={Camera} label="Photo Coach" requiresSub />
+          <QuickAction href={toolHref("/dashboard/lens/descriptions")} icon={FileText} label="Write Description" requiresSub />
+          <QuickAction href={toolHref("/dashboard/lens/staging")} icon={Sofa} label="Stage Room" requiresSub />
+          <QuickAction href={toolHref("/dashboard/lens/design-studio")} icon={PenTool} label="Create Graphic" requiresSub />
+        </div>
+
+        {/* ═══ PROPERTY DETAILS (editable) ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-foreground">Property Details</h2>
+            {editing && (
+              <div className="flex gap-2">
+                <Button onClick={() => { setEditing(false); setEditForm(property); }} variant="outline" size="sm">
+                  <X className="h-3.5 w-3.5 mr-1" /> Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={saving} size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
+                  Save
+                </Button>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Empty State */}
-        {!loading && properties.length === 0 && (
-          <div className="bg-card rounded-2xl border border-border p-10 sm:p-14 text-center">
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-6">
-              <Home className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-3">No properties yet.</h2>
-            <p className="text-muted-foreground max-w-md mx-auto mb-8 leading-relaxed">
-              Your properties will appear here automatically when you order a listing video, run Photo Coach on a property, write a listing description, or create marketing materials.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-                <Link href="/order">Order a Video</Link>
-              </Button>
-              <Button asChild variant="outline" className="font-bold">
-                <Link href="/dashboard/lens/coach">Open Photo Coach</Link>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Property Grid */}
-        {!loading && properties.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((prop) => (
-              <Link
-                key={prop.id}
-                href={`/dashboard/properties/${prop.id}`}
-                className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300 block group"
-              >
-                <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors truncate">
-                  {prop.address}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {[prop.city, prop.state].filter(Boolean).join(", ") || "No location details"}
-                </p>
-
-                <div className="flex items-center gap-2 mt-3">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${STATUS_COLORS[prop.status] || STATUS_COLORS.active}`}>
-                    {prop.status}
-                  </span>
-                  {prop.property_type && prop.property_type !== "single_family" && (
-                    <span className="text-xs text-muted-foreground">
-                      {PROPERTY_TYPES[prop.property_type] || prop.property_type}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 mt-4 text-muted-foreground">
-                  {(prop.photo_count ?? 0) > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium">
-                      <Camera className="h-3.5 w-3.5" /> {prop.photo_count}
-                    </span>
-                  )}
-                  {(prop.video_count ?? 0) > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium">
-                      <Film className="h-3.5 w-3.5" /> {prop.video_count}
-                    </span>
-                  )}
-                  {(prop.description_count ?? 0) > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium">
-                      <FileText className="h-3.5 w-3.5" /> {prop.description_count}
-                    </span>
-                  )}
-                  {(prop.export_count ?? 0) > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium">
-                      <PenTool className="h-3.5 w-3.5" /> {prop.export_count}
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-xs text-muted-foreground mt-3">
-                  {timeAgo(prop.updated_at || prop.created_at)}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Add Property Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-foreground">Add Property</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
+          {editing ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
-                  Address <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formAddress}
-                  onChange={(e) => setFormAddress(e.target.value)}
-                  placeholder="123 Main Street"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                />
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Status</label>
+                <select
+                  value={editForm.status || "active"}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                >
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="sold">Sold</option>
+                  <option value="withdrawn">Withdrawn</option>
+                  <option value="rental">Rental</option>
+                </select>
               </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">City</label>
-                  <input type="text" value={formCity} onChange={(e) => setFormCity(e.target.value)} placeholder="Austin" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">State</label>
-                  <input type="text" value={formState} onChange={(e) => setFormState(e.target.value)} placeholder="TX" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Zip</label>
-                  <input type="text" value={formZip} onChange={(e) => setFormZip(e.target.value)} placeholder="78701" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Bedrooms</label>
-                  <input type="number" value={formBedrooms} onChange={(e) => setFormBedrooms(e.target.value)} placeholder="3" min="0" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Bathrooms</label>
-                  <input type="number" value={formBathrooms} onChange={(e) => setFormBathrooms(e.target.value)} placeholder="2" min="0" step="0.5" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Property Type</label>
-                <select value={formPropertyType} onChange={(e) => setFormPropertyType(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Listing Type</label>
+                <select
+                  value={editForm.listing_type || "sale"}
+                  onChange={(e) => setEditForm({ ...editForm, listing_type: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                >
+                  <option value="sale">Sale</option>
+                  <option value="rental">Rental</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Property Type</label>
+                <select
+                  value={editForm.property_type || "single_family"}
+                  onChange={(e) => setEditForm({ ...editForm, property_type: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                >
                   <option value="single_family">Single Family</option>
                   <option value="condo">Condo</option>
                   <option value="apartment">Apartment</option>
@@ -509,41 +366,355 @@ export default function PropertiesPage() {
                   <option value="commercial">Commercial</option>
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Status</label>
-                <select value={formStatus} onChange={(e) => setFormStatus(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50">
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="sold">Sold</option>
-                  <option value="withdrawn">Withdrawn</option>
-                  <option value="rental">Rental</option>
-                </select>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Price</label>
+                <input
+                  type="number"
+                  value={editForm.price || ""}
+                  onChange={(e) => setEditForm({ ...editForm, price: e.target.value ? parseInt(e.target.value) : null })}
+                  placeholder="499000"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Bedrooms</label>
+                <input
+                  type="number"
+                  value={editForm.bedrooms || ""}
+                  onChange={(e) => setEditForm({ ...editForm, bedrooms: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Bathrooms</label>
+                <input
+                  type="number"
+                  value={editForm.bathrooms || ""}
+                  onChange={(e) => setEditForm({ ...editForm, bathrooms: e.target.value ? parseFloat(e.target.value) : null })}
+                  step="0.5"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Sqft</label>
+                <input
+                  type="number"
+                  value={editForm.sqft || ""}
+                  onChange={(e) => setEditForm({ ...editForm, sqft: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Lot Size</label>
+                <input
+                  type="text"
+                  value={editForm.lot_size || ""}
+                  onChange={(e) => setEditForm({ ...editForm, lot_size: e.target.value || null })}
+                  placeholder="0.25 acres"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Year Built</label>
+                <input
+                  type="number"
+                  value={editForm.year_built || ""}
+                  onChange={(e) => setEditForm({ ...editForm, year_built: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
               </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Bedrooms", value: property.bedrooms },
+                { label: "Bathrooms", value: property.bathrooms },
+                { label: "Sqft", value: property.sqft?.toLocaleString() },
+                { label: "Lot Size", value: property.lot_size },
+                { label: "Year Built", value: property.year_built },
+                { label: "Price", value: property.price ? `$${property.price.toLocaleString()}${property.price_period ? `/${property.price_period}` : ""}` : null },
+                { label: "Listing Type", value: property.listing_type ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1) : null },
+                { label: "Property Type", value: PROPERTY_TYPES[property.property_type] || property.property_type },
+              ].map((item, i) => (
+                <div key={i}>
+                  <p className="text-xs font-semibold text-muted-foreground">{item.label}</p>
+                  <p className="text-sm font-medium text-foreground mt-0.5">{item.value || "—"}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
-            <div className="flex gap-3 mt-6">
-              <Button onClick={() => setShowAddModal(false)} variant="outline" className="flex-1 font-bold">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddProperty}
-                disabled={!formAddress.trim() || saving}
-                className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
-              >
-                {saving ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>) : "Save"}
-              </Button>
+          {/* Special features */}
+          {!editing && property.special_features && property.special_features.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Special Features</p>
+              <div className="flex flex-wrap gap-2">
+                {property.special_features.map((f, i) => (
+                  <span key={i} className="text-xs font-medium bg-accent/10 text-accent px-2.5 py-1 rounded-full">{f}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ═══ PHOTOS ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-bold text-foreground">Photos</h2>
+              {photos.length > 0 && (
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{photos.length} session{photos.length !== 1 ? "s" : ""}</span>
+              )}
             </div>
           </div>
-        </div>
-      )}
 
+          {photos.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">No Photo Coach sessions for this property yet.</p>
+              {isSubscriber ? (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href={toolHref("/dashboard/lens/coach")}>Open Photo Coach</Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe to Use Photo Coach</Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {photos.map((session: any) => (
+                <Link
+                  key={session.id}
+                  href="/dashboard/lens/coach"
+                  className="block p-4 rounded-xl bg-muted/30 border border-border hover:border-accent/30 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{session.property_address}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {session.total_analyses || 0} photos analyzed · {new Date(session.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ VIDEOS ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Film className="h-5 w-5 text-cyan-600" />
+              <h2 className="text-lg font-bold text-foreground">Videos</h2>
+              {videos.length > 0 && (
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{videos.length}</span>
+              )}
+            </div>
+          </div>
+
+          {videos.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">No video orders for this property yet.</p>
+              <Button asChild size="sm" variant="outline" className="font-semibold">
+                <Link href={toolHref("/order")}>Order a Video</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {videos.map((order: any) => {
+                const statusColor: Record<string, string> = {
+                  delivered: "bg-green-100 text-green-700",
+                  complete: "bg-green-100 text-green-700",
+                  processing: "bg-amber-100 text-amber-700",
+                  new: "bg-blue-100 text-blue-700",
+                  pending_payment: "bg-gray-100 text-gray-600",
+                };
+                return (
+                  <div
+                    key={order.id}
+                    className="p-4 rounded-xl bg-muted/30 border border-border"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            {order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}
+                          </p>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${statusColor[order.status] || "bg-gray-100 text-gray-600"}`}>
+                            {order.status?.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {order.delivery_url && (
+                        <Button asChild size="sm" variant="outline" className="font-semibold">
+                          <Link href={`/video/${order.order_id}`}>
+                            <ExternalLink className="h-3 w-3 mr-1.5" />Watch
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ DESCRIPTIONS ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-teal-600" />
+              <h2 className="text-lg font-bold text-foreground">Descriptions</h2>
+              {descriptions.length > 0 && (
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{descriptions.length}</span>
+              )}
+            </div>
+          </div>
+
+          {descriptions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">No descriptions generated yet.</p>
+              {isSubscriber ? (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href={toolHref("/dashboard/lens/descriptions")}>Write a Description</Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe to Use Description Writer</Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {descriptions.slice(0, 5).map((desc: any) => (
+                <div
+                  key={desc.id}
+                  className="p-4 rounded-xl bg-muted/30 border border-border"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-muted-foreground capitalize mb-1">
+                        {desc.style || "Professional"} style · {new Date(desc.created_at).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-foreground line-clamp-2">
+                        {desc.description?.slice(0, 150)}...
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(desc.description || "")}
+                      className="flex-shrink-0 p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      title="Copy to clipboard"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ VIRTUAL STAGING ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Sofa className="h-5 w-5 text-indigo-600" />
+              <h2 className="text-lg font-bold text-foreground">Virtual Staging</h2>
+            </div>
+          </div>
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>
+            {isSubscriber ? (
+              <Button asChild size="sm" variant="outline" className="font-semibold">
+                <Link href={toolHref("/dashboard/lens/staging")}>Stage a Room</Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm" variant="outline" className="font-semibold">
+                <Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe to Use Virtual Staging</Link>
+              </Button>
+            )}
+          </div>
+        </section>
+
+        {/* ═══ MARKETING MATERIALS ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <PenTool className="h-5 w-5 text-orange-600" />
+              <h2 className="text-lg font-bold text-foreground">Marketing Materials</h2>
+              {exports.length > 0 && (
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{exports.length}</span>
+              )}
+            </div>
+          </div>
+
+          {exports.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">No design exports linked to this property yet.</p>
+              {isSubscriber ? (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href={toolHref("/dashboard/lens/design-studio")}>Create a Graphic</Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe to Use Design Studio</Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {exports.map((exp: any) => {
+                const typeLabels: Record<string, string> = {
+                  just_listed: "Just Listed",
+                  open_house: "Open House",
+                  price_reduced: "Price Reduced",
+                  just_sold: "Just Sold",
+                  yard_sign: "Yard Sign",
+                  property_pdf: "Property PDF",
+                  branding_card: "Branding Card",
+                };
+                return (
+                  <div key={exp.id} className="p-3 rounded-xl bg-muted/30 border border-border">
+                    <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                      {typeLabels[exp.template_type] || exp.template_type}
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(exp.created_at).toLocaleDateString()}
+                    </p>
+                    {exp.export_url && (
+                      <a
+                        href={exp.export_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 mt-2"
+                      >
+                        <Download className="h-3 w-3" /> Download
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Footer */}
       <footer className="bg-muted/50 border-t py-8 mt-12">
         <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
           <div className="flex justify-center gap-6 mt-2">
             <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-            <Link href="/lens" className="hover:text-foreground transition-colors">P2V Lens</Link>
+            <Link href="/dashboard/properties" className="hover:text-foreground transition-colors">Properties</Link>
             <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
           </div>
         </div>
