@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Home,
   Image as ImageIcon,
+  Play,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -85,6 +86,7 @@ export default function SinglePropertyPage() {
   const [exports, setExports] = useState<any[]>([]);
   const [stagings, setStagings] = useState<any[]>([]);
   const [orderPhotos, setOrderPhotos] = useState<any[]>([]);
+  const [orderClips, setOrderClips] = useState<any[]>([]);
 
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<Property>>({});
@@ -182,6 +184,27 @@ export default function SinglePropertyPage() {
       }
     });
     setOrderPhotos(allPhotos);
+
+    // Extract all individual clips from orders
+    const allClips: any[] = [];
+    (orderData || []).forEach((order: any) => {
+      if (Array.isArray(order.clip_urls)) {
+        order.clip_urls.forEach((clip: any, idx: number) => {
+          const clipUrl = clip.url || clip.clip_file || clip.drive_url || "";
+          if (clipUrl) {
+            allClips.push({
+              ...clip,
+              clipUrl,
+              photoUrl: clip.photo_url || "",
+              orderId: order.order_id || order.id,
+              orderDate: order.created_at,
+              index: idx,
+            });
+          }
+        });
+      }
+    });
+    setOrderClips(allClips);
 
     // FIX 1: Load descriptions — fetch all, then filter client-side by address match
     const { data: descData } = await supabase
@@ -640,6 +663,113 @@ export default function SinglePropertyPage() {
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Download className="h-3 w-3" />Download All ({orderPhotos.length})
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ═══ VIDEO CLIPS (individual clips from orders) ═══ */}
+        {orderClips.length > 0 && (
+          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Play className="h-5 w-5 text-violet-600" />
+                <h2 className="text-lg font-bold text-foreground">Video Clips</h2>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderClips.length}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {orderClips.map((clip: any, i: number) => {
+                // Build thumbnail from the photo used for the clip, or from the clip video URL
+                const photoThumb = clip.photoUrl && clip.photoUrl.includes("/upload/")
+                  ? clip.photoUrl.replace("/upload/", "/upload/w_400,h_300,c_fill/")
+                  : null;
+                const videoThumb = clip.clipUrl.includes("cloudinary.com") && clip.clipUrl.includes("/video/upload/")
+                  ? clip.clipUrl.replace("/video/upload/", "/video/upload/so_1,w_400,h_300,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg")
+                  : null;
+                const thumbUrl = photoThumb || videoThumb;
+
+                return (
+                  <div key={`clip-${clip.orderId}-${clip.index}`} className="group relative rounded-xl overflow-hidden border border-border hover:border-accent/40 hover:shadow-md transition-all">
+                    <div className="aspect-video relative bg-black">
+                      {thumbUrl ? (
+                        <img
+                          src={thumbUrl}
+                          alt={clip.description || `Clip ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Play className="h-8 w-8 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      {/* Play overlay */}
+                      <a
+                        href={clip.clipUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                          <Play className="h-4 w-4 text-gray-800 ml-0.5" />
+                        </div>
+                      </a>
+                      {/* Direction badge */}
+                      {clip.camera_direction && (
+                        <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">
+                          {clip.camera_direction.replace(/_/g, " ")}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-[10px] font-semibold text-foreground truncate">
+                        {clip.description || `Clip ${(clip.position || i) + 1}`}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <a
+                          href={clip.clipUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-semibold text-accent hover:text-accent/80"
+                        >
+                          Watch
+                        </a>
+                        <a
+                          href={clip.clipUrl.includes("/upload/") ? clip.clipUrl.replace("/upload/", "/upload/fl_attachment/") : clip.clipUrl}
+                          download
+                          className="text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
+              <button
+                onClick={() => {
+                  orderClips.forEach((clip: any, i: number) => {
+                    setTimeout(() => {
+                      const url = clip.clipUrl;
+                      const downloadUrl = url.includes("/upload/")
+                        ? url.replace("/upload/", "/upload/fl_attachment/")
+                        : url;
+                      const a = document.createElement("a");
+                      a.href = downloadUrl;
+                      a.download = `${property.address.replace(/[^a-zA-Z0-9]/g, "_")}_clip_${i + 1}.mp4`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }, i * 500);
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Download className="h-3 w-3" />Download All Clips ({orderClips.length})
               </button>
             </div>
           </section>
