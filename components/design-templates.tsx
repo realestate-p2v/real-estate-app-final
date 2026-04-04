@@ -687,47 +687,189 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
 export function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, email, brokerage, officeName, officePhone, headerText, topColor, bottomColor, fontFamily, qrDataUrl }: {
   width: number; height: number; headshot: string | null; logo: string | null; agentName: string; phone: string; email: string; brokerage: string; officeName: string; officePhone: string; headerText: string; topColor: string; bottomColor: string; fontFamily: string; qrDataUrl: string | null;
 }) {
-  const topH = Math.round(height * 0.18);
-  const bottomH = Math.round(height * 0.18);
+  const topH = Math.round(height * 0.17);
+  const bottomH = Math.round(height * 0.17);
   const centerH = height - topH - bottomH;
-  const headshotSz = Math.round(centerH * 0.55);
+  const headshotSz = Math.round(centerH * 0.52);
   const topLight = isLightColor(topColor);
   const bottomLight = isLightColor(bottomColor);
+  const u = width / 5400; // unit relative to standard 18x24
 
   const nameText = agentName || "AGENT NAME";
   const phoneText = phone || "321-555-4321";
   const officeText = officeName || brokerage || "OFFICE NAME";
+  const headerLabel = headerText || "FOR SALE";
 
-  const headerSz = Math.round(topH * 0.50);
-  const nameSz = responsiveSize(Math.round(centerH * 0.12), nameText, 16);
-  const phoneSz = Math.round(centerH * 0.10);
-  const detailSz = Math.round(centerH * 0.055);
+  const headerSz = Math.round(topH * 0.46);
+  const nameSz = responsiveSize(Math.round(centerH * 0.11), nameText, 16);
+  const phoneSz = Math.round(centerH * 0.088);
+  const detailSz = Math.round(centerH * 0.052);
   const bottomNameSz = responsiveSize(Math.round(bottomH * 0.28), officeText, 18);
-  const bottomPhoneSz = Math.round(bottomH * 0.24);
+  const bottomPhoneSz = Math.round(bottomH * 0.22);
+
+  const topTextColor = topLight ? "#000" : "#fff";
+  const bottomTextColor = bottomLight ? "#000" : "#fff";
+  const topRuleColor = topLight ? "rgba(0,0,0,0.20)" : "rgba(255,255,255,0.25)";
+  const bottomRuleColor = bottomLight ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.20)";
+  const accentLineColor = topColor; // Use top bar color as accent in center
 
   return (
     <div style={{ width, height, fontFamily, display: "flex", flexDirection: "column" }}>
-      <div style={{ height: topH, backgroundColor: topColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ fontSize: headerSz, fontWeight: 900, color: topLight ? "#000" : "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>{headerText || "FOR SALE"}</p>
+
+      {/* ── TOP BAR ── */}
+      <div style={{
+        height: topH, backgroundColor: topColor,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        position: "relative",
+      }}>
+        {/* Decorative rules flanking header text */}
+        <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.03) }}>
+          <div style={{ width: Math.round(width * 0.08), height: Math.round(3 * u), backgroundColor: topRuleColor }} />
+          <p style={{
+            fontSize: headerSz, fontWeight: 900, color: topTextColor,
+            letterSpacing: "0.12em", textTransform: "uppercase" as const,
+            margin: 0, lineHeight: 1,
+          }}>{headerLabel}</p>
+          <div style={{ width: Math.round(width * 0.08), height: Math.round(3 * u), backgroundColor: topRuleColor }} />
+        </div>
+
+        {/* Thin accent line at bottom of top bar */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          height: Math.round(4 * u),
+          backgroundColor: bottomColor,
+          opacity: 0.3,
+        }} />
       </div>
-      <div style={{ height: centerH, backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.05), gap: Math.round(width * 0.05) }}>
+
+      {/* ── CENTER SECTION ── */}
+      <div style={{
+        height: centerH, backgroundColor: "#ffffff",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: `${Math.round(width * 0.04)}px ${Math.round(width * 0.06)}px`,
+        gap: Math.round(width * 0.05),
+      }}>
+        {/* Headshot with shadow and rounded corners */}
         <div style={{ flexShrink: 0 }}>
-          {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "#f3f4f6", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: headshotSz * 0.4, height: headshotSz * 0.4, color: "#9ca3af" }} /></div>}
+          {headshot ? (
+            <img src={headshot} alt="Agent" style={{
+              width: headshotSz, height: headshotSz, objectFit: "cover",
+              borderRadius: Math.round(12 * u),
+              boxShadow: `0 ${Math.round(8 * u)}px ${Math.round(24 * u)}px rgba(0,0,0,0.15)`,
+            }} />
+          ) : (
+            <div style={{
+              width: headshotSz, height: headshotSz,
+              backgroundColor: "#f3f4f6",
+              borderRadius: Math.round(12 * u),
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: `0 ${Math.round(8 * u)}px ${Math.round(24 * u)}px rgba(0,0,0,0.08)`,
+            }}>
+              <User style={{ width: headshotSz * 0.38, height: headshotSz * 0.38, color: "#9ca3af" }} />
+            </div>
+          )}
         </div>
-        <div style={{ textAlign: "left" }}>
-          <p style={{ fontSize: nameSz, fontWeight: 800, color: "#111", lineHeight: 1.15, overflowWrap: "break-word" }}>{nameText}</p>
-          <p style={{ fontSize: phoneSz, fontWeight: 700, color: "#111", marginTop: Math.round(height * 0.012) }}>{phoneText}</p>
-          {email && <p style={{ fontSize: detailSz, color: "#555", marginTop: Math.round(height * 0.006), overflowWrap: "break-word" }}>{email}</p>}
-          <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.02), marginTop: Math.round(height * 0.015) }}>
-            {logo && <img src={logo} alt="Logo" style={{ maxHeight: Math.round(centerH * 0.15), maxWidth: Math.round(width * 0.2), objectFit: "contain" }} />}
-            {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(centerH * 0.15), height: Math.round(centerH * 0.15), borderRadius: 4 }} />}
-          </div>
+
+        {/* Agent info */}
+        <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+          {/* Agent name — tracked uppercase */}
+          <p style={{
+            fontSize: nameSz, fontWeight: 800, color: "#111",
+            lineHeight: 1.15, margin: 0,
+            letterSpacing: "0.06em", textTransform: "uppercase" as const,
+            whiteSpace: "nowrap",
+          }}>{nameText}</p>
+
+          {/* Thin accent line between name and phone */}
+          <div style={{
+            width: Math.round(width * 0.06), height: Math.round(3 * u),
+            backgroundColor: accentLineColor,
+            marginTop: Math.round(height * 0.012), marginBottom: Math.round(height * 0.012),
+            borderRadius: 2,
+          }} />
+
+          {/* Phone — lighter weight */}
+          <p style={{
+            fontSize: phoneSz, fontWeight: 600, color: "#222",
+            margin: 0, letterSpacing: "0.03em",
+          }}>{phoneText}</p>
+
+          {/* Email */}
+          {email && (
+            <p style={{
+              fontSize: detailSz, fontWeight: 400, color: "#666",
+              marginTop: Math.round(height * 0.006), margin: 0,
+              marginTop: Math.round(height * 0.008),
+              overflowWrap: "break-word",
+            }}>{email}</p>
+          )}
+
+          {/* Logo + QR row — well composed */}
+          {(logo || qrDataUrl) && (
+            <div style={{
+              display: "flex", alignItems: "center",
+              gap: Math.round(width * 0.025),
+              marginTop: Math.round(height * 0.018),
+            }}>
+              {logo && (
+                <img src={logo} alt="Logo" style={{
+                  maxHeight: Math.round(centerH * 0.16),
+                  maxWidth: Math.round(width * 0.22),
+                  objectFit: "contain" as const,
+                }} />
+              )}
+              {logo && qrDataUrl && (
+                <div style={{
+                  width: Math.round(2 * u), height: Math.round(centerH * 0.10),
+                  backgroundColor: "rgba(0,0,0,0.08)",
+                }} />
+              )}
+              {qrDataUrl && (
+                <img src={qrDataUrl} alt="QR" style={{
+                  width: Math.round(centerH * 0.16),
+                  height: Math.round(centerH * 0.16),
+                  borderRadius: Math.round(4 * u),
+                }} />
+              )}
+            </div>
+          )}
         </div>
       </div>
-      <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.04), padding: `0 ${Math.round(width * 0.06)}px` }}>
+
+      {/* ── BOTTOM BAR ── */}
+      <div style={{
+        height: bottomH, backgroundColor: bottomColor,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: `0 ${Math.round(width * 0.06)}px`,
+        position: "relative",
+      }}>
+        {/* Thin accent line at top of bottom bar */}
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0,
+          height: Math.round(4 * u),
+          backgroundColor: topColor,
+          opacity: 0.3,
+        }} />
+
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: bottomNameSz, fontWeight: 800, color: bottomLight ? "#000" : "#fff", overflowWrap: "break-word" }}>{officeText}</p>
-          {officePhone && <p style={{ fontSize: bottomPhoneSz, fontWeight: 700, color: bottomLight ? "#000" : "#fff", marginTop: 4 }}>{officePhone}</p>}
+          {/* Decorative rules flanking office name */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.025) }}>
+            <div style={{ width: Math.round(width * 0.05), height: Math.round(2 * u), backgroundColor: bottomRuleColor }} />
+            <p style={{
+              fontSize: bottomNameSz, fontWeight: 800, color: bottomTextColor,
+              margin: 0, letterSpacing: "0.04em",
+              overflowWrap: "break-word",
+            }}>{officeText}</p>
+            <div style={{ width: Math.round(width * 0.05), height: Math.round(2 * u), backgroundColor: bottomRuleColor }} />
+          </div>
+          {officePhone && (
+            <p style={{
+              fontSize: bottomPhoneSz, fontWeight: 600, color: bottomTextColor,
+              marginTop: Math.round(height * 0.006), margin: 0,
+              marginTop: Math.round(height * 0.008),
+              letterSpacing: "0.03em",
+            }}>{officePhone}</p>
+          )}
         </div>
       </div>
     </div>
