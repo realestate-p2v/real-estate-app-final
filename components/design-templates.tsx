@@ -697,6 +697,7 @@ export function YardSignSplitBar({ width, height, headshot, logo, agentName, pho
   const nameText = agentName || "AGENT NAME";
   const phoneText = phone || "321-555-4321";
   const officeText = officeName || brokerage || "OFFICE NAME";
+  const showBothLines = !!(officeName && brokerage && officeName !== brokerage);
   const headerLabel = headerText || "FOR SALE";
 
   const headerSz = Math.round(topH * 0.48);
@@ -841,11 +842,29 @@ export function YardSignSplitBar({ width, height, headshot, logo, agentName, pho
         <div style={{ textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.025) }}>
             <div style={{ width: Math.round(width * 0.05), height: Math.round(2 * u), backgroundColor: bottomRuleColor }} />
-            <p style={{
-              fontSize: bottomNameSz, fontWeight: 800, color: bottomTextColor,
-              margin: 0, letterSpacing: "0.05em",
-              overflowWrap: "break-word",
-            }}>{officeText}</p>
+            <div>
+              {showBothLines ? (
+                <>
+                  <p style={{
+                    fontSize: bottomNameSz, fontWeight: 800, color: bottomTextColor,
+                    margin: 0, letterSpacing: "0.05em",
+                    overflowWrap: "break-word",
+                  }}>{brokerage}</p>
+                  <p style={{
+                    fontSize: Math.round(bottomNameSz * 0.7), fontWeight: 600, color: bottomTextColor,
+                    margin: 0, marginTop: Math.round(height * 0.004),
+                    letterSpacing: "0.03em", opacity: 0.8,
+                    overflowWrap: "break-word",
+                  }}>{officeName}</p>
+                </>
+              ) : (
+                <p style={{
+                  fontSize: bottomNameSz, fontWeight: 800, color: bottomTextColor,
+                  margin: 0, letterSpacing: "0.05em",
+                  overflowWrap: "break-word",
+                }}>{officeText}</p>
+              )}
+            </div>
             <div style={{ width: Math.round(width * 0.05), height: Math.round(2 * u), backgroundColor: bottomRuleColor }} />
           </div>
           {officePhone && (
@@ -889,7 +908,7 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
   const brokerageText = brokerage || "BROKERAGE";
   const headerLabel = headerText || "FOR SALE";
 
-  const headshotSz = Math.round(mainW * 0.42);
+  const headshotSz = Math.round(mainW * 0.38);
   const headerSz = Math.round(height * 0.042);
   const nameSz = responsiveSize(Math.round(height * 0.044), nameText, 16);
   const phoneSz = Math.round(height * 0.034);
@@ -935,9 +954,10 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
         width: mainW, height, backgroundColor: mainBgColor,
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
-        padding: `${Math.round(height * 0.03)}px ${Math.round(width * 0.05)}px`,
+        padding: `${Math.round(height * 0.02)}px ${Math.round(width * 0.04)}px`,
         textAlign: "center",
         position: "relative",
+        gap: Math.round(height * 0.008),
       }}>
         {/* Subtle accent line at left edge */}
         <div style={{
@@ -951,7 +971,7 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
           backgroundColor: sidebarColor,
           padding: `${Math.round(height * 0.012)}px ${Math.round(width * 0.06)}px`,
           borderRadius: Math.round(6 * u),
-          marginBottom: Math.round(height * 0.025),
+          marginBottom: Math.round(height * 0.012),
         }}>
           <p style={{
             fontSize: headerSz, fontWeight: 900,
@@ -985,7 +1005,7 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
         <div style={{
           width: Math.round(width * 0.08), height: Math.round(3 * u),
           backgroundColor: sidebarColor, opacity: 0.4,
-          marginTop: Math.round(height * 0.02), marginBottom: Math.round(height * 0.012),
+          marginTop: Math.round(height * 0.01), marginBottom: Math.round(height * 0.006),
         }} />
 
         {/* Agent name */}
@@ -1008,7 +1028,7 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
         <div style={{
           width: Math.round(width * 0.08), height: Math.round(3 * u),
           backgroundColor: sidebarColor, opacity: 0.4,
-          marginTop: Math.round(height * 0.012), marginBottom: Math.round(height * 0.015),
+          marginTop: Math.round(height * 0.006), marginBottom: Math.round(height * 0.008),
         }} />
 
         {/* Phone */}
@@ -1072,14 +1092,14 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
 export function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, email, brokerage, headerText, topColor, bottomColor, fontFamily, qrDataUrl, bulletPoints }: {
   width: number; height: number; headshot: string | null; logo: string | null; agentName: string; phone: string; email: string; brokerage: string; headerText: string; topColor: string; bottomColor: string; fontFamily: string; qrDataUrl: string | null; bulletPoints?: string[];
 }) {
-  const topH = Math.round(height * 0.42);
+  const topH = Math.round(height * 0.38);
   const bottomH = height - topH;
   const topLight = isLightColor(topColor);
   const bottomLight = isLightColor(bottomColor);
   const headerSz = Math.round(topH * 0.28);
   const logoMaxH = Math.round(topH * 0.22);
   const logoMaxW = Math.round(width * 0.45);
-  const headshotSz = Math.round(bottomH * 0.50);
+  const headshotSz = Math.round(bottomH * 0.38);
   const bottomText = bottomLight ? "#111" : "#fff";
   const bottomMuted = bottomLight ? "#555" : "rgba(255,255,255,0.65)";
 
@@ -1087,9 +1107,9 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
   const phoneText = phone || "305.555.7315";
   const brokerageText = brokerage || "";
 
-  const nameSz = responsiveSize(Math.round(bottomH * 0.10), nameText, 16);
-  const phoneSz = Math.round(bottomH * 0.075);
-  const detailSz = Math.round(bottomH * 0.05);
+  const nameSz = responsiveSize(Math.round(bottomH * 0.08), nameText, 16);
+  const phoneSz = Math.round(bottomH * 0.065);
+  const detailSz = Math.round(bottomH * 0.04);
 
   return (
     <div style={{ width, height, fontFamily, display: "flex", flexDirection: "column" }}>
@@ -1098,12 +1118,12 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
         {logo && <img src={logo} alt="Logo" style={{ maxHeight: logoMaxH, maxWidth: logoMaxW, objectFit: "contain", marginTop: Math.round(topH * 0.08) }} />}
         {!logo && brokerageText && <p style={{ fontSize: Math.round(topH * 0.10), fontWeight: 700, color: topLight ? "#000" : "#fff", marginTop: Math.round(topH * 0.06), textTransform: "uppercase", letterSpacing: "0.08em" }}>{brokerageText}</p>}
       </div>
-      <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.06), textAlign: "center" }}>
-        {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: bottomLight ? "#e5e7eb" : "rgba(255,255,255,0.08)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: headshotSz * 0.35, height: headshotSz * 0.35, color: bottomMuted }} /></div>}
-        <p style={{ fontSize: nameSz, fontWeight: 800, color: bottomText, marginTop: Math.round(bottomH * 0.04), lineHeight: 1.1, overflowWrap: "break-word" }}>{nameText}</p>
-        <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01), textTransform: "uppercase", letterSpacing: "0.05em" }}>Real Estate Agent</p>
-        <p style={{ fontSize: phoneSz, fontWeight: 700, color: bottomText, marginTop: Math.round(bottomH * 0.025) }}>{phoneText}</p>
-        {email && <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01), overflowWrap: "break-word" }}>{email}</p>}
+      <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `${Math.round(width * 0.03)}px ${Math.round(width * 0.06)}px`, textAlign: "center", gap: Math.round(bottomH * 0.01) }}>
+        {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", border: `${Math.round(width / 5400 * 6)}px solid ${topColor}` }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: bottomLight ? "#e5e7eb" : "rgba(255,255,255,0.08)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: headshotSz * 0.35, height: headshotSz * 0.35, color: bottomMuted }} /></div>}
+        <p style={{ fontSize: nameSz, fontWeight: 800, color: bottomText, lineHeight: 1.1, overflowWrap: "break-word", margin: 0 }}>{nameText}</p>
+        <p style={{ fontSize: detailSz, color: bottomMuted, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>Real Estate Agent</p>
+        <p style={{ fontSize: phoneSz, fontWeight: 700, color: bottomText, margin: 0 }}>{phoneText}</p>
+        {email && <p style={{ fontSize: detailSz, color: bottomMuted, overflowWrap: "break-word", margin: 0 }}>{email}</p>}
         {bulletPoints && bulletPoints.filter(Boolean).length > 0 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.02), marginTop: Math.round(bottomH * 0.015), flexWrap: "wrap" }}>
             {bulletPoints.filter(Boolean).map((bp, i) => (
@@ -1114,8 +1134,8 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
             ))}
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.04), marginTop: Math.round(bottomH * 0.025) }}>
-          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(bottomH * 0.22), height: Math.round(bottomH * 0.22), borderRadius: 4 }} />}
+        <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.04) }}>
+          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(bottomH * 0.18), height: Math.round(bottomH * 0.18), borderRadius: 4 }} />}
         </div>
       </div>
     </div>
