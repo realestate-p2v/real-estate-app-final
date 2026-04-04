@@ -189,7 +189,7 @@ function PhotoCoachPageInner() {
       setNewAddress(parts);
       setShowNewSession(true);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   /* ─── Sound Effects via Web Audio API ─── */
   const playApprovedSound = useCallback(() => {
