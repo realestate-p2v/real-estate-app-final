@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,10 +57,11 @@ const SURPRISE_SEGMENTS = [
   { value: 5,  label: "5%\nOFF",  color: "#22c55e", angle: 70 },
   { value: 8,  label: "8%\nOFF",  color: "#ec4899", angle: 55 },
 ];
-// Total: 70+55+70+40+70+55 = 360 ✓
 
 export default function DescriptionWriterPage() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -105,7 +107,6 @@ export default function DescriptionWriterPage() {
         setIsAdmin(true);
         setIsSubscriber(true);
       } else if (user) {
-        // Check lens_usage for subscriber status
         const { data: usage } = await supabase
           .from("lens_usage")
           .select("is_subscriber")
@@ -119,8 +120,29 @@ export default function DescriptionWriterPage() {
     getUser();
   }, [supabase.auth]);
 
-  // Load photos from Photo Coach if navigated from gallery
+  // Pre-fill from URL params (property portfolio) or sessionStorage (Photo Coach)
   useEffect(() => {
+    // URL params take priority (from property portfolio page)
+    const addr = searchParams.get("address");
+    if (addr) {
+      const city = searchParams.get("city") || "";
+      const state = searchParams.get("state") || "";
+      const fullAddr = [addr, city, state].filter(Boolean).join(", ");
+      setPropertyData(prev => ({
+        ...prev,
+        address: fullAddr,
+        beds: searchParams.get("beds") || prev.beds,
+        baths: searchParams.get("baths") || prev.baths,
+        sqft: searchParams.get("sqft") || prev.sqft,
+        lotSize: searchParams.get("lotSize") || prev.lotSize,
+        yearBuilt: searchParams.get("yearBuilt") || prev.yearBuilt,
+        price: searchParams.get("price") ? `$${Number(searchParams.get("price")).toLocaleString()}` : prev.price,
+        specialFeatures: searchParams.get("specialFeatures") || prev.specialFeatures,
+      }));
+      return; // Don't also load from sessionStorage
+    }
+
+    // Fallback: load from Photo Coach sessionStorage
     try {
       const coachPhotos = sessionStorage.getItem("coach_photos_for_description");
       const coachAddress = sessionStorage.getItem("coach_property_address");
@@ -138,7 +160,7 @@ export default function DescriptionWriterPage() {
     } catch (e) {
       console.error("Failed to load coach photos:", e);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -156,7 +178,6 @@ export default function DescriptionWriterPage() {
       let uploaded = 0;
 
       for (const file of fileArray) {
-        // Check file size
         if (file.size > MAX_FILE_SIZE) {
           oversized.push(file.name);
           continue;
@@ -165,7 +186,6 @@ export default function DescriptionWriterPage() {
         setUploadProgress(`Uploading ${uploaded + 1} of ${fileArray.length - oversized.length}...`);
 
         try {
-          // Get Cloudinary signature — matches exact pattern from photo-uploader.tsx
           const sigResponse = await fetch("/api/cloudinary-signature", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -202,7 +222,6 @@ export default function DescriptionWriterPage() {
 
       setPhotoUrls((prev) => [...prev, ...newUrls].slice(0, 10));
 
-      // Build error messages
       const messages: string[] = [];
       if (oversized.length > 0) {
         messages.push(
@@ -271,7 +290,6 @@ export default function DescriptionWriterPage() {
       setPhotoAnalyses(data.photoAnalyses || []);
       setPhotosSkipped(data.photosSkipped || 0);
 
-      // Check for surprise discount (subscribers only)
       if (data.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
@@ -414,7 +432,6 @@ export default function DescriptionWriterPage() {
                 Upload 3–10 photos. AI analyzes each room to write an accurate description.
               </p>
 
-              {/* Upload area */}
               <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-accent/40 transition-colors">
                 <input
                   type="file"
@@ -444,7 +461,6 @@ export default function DescriptionWriterPage() {
                 )}
               </label>
 
-              {/* Photo thumbnails */}
               {photoUrls.length > 0 && (
                 <div className="grid grid-cols-5 gap-2 mt-4">
                   {photoUrls.map((url, i) => (
@@ -595,7 +611,6 @@ export default function DescriptionWriterPage() {
 
           {/* Right Column: Results */}
           <div className="space-y-6">
-            {/* Description Result */}
             <div className="bg-card rounded-2xl border border-border p-6 sticky top-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-foreground">Generated Description</h2>
@@ -671,7 +686,6 @@ export default function DescriptionWriterPage() {
               )}
             </div>
 
-            {/* Photo Analyses */}
             {photoAnalyses.length > 0 && (
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h2 className="text-lg font-bold text-foreground mb-1">AI Photo Analysis</h2>
