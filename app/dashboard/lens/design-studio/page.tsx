@@ -275,6 +275,9 @@ function DesignStudioPageInner() {
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoExportProgress, setVideoExportProgress] = useState(0);
   const [videoExportStatus, setVideoExportStatus] = useState("");
+  const [userProperties, setUserProperties] = useState<any[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [loadingProperties, setLoadingProperties] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -302,6 +305,14 @@ function DesignStudioPageInner() {
         setFreeExportsUsed(data.free_design_exports_used || 0);
       }
       if (admin) setIsSubscriber(true);
+
+      // Load user properties for the property selector
+      const { data: props } = await supabase
+        .from("agent_properties")
+        .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features")
+        .eq("user_id", authUser.id)
+        .order("updated_at", { ascending: false });
+      if (props) setUserProperties(props);
     };
     init();
   }, []);
@@ -329,7 +340,17 @@ function DesignStudioPageInner() {
     if (sf) { setSqft(sf); setPdfSqft(sf); }
     if (pr) { setPrice(pr); setPdfPrice(pr); setBrandPrice(pr); }
     if (features) { setPdfFeatures(features); setBrandFeatures(features); }
-  }, [searchParams]);
+
+    // Auto-match property from URL params
+    if (a && userProperties.length > 0) {
+      const normalizedInput = a.trim().toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd").replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+      const match = userProperties.find((p: any) => {
+        const norm = (p.address_normalized || "").trim();
+        return norm && (normalizedInput.startsWith(norm) || norm.startsWith(normalizedInput));
+      });
+      if (match) setSelectedPropertyId(match.id);
+    }
+  }, [searchParams, userProperties]);
 
   const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => { if (!user) return; const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" }); };
 
@@ -364,15 +385,65 @@ function DesignStudioPageInner() {
   const incrementExportCounter = async () => { if (!isSubscriber && !isAdmin && user) { const newCount = freeExportsUsed + 1; setFreeExportsUsed(newCount); const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, free_design_exports_used: newCount }, { onConflict: "user_id" }); } };
   const checkPaywall = (): boolean => { if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) { setPaywallHit(true); return true; } return false; };
 
+  const saveDesignExport = async (exportUrl: string | null, format: "png" | "pdf" | "mp4", overlayVideoUrl?: string) => {
+    if (!user) return;
+    const supabase = (await import("@/lib/supabase/client")).createClient();
+    const templateType = tab === "templates" ? selectedTemplate : tab === "branding-card" ? "branding_card" : tab === "yard-sign" ? "yard_sign" : tab === "property-pdf" ? "property_pdf" : tab;
+    await supabase.from("design_exports").insert({
+      user_id: user.id,
+      property_id: selectedPropertyId || null,
+      template_type: templateType,
+      export_url: exportUrl || null,
+      export_format: format,
+      overlay_video_url: overlayVideoUrl || null,
+    });
+  };
+
+  const handleSelectProperty = (propertyId: string) => {
+    if (propertyId === "__new__") {
+      // Clear fields for manual entry
+      setSelectedPropertyId(null);
+      setAddress(""); setBeds(""); setBaths(""); setSqft(""); setPrice("");
+      setPdfAddress(""); setPdfCityStateZip(""); setPdfBeds(""); setPdfBaths(""); setPdfSqft(""); setPdfPrice("");
+      setBrandAddress(""); setBrandCityState(""); setBrandPrice("");
+      setPdfFeatures(""); setBrandFeatures("");
+      return;
+    }
+    const prop = userProperties.find((p: any) => p.id === propertyId);
+    if (!prop) return;
+    setSelectedPropertyId(prop.id);
+    const fullAddr = [prop.address, prop.city, prop.state].filter(Boolean).join(", ");
+    setAddress(fullAddr);
+    setPdfAddress(prop.address || "");
+    setBrandAddress(prop.address || "");
+    const cs = [prop.city, prop.state].filter(Boolean).join(", ");
+    if (cs) { setPdfCityStateZip(cs); setBrandCityState(cs); }
+    if (prop.bedrooms) { const b = prop.bedrooms.toString(); setBeds(b); setPdfBeds(b); }
+    if (prop.bathrooms) { const b = prop.bathrooms.toString(); setBaths(b); setPdfBaths(b); }
+    if (prop.sqft) { const s = prop.sqft.toString(); setSqft(s); setPdfSqft(s); }
+    if (prop.price) { const p = prop.price.toString(); setPrice(p); setPdfPrice(p); setBrandPrice(p); }
+    if (prop.special_features && prop.special_features.length > 0) {
+      const features = prop.special_features.join("\n");
+      setPdfFeatures(features);
+      setBrandFeatures(features);
+    }
+  };
+
   const prepareForExport = (el: HTMLElement): { restore: () => void } => { const parent = el.parentElement as HTMLElement; const savedTransform = el.style.transform; const savedOverflow = parent?.style.overflow; const savedWidth = parent?.style.width; const savedHeight = parent?.style.height; el.style.transform = "none"; if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; } return { restore: () => { el.style.transform = savedTransform; if (parent) { parent.style.overflow = savedOverflow || ""; parent.style.width = savedWidth || ""; parent.style.height = savedHeight || ""; } } }; };
 
-  const handleExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) return; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH }); restore(); const link = document.createElement("a"); link.download = `p2v-${tab}-${Date.now()}.png`; link.href = canvas.toDataURL("image/png"); link.click(); await incrementExportCounter(); } catch (err) { console.error(err); alert("Export failed."); } finally { setExporting(false); } };
+  const handleExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) return; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH }); restore(); const link = document.createElement("a"); link.download = `p2v-${tab}-${Date.now()}.png`; link.href = canvas.toDataURL("image/png"); link.click(); await incrementExportCounter(); // Upload to Cloudinary and save to design_exports
+    const blob = await new Promise<Blob>((resolve) => { canvas.toBlob((b) => resolve(b!), "image/png"); });
+    const uploadedUrl = await uploadToCloudinary(new File([blob], `p2v-${tab}.png`, { type: "image/png" }), "design-studio/exports");
+    await saveDesignExport(uploadedUrl, "png"); } catch (err) { console.error(err); alert("Export failed."); } finally { setExporting(false); } };
 
-  const handlePdfExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const jsPDF = (await import("jspdf")).default; const html2canvas = (await import("html2canvas-pro")).default; const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" }); for (let page = 0; page < pdfTotalPages; page++) { setPdfPreviewPage(page); await new Promise(r => setTimeout(r, 400)); const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement; if (!el) continue; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 }); restore(); if (page > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11); } pdf.save(`${pdfAddress.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "property"}_sheet.pdf`); setPdfPreviewPage(0); await incrementExportCounter(); } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); } };
+  const handlePdfExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const jsPDF = (await import("jspdf")).default; const html2canvas = (await import("html2canvas-pro")).default; const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" }); for (let page = 0; page < pdfTotalPages; page++) { setPdfPreviewPage(page); await new Promise(r => setTimeout(r, 400)); const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement; if (!el) continue; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 }); restore(); if (page > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11); } pdf.save(`${pdfAddress.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "property"}_sheet.pdf`); setPdfPreviewPage(0); await incrementExportCounter(); // Upload PDF to Cloudinary and save to design_exports
+    const pdfBlob = pdf.output("blob");
+    const uploadedUrl = await uploadToCloudinary(new File([pdfBlob], "property_sheet.pdf", { type: "application/pdf" }), "design-studio/exports");
+    await saveDesignExport(uploadedUrl, "pdf"); } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); } };
 
   const getMusicSource = (): { type: "url"; url: string } | { type: "file"; file: File } | null => { if (overlayMusic.startsWith("library:")) { const parts = overlayMusic.split(":"); const url = parts.slice(2).join(":"); if (url) return { type: "url", url }; } if (overlayMusic === "custom" && customAudioFile) { return { type: "file", file: customAudioFile }; } return null; };
 
-  const handleVideoExport = async () => { if (checkPaywall()) return; if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; } setVideoExporting(true); setVideoExportProgress(0); setVideoExportStatus("Loading video encoder..."); try { const { FFmpeg } = await import("@ffmpeg/ffmpeg"); const { toBlobURL, fetchFile } = await import("@ffmpeg/util"); const ffmpeg = new FFmpeg(); ffmpeg.on("progress", ({ progress: p }) => { setVideoExportProgress(Math.min(Math.round(p * 100), 99)); }); setVideoExportStatus("Downloading encoder (~30 MB)..."); const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd"; await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"), }); setVideoExportStatus("Downloading source video..."); setVideoExportProgress(5); const videoData = await fetchFile(selectedVideo.url); await ffmpeg.writeFile("input.mp4", videoData); const musicSource = getMusicSource(); let hasMusic = false; if (musicSource) { setVideoExportStatus("Loading music track..."); setVideoExportProgress(8); if (musicSource.type === "url") { const musicData = await fetchFile(musicSource.url); await ffmpeg.writeFile("music.mp3", musicData); hasMusic = true; } else { const buf = new Uint8Array(await musicSource.file.arrayBuffer()); await ffmpeg.writeFile("music.mp3", buf); hasMusic = true; } } setVideoExportStatus("Rendering overlay..."); setVideoExportProgress(10); const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) throw new Error("Export target not found"); const videoEls = el.querySelectorAll("video"); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; }); const placeholders = el.querySelectorAll("[data-video-area]"); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; }); const { restore } = prepareForExport(el); const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH }); restore(); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; }); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; }); const overlayBlob = await new Promise<Blob>((resolve) => { overlayCanvas.toBlob((b) => resolve(b!), "image/png"); }); const overlayData = new Uint8Array(await overlayBlob.arrayBuffer()); await ffmpeg.writeFile("overlay.png", overlayData); setVideoExportStatus(hasMusic ? "Compositing video with overlay & music..." : "Compositing video with overlay..."); setVideoExportProgress(15); const outW = currentSize.width; const outH = currentSize.height; if (hasMusic) { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-i", "music.mp3", "-t", "60", "-filter_complex", `[0:v]scale=${outW}:-2,pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:60,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`, "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } else { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-t", "60", "-filter_complex", `[0:v]scale=${outW}:-2,pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } setVideoExportStatus("Finalizing..."); setVideoExportProgress(95); const outputData = await ffmpeg.readFile("output.mp4"); const outputBlob = new Blob([outputData], { type: "video/mp4" }); const downloadUrl = URL.createObjectURL(outputBlob); const link = document.createElement("a"); link.download = `p2v-video-overlay-${Date.now()}.mp4`; link.href = downloadUrl; link.click(); URL.revokeObjectURL(downloadUrl); setVideoExportStatus("Saving to My Videos..."); setVideoExportProgress(98); const uploadedUrl = await uploadToCloudinary(new File([outputBlob], "overlay-video.mp4", { type: "video/mp4" }), "design-studio/videos"); if (uploadedUrl && user) { const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("orders").update({ overlay_video_url: uploadedUrl }).eq("order_id", selectedVideo.orderId); } setVideoExportProgress(100); setVideoExportStatus("Done!"); await incrementExportCounter(); setTimeout(() => { setVideoExporting(false); }, 1500); } catch (err: any) { console.error("Video export error:", err); alert("Video export failed: " + (err.message || "Unknown error")); setVideoExporting(false); } };
+  const handleVideoExport = async () => { if (checkPaywall()) return; if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; } setVideoExporting(true); setVideoExportProgress(0); setVideoExportStatus("Loading video encoder..."); try { const { FFmpeg } = await import("@ffmpeg/ffmpeg"); const { toBlobURL, fetchFile } = await import("@ffmpeg/util"); const ffmpeg = new FFmpeg(); ffmpeg.on("progress", ({ progress: p }) => { setVideoExportProgress(Math.min(Math.round(p * 100), 99)); }); setVideoExportStatus("Downloading encoder (~30 MB)..."); const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd"; await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"), }); setVideoExportStatus("Downloading source video..."); setVideoExportProgress(5); const videoData = await fetchFile(selectedVideo.url); await ffmpeg.writeFile("input.mp4", videoData); const musicSource = getMusicSource(); let hasMusic = false; if (musicSource) { setVideoExportStatus("Loading music track..."); setVideoExportProgress(8); if (musicSource.type === "url") { const musicData = await fetchFile(musicSource.url); await ffmpeg.writeFile("music.mp3", musicData); hasMusic = true; } else { const buf = new Uint8Array(await musicSource.file.arrayBuffer()); await ffmpeg.writeFile("music.mp3", buf); hasMusic = true; } } setVideoExportStatus("Rendering overlay..."); setVideoExportProgress(10); const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) throw new Error("Export target not found"); const videoEls = el.querySelectorAll("video"); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; }); const placeholders = el.querySelectorAll("[data-video-area]"); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; }); const { restore } = prepareForExport(el); const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH }); restore(); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; }); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; }); const overlayBlob = await new Promise<Blob>((resolve) => { overlayCanvas.toBlob((b) => resolve(b!), "image/png"); }); const overlayData = new Uint8Array(await overlayBlob.arrayBuffer()); await ffmpeg.writeFile("overlay.png", overlayData); setVideoExportStatus(hasMusic ? "Compositing video with overlay & music..." : "Compositing video with overlay..."); setVideoExportProgress(15); const outW = currentSize.width; const outH = currentSize.height; if (hasMusic) { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-i", "music.mp3", "-t", "60", "-filter_complex", `[0:v]scale=${outW}:-2,pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:60,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`, "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } else { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-t", "60", "-filter_complex", `[0:v]scale=${outW}:-2,pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } setVideoExportStatus("Finalizing..."); setVideoExportProgress(95); const outputData = await ffmpeg.readFile("output.mp4"); const outputBlob = new Blob([outputData], { type: "video/mp4" }); const downloadUrl = URL.createObjectURL(outputBlob); const link = document.createElement("a"); link.download = `p2v-video-overlay-${Date.now()}.mp4`; link.href = downloadUrl; link.click(); URL.revokeObjectURL(downloadUrl); setVideoExportStatus("Saving to My Videos..."); setVideoExportProgress(98); const uploadedUrl = await uploadToCloudinary(new File([outputBlob], "overlay-video.mp4", { type: "video/mp4" }), "design-studio/videos"); if (uploadedUrl && user) { const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("orders").update({ overlay_video_url: uploadedUrl }).eq("order_id", selectedVideo.orderId); } setVideoExportProgress(100); setVideoExportStatus("Done!"); await incrementExportCounter(); await saveDesignExport(null, "mp4", uploadedUrl || undefined); setTimeout(() => { setVideoExporting(false); }, 1500); } catch (err: any) { console.error("Video export error:", err); alert("Video export failed: " + (err.message || "Unknown error")); setVideoExporting(false); } };
 
   const badge = getBadgeConfig(selectedTemplate);
 
@@ -390,6 +461,37 @@ function DesignStudioPageInner() {
         <div className="flex items-center gap-3 mb-8"><Link href="/dashboard/lens" className="text-muted-foreground hover:text-foreground transition-colors"><ArrowLeft className="h-5 w-5" /></Link><div><h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Marketing Design Studio</h1><p className="text-muted-foreground mt-1">Create listing graphics, yard signs, property sheets, and branding cards</p></div></div>
 
         {isAdmin ? (<div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" /><p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p></div>) : isSubscriber ? (<div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited exports</p></div>) : (<div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-accent flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold">Free trial:</span> {FREE_EXPORT_LIMIT - freeExportsUsed} of {FREE_EXPORT_LIMIT} exports remaining.</p></div>)}
+
+        {/* Property Selector */}
+        <div className="bg-card rounded-2xl border border-border p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Home className="h-5 w-5 text-accent flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Property</label>
+              <select
+                value={selectedPropertyId || ""}
+                onChange={(e) => handleSelectProperty(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 appearance-none"
+              >
+                <option value="">Select a property...</option>
+                {userProperties.map((p: any) => (
+                  <option key={p.id} value={p.id}>
+                    {p.address}{p.city ? `, ${p.city}` : ""}{p.state ? `, ${p.state}` : ""}
+                  </option>
+                ))}
+                <option value="__new__">＋ Enter address manually</option>
+              </select>
+            </div>
+            {selectedPropertyId && (
+              <Link
+                href={`/dashboard/properties/${selectedPropertyId}`}
+                className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors flex-shrink-0 mt-4"
+              >
+                View →
+              </Link>
+            )}
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2 mb-8">{([{ id: "templates" as StudioTab, label: "Listing Graphics", icon: PenTool },{ id: "branding-card" as StudioTab, label: "Branding Card", icon: CreditCard },{ id: "yard-sign" as StudioTab, label: "Yard Sign", icon: MapPin },{ id: "property-pdf" as StudioTab, label: "Property Sheet", icon: FileText },]).map((t) => (<button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all ${tab === t.id ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}><t.icon className="h-4 w-4" />{t.label}</button>))}</div>
 
