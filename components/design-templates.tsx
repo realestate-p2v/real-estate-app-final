@@ -820,8 +820,8 @@ export function YardSignSplitBar({ width, height, headshot, logo, agentName, pho
             )}
             {qrDataUrl && (
               <img src={qrDataUrl} alt="QR" style={{
-                width: Math.round(centerH * 0.12),
-                height: Math.round(centerH * 0.12),
+                width: Math.round(centerH * 0.22),
+                height: Math.round(centerH * 0.22),
                 borderRadius: Math.round(4 * u),
               }} />
             )}
@@ -1055,7 +1055,7 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
         {/* QR Code */}
         {qrDataUrl && (
           <img src={qrDataUrl} alt="QR" style={{
-            width: Math.round(height * 0.07), height: Math.round(height * 0.07),
+            width: Math.round(height * 0.12), height: Math.round(height * 0.12),
             marginTop: Math.round(height * 0.015),
             borderRadius: Math.round(4 * u),
           }} />
@@ -1115,7 +1115,7 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.04), marginTop: Math.round(bottomH * 0.025) }}>
-          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(bottomH * 0.12), height: Math.round(bottomH * 0.12), borderRadius: 4 }} />}
+          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(bottomH * 0.22), height: Math.round(bottomH * 0.22), borderRadius: 4 }} />}
         </div>
       </div>
     </div>
