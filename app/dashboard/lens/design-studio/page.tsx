@@ -314,7 +314,7 @@ function DesignStudioPageInner() {
       // Load user properties for the property selector
       const { data: props } = await supabase
         .from("agent_properties")
-        .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features")
+        .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features, description")
         .eq("user_id", authUser.id)
         .order("updated_at", { ascending: false });
       if (props) setUserProperties(props);
@@ -460,6 +460,7 @@ function DesignStudioPageInner() {
       setPdfFeatures(features);
       setBrandFeatures(features);
     }
+    if (prop.description) { setPdfDescription(prop.description); }
   };
 
   const prepareForExport = (el: HTMLElement): { restore: () => void } => { const parent = el.parentElement as HTMLElement; const savedTransform = el.style.transform; const savedOverflow = parent?.style.overflow; const savedWidth = parent?.style.width; const savedHeight = parent?.style.height; el.style.transform = "none"; if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; } return { restore: () => { el.style.transform = savedTransform; if (parent) { parent.style.overflow = savedOverflow || ""; parent.style.width = savedWidth || ""; parent.style.height = savedHeight || ""; } } }; };
