@@ -219,8 +219,8 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
             }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ textAlign: "center", minWidth: 0 }}>
-                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
-                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, overflowWrap: "break-word" }}>{agentNameText}</p>
+                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), overflowWrap: "break-word" }}>{brokerageText}</p>
                 <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
               </div>
               {/* Logo under agent info */}
@@ -249,7 +249,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
               flex: 1, textAlign: "right", minWidth: 0,
               display: "flex", flexDirection: "column", justifyContent: "center",
             }}>
-              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, overflowWrap: "break-word" }}>{addressText}</p>
               <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(8 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
               <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(14 * unit), marginBottom: Math.round(10 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
               <p style={{
@@ -307,8 +307,8 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
             }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
-                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, overflowWrap: "break-word" }}>{agentNameText}</p>
+                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), overflowWrap: "break-word" }}>{brokerageText}</p>
                 <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
               </div>
             </div>
@@ -318,7 +318,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
 
             {/* RIGHT: Property Info */}
             <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, overflowWrap: "break-word" }}>{addressText}</p>
               <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
               <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(10 * unit), marginBottom: Math.round(8 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
               <p style={{
@@ -383,8 +383,8 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
           }}>
             {renderHeadshot(headshotSize, headshotBorder)}
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
-              <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(4 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+              <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, overflowWrap: "break-word" }}>{agentNameText}</p>
+              <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(4 * unit), overflowWrap: "break-word" }}>{brokerageText}</p>
               <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(2 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
             </div>
           </div>
@@ -394,7 +394,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
 
           {/* RIGHT: Property Info */}
           <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+            <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, overflowWrap: "break-word" }}>{addressText}</p>
             <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
             <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(10 * unit), marginBottom: Math.round(8 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
             <p style={{
@@ -454,15 +454,15 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
       </div>
       <div className="absolute inset-x-0 bottom-0" style={{ padding: `0 ${pad}px` }}>
         <div className="text-center text-white" style={{ marginBottom: Math.round(12 * unit) }}>
-          <p className="font-bold leading-tight" style={{ fontSize: addressFontSize, wordBreak: "break-word" }}>{addressText}</p>
+          <p className="font-bold leading-tight" style={{ fontSize: addressFontSize, overflowWrap: "break-word" }}>{addressText}</p>
           <p className="text-white/80" style={{ fontSize: Math.round(24 * unit), marginTop: Math.round(4 * unit) }}>{[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}</p>
           <p className="font-black" style={{ fontSize: Math.round(44 * unit), marginTop: Math.round(8 * unit), lineHeight: 1.1, color: accent }}>{price ? `$${price}` : "$000,000"}</p>
         </div>
         <div className="flex items-center justify-center backdrop-blur-sm rounded-t-xl" style={{ padding: `${Math.round(14 * unit)}px ${Math.round(20 * unit)}px`, gap: Math.round(14 * unit), backgroundColor: barColor + "cc" }}>
           {headshot ? <img src={headshot} alt="Agent" className="rounded-full object-cover flex-shrink-0" style={{ width: Math.round(90 * unit), height: Math.round(90 * unit), border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }} /> : <div className="rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0" style={{ width: Math.round(90 * unit), height: Math.round(90 * unit) }}><User className="text-gray-400" style={{ width: 32 * unit, height: 32 * unit }} /></div>}
           <div className="text-white min-w-0">
-            <p className="font-bold" style={{ fontSize: agentFontSize, wordBreak: "break-word" }}>{agentNameText}</p>
-            <p className="text-white/60" style={{ fontSize: contactFontSize, wordBreak: "break-word" }}>{contactLine}</p>
+            <p className="font-bold" style={{ fontSize: agentFontSize, overflowWrap: "break-word" }}>{agentNameText}</p>
+            <p className="text-white/60" style={{ fontSize: contactFontSize, overflowWrap: "break-word" }}>{contactLine}</p>
           </div>
           {logo && <img src={logo} alt="Logo" className="object-contain flex-shrink-0 ml-auto" style={{ maxWidth: Math.round(120 * unit), maxHeight: Math.round(56 * unit), opacity: 1 }} />}
         </div>
@@ -506,9 +506,9 @@ export function YardSignSplitBar({ width, height, headshot, logo, agentName, pho
           {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "#f3f4f6", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: headshotSz * 0.4, height: headshotSz * 0.4, color: "#9ca3af" }} /></div>}
         </div>
         <div style={{ textAlign: "left" }}>
-          <p style={{ fontSize: nameSz, fontWeight: 800, color: "#111", lineHeight: 1.15, wordBreak: "break-word" }}>{nameText}</p>
+          <p style={{ fontSize: nameSz, fontWeight: 800, color: "#111", lineHeight: 1.15, overflowWrap: "break-word" }}>{nameText}</p>
           <p style={{ fontSize: phoneSz, fontWeight: 700, color: "#111", marginTop: Math.round(height * 0.012) }}>{phoneText}</p>
-          {email && <p style={{ fontSize: detailSz, color: "#555", marginTop: Math.round(height * 0.006), wordBreak: "break-word" }}>{email}</p>}
+          {email && <p style={{ fontSize: detailSz, color: "#555", marginTop: Math.round(height * 0.006), overflowWrap: "break-word" }}>{email}</p>}
           <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.02), marginTop: Math.round(height * 0.015) }}>
             {logo && <img src={logo} alt="Logo" style={{ maxHeight: Math.round(centerH * 0.15), maxWidth: Math.round(width * 0.2), objectFit: "contain" }} />}
             {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(centerH * 0.15), height: Math.round(centerH * 0.15), borderRadius: 4 }} />}
@@ -517,7 +517,7 @@ export function YardSignSplitBar({ width, height, headshot, logo, agentName, pho
       </div>
       <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(width * 0.04), padding: `0 ${Math.round(width * 0.06)}px` }}>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: bottomNameSz, fontWeight: 800, color: bottomLight ? "#000" : "#fff", wordBreak: "break-word" }}>{officeText}</p>
+          <p style={{ fontSize: bottomNameSz, fontWeight: 800, color: bottomLight ? "#000" : "#fff", overflowWrap: "break-word" }}>{officeText}</p>
           {officePhone && <p style={{ fontSize: bottomPhoneSz, fontWeight: 700, color: bottomLight ? "#000" : "#fff", marginTop: 4 }}>{officePhone}</p>}
         </div>
       </div>
@@ -559,11 +559,11 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
       </div>
       <div style={{ width: mainW, height, backgroundColor: mainBgColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.04), textAlign: "center" }}>
         {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", border: `${Math.round(width * 0.01)}px solid ${sidebarColor}` }} /> : <div style={{ width: headshotSz, height: headshotSz, borderRadius: "50%", backgroundColor: mainLight ? "#e5e7eb" : "rgba(255,255,255,0.1)", border: `${Math.round(width * 0.01)}px solid ${sidebarColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: headshotSz * 0.35, height: headshotSz * 0.35, color: mainMuted }} /></div>}
-        <p style={{ fontSize: nameSz, fontWeight: 800, color: mainText, marginTop: Math.round(height * 0.025), wordBreak: "break-word" }}>{nameText}</p>
+        <p style={{ fontSize: nameSz, fontWeight: 800, color: mainText, marginTop: Math.round(height * 0.025), overflowWrap: "break-word" }}>{nameText}</p>
         <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.005), textTransform: "uppercase", letterSpacing: "0.05em" }}>Real Estate Agent</p>
         <p style={{ fontSize: phoneSz, fontWeight: 700, color: mainText, marginTop: Math.round(height * 0.02) }}>{phoneText}</p>
-        {website && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.008), wordBreak: "break-word" }}>{website}</p>}
-        {email && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.005), wordBreak: "break-word" }}>{email}</p>}
+        {website && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.008), overflowWrap: "break-word" }}>{website}</p>}
+        {email && <p style={{ fontSize: detailSz, color: mainMuted, marginTop: Math.round(height * 0.005), overflowWrap: "break-word" }}>{email}</p>}
         {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(height * 0.08), height: Math.round(height * 0.08), marginTop: Math.round(height * 0.015), borderRadius: 4 }} />}
         <div style={{ marginTop: Math.round(height * 0.03), backgroundColor: sidebarColor, padding: `${Math.round(height * 0.012)}px ${Math.round(width * 0.06)}px`, borderRadius: 4 }}>
           <p style={{ fontSize: headerSz, fontWeight: 900, color: sideLight ? "#000" : "#fff", letterSpacing: "0.06em", textTransform: "uppercase" }}>{headerText || "FOR SALE"}</p>
@@ -608,10 +608,10 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
       </div>
       <div style={{ height: bottomH, backgroundColor: bottomColor, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: Math.round(width * 0.06), textAlign: "center" }}>
         {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: 8 }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: bottomLight ? "#e5e7eb" : "rgba(255,255,255,0.08)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: headshotSz * 0.35, height: headshotSz * 0.35, color: bottomMuted }} /></div>}
-        <p style={{ fontSize: nameSz, fontWeight: 800, color: bottomText, marginTop: Math.round(bottomH * 0.04), lineHeight: 1.1, wordBreak: "break-word" }}>{nameText}</p>
+        <p style={{ fontSize: nameSz, fontWeight: 800, color: bottomText, marginTop: Math.round(bottomH * 0.04), lineHeight: 1.1, overflowWrap: "break-word" }}>{nameText}</p>
         <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01), textTransform: "uppercase", letterSpacing: "0.05em" }}>Real Estate Agent</p>
         <p style={{ fontSize: phoneSz, fontWeight: 700, color: bottomText, marginTop: Math.round(bottomH * 0.025) }}>{phoneText}</p>
-        {email && <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01), wordBreak: "break-word" }}>{email}</p>}
+        {email && <p style={{ fontSize: detailSz, color: bottomMuted, marginTop: Math.round(bottomH * 0.01), overflowWrap: "break-word" }}>{email}</p>}
         <div style={{ display: "flex", alignItems: "center", gap: Math.round(width * 0.04), marginTop: Math.round(bottomH * 0.025) }}>
           {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: Math.round(bottomH * 0.12), height: Math.round(bottomH * 0.12), borderRadius: 4 }} />}
         </div>
@@ -643,7 +643,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
       <div style={{ width: W, height: H, backgroundColor: "#f8f7f2", fontFamily, display: "flex" }}>
         <div style={{ width: leftW, padding: pad, display: "flex", flexDirection: "column" }}>
           <p style={{ fontSize: 72, color: accent, fontWeight: 700, fontStyle: "italic", lineHeight: 1.1 }}>Introducing</p>
-          <p style={{ fontSize: responsiveSize(130, address || "Property Name", 14), color: accent, fontStyle: "italic", lineHeight: 0.95, marginTop: 4, wordBreak: "break-word" }}>{address || "Property Name"}</p>
+          <p style={{ fontSize: responsiveSize(130, address || "Property Name", 14), color: accent, fontStyle: "italic", lineHeight: 0.95, marginTop: 4, overflowWrap: "break-word" }}>{address || "Property Name"}</p>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
             <span style={{ fontSize: 40, color: accent }}>📍</span>
             <p style={{ fontSize: 40, color: accent, fontWeight: 600 }}>{cityStateZip || "City, State"}</p>
@@ -675,7 +675,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
           {description && (
             <div>
               <p style={{ fontSize: 44, fontWeight: 800, color: accent, marginTop: 44, marginBottom: 20 }}>ABOUT THIS PROPERTY:</p>
-              <div style={{ fontSize: 36, color: "#444", lineHeight: 1.8, wordBreak: "break-word", overflowWrap: "break-word" }}>
+              <div style={{ fontSize: 36, color: "#444", lineHeight: 1.8, overflowWrap: "break-word", overflowWrap: "break-word" }}>
                 {description.split("\n").filter(Boolean).map((p, i) => (
                   <p key={i} style={{ marginBottom: 14 }}>{p}</p>
                 ))}
@@ -748,17 +748,17 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
           {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
           <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%" }}>
             {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", border: `${frameBorder}px solid white`, margin: "0 auto", display: "block" }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.08)", border: `${frameBorder}px solid ${borderColor}`, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: 100 * u, height: 100 * u, color: textMuted }} /></div>}
-            <p style={{ fontSize: nameFontSize, fontWeight: 700, color: accent, marginTop: Math.round(20 * u), wordBreak: "break-word" }}>{nameText}</p>
+            <p style={{ fontSize: nameFontSize, fontWeight: 700, color: accent, marginTop: Math.round(20 * u), overflowWrap: "break-word" }}>{nameText}</p>
             {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(400 * u), maxHeight: Math.round(180 * u), objectFit: "contain", margin: `${Math.round(32 * u)}px auto`, display: "block" }} />}
-            {address && <p style={{ fontSize: responsiveSize(Math.round(80 * u), address, 16), fontWeight: 800, color: textColor, marginTop: Math.round(28 * u), lineHeight: 1.05, wordBreak: "break-word" }}>{address}</p>}
+            {address && <p style={{ fontSize: responsiveSize(Math.round(80 * u), address, 16), fontWeight: 800, color: textColor, marginTop: Math.round(28 * u), lineHeight: 1.05, overflowWrap: "break-word" }}>{address}</p>}
             {cityState && <p style={{ fontSize: Math.round(48 * u), fontWeight: 600, color: textColor, marginTop: Math.round(10 * u) }}>{cityState}</p>}
             {price && <p style={{ fontSize: Math.round(68 * u), fontWeight: 800, color: accent, marginTop: Math.round(24 * u) }}>${price}</p>}
             {features && <div style={{ marginTop: Math.round(22 * u), color: textMuted, fontSize: Math.round(40 * u), lineHeight: 1.6 }}>{features.split("\n").map((f, i) => <div key={i}>{f}</div>)}</div>}
             <div style={{ marginTop: Math.round(36 * u), display: "flex", justifyContent: "center", gap: Math.round(28 * u), flexWrap: "wrap" }}>
               {phone && <span style={{ fontSize: Math.round(34 * u), color: textMuted }}>{phone}</span>}
-              {email && <span style={{ fontSize: Math.round(34 * u), color: textMuted, wordBreak: "break-word" }}>{email}</span>}
+              {email && <span style={{ fontSize: Math.round(34 * u), color: textMuted, overflowWrap: "break-word" }}>{email}</span>}
             </div>
-            {brokerage && <p style={{ fontSize: Math.round(34 * u), color: textMuted, marginTop: Math.round(8 * u), wordBreak: "break-word" }}>{brokerage}</p>}
+            {brokerage && <p style={{ fontSize: Math.round(34 * u), color: textMuted, marginTop: Math.round(8 * u), overflowWrap: "break-word" }}>{brokerage}</p>}
             {tagline && <p style={{ fontSize: Math.round(32 * u), color: accentColor || textMuted, fontStyle: "italic", marginTop: Math.round(10 * u) }}>{tagline}</p>}
           </div>
         </div>
@@ -782,25 +782,25 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
         {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
         <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "stretch", width: "100%", height: "100%", padding: `${contentPadY}px ${contentPadX}px` }}>
           <div style={{ flex: "0 0 38%", display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: Math.round(20 * u), minWidth: 0 }}>
-            {address ? <p style={{ fontSize: addrFontSize, fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0, wordBreak: "break-word" }}>{address}</p> : <p style={{ fontSize: addrFontSize, fontWeight: 800, color: accent, lineHeight: 1.05, margin: 0, wordBreak: "break-word" }}>{nameText}</p>}
+            {address ? <p style={{ fontSize: addrFontSize, fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0, overflowWrap: "break-word" }}>{address}</p> : <p style={{ fontSize: addrFontSize, fontWeight: 800, color: accent, lineHeight: 1.05, margin: 0, overflowWrap: "break-word" }}>{nameText}</p>}
             {cityState && <p style={{ fontSize: Math.round(h * 0.067), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(h * 0.035) }}>{cityState}</p>}
             {price && <p style={{ fontSize: Math.round(h * 0.089), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(h * 0.045) }}>${price}</p>}
             {features && <div style={{ marginTop: Math.round(h * 0.04), color: textMuted, fontSize: Math.round(h * 0.050), lineHeight: 1.55 }}>{features.split("\n").map((f, i) => <div key={i}>{f}</div>)}</div>}
             {!address && tagline && <p style={{ fontSize: Math.round(h * 0.067), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(h * 0.03) }}>{tagline}</p>}
-            {!address && brokerage && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.02), wordBreak: "break-word" }}>{brokerage}</p>}
+            {!address && brokerage && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.02), overflowWrap: "break-word" }}>{brokerage}</p>}
             {!address && phone && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.015) }}>{phone}</p>}
-            {!address && email && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.010), wordBreak: "break-word" }}>{email}</p>}
+            {!address && email && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.010), overflowWrap: "break-word" }}>{email}</p>}
           </div>
           <div style={{ flex: "0 0 24%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             {logo ? <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.18), maxHeight: Math.round(innerH * 0.50), objectFit: "contain" }} /> : <div style={{ width: Math.round(120 * u), height: Math.round(120 * u), borderRadius: "50%", border: `3px dashed ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><ImageIcon style={{ width: 40 * u, height: 40 * u, color: textMuted }} /></div>}
-            {brokerage && address && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(16 * u), textAlign: "center", wordBreak: "break-word" }}>{brokerage}</p>}
+            {brokerage && address && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(16 * u), textAlign: "center", overflowWrap: "break-word" }}>{brokerage}</p>}
             {tagline && address && <p style={{ fontSize: Math.round(h * 0.032), color: accentColor || textMuted, fontStyle: "italic", marginTop: Math.round(10 * u), textAlign: "center", maxWidth: Math.round(innerW * 0.18) }}>{tagline}</p>}
           </div>
           <div style={{ flex: "0 0 38%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             {headshot ? <img src={headshot} alt="Agent" style={{ width: frameW, height: frameH, objectFit: "cover", border: `${frameBorder}px solid white` }} /> : <div style={{ width: frameW, height: frameH, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: 80 * u, height: 80 * u, color: textMuted }} /></div>}
-            <p style={{ fontSize: responsiveSize(Math.round(h * 0.055), address ? (agentName || "Agent Name") : "", 18), fontWeight: 600, color: accent, marginTop: Math.round(10 * uh), textAlign: "center", wordBreak: "break-word" }}>{address ? (agentName || "Agent Name") : ""}</p>
+            <p style={{ fontSize: responsiveSize(Math.round(h * 0.055), address ? (agentName || "Agent Name") : "", 18), fontWeight: 600, color: accent, marginTop: Math.round(10 * uh), textAlign: "center", overflowWrap: "break-word" }}>{address ? (agentName || "Agent Name") : ""}</p>
             {address && phone && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(4 * uh), textAlign: "center" }}>{phone}</p>}
-            {address && email && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(2 * uh), textAlign: "center", wordBreak: "break-word" }}>{email}</p>}
+            {address && email && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(2 * uh), textAlign: "center", overflowWrap: "break-word" }}>{email}</p>}
           </div>
         </div>
       </div>
