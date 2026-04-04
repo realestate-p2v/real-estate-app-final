@@ -1358,7 +1358,7 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
     const nameFontSize = responsiveSize(Math.round(60 * u), nameText, 16);
 
     return (
-      <div style={{ width: w, height: h, background: "transparent" }}>
+      <div style={{ width: w, height: h, background: "transparent", position: "relative" }}>
         <div style={{ position: "absolute", top: inset, left: inset, right: inset, bottom: inset, borderRadius: radius, border: `${border}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: pad, fontFamily }}>
           {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
           {renderCorners(Math.round(36 * u), Math.round(36 * u))}
@@ -1417,7 +1417,7 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
   const contactMuted = isLightBg ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.75)";
 
   return (
-    <div style={{ width: w, height: h, background: "transparent" }}>
+    <div style={{ width: w, height: h, background: "transparent", position: "relative" }}>
       <div style={{ position: "absolute", top: inset, left: inset, right: inset, bottom: inset, borderRadius: radius, border: `${borderW}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", fontFamily }}>
         {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
 
