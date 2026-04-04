@@ -22,6 +22,7 @@ import {
   Download,
   ExternalLink,
   Home,
+  Image as ImageIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -83,6 +84,7 @@ export default function SinglePropertyPage() {
   const [descriptions, setDescriptions] = useState<any[]>([]);
   const [exports, setExports] = useState<any[]>([]);
   const [stagings, setStagings] = useState<any[]>([]);
+  const [orderPhotos, setOrderPhotos] = useState<any[]>([]);
 
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<Property>>({});
@@ -162,6 +164,24 @@ export default function SinglePropertyPage() {
       .ilike("property_address", `${norm}%`)
       .order("created_at", { ascending: false });
     setVideos(orderData || []);
+
+    // Extract all individual photos from orders
+    const allPhotos: any[] = [];
+    (orderData || []).forEach((order: any) => {
+      if (Array.isArray(order.photos)) {
+        order.photos.forEach((photo: any, idx: number) => {
+          if (photo.secure_url) {
+            allPhotos.push({
+              ...photo,
+              orderId: order.order_id || order.id,
+              orderDate: order.created_at,
+              index: idx,
+            });
+          }
+        });
+      }
+    });
+    setOrderPhotos(allPhotos);
 
     // FIX 1: Load descriptions — fetch all, then filter client-side by address match
     const { data: descData } = await supabase
@@ -522,6 +542,108 @@ export default function SinglePropertyPage() {
             </div>
           )}
         </section>
+
+        {/* ═══ LISTING PHOTOS (from orders) ═══ */}
+        {orderPhotos.length > 0 && (
+          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-emerald-600" />
+                <h2 className="text-lg font-bold text-foreground">Listing Photos</h2>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderPhotos.length}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {orderPhotos.map((photo: any, i: number) => {
+                const thumbUrl = photo.secure_url.includes("/upload/")
+                  ? photo.secure_url.replace("/upload/", "/upload/w_400,h_300,c_fill/")
+                  : photo.secure_url;
+                return (
+                  <div key={`${photo.orderId}-${photo.index}`} className="group relative rounded-xl overflow-hidden border border-border hover:border-accent/40 hover:shadow-md transition-all">
+                    <div className="aspect-[4/3] relative bg-muted">
+                      <img
+                        src={thumbUrl}
+                        alt={photo.description || `Photo ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Hover overlay with actions */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                        <a
+                          href={photo.secure_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-8 w-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                          title="View full size"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 text-gray-700" />
+                        </a>
+                        <a
+                          href={photo.secure_url.includes("/upload/") ? photo.secure_url.replace("/upload/", "/upload/fl_attachment/") : photo.secure_url}
+                          download
+                          className="h-8 w-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                          title="Download"
+                        >
+                          <Download className="h-3.5 w-3.5 text-gray-700" />
+                        </a>
+                        {isSubscriber && (
+                          <Link
+                            href={`/dashboard/lens/staging?${qs}`}
+                            className="h-8 w-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                            title="Stage this room"
+                          >
+                            <Sofa className="h-3.5 w-3.5 text-gray-700" />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                    {photo.description && (
+                      <div className="px-2 py-1.5">
+                        <p className="text-[10px] text-muted-foreground truncate">{photo.description}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
+              <Button asChild size="sm" variant="outline" className="font-semibold">
+                <Link href={`/dashboard/lens/design-studio?${qs}`}>
+                  <PenTool className="h-3 w-3 mr-1.5" />Use in Design Studio
+                </Link>
+              </Button>
+              {isSubscriber && (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href={`/dashboard/lens/staging?${qs}`}>
+                    <Sofa className="h-3 w-3 mr-1.5" />Stage a Room
+                  </Link>
+                </Button>
+              )}
+              <button
+                onClick={() => {
+                  orderPhotos.forEach((photo: any, i: number) => {
+                    setTimeout(() => {
+                      const url = photo.secure_url;
+                      const downloadUrl = url.includes("/upload/")
+                        ? url.replace("/upload/", "/upload/fl_attachment/")
+                        : url;
+                      const a = document.createElement("a");
+                      a.href = downloadUrl;
+                      a.download = `${property.address.replace(/[^a-zA-Z0-9]/g, "_")}_photo_${i + 1}.jpg`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }, i * 300);
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Download className="h-3 w-3" />Download All ({orderPhotos.length})
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* ═══ VIDEOS (FIX 2: with thumbnails) ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
