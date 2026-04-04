@@ -456,14 +456,14 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
   const addressFontSize = responsiveSize(Math.round((isPostcard ? 36 : 32) * unit), addressText, 22);
   const detailsFontSz = Math.round((isPostcard ? 28 : 24) * unit);
   const priceFontSize = Math.round((isPostcard ? 52 : 46) * unit);
-  const agentFontSize = responsiveSize(Math.round((isPostcard ? 28 : 24) * unit), agentNameText, 20);
-  const contactFontSize = responsiveSize(Math.round((isPostcard ? 22 : 18) * unit), contactLine, 35);
-  const headshotSz = Math.round((isPostcard ? 100 : 86) * unit);
-  const logoMaxW = Math.round((isPostcard ? 140 : 120) * unit);
-  const logoMaxH = Math.round((isPostcard ? 64 : 52) * unit);
+  const agentFontSize = responsiveSize(Math.round((isPostcard ? 34 : isStory ? 34 : 30) * unit), agentNameText, 20);
+  const contactFontSize = responsiveSize(Math.round((isPostcard ? 26 : isStory ? 26 : 22) * unit), contactLine, 35);
+  const headshotSz = Math.round((isPostcard ? 120 : isStory ? 120 : 110) * unit);
+  const logoMaxW = Math.round((isPostcard ? 160 : isStory ? 160 : 150) * unit);
+  const logoMaxH = Math.round((isPostcard ? 72 : isStory ? 72 : 64) * unit);
 
   // Agent bar height
-  const agentBarH = Math.round((isPostcard ? 120 : isStory ? 100 : 106) * unit);
+  const agentBarH = Math.round((isPostcard ? 140 : isStory ? 140 : 130) * unit);
   const agentBarRadius = Math.round(14 * unit);
 
   const textShadow = `0 ${Math.round(2 * unit)}px ${Math.round(8 * unit)}px rgba(0,0,0,0.5)`;
