@@ -44,62 +44,313 @@ function responsiveSize(base: number, text: string, maxChars: number): number {
   return Math.max(base * 0.5, Math.round(base * Math.max(ratio, 0.55)));
 }
 
+/** Convert hex to rgba string */
+function hexToRgba(hex: string, alpha: number): string {
+  const c = hex.replace("#", "");
+  if (c.length < 6) return `rgba(0,0,0,${alpha})`;
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 /* ═══════════════════════════════════════════════════════
    INFO BAR TEMPLATE (Just Listed, Price Reduced, Just Sold)
+   ─────────────────────────────────────────────────────
+   Redesigned with:
+   • Floating pill badge bridging photo → bar
+   • Frosted-glass info bar with accent top border
+   • Vertical divider separating agent / property
+   • Improved headshot ring with accent glow
+   • Cinematic gradient transition from photo to bar
+   • Better typography hierarchy & spacing
    ═══════════════════════════════════════════════════════ */
 
 export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, address, beds, baths, sqft, price, agentName, phone, brokerage, badgeText, badgeColor, fontFamily, barColor, accentColor }: {
   size: SizeConfig; listingPhoto: string | null; videoElement?: React.ReactNode; headshot: string | null; logo: string | null; address: string; beds: string; baths: string; sqft: string; price: string; agentName: string; phone: string; brokerage: string; badgeText: string; badgeColor: string; fontFamily: string; barColor: string; accentColor: string;
 }) {
   const w = size.width, h = size.height, isStory = size.id === "story", unit = w / 1080;
-  const photoPercent = isStory ? 62 : 55;
+
+  // Layout proportions
+  const photoPercent = isStory ? 64 : 58;
   const barH = h * (1 - photoPercent / 100);
-  const barPadX = Math.round(40 * unit), barPadY = Math.round(24 * unit);
-  const headshotSize = Math.round(barH * 0.55);
+  const barPadX = Math.round(44 * unit);
+  const barPadY = Math.round(28 * unit);
+
+  // Colors
   const accent = accentColor || "#ffffff";
   const usedBadgeColor = accentColor || badgeColor;
+  const barLight = isLightColor(barColor);
+  const barTextPrimary = barLight ? "#111827" : "#ffffff";
+  const barTextSecondary = barLight ? "rgba(17,24,39,0.55)" : "rgba(255,255,255,0.55)";
+  const barTextMuted = barLight ? "rgba(17,24,39,0.40)" : "rgba(255,255,255,0.35)";
+  const dividerColor = barLight ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.12)";
 
-  // Responsive font sizes
+  // Headshot
+  const headshotSize = Math.round(barH * 0.52);
+  const headshotBorder = Math.round(3 * unit);
+
+  // Text content with fallbacks
   const agentNameText = agentName || "Agent Name";
   const brokerageText = brokerage || "Brokerage";
   const phoneText = phone || "(555) 000-0000";
   const addressText = address || "123 Main Street";
+  const detailsText = [beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF";
+  const priceText = price ? `$${price}` : "$000,000";
 
-  const agentNameFontSize = responsiveSize(Math.round(barH * 0.075), agentNameText, 18);
-  const agentDetailFontSize = responsiveSize(Math.round(barH * 0.055), brokerageText, 22);
-  const badgeFontSize = Math.round(barH * 0.06);
-  const addressFontSize = responsiveSize(Math.round(barH * 0.075), addressText, 22);
-  const detailsFontSize = Math.round(barH * 0.055);
-  const priceFontSize = Math.round(barH * 0.11);
+  // Responsive font sizes
+  const badgeFontSize = Math.round(barH * 0.052);
+  const agentNameFontSize = responsiveSize(Math.round(barH * 0.082), agentNameText, 18);
+  const brokerageFontSize = responsiveSize(Math.round(barH * 0.050), brokerageText, 24);
+  const phoneFontSize = Math.round(barH * 0.048);
+  const addressFontSize = responsiveSize(Math.round(barH * 0.078), addressText, 20);
+  const detailsFontSize = Math.round(barH * 0.048);
+  const priceFontSize = Math.round(barH * 0.13);
+
+  // Badge dimensions
+  const badgeHeight = Math.round(barH * 0.14);
+  const badgeOffsetY = Math.round(badgeHeight * 0.5); // Half above, half below the photo/bar line
 
   return (
     <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
+
+      {/* ── PHOTO AREA ── */}
       <div className="absolute inset-x-0 top-0" style={{ height: `${photoPercent}%` }}>
         {videoElement ? (
           <div className="w-full h-full">{videoElement}</div>
         ) : listingPhoto ? (
           <img src={listingPhoto} alt="Listing" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gray-700 flex items-center justify-center"><ImageIcon className="text-gray-500" style={{ width: 80 * unit, height: 80 * unit }} /></div>
+          <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: "#1a1a2e" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(12 * unit) }}>
+              <ImageIcon style={{ width: 64 * unit, height: 64 * unit, color: "rgba(255,255,255,0.12)" }} />
+              <span style={{ fontSize: Math.round(16 * unit), color: "rgba(255,255,255,0.18)", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" }}>Listing Photo</span>
+            </div>
+          </div>
         )}
-        <div className="absolute inset-x-0 bottom-0" style={{ height: Math.round(80 * unit), backgroundImage: `linear-gradient(to top, ${barColor}, transparent)` }} />
+
+        {/* Cinematic gradient: multi-layer transition from photo to bar */}
+        <div className="absolute inset-x-0 bottom-0" style={{
+          height: Math.round(140 * unit),
+          backgroundImage: `linear-gradient(to top, ${barColor} 0%, ${hexToRgba(barColor, 0.85)} 30%, ${hexToRgba(barColor, 0.4)} 65%, transparent 100%)`
+        }} />
       </div>
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between" style={{ height: `${100 - photoPercent}%`, padding: `${barPadY}px ${barPadX}px`, backgroundColor: barColor }}>
-        <div className="flex items-center flex-shrink-0" style={{ gap: Math.round(16 * unit), maxWidth: "48%" }}>
-          {headshot ? <img src={headshot} alt="Agent" className="rounded-full object-cover flex-shrink-0" style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }} /> : <div className="rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0" style={{ width: headshotSize, height: headshotSize, border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.25)` }}><User className="text-gray-500" style={{ width: 36 * unit, height: 36 * unit }} /></div>}
-          <div className="min-w-0">
-            <p className="text-white font-bold" style={{ fontSize: agentNameFontSize, lineHeight: 1.2, wordBreak: "break-word" }}>{agentNameText}</p>
-            <p className="text-gray-400" style={{ fontSize: agentDetailFontSize, lineHeight: 1.3, wordBreak: "break-word" }}>{brokerageText}</p>
-            <p className="text-gray-400" style={{ fontSize: agentDetailFontSize, lineHeight: 1.3 }}>{phoneText}</p>
+
+      {/* ── FLOATING BADGE — bridges photo and bar ── */}
+      <div className="absolute inset-x-0" style={{
+        top: `calc(${photoPercent}% - ${badgeOffsetY}px)`,
+        zIndex: 10,
+        display: "flex",
+        justifyContent: "flex-end",
+        paddingRight: barPadX,
+      }}>
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          height: badgeHeight,
+          padding: `0 ${Math.round(22 * unit)}px`,
+          backgroundColor: usedBadgeColor,
+          borderRadius: Math.round(4 * unit),
+          boxShadow: `0 ${Math.round(4 * unit)}px ${Math.round(20 * unit)}px ${hexToRgba(usedBadgeColor, 0.45)}`,
+        }}>
+          <span style={{
+            fontSize: badgeFontSize,
+            fontWeight: 800,
+            color: isLightColor(usedBadgeColor) ? "#111" : "#fff",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            lineHeight: 1,
+          }}>{badgeText}</span>
+        </div>
+      </div>
+
+      {/* ── INFO BAR ── */}
+      <div className="absolute inset-x-0 bottom-0" style={{
+        height: `${100 - photoPercent}%`,
+        backgroundColor: barColor,
+      }}>
+        {/* Accent top border */}
+        <div className="absolute inset-x-0 top-0" style={{
+          height: Math.round(3 * unit),
+          backgroundColor: accent,
+          opacity: accentColor ? 0.8 : 0.15,
+        }} />
+
+        {/* Subtle inner gradient for depth */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: barLight
+            ? "linear-gradient(to bottom, rgba(0,0,0,0.03) 0%, transparent 40%)"
+            : "linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, transparent 40%)",
+        }} />
+
+        {/* Content container */}
+        <div className="absolute inset-0 flex items-center" style={{
+          padding: `${barPadY}px ${barPadX}px`,
+          gap: Math.round(24 * unit),
+        }}>
+
+          {/* ── LEFT: Agent Info ── */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: Math.round(18 * unit),
+            flex: "0 0 auto",
+            maxWidth: "44%",
+          }}>
+            {/* Headshot with accent ring */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              {headshot ? (
+                <div style={{
+                  width: headshotSize,
+                  height: headshotSize,
+                  borderRadius: "50%",
+                  padding: headshotBorder,
+                  background: accentColor
+                    ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.4)})`
+                    : barLight
+                      ? "linear-gradient(135deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05))"
+                      : "linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1))",
+                }}>
+                  <img
+                    src={headshot}
+                    alt="Agent"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{
+                  width: headshotSize,
+                  height: headshotSize,
+                  borderRadius: "50%",
+                  backgroundColor: barLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+                  border: `${headshotBorder}px solid ${dividerColor}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <User style={{ width: headshotSize * 0.38, height: headshotSize * 0.38, color: barTextMuted }} />
+                </div>
+              )}
+            </div>
+
+            {/* Agent text */}
+            <div style={{ minWidth: 0 }}>
+              <p style={{
+                fontSize: agentNameFontSize,
+                fontWeight: 700,
+                color: barTextPrimary,
+                lineHeight: 1.15,
+                margin: 0,
+                wordBreak: "break-word",
+              }}>{agentNameText}</p>
+              <p style={{
+                fontSize: brokerageFontSize,
+                fontWeight: 500,
+                color: barTextSecondary,
+                lineHeight: 1.3,
+                margin: 0,
+                marginTop: Math.round(4 * unit),
+                wordBreak: "break-word",
+              }}>{brokerageText}</p>
+              <p style={{
+                fontSize: phoneFontSize,
+                fontWeight: 500,
+                color: barTextSecondary,
+                lineHeight: 1.3,
+                margin: 0,
+                marginTop: Math.round(2 * unit),
+                letterSpacing: "0.02em",
+              }}>{phoneText}</p>
+            </div>
+          </div>
+
+          {/* ── VERTICAL DIVIDER ── */}
+          <div style={{
+            width: Math.round(1.5 * unit),
+            alignSelf: "stretch",
+            margin: `${Math.round(barH * 0.12)}px 0`,
+            backgroundColor: dividerColor,
+            flexShrink: 0,
+          }} />
+
+          {/* ── RIGHT: Property Info ── */}
+          <div style={{
+            flex: 1,
+            textAlign: "right",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}>
+            {/* Address */}
+            <p style={{
+              fontSize: addressFontSize,
+              fontWeight: 700,
+              color: barTextPrimary,
+              lineHeight: 1.15,
+              margin: 0,
+              wordBreak: "break-word",
+            }}>{addressText}</p>
+
+            {/* Details line */}
+            <p style={{
+              fontSize: detailsFontSize,
+              fontWeight: 500,
+              color: barTextSecondary,
+              lineHeight: 1.3,
+              margin: 0,
+              marginTop: Math.round(6 * unit),
+              letterSpacing: "0.04em",
+            }}>{detailsText}</p>
+
+            {/* Thin accent rule above price */}
+            <div style={{
+              width: Math.round(60 * unit),
+              height: Math.round(2 * unit),
+              backgroundColor: accentColor || dividerColor,
+              marginLeft: "auto",
+              marginTop: Math.round(10 * unit),
+              marginBottom: Math.round(8 * unit),
+              borderRadius: 1,
+              opacity: accentColor ? 0.7 : 1,
+            }} />
+
+            {/* Price — dominant element */}
+            <p style={{
+              fontSize: priceFontSize,
+              fontWeight: 800,
+              color: accent,
+              lineHeight: 1.0,
+              margin: 0,
+              letterSpacing: "-0.01em",
+              textShadow: accentColor && !barLight
+                ? `0 ${Math.round(2 * unit)}px ${Math.round(12 * unit)}px ${hexToRgba(accentColor, 0.3)}`
+                : "none",
+            }}>{priceText}</p>
           </div>
         </div>
-        <div className="text-right flex-shrink-0" style={{ maxWidth: "50%" }}>
-          <div className="inline-block text-white font-black uppercase tracking-wider rounded-sm" style={{ fontSize: badgeFontSize, backgroundColor: usedBadgeColor, padding: `${Math.round(5 * unit)}px ${Math.round(14 * unit)}px`, marginBottom: Math.round(8 * unit) }}>{badgeText}</div>
-          <p className="text-white font-bold leading-tight" style={{ fontSize: addressFontSize, wordBreak: "break-word" }}>{addressText}</p>
-          <p className="text-gray-300" style={{ fontSize: detailsFontSize, marginTop: Math.round(3 * unit) }}>{[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}</p>
-          <p className="font-black" style={{ fontSize: priceFontSize, marginTop: Math.round(4 * unit), lineHeight: 1.1, color: accent }}>{price ? `$${price}` : "$000,000"}</p>
-        </div>
-        {logo && <img src={logo} alt="Logo" className="absolute object-contain" style={{ top: barPadY, left: barPadX, maxWidth: Math.round(barH * 0.40), maxHeight: Math.round(barH * 0.22), opacity: 0.8 }} />}
+
+        {/* ── LOGO — bottom-right corner, subtle ── */}
+        {logo && (
+          <img
+            src={logo}
+            alt="Logo"
+            className="absolute object-contain"
+            style={{
+              bottom: Math.round(10 * unit),
+              right: barPadX,
+              maxWidth: Math.round(barH * 0.30),
+              maxHeight: Math.round(barH * 0.16),
+              opacity: 0.45,
+            }}
+          />
+        )}
       </div>
     </div>
   );
