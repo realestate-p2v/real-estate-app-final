@@ -464,11 +464,13 @@ function DesignStudioPageInner() {
     if (prop.description) { setPdfDescription(prop.description); }
     // Try to fetch description separately (column may not exist)
     if (!prop.description) {
-      try {
-        const supabase = (await import("@/lib/supabase/client")).createClient();
-        const { data: descData } = await supabase.from("agent_properties").select("description").eq("id", prop.id).single();
-        if (descData?.description) setPdfDescription(descData.description);
-      } catch { /* description column may not exist */ }
+      (async () => {
+        try {
+          const supabase = (await import("@/lib/supabase/client")).createClient();
+          const { data: descData } = await supabase.from("agent_properties").select("description").eq("id", prop.id).single();
+          if (descData?.description) setPdfDescription(descData.description);
+        } catch { /* description column may not exist */ }
+      })();
     }
   };
 
