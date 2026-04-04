@@ -229,7 +229,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
                   maxWidth: Math.round(headshotSize * 1.3),
                   maxHeight: Math.round(barH * 0.14),
                   objectFit: "contain" as const,
-                  opacity: 0.55,
+                  opacity: 1,
                   marginTop: Math.round(6 * unit),
                 }} />
               )}
@@ -333,7 +333,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
             <img src={logo} alt="Logo" className="absolute object-contain" style={{
               bottom: Math.round(10 * unit), right: barPadX,
               maxWidth: Math.round(barH * 0.34), maxHeight: Math.round(barH * 0.18),
-              opacity: 0.45,
+              opacity: 1,
             }} />
           )}
         </div>
@@ -409,7 +409,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
           <img src={logo} alt="Logo" className="absolute object-contain" style={{
             bottom: Math.round(10 * unit), right: barPadX,
             maxWidth: Math.round(barH * 0.30), maxHeight: Math.round(barH * 0.16),
-            opacity: 0.45,
+            opacity: 1,
           }} />
         )}
       </div>
@@ -464,7 +464,7 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
             <p className="font-bold" style={{ fontSize: agentFontSize, wordBreak: "break-word" }}>{agentNameText}</p>
             <p className="text-white/60" style={{ fontSize: contactFontSize, wordBreak: "break-word" }}>{contactLine}</p>
           </div>
-          {logo && <img src={logo} alt="Logo" className="object-contain flex-shrink-0 ml-auto" style={{ maxWidth: Math.round(120 * unit), maxHeight: Math.round(56 * unit), opacity: 0.9 }} />}
+          {logo && <img src={logo} alt="Logo" className="object-contain flex-shrink-0 ml-auto" style={{ maxWidth: Math.round(120 * unit), maxHeight: Math.round(56 * unit), opacity: 1 }} />}
         </div>
       </div>
     </div>
