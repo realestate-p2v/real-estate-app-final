@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,14 @@ const SURPRISE_SEGMENTS = [
 ];
 
 export default function DescriptionWriterPage() {
+  return (
+    <Suspense>
+      <DescriptionWriterPageInner />
+    </Suspense>
+  );
+}
+
+function DescriptionWriterPageInner() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
