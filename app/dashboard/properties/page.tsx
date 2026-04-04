@@ -86,7 +86,7 @@ export default function PropertiesPage() {
 
   const supabase = createClient();
 
-  // Client-side upsert — uses RLS-aware client
+  // Client-side upsert
   const ensurePropertyClient = async (
     uid: string,
     address: string,
@@ -119,23 +119,47 @@ export default function PropertiesPage() {
       .single();
 
     if (error) {
-      console.error("Failed to create property:", error);
+      console.error("[Properties] Failed to create property:", error);
       return null;
     }
     return newProp.id;
   };
 
-  // Backfill: create portfolio entries from existing orders that have addresses
+  // Backfill from existing orders
   const backfillFromOrders = async (uid: string) => {
     try {
-      const { data: orders } = await supabase
+      // First: get ALL orders for this user to see what's there
+      const { data: allOrders, error: allOrdersError } = await supabase
         .from("orders")
-        .select("property_address, property_city, property_state, property_bedrooms, property_bathrooms")
-        .eq("user_id", uid)
-        .not("property_address", "is", null);
+        .select("id, order_id, property_address, property_city, property_state, property_bedrooms, property_bathrooms, user_id")
+        .eq("user_id", uid);
 
-      if (!orders || orders.length === 0) return;
+      console.log("[Properties] Backfill - user_id:", uid);
+      console.log("[Properties] Backfill - all orders for user:", allOrders?.length, allOrders);
+      if (allOrdersError) console.error("[Properties] Backfill - orders query error:", allOrdersError);
 
+      // Also try without user_id filter to see if orders exist but with different user_id
+      const { data: allOrdersByEmail } = await supabase
+        .from("orders")
+        .select("id, order_id, property_address, user_id")
+        .limit(10);
+      console.log("[Properties] Backfill - sample orders (no user filter):", allOrdersByEmail);
+
+      if (!allOrders || allOrders.length === 0) {
+        console.log("[Properties] Backfill - no orders found for this user");
+        return;
+      }
+
+      // Filter to orders that have an address
+      const ordersWithAddress = allOrders.filter((o: any) => o.property_address && o.property_address.trim() !== "");
+      console.log("[Properties] Backfill - orders with address:", ordersWithAddress.length, ordersWithAddress.map((o: any) => o.property_address));
+
+      if (ordersWithAddress.length === 0) {
+        console.log("[Properties] Backfill - no orders have a property_address");
+        return;
+      }
+
+      // Get existing properties
       const { data: existingProps } = await supabase
         .from("agent_properties")
         .select("address_normalized")
@@ -144,29 +168,40 @@ export default function PropertiesPage() {
       const existingNorms = new Set(
         (existingProps || []).map((p: any) => p.address_normalized)
       );
+      console.log("[Properties] Backfill - existing normalized addresses:", Array.from(existingNorms));
 
       const seen = new Set<string>();
-      for (const order of orders) {
-        if (!order.property_address) continue;
+      for (const order of ordersWithAddress) {
         const norm = normalizeAddress(order.property_address);
-        if (!norm || seen.has(norm) || existingNorms.has(norm)) continue;
+        console.log("[Properties] Backfill - processing:", order.property_address, "→ normalized:", norm);
+
+        if (!norm || seen.has(norm) || existingNorms.has(norm)) {
+          console.log("[Properties] Backfill - skipping (already exists or empty)");
+          continue;
+        }
         seen.add(norm);
 
-        await ensurePropertyClient(uid, order.property_address, {
+        console.log("[Properties] Backfill - creating property for:", order.property_address);
+        const id = await ensurePropertyClient(uid, order.property_address, {
           city: order.property_city || undefined,
           state: order.property_state || undefined,
           bedrooms: order.property_bedrooms ? Number(order.property_bedrooms) : undefined,
           bathrooms: order.property_bathrooms ? Number(order.property_bathrooms) : undefined,
         });
+        console.log("[Properties] Backfill - created property id:", id);
       }
     } catch (err) {
-      console.error("Backfill error:", err);
+      console.error("[Properties] Backfill error:", err);
     }
   };
 
   const loadProperties = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      console.log("[Properties] No user found");
+      return;
+    }
+    console.log("[Properties] Logged in as:", user.id, user.email);
     setUserId(user.id);
 
     // Backfill from existing orders first
@@ -179,8 +214,10 @@ export default function PropertiesPage() {
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
+    console.log("[Properties] Fetched properties:", props?.length, props, "error:", propsError);
+
     if (propsError) {
-      console.error("Error fetching properties:", propsError);
+      console.error("[Properties] Error fetching properties:", propsError);
       setProperties([]);
       setLoading(false);
       return;
@@ -197,7 +234,7 @@ export default function PropertiesPage() {
       props.map(async (p: any) => {
         const norm = p.address_normalized;
 
-        // Video count — fetch orders and match normalized addresses client-side
+        // Video count — match normalized addresses client-side
         const { data: userOrders } = await supabase
           .from("orders")
           .select("id, property_address")
@@ -210,7 +247,7 @@ export default function PropertiesPage() {
           return orderNorm === norm || orderNorm.startsWith(norm) || norm.startsWith(orderNorm);
         }).length;
 
-        // Photo count (lens_sessions)
+        // Photo count
         const { count: photoCount } = await supabase
           .from("lens_sessions")
           .select("*", { count: "exact", head: true })
