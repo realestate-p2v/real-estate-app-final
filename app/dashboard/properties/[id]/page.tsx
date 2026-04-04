@@ -88,6 +88,25 @@ export default function SinglePropertyPage() {
 
   const supabase = createClient();
 
+  // Build query string from property data for tool deep-linking
+  const buildPropertyParams = (prop: Property) => {
+    const p = new URLSearchParams();
+    if (prop.address) p.set("address", prop.address);
+    if (prop.city) p.set("city", prop.city);
+    if (prop.state) p.set("state", prop.state);
+    if (prop.zip) p.set("zip", prop.zip);
+    if (prop.bedrooms) p.set("beds", prop.bedrooms.toString());
+    if (prop.bathrooms) p.set("baths", prop.bathrooms.toString());
+    if (prop.sqft) p.set("sqft", prop.sqft.toString());
+    if (prop.lot_size) p.set("lotSize", prop.lot_size);
+    if (prop.year_built) p.set("yearBuilt", prop.year_built.toString());
+    if (prop.price) p.set("price", prop.price.toString());
+    if (prop.special_features && prop.special_features.length > 0) {
+      p.set("specialFeatures", prop.special_features.join(", "));
+    }
+    return p.toString();
+  };
+
   const loadProperty = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
@@ -149,7 +168,6 @@ export default function SinglePropertyPage() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    // Filter to descriptions that match this property's address
     const normalizedPropAddr = norm;
     const filteredDescs = (descData || []).filter((desc: any) => {
       const descAddr = desc.property_data?.address || desc.property_data?.property_address || "";
@@ -250,6 +268,8 @@ export default function SinglePropertyPage() {
 
   if (!property) return null;
 
+  const qs = buildPropertyParams(property);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -285,13 +305,13 @@ export default function SinglePropertyPage() {
           </Button>
         </div>
 
-        {/* Quick Actions Bar */}
+        {/* Quick Actions Bar — links include property params */}
         <div className="flex flex-wrap gap-2 mt-6 mb-8">
-          <QuickAction href="/order" icon={Film} label="Order Video" />
-          <QuickAction href="/dashboard/lens/coach" icon={Camera} label="Photo Coach" requiresSub />
-          <QuickAction href="/dashboard/lens/descriptions" icon={FileText} label="Write Description" requiresSub />
-          <QuickAction href="/dashboard/lens/staging" icon={Sofa} label="Stage Room" requiresSub />
-          <QuickAction href="/dashboard/lens/design-studio" icon={PenTool} label="Create Graphic" requiresSub />
+          <QuickAction href={`/order?${qs}`} icon={Film} label="Order Video" />
+          <QuickAction href={`/dashboard/lens/coach?${qs}`} icon={Camera} label="Photo Coach" requiresSub />
+          <QuickAction href={`/dashboard/lens/descriptions?${qs}`} icon={FileText} label="Write Description" requiresSub />
+          <QuickAction href={`/dashboard/lens/staging?${qs}`} icon={Sofa} label="Stage Room" requiresSub />
+          <QuickAction href={`/dashboard/lens/design-studio?${qs}`} icon={PenTool} label="Create Graphic" requiresSub />
         </div>
 
         {/* ═══ PROPERTY DETAILS (editable) ═══ */}
@@ -462,7 +482,7 @@ export default function SinglePropertyPage() {
               <p className="text-sm text-muted-foreground mb-3">No Photo Coach sessions for this property yet.</p>
               {isSubscriber ? (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
-                  <Link href="/dashboard/lens/coach">Open Photo Coach</Link>
+                  <Link href={`/dashboard/lens/coach?${qs}`}>Open Photo Coach</Link>
                 </Button>
               ) : (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
@@ -475,7 +495,7 @@ export default function SinglePropertyPage() {
               {photos.map((session: any) => (
                 <Link
                   key={session.id}
-                  href="/dashboard/lens/coach"
+                  href={`/dashboard/lens/coach?${qs}`}
                   className="block p-4 rounded-xl bg-muted/30 border border-border hover:border-accent/30 transition-all"
                 >
                   <div className="flex items-center justify-between">
@@ -509,7 +529,7 @@ export default function SinglePropertyPage() {
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground mb-3">No video orders for this property yet.</p>
               <Button asChild size="sm" variant="outline" className="font-semibold">
-                <Link href="/order">Order a Video</Link>
+                <Link href={`/order?${qs}`}>Order a Video</Link>
               </Button>
             </div>
           ) : (
@@ -522,7 +542,6 @@ export default function SinglePropertyPage() {
                   new: "bg-blue-100 text-blue-700",
                   pending_payment: "bg-gray-100 text-gray-600",
                 };
-                // Get first photo URL for thumbnail
                 const firstPhotoUrl = Array.isArray(order.photos) && order.photos.length > 0
                   ? order.photos[0]?.secure_url || null
                   : null;
@@ -596,7 +615,7 @@ export default function SinglePropertyPage() {
               <p className="text-sm text-muted-foreground mb-3">Descriptions will appear here when generated from this property&apos;s portfolio page.</p>
               {isSubscriber ? (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
-                  <Link href="/dashboard/lens/descriptions">Write a Description</Link>
+                  <Link href={`/dashboard/lens/descriptions?${qs}`}>Write a Description</Link>
                 </Button>
               ) : (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
@@ -646,7 +665,7 @@ export default function SinglePropertyPage() {
             <p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>
             {isSubscriber ? (
               <Button asChild size="sm" variant="outline" className="font-semibold">
-                <Link href="/dashboard/lens/staging">Stage a Room</Link>
+                <Link href={`/dashboard/lens/staging?${qs}`}>Stage a Room</Link>
               </Button>
             ) : (
               <Button asChild size="sm" variant="outline" className="font-semibold">
@@ -673,7 +692,7 @@ export default function SinglePropertyPage() {
               <p className="text-sm text-muted-foreground mb-3">No design exports linked to this property yet.</p>
               {isSubscriber ? (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
-                  <Link href="/dashboard/lens/design-studio">Create a Graphic</Link>
+                  <Link href={`/dashboard/lens/design-studio?${qs}`}>Create a Graphic</Link>
                 </Button>
               ) : (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
