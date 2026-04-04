@@ -11,14 +11,12 @@ import {
   Camera,
   Film,
   FileText,
-  Sofa,
   PenTool,
   X,
   Loader2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeAddress } from "@/lib/utils/address";
-import { ensurePropertyExists } from "@/lib/utils/portfolio";
 
 interface Property {
   id: string;
@@ -32,7 +30,6 @@ interface Property {
   bathrooms: number | null;
   created_at: string;
   updated_at: string;
-  // Asset counts (loaded separately)
   photo_count?: number;
   video_count?: number;
   description_count?: number;
@@ -78,7 +75,6 @@ export default function PropertiesPage() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Add form state
   const [formAddress, setFormAddress] = useState("");
   const [formCity, setFormCity] = useState("");
   const [formState, setFormState] = useState("");
@@ -90,50 +86,143 @@ export default function PropertiesPage() {
 
   const supabase = createClient();
 
+  // Client-side upsert — uses RLS-aware client
+  const ensurePropertyClient = async (
+    uid: string,
+    address: string,
+    extras?: { city?: string; state?: string; bedrooms?: number; bathrooms?: number }
+  ): Promise<string | null> => {
+    const normalized = normalizeAddress(address);
+    if (!normalized) return null;
+
+    const { data: existing } = await supabase
+      .from("agent_properties")
+      .select("id")
+      .eq("user_id", uid)
+      .eq("address_normalized", normalized)
+      .maybeSingle();
+
+    if (existing) return existing.id;
+
+    const { data: newProp, error } = await supabase
+      .from("agent_properties")
+      .insert({
+        user_id: uid,
+        address: address.trim(),
+        address_normalized: normalized,
+        city: extras?.city || null,
+        state: extras?.state || null,
+        bedrooms: extras?.bedrooms || null,
+        bathrooms: extras?.bathrooms || null,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Failed to create property:", error);
+      return null;
+    }
+    return newProp.id;
+  };
+
+  // Backfill: create portfolio entries from existing orders that have addresses
+  const backfillFromOrders = async (uid: string) => {
+    try {
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("property_address, property_city, property_state, property_bedrooms, property_bathrooms")
+        .eq("user_id", uid)
+        .not("property_address", "is", null);
+
+      if (!orders || orders.length === 0) return;
+
+      const { data: existingProps } = await supabase
+        .from("agent_properties")
+        .select("address_normalized")
+        .eq("user_id", uid);
+
+      const existingNorms = new Set(
+        (existingProps || []).map((p: any) => p.address_normalized)
+      );
+
+      const seen = new Set<string>();
+      for (const order of orders) {
+        if (!order.property_address) continue;
+        const norm = normalizeAddress(order.property_address);
+        if (!norm || seen.has(norm) || existingNorms.has(norm)) continue;
+        seen.add(norm);
+
+        await ensurePropertyClient(uid, order.property_address, {
+          city: order.property_city || undefined,
+          state: order.property_state || undefined,
+          bedrooms: order.property_bedrooms ? Number(order.property_bedrooms) : undefined,
+          bathrooms: order.property_bathrooms ? Number(order.property_bathrooms) : undefined,
+        });
+      }
+    } catch (err) {
+      console.error("Backfill error:", err);
+    }
+  };
+
   const loadProperties = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
 
+    // Backfill from existing orders first
+    await backfillFromOrders(user.id);
+
     // Fetch properties
-    const { data: props } = await supabase
+    const { data: props, error: propsError } = await supabase
       .from("agent_properties")
       .select("*")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
-    if (!props) {
+    if (propsError) {
+      console.error("Error fetching properties:", propsError);
       setProperties([]);
       setLoading(false);
       return;
     }
 
-    // Load asset counts for each property
+    if (!props || props.length === 0) {
+      setProperties([]);
+      setLoading(false);
+      return;
+    }
+
+    // Load asset counts
     const enriched = await Promise.all(
       props.map(async (p: any) => {
         const norm = p.address_normalized;
 
-        // Photo count (lens_sessions matched by address)
+        // Video count — fetch orders and match normalized addresses client-side
+        const { data: userOrders } = await supabase
+          .from("orders")
+          .select("id, property_address")
+          .eq("user_id", user.id)
+          .not("property_address", "is", null);
+
+        const videoCount = (userOrders || []).filter((o: any) => {
+          if (!o.property_address) return false;
+          const orderNorm = normalizeAddress(o.property_address);
+          return orderNorm === norm || orderNorm.startsWith(norm) || norm.startsWith(orderNorm);
+        }).length;
+
+        // Photo count (lens_sessions)
         const { count: photoCount } = await supabase
           .from("lens_sessions")
           .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .ilike("property_address", `${norm}%`);
+          .eq("user_id", user.id);
 
-        // Video count (orders matched by address)
-        const { count: videoCount } = await supabase
-          .from("orders")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .ilike("property_address", `${norm}%`);
-
-        // Description count (lens_descriptions matched by user)
+        // Description count
         const { count: descCount } = await supabase
           .from("lens_descriptions")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
 
-        // Export count (design_exports linked to this property)
+        // Export count
         const { count: exportCount } = await supabase
           .from("design_exports")
           .select("*", { count: "exact", head: true })
@@ -151,7 +240,7 @@ export default function PropertiesPage() {
 
     setProperties(enriched);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     loadProperties();
@@ -162,15 +251,19 @@ export default function PropertiesPage() {
     setSaving(true);
 
     try {
-      await ensurePropertyExists(supabase, userId, formAddress.trim(), {
+      const propId = await ensurePropertyClient(userId, formAddress.trim(), {
         city: formCity.trim() || undefined,
         state: formState.trim() || undefined,
         bedrooms: formBedrooms ? parseInt(formBedrooms) : undefined,
         bathrooms: formBathrooms ? parseFloat(formBathrooms) : undefined,
       });
 
-      // If zip or property_type or status were set, update now
-      const norm = normalizeAddress(formAddress.trim());
+      if (!propId) {
+        alert("Failed to add property. Please try again.");
+        setSaving(false);
+        return;
+      }
+
       const updates: any = {};
       if (formZip.trim()) updates.zip = formZip.trim();
       if (formPropertyType !== "single_family") updates.property_type = formPropertyType;
@@ -180,11 +273,9 @@ export default function PropertiesPage() {
         await supabase
           .from("agent_properties")
           .update(updates)
-          .eq("user_id", userId)
-          .eq("address_normalized", norm);
+          .eq("id", propId);
       }
 
-      // Reset form
       setFormAddress("");
       setFormCity("");
       setFormState("");
@@ -195,7 +286,6 @@ export default function PropertiesPage() {
       setFormStatus("active");
       setShowAddModal(false);
 
-      // Reload
       setLoading(true);
       await loadProperties();
     } catch (err) {
@@ -270,7 +360,6 @@ export default function PropertiesPage() {
                 href={`/dashboard/properties/${prop.id}`}
                 className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300 block group"
               >
-                {/* Address */}
                 <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors truncate">
                   {prop.address}
                 </h3>
@@ -278,7 +367,6 @@ export default function PropertiesPage() {
                   {[prop.city, prop.state].filter(Boolean).join(", ") || "No location details"}
                 </p>
 
-                {/* Status badge */}
                 <div className="flex items-center gap-2 mt-3">
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${STATUS_COLORS[prop.status] || STATUS_COLORS.active}`}>
                     {prop.status}
@@ -290,7 +378,6 @@ export default function PropertiesPage() {
                   )}
                 </div>
 
-                {/* Asset counts */}
                 <div className="flex items-center gap-4 mt-4 text-muted-foreground">
                   {(prop.photo_count ?? 0) > 0 && (
                     <span className="flex items-center gap-1 text-xs font-medium">
@@ -314,7 +401,6 @@ export default function PropertiesPage() {
                   )}
                 </div>
 
-                {/* Created date */}
                 <p className="text-xs text-muted-foreground mt-3">
                   {timeAgo(prop.updated_at || prop.created_at)}
                 </p>
@@ -336,7 +422,6 @@ export default function PropertiesPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Address */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-1.5">
                   Address <span className="text-red-500">*</span>
@@ -350,75 +435,35 @@ export default function PropertiesPage() {
                 />
               </div>
 
-              {/* City, State, Zip */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">City</label>
-                  <input
-                    type="text"
-                    value={formCity}
-                    onChange={(e) => setFormCity(e.target.value)}
-                    placeholder="Austin"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                  />
+                  <input type="text" value={formCity} onChange={(e) => setFormCity(e.target.value)} placeholder="Austin" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">State</label>
-                  <input
-                    type="text"
-                    value={formState}
-                    onChange={(e) => setFormState(e.target.value)}
-                    placeholder="TX"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                  />
+                  <input type="text" value={formState} onChange={(e) => setFormState(e.target.value)} placeholder="TX" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">Zip</label>
-                  <input
-                    type="text"
-                    value={formZip}
-                    onChange={(e) => setFormZip(e.target.value)}
-                    placeholder="78701"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                  />
+                  <input type="text" value={formZip} onChange={(e) => setFormZip(e.target.value)} placeholder="78701" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
                 </div>
               </div>
 
-              {/* Bedrooms, Bathrooms */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">Bedrooms</label>
-                  <input
-                    type="number"
-                    value={formBedrooms}
-                    onChange={(e) => setFormBedrooms(e.target.value)}
-                    placeholder="3"
-                    min="0"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                  />
+                  <input type="number" value={formBedrooms} onChange={(e) => setFormBedrooms(e.target.value)} placeholder="3" min="0" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-1.5">Bathrooms</label>
-                  <input
-                    type="number"
-                    value={formBathrooms}
-                    onChange={(e) => setFormBathrooms(e.target.value)}
-                    placeholder="2"
-                    min="0"
-                    step="0.5"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                  />
+                  <input type="number" value={formBathrooms} onChange={(e) => setFormBathrooms(e.target.value)} placeholder="2" min="0" step="0.5" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" />
                 </div>
               </div>
 
-              {/* Property Type */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-1.5">Property Type</label>
-                <select
-                  value={formPropertyType}
-                  onChange={(e) => setFormPropertyType(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
+                <select value={formPropertyType} onChange={(e) => setFormPropertyType(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50">
                   <option value="single_family">Single Family</option>
                   <option value="condo">Condo</option>
                   <option value="apartment">Apartment</option>
@@ -428,14 +473,9 @@ export default function PropertiesPage() {
                 </select>
               </div>
 
-              {/* Status */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-1.5">Status</label>
-                <select
-                  value={formStatus}
-                  onChange={(e) => setFormStatus(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
+                <select value={formStatus} onChange={(e) => setFormStatus(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50">
                   <option value="active">Active</option>
                   <option value="pending">Pending</option>
                   <option value="sold">Sold</option>
@@ -446,11 +486,7 @@ export default function PropertiesPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button
-                onClick={() => setShowAddModal(false)}
-                variant="outline"
-                className="flex-1 font-bold"
-              >
+              <Button onClick={() => setShowAddModal(false)} variant="outline" className="flex-1 font-bold">
                 Cancel
               </Button>
               <Button
@@ -458,18 +494,13 @@ export default function PropertiesPage() {
                 disabled={!formAddress.trim() || saving}
                 className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
               >
-                {saving ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
-                ) : (
-                  "Save"
-                )}
+                {saving ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>) : "Save"}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Footer */}
       <footer className="bg-muted/50 border-t py-8 mt-12">
         <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
