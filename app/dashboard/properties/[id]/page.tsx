@@ -131,7 +131,7 @@ export default function SinglePropertyPage() {
 
   const [selectedPhotos, setSelectedPhotos] = useState<Set<number>>(new Set());
   const [selectedCoachPhotos, setSelectedCoachPhotos] = useState<Set<string>>(new Set());
-  const [selectedClips, setSelectedClips] = useState<Set<number>>(new Set());
+  const [selectedClips, setSelectedClips] = useState<number[]>([]);
   const [stagingModal, setStagingModal] = useState<any>(null);
   const [exportModal, setExportModal] = useState<any>(null);
   const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
@@ -217,7 +217,7 @@ export default function SinglePropertyPage() {
   };
 
   const sendClipsToDesignStudio = () => {
-    const selected = orderClips.filter((_, i) => selectedClips.has(i));
+    const selected = selectedClips.map(i => orderClips[i]).filter(Boolean);
     if (selected.length === 0) return;
     sessionStorage.setItem("design_studio_clips", JSON.stringify(selected.map(c => c.clipUrl)));
     if (property) window.location.href = `/dashboard/lens/design-studio?${buildPropertyParams(property)}`;
@@ -510,18 +510,19 @@ export default function SinglePropertyPage() {
           <section className="bg-card rounded-2xl border border-border p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2"><Play className="h-5 w-5 text-violet-600" /><h2 className="text-lg font-bold text-foreground">Video Clips</h2><span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderClips.length}</span></div>
-              {selectedClips.size > 0 && <button onClick={sendClipsToDesignStudio} className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-3 py-2 rounded-lg"><PenTool className="h-3.5 w-3.5" />Design Studio ({selectedClips.size})</button>}
+              {selectedClips.length > 0 && <button onClick={sendClipsToDesignStudio} className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-3 py-2 rounded-lg"><PenTool className="h-3.5 w-3.5" />Design Studio ({selectedClips.length})</button>}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {orderClips.map((clip: any, i: number) => {
-                const sel = selectedClips.has(i);
+                const sel = selectedClips.includes(i);
+                const selOrder = sel ? selectedClips.indexOf(i) + 1 : 0;
                 const pTh = clip.photoUrl?.includes("/upload/") ? clip.photoUrl.replace("/upload/", "/upload/w_400,h_225,c_fill/") : null;
                 const vTh = clip.clipUrl.includes("cloudinary.com") && clip.clipUrl.includes("/video/upload/") ? clip.clipUrl.replace("/video/upload/", "/video/upload/so_1,w_400,h_225,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg") : null;
                 const th = pTh || vTh;
                 return (
-                  <button key={`clip-${clip.orderId}-${clip.index}`} onClick={() => setSelectedClips(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; })} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-violet-500 ring-2 ring-violet-500/30" : "border-border hover:border-violet-500/40"}`}>
+                  <button key={`clip-${clip.orderId}-${clip.index}`} onClick={() => setSelectedClips(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-violet-500 ring-2 ring-violet-500/30" : "border-border hover:border-violet-500/40"}`}>
                     <div className="aspect-video bg-black">{th ? <img src={th} alt={clip.description || `Clip ${i+1}`} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><Play className="h-8 w-8 text-muted-foreground/30" /></div>}</div>
-                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-violet-500 flex items-center justify-center"><Check className="h-3.5 w-3.5 text-white" /></div>}
+                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-violet-500 flex items-center justify-center text-[10px] font-bold text-white">{selOrder}</div>}
                     {clip.camera_direction && <span className="absolute top-2 left-2 text-[8px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">{clip.camera_direction.replace(/_/g, " ")}</span>}
                     <div className="p-2"><p className="text-[10px] font-semibold text-foreground truncate">{clip.description || `Clip ${(clip.position || i) + 1}`}</p></div>
                   </button>
