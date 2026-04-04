@@ -69,15 +69,12 @@ function hexToRgba(hex: string, alpha: number): string {
 export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, address, beds, baths, sqft, price, agentName, phone, brokerage, badgeText, badgeColor, fontFamily, barColor, accentColor }: {
   size: SizeConfig; listingPhoto: string | null; videoElement?: React.ReactNode; headshot: string | null; logo: string | null; address: string; beds: string; baths: string; sqft: string; price: string; agentName: string; phone: string; brokerage: string; badgeText: string; badgeColor: string; fontFamily: string; barColor: string; accentColor: string;
 }) {
-  const w = size.width, h = size.height, isStory = size.id === "story", unit = w / 1080;
+  const w = size.width, h = size.height;
+  const isStory = size.id === "story";
+  const isPostcard = size.id === "postcard";
+  const unit = w / 1080;
 
-  // Layout proportions
-  const photoPercent = isStory ? 64 : 58;
-  const barH = h * (1 - photoPercent / 100);
-  const barPadX = Math.round(44 * unit);
-  const barPadY = Math.round(28 * unit);
-
-  // Colors
+  // Colors (shared across all layouts)
   const accent = accentColor || "#ffffff";
   const usedBadgeColor = accentColor || badgeColor;
   const barLight = isLightColor(barColor);
@@ -86,11 +83,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
   const barTextMuted = barLight ? "rgba(17,24,39,0.40)" : "rgba(255,255,255,0.35)";
   const dividerColor = barLight ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.12)";
 
-  // Headshot
-  const headshotSize = Math.round(barH * 0.52);
-  const headshotBorder = Math.round(3 * unit);
-
-  // Text content with fallbacks
+  // Text content with fallbacks (shared)
   const agentNameText = agentName || "Agent Name";
   const brokerageText = brokerage || "Brokerage";
   const phoneText = phone || "(555) 000-0000";
@@ -98,8 +91,269 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
   const detailsText = [beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF";
   const priceText = price ? `$${price}` : "$000,000";
 
-  // Responsive font sizes
-  const badgeFontSize = Math.round(barH * 0.052);
+  // ── Shared sub-components ──
+
+  const renderPhoto = (photoHeight: string) => (
+    <div className="absolute inset-x-0 top-0" style={{ height: photoHeight }}>
+      {videoElement ? (
+        <div className="w-full h-full">{videoElement}</div>
+      ) : listingPhoto ? (
+        <img src={listingPhoto} alt="Listing" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: "#1a1a2e" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(12 * unit) }}>
+            <ImageIcon style={{ width: 64 * unit, height: 64 * unit, color: "rgba(255,255,255,0.12)" }} />
+            <span style={{ fontSize: Math.round(16 * unit), color: "rgba(255,255,255,0.18)", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" }}>Listing Photo</span>
+          </div>
+        </div>
+      )}
+      <div className="absolute inset-x-0 bottom-0" style={{
+        height: Math.round(140 * unit),
+        backgroundImage: `linear-gradient(to top, ${barColor} 0%, ${hexToRgba(barColor, 0.85)} 30%, ${hexToRgba(barColor, 0.4)} 65%, transparent 100%)`
+      }} />
+    </div>
+  );
+
+  const renderHeadshot = (sz: number, border: number) => (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      {headshot ? (
+        <div style={{
+          width: sz, height: sz, borderRadius: "50%", padding: border,
+          background: accentColor
+            ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.4)})`
+            : barLight
+              ? "linear-gradient(135deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05))"
+              : "linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1))",
+        }}>
+          <img src={headshot} alt="Agent" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }} />
+        </div>
+      ) : (
+        <div style={{
+          width: sz, height: sz, borderRadius: "50%",
+          backgroundColor: barLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+          border: `${border}px solid ${dividerColor}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <User style={{ width: sz * 0.38, height: sz * 0.38, color: barTextMuted }} />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderBarChrome = (bH: number) => (
+    <>
+      <div className="absolute inset-x-0 top-0" style={{ height: Math.round(3 * unit), backgroundColor: accent, opacity: accentColor ? 0.8 : 0.15 }} />
+      <div className="absolute inset-0" style={{
+        backgroundImage: barLight
+          ? "linear-gradient(to bottom, rgba(0,0,0,0.03) 0%, transparent 40%)"
+          : "linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, transparent 40%)",
+      }} />
+    </>
+  );
+
+  const renderBadge = (photoPercent: number, badgeH: number, fontSize: number, padRight: number) => {
+    const offsetY = Math.round(badgeH * 0.5);
+    return (
+      <div className="absolute inset-x-0" style={{ top: `calc(${photoPercent}% - ${offsetY}px)`, zIndex: 10, display: "flex", justifyContent: "flex-end", paddingRight: padRight }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", height: badgeH,
+          padding: `0 ${Math.round(22 * unit)}px`,
+          backgroundColor: usedBadgeColor,
+          borderRadius: Math.round(4 * unit),
+          boxShadow: `0 ${Math.round(4 * unit)}px ${Math.round(20 * unit)}px ${hexToRgba(usedBadgeColor, 0.45)}`,
+        }}>
+          <span style={{ fontSize, fontWeight: 800, color: isLightColor(usedBadgeColor) ? "#111" : "#fff", letterSpacing: "0.14em", textTransform: "uppercase" as const, lineHeight: 1 }}>{badgeText}</span>
+        </div>
+      </div>
+    );
+  };
+
+  /* ═══════════════════════════════════════════════════════
+     STORY LAYOUT (1080×1920)
+     Agent info stacked vertically: headshot centered,
+     name/brokerage/phone below. Property info on right side.
+     ═══════════════════════════════════════════════════════ */
+  if (isStory) {
+    const photoPercent = 60;
+    const barH = h * (1 - photoPercent / 100); // 768px
+    const barPadX = Math.round(48 * unit);
+    const barPadY = Math.round(36 * unit);
+    const headshotSize = Math.round(barH * 0.28);
+    const headshotBorder = Math.round(3 * unit);
+
+    const badgeH = Math.round(barH * 0.065);
+    const badgeFontSz = Math.round(barH * 0.032);
+
+    const agentNameFontSize = responsiveSize(Math.round(barH * 0.050), agentNameText, 18);
+    const brokerageFontSize = responsiveSize(Math.round(barH * 0.034), brokerageText, 24);
+    const phoneFontSize = Math.round(barH * 0.032);
+    const addressFontSize = responsiveSize(Math.round(barH * 0.052), addressText, 20);
+    const detailsFontSize = Math.round(barH * 0.032);
+    const priceFontSize = Math.round(barH * 0.085);
+
+    return (
+      <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
+        {renderPhoto(`${photoPercent}%`)}
+        {renderBadge(photoPercent, badgeH, badgeFontSz, barPadX)}
+
+        {/* ── INFO BAR ── */}
+        <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
+          {renderBarChrome(barH)}
+
+          {/* Content: two-column with agent stacked on left, property on right */}
+          <div className="absolute inset-0" style={{
+            display: "flex",
+            padding: `${barPadY}px ${barPadX}px`,
+            gap: Math.round(24 * unit),
+          }}>
+            {/* LEFT: Agent — stacked vertically */}
+            <div style={{
+              flex: "0 0 auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              maxWidth: "42%",
+              gap: Math.round(10 * unit),
+            }}>
+              {renderHeadshot(headshotSize, headshotBorder)}
+              <div style={{ textAlign: "center", minWidth: 0 }}>
+                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
+                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(4 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+                <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(2 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
+              </div>
+              {/* Logo under agent info */}
+              {logo && (
+                <img src={logo} alt="Logo" style={{
+                  maxWidth: Math.round(headshotSize * 1.1),
+                  maxHeight: Math.round(barH * 0.10),
+                  objectFit: "contain" as const,
+                  opacity: 0.5,
+                  marginTop: Math.round(4 * unit),
+                }} />
+              )}
+            </div>
+
+            {/* VERTICAL DIVIDER */}
+            <div style={{
+              width: Math.round(1.5 * unit),
+              alignSelf: "stretch",
+              margin: `${Math.round(barH * 0.08)}px 0`,
+              backgroundColor: dividerColor,
+              flexShrink: 0,
+            }} />
+
+            {/* RIGHT: Property Info */}
+            <div style={{
+              flex: 1, textAlign: "right", minWidth: 0,
+              display: "flex", flexDirection: "column", justifyContent: "center",
+            }}>
+              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+              <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(8 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
+              <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(14 * unit), marginBottom: Math.round(10 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
+              <p style={{
+                fontSize: priceFontSize, fontWeight: 800, color: accent, lineHeight: 1.0, margin: 0, letterSpacing: "-0.01em",
+                textShadow: accentColor && !barLight ? `0 ${Math.round(2 * unit)}px ${Math.round(12 * unit)}px ${hexToRgba(accentColor, 0.3)}` : "none",
+              }}>{priceText}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     POSTCARD LAYOUT (1800×1200)
+     Wider format — everything needs to be bigger.
+     Uses a taller bar percentage and bigger font multipliers.
+     ═══════════════════════════════════════════════════════ */
+  if (isPostcard) {
+    const photoPercent = 52;
+    const barH = h * (1 - photoPercent / 100); // ~576px
+    const barPadX = Math.round(52 * unit);
+    const barPadY = Math.round(32 * unit);
+    const headshotSize = Math.round(barH * 0.62);
+    const headshotBorder = Math.round(4 * unit);
+
+    const badgeH = Math.round(barH * 0.145);
+    const badgeFontSz = Math.round(barH * 0.058);
+
+    const agentNameFontSize = responsiveSize(Math.round(barH * 0.090), agentNameText, 18);
+    const brokerageFontSize = responsiveSize(Math.round(barH * 0.058), brokerageText, 24);
+    const phoneFontSize = Math.round(barH * 0.054);
+    const addressFontSize = responsiveSize(Math.round(barH * 0.088), addressText, 20);
+    const detailsFontSize = Math.round(barH * 0.054);
+    const priceFontSize = Math.round(barH * 0.155);
+
+    return (
+      <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
+        {renderPhoto(`${photoPercent}%`)}
+        {renderBadge(photoPercent, badgeH, badgeFontSz, barPadX)}
+
+        {/* ── INFO BAR ── */}
+        <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
+          {renderBarChrome(barH)}
+
+          <div className="absolute inset-0 flex items-center" style={{
+            padding: `${barPadY}px ${barPadX}px`,
+            gap: Math.round(28 * unit),
+          }}>
+            {/* LEFT: Agent Info */}
+            <div style={{
+              display: "flex", alignItems: "center",
+              gap: Math.round(22 * unit),
+              flex: "0 0 auto", maxWidth: "44%",
+            }}>
+              {renderHeadshot(headshotSize, headshotBorder)}
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
+                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+                <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
+              </div>
+            </div>
+
+            {/* VERTICAL DIVIDER */}
+            <div style={{ width: Math.round(1.5 * unit), alignSelf: "stretch", margin: `${Math.round(barH * 0.12)}px 0`, backgroundColor: dividerColor, flexShrink: 0 }} />
+
+            {/* RIGHT: Property Info */}
+            <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+              <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
+              <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(10 * unit), marginBottom: Math.round(8 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
+              <p style={{
+                fontSize: priceFontSize, fontWeight: 800, color: accent, lineHeight: 1.0, margin: 0, letterSpacing: "-0.01em",
+                textShadow: accentColor && !barLight ? `0 ${Math.round(2 * unit)}px ${Math.round(12 * unit)}px ${hexToRgba(accentColor, 0.3)}` : "none",
+              }}>{priceText}</p>
+            </div>
+          </div>
+
+          {/* Logo — bottom-right */}
+          {logo && (
+            <img src={logo} alt="Logo" className="absolute object-contain" style={{
+              bottom: Math.round(10 * unit), right: barPadX,
+              maxWidth: Math.round(barH * 0.34), maxHeight: Math.round(barH * 0.18),
+              opacity: 0.45,
+            }} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     SQUARE LAYOUT (1080×1080) — DEFAULT
+     The original design that works perfectly. Unchanged.
+     ═══════════════════════════════════════════════════════ */
+  const photoPercent = 58;
+  const barH = h * (1 - photoPercent / 100);
+  const barPadX = Math.round(44 * unit);
+  const barPadY = Math.round(28 * unit);
+  const headshotSize = Math.round(barH * 0.52);
+  const headshotBorder = Math.round(3 * unit);
+
+  const badgeH = Math.round(barH * 0.14);
+  const badgeFontSz = Math.round(barH * 0.052);
+
   const agentNameFontSize = responsiveSize(Math.round(barH * 0.082), agentNameText, 18);
   const brokerageFontSize = responsiveSize(Math.round(barH * 0.050), brokerageText, 24);
   const phoneFontSize = Math.round(barH * 0.048);
@@ -107,249 +361,55 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
   const detailsFontSize = Math.round(barH * 0.048);
   const priceFontSize = Math.round(barH * 0.13);
 
-  // Badge dimensions
-  const badgeHeight = Math.round(barH * 0.14);
-  const badgeOffsetY = Math.round(badgeHeight * 0.5); // Half above, half below the photo/bar line
-
   return (
     <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
-
-      {/* ── PHOTO AREA ── */}
-      <div className="absolute inset-x-0 top-0" style={{ height: `${photoPercent}%` }}>
-        {videoElement ? (
-          <div className="w-full h-full">{videoElement}</div>
-        ) : listingPhoto ? (
-          <img src={listingPhoto} alt="Listing" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: "#1a1a2e" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(12 * unit) }}>
-              <ImageIcon style={{ width: 64 * unit, height: 64 * unit, color: "rgba(255,255,255,0.12)" }} />
-              <span style={{ fontSize: Math.round(16 * unit), color: "rgba(255,255,255,0.18)", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" }}>Listing Photo</span>
-            </div>
-          </div>
-        )}
-
-        {/* Cinematic gradient: multi-layer transition from photo to bar */}
-        <div className="absolute inset-x-0 bottom-0" style={{
-          height: Math.round(140 * unit),
-          backgroundImage: `linear-gradient(to top, ${barColor} 0%, ${hexToRgba(barColor, 0.85)} 30%, ${hexToRgba(barColor, 0.4)} 65%, transparent 100%)`
-        }} />
-      </div>
-
-      {/* ── FLOATING BADGE — bridges photo and bar ── */}
-      <div className="absolute inset-x-0" style={{
-        top: `calc(${photoPercent}% - ${badgeOffsetY}px)`,
-        zIndex: 10,
-        display: "flex",
-        justifyContent: "flex-end",
-        paddingRight: barPadX,
-      }}>
-        <div style={{
-          display: "inline-flex",
-          alignItems: "center",
-          height: badgeHeight,
-          padding: `0 ${Math.round(22 * unit)}px`,
-          backgroundColor: usedBadgeColor,
-          borderRadius: Math.round(4 * unit),
-          boxShadow: `0 ${Math.round(4 * unit)}px ${Math.round(20 * unit)}px ${hexToRgba(usedBadgeColor, 0.45)}`,
-        }}>
-          <span style={{
-            fontSize: badgeFontSize,
-            fontWeight: 800,
-            color: isLightColor(usedBadgeColor) ? "#111" : "#fff",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            lineHeight: 1,
-          }}>{badgeText}</span>
-        </div>
-      </div>
+      {renderPhoto(`${photoPercent}%`)}
+      {renderBadge(photoPercent, badgeH, badgeFontSz, barPadX)}
 
       {/* ── INFO BAR ── */}
-      <div className="absolute inset-x-0 bottom-0" style={{
-        height: `${100 - photoPercent}%`,
-        backgroundColor: barColor,
-      }}>
-        {/* Accent top border */}
-        <div className="absolute inset-x-0 top-0" style={{
-          height: Math.round(3 * unit),
-          backgroundColor: accent,
-          opacity: accentColor ? 0.8 : 0.15,
-        }} />
+      <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
+        {renderBarChrome(barH)}
 
-        {/* Subtle inner gradient for depth */}
-        <div className="absolute inset-0" style={{
-          backgroundImage: barLight
-            ? "linear-gradient(to bottom, rgba(0,0,0,0.03) 0%, transparent 40%)"
-            : "linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, transparent 40%)",
-        }} />
-
-        {/* Content container */}
         <div className="absolute inset-0 flex items-center" style={{
           padding: `${barPadY}px ${barPadX}px`,
           gap: Math.round(24 * unit),
         }}>
-
-          {/* ── LEFT: Agent Info ── */}
+          {/* LEFT: Agent Info */}
           <div style={{
-            display: "flex",
-            alignItems: "center",
+            display: "flex", alignItems: "center",
             gap: Math.round(18 * unit),
-            flex: "0 0 auto",
-            maxWidth: "44%",
+            flex: "0 0 auto", maxWidth: "44%",
           }}>
-            {/* Headshot with accent ring */}
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              {headshot ? (
-                <div style={{
-                  width: headshotSize,
-                  height: headshotSize,
-                  borderRadius: "50%",
-                  padding: headshotBorder,
-                  background: accentColor
-                    ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.4)})`
-                    : barLight
-                      ? "linear-gradient(135deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05))"
-                      : "linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1))",
-                }}>
-                  <img
-                    src={headshot}
-                    alt="Agent"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={{
-                  width: headshotSize,
-                  height: headshotSize,
-                  borderRadius: "50%",
-                  backgroundColor: barLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
-                  border: `${headshotBorder}px solid ${dividerColor}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <User style={{ width: headshotSize * 0.38, height: headshotSize * 0.38, color: barTextMuted }} />
-                </div>
-              )}
-            </div>
-
-            {/* Agent text */}
+            {renderHeadshot(headshotSize, headshotBorder)}
             <div style={{ minWidth: 0 }}>
-              <p style={{
-                fontSize: agentNameFontSize,
-                fontWeight: 700,
-                color: barTextPrimary,
-                lineHeight: 1.15,
-                margin: 0,
-                wordBreak: "break-word",
-              }}>{agentNameText}</p>
-              <p style={{
-                fontSize: brokerageFontSize,
-                fontWeight: 500,
-                color: barTextSecondary,
-                lineHeight: 1.3,
-                margin: 0,
-                marginTop: Math.round(4 * unit),
-                wordBreak: "break-word",
-              }}>{brokerageText}</p>
-              <p style={{
-                fontSize: phoneFontSize,
-                fontWeight: 500,
-                color: barTextSecondary,
-                lineHeight: 1.3,
-                margin: 0,
-                marginTop: Math.round(2 * unit),
-                letterSpacing: "0.02em",
-              }}>{phoneText}</p>
+              <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
+              <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(4 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+              <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(2 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
             </div>
           </div>
 
-          {/* ── VERTICAL DIVIDER ── */}
-          <div style={{
-            width: Math.round(1.5 * unit),
-            alignSelf: "stretch",
-            margin: `${Math.round(barH * 0.12)}px 0`,
-            backgroundColor: dividerColor,
-            flexShrink: 0,
-          }} />
+          {/* VERTICAL DIVIDER */}
+          <div style={{ width: Math.round(1.5 * unit), alignSelf: "stretch", margin: `${Math.round(barH * 0.12)}px 0`, backgroundColor: dividerColor, flexShrink: 0 }} />
 
-          {/* ── RIGHT: Property Info ── */}
-          <div style={{
-            flex: 1,
-            textAlign: "right",
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}>
-            {/* Address */}
+          {/* RIGHT: Property Info */}
+          <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+            <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
+            <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(10 * unit), marginBottom: Math.round(8 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
             <p style={{
-              fontSize: addressFontSize,
-              fontWeight: 700,
-              color: barTextPrimary,
-              lineHeight: 1.15,
-              margin: 0,
-              wordBreak: "break-word",
-            }}>{addressText}</p>
-
-            {/* Details line */}
-            <p style={{
-              fontSize: detailsFontSize,
-              fontWeight: 500,
-              color: barTextSecondary,
-              lineHeight: 1.3,
-              margin: 0,
-              marginTop: Math.round(6 * unit),
-              letterSpacing: "0.04em",
-            }}>{detailsText}</p>
-
-            {/* Thin accent rule above price */}
-            <div style={{
-              width: Math.round(60 * unit),
-              height: Math.round(2 * unit),
-              backgroundColor: accentColor || dividerColor,
-              marginLeft: "auto",
-              marginTop: Math.round(10 * unit),
-              marginBottom: Math.round(8 * unit),
-              borderRadius: 1,
-              opacity: accentColor ? 0.7 : 1,
-            }} />
-
-            {/* Price — dominant element */}
-            <p style={{
-              fontSize: priceFontSize,
-              fontWeight: 800,
-              color: accent,
-              lineHeight: 1.0,
-              margin: 0,
-              letterSpacing: "-0.01em",
-              textShadow: accentColor && !barLight
-                ? `0 ${Math.round(2 * unit)}px ${Math.round(12 * unit)}px ${hexToRgba(accentColor, 0.3)}`
-                : "none",
+              fontSize: priceFontSize, fontWeight: 800, color: accent, lineHeight: 1.0, margin: 0, letterSpacing: "-0.01em",
+              textShadow: accentColor && !barLight ? `0 ${Math.round(2 * unit)}px ${Math.round(12 * unit)}px ${hexToRgba(accentColor, 0.3)}` : "none",
             }}>{priceText}</p>
           </div>
         </div>
 
-        {/* ── LOGO — bottom-right corner, subtle ── */}
+        {/* Logo — bottom-right */}
         {logo && (
-          <img
-            src={logo}
-            alt="Logo"
-            className="absolute object-contain"
-            style={{
-              bottom: Math.round(10 * unit),
-              right: barPadX,
-              maxWidth: Math.round(barH * 0.30),
-              maxHeight: Math.round(barH * 0.16),
-              opacity: 0.45,
-            }}
-          />
+          <img src={logo} alt="Logo" className="absolute object-contain" style={{
+            bottom: Math.round(10 * unit), right: barPadX,
+            maxWidth: Math.round(barH * 0.30), maxHeight: Math.round(barH * 0.16),
+            opacity: 0.45,
+          }} />
         )}
       </div>
     </div>
