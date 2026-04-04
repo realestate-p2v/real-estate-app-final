@@ -174,27 +174,28 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
      name/brokerage/phone below. Property info on right side.
      ═══════════════════════════════════════════════════════ */
   if (isStory) {
-    const photoPercent = 60;
-    const barH = h * (1 - photoPercent / 100); // 768px
-    const barPadX = Math.round(48 * unit);
+    const photoPercent = 56;
+    const barH = h * (1 - photoPercent / 100); // ~845px
+    const barPadLeft = Math.round(72 * unit);
+    const barPadRight = Math.round(52 * unit);
     const barPadY = Math.round(36 * unit);
-    const headshotSize = Math.round(barH * 0.28);
-    const headshotBorder = Math.round(3 * unit);
+    const headshotSize = Math.round(barH * 0.34);
+    const headshotBorder = Math.round(4 * unit);
 
-    const badgeH = Math.round(barH * 0.065);
-    const badgeFontSz = Math.round(barH * 0.032);
+    const badgeH = Math.round(barH * 0.070);
+    const badgeFontSz = Math.round(barH * 0.035);
 
-    const agentNameFontSize = responsiveSize(Math.round(barH * 0.050), agentNameText, 18);
-    const brokerageFontSize = responsiveSize(Math.round(barH * 0.034), brokerageText, 24);
-    const phoneFontSize = Math.round(barH * 0.032);
-    const addressFontSize = responsiveSize(Math.round(barH * 0.052), addressText, 20);
-    const detailsFontSize = Math.round(barH * 0.032);
-    const priceFontSize = Math.round(barH * 0.085);
+    const agentNameFontSize = responsiveSize(Math.round(barH * 0.065), agentNameText, 18);
+    const brokerageFontSize = responsiveSize(Math.round(barH * 0.044), brokerageText, 24);
+    const phoneFontSize = Math.round(barH * 0.042);
+    const addressFontSize = responsiveSize(Math.round(barH * 0.058), addressText, 20);
+    const detailsFontSize = Math.round(barH * 0.038);
+    const priceFontSize = Math.round(barH * 0.095);
 
     return (
       <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
         {renderPhoto(`${photoPercent}%`)}
-        {renderBadge(photoPercent, badgeH, badgeFontSz, barPadX)}
+        {renderBadge(photoPercent, badgeH, badgeFontSz, barPadRight)}
 
         {/* ── INFO BAR ── */}
         <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
@@ -203,8 +204,8 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
           {/* Content: two-column with agent stacked on left, property on right */}
           <div className="absolute inset-0" style={{
             display: "flex",
-            padding: `${barPadY}px ${barPadX}px`,
-            gap: Math.round(24 * unit),
+            padding: `${barPadY}px ${barPadRight}px ${barPadY}px ${barPadLeft}px`,
+            gap: Math.round(28 * unit),
           }}>
             {/* LEFT: Agent — stacked vertically */}
             <div style={{
@@ -213,23 +214,23 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              maxWidth: "42%",
-              gap: Math.round(10 * unit),
+              maxWidth: "44%",
+              gap: Math.round(12 * unit),
             }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ textAlign: "center", minWidth: 0 }}>
                 <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{agentNameText}</p>
-                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(4 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
-                <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(2 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
+                <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), wordBreak: "break-word" }}>{brokerageText}</p>
+                <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
               </div>
               {/* Logo under agent info */}
               {logo && (
                 <img src={logo} alt="Logo" style={{
-                  maxWidth: Math.round(headshotSize * 1.1),
-                  maxHeight: Math.round(barH * 0.10),
+                  maxWidth: Math.round(headshotSize * 1.3),
+                  maxHeight: Math.round(barH * 0.14),
                   objectFit: "contain" as const,
-                  opacity: 0.5,
-                  marginTop: Math.round(4 * unit),
+                  opacity: 0.55,
+                  marginTop: Math.round(6 * unit),
                 }} />
               )}
             </div>
