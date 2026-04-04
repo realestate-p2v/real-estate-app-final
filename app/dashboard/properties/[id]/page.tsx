@@ -91,6 +91,7 @@ export default function SinglePropertyPage() {
   // Build query string from property data for tool deep-linking
   const buildPropertyParams = (prop: Property) => {
     const p = new URLSearchParams();
+    p.set("propertyId", prop.id);
     if (prop.address) p.set("address", prop.address);
     if (prop.city) p.set("city", prop.city);
     if (prop.state) p.set("state", prop.state);
@@ -712,22 +713,37 @@ export default function SinglePropertyPage() {
                   property_pdf: "Property PDF",
                   branding_card: "Branding Card",
                 };
+                const formatLabels: Record<string, string> = {
+                  png: "PNG",
+                  pdf: "PDF",
+                  mp4: "Video",
+                };
+                const downloadUrl = exp.export_url || exp.overlay_video_url;
                 return (
                   <div key={exp.id} className="p-3 rounded-xl bg-muted/30 border border-border">
-                    <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                      {typeLabels[exp.template_type] || exp.template_type}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                        {typeLabels[exp.template_type] || exp.template_type}
+                      </span>
+                      {exp.export_format && (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {formatLabels[exp.export_format] || exp.export_format.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       {new Date(exp.created_at).toLocaleDateString()}
                     </p>
-                    {exp.export_url && (
+                    {downloadUrl && (
                       <a
-                        href={exp.export_url}
+                        href={downloadUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 mt-2"
                       >
-                        <Download className="h-3 w-3" /> Download
+                        <Download className="h-3 w-3" /> {exp.export_format === "mp4" ? "Watch" : "Download"}
                       </a>
                     )}
                   </div>
