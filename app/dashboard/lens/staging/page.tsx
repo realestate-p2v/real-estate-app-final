@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -19,6 +20,7 @@ import {
   X,
   GripVertical,
   Camera,
+  Home,
 } from "lucide-react";
 import { SpinWheel } from "@/components/spin-wheel";
 
@@ -222,6 +224,14 @@ function UsageBar({
 
 // ─── Main Page ───
 export default function VirtualStagingPage() {
+  return (
+    <Suspense>
+      <VirtualStagingPageInner />
+    </Suspense>
+  );
+}
+
+function VirtualStagingPageInner() {
   // Auth
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -253,6 +263,10 @@ export default function VirtualStagingPage() {
   // Surprise discount wheel
   const [showSurpriseWheel, setShowSurpriseWheel] = useState(false);
   const [surprisePromoCode, setSurprisePromoCode] = useState<string | null>(null);
+
+  // Property selector
+  const [userProperties, setUserProperties] = useState<any[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
   // ── Init: load user, check sub, load history ──
   useEffect(() => {
@@ -302,6 +316,14 @@ export default function VirtualStagingPage() {
 
       setMonthlyCount(mCount || 0);
 
+      // Load user properties for selector
+      const { data: props } = await supabase
+        .from("agent_properties")
+        .select("id, address, city, state")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      if (props) setUserProperties(props);
+
       // Check sessionStorage for photo from Coach
       try {
         const coachPhoto = sessionStorage.getItem("coach_photos_for_staging");
@@ -316,6 +338,13 @@ export default function VirtualStagingPage() {
     };
     init();
   }, []);
+
+  // Pre-fill property from URL params (linked from property portfolio)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const propId = searchParams.get("propertyId");
+    if (propId) setSelectedPropertyId(propId);
+  }, [searchParams]);
 
   // ── Cloudinary signed upload ──
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -426,6 +455,21 @@ export default function VirtualStagingPage() {
       setMonthlyCount((c) => c + 1);
       setPreviousStagings((prev) => [newResult, ...prev]);
 
+      // Link staging to selected property
+      if (selectedPropertyId && data.staging_id) {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        await supabase.from("lens_staging").update({ property_id: selectedPropertyId }).eq("id", data.staging_id);
+      } else if (selectedPropertyId) {
+        // Fallback: update the most recent staging by matching URLs
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        await supabase
+          .from("lens_staging")
+          .update({ property_id: selectedPropertyId })
+          .eq("user_id", user.id)
+          .eq("original_url", photoUrl)
+          .eq("staged_url", data.staged_url);
+      }
+
       if (data.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
@@ -535,6 +579,39 @@ export default function VirtualStagingPage() {
             isAdmin={isAdmin}
           />
         )}
+
+        {/* Property Selector */}
+        <div className="bg-card rounded-2xl border border-border p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Home className="h-5 w-5 text-accent flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Property</label>
+              <div className="relative">
+                <select
+                  value={selectedPropertyId || ""}
+                  onChange={(e) => setSelectedPropertyId(e.target.value || null)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 appearance-none"
+                >
+                  <option value="">Select a property (optional)</option>
+                  {userProperties.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.address}{p.city ? `, ${p.city}` : ""}{p.state ? `, ${p.state}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+            {selectedPropertyId && (
+              <Link
+                href={`/dashboard/properties/${selectedPropertyId}`}
+                className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors flex-shrink-0 mt-4"
+              >
+                View →
+              </Link>
+            )}
+          </div>
+        </div>
 
         {!activeSlider ? (
           <div className="grid lg:grid-cols-2 gap-6">
