@@ -142,13 +142,26 @@ export default function SinglePropertyPage() {
       .order("created_at", { ascending: false });
     setVideos(orderData || []);
 
-    // Load descriptions
+    // FIX 1: Load descriptions — fetch all, then filter client-side by address match
     const { data: descData } = await supabase
       .from("lens_descriptions")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    setDescriptions(descData || []);
+
+    // Filter to descriptions that match this property's address
+    const normalizedPropAddr = norm;
+    const filteredDescs = (descData || []).filter((desc: any) => {
+      const descAddr = desc.property_data?.address || desc.property_data?.property_address || "";
+      if (!descAddr) return false;
+      const normalizedDescAddr = descAddr.trim().toLowerCase()
+        .replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+        .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+        .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+        .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+      return normalizedDescAddr.startsWith(normalizedPropAddr) || normalizedPropAddr.startsWith(normalizedDescAddr);
+    });
+    setDescriptions(filteredDescs);
 
     // Load design exports
     const { data: exportData } = await supabase
@@ -480,7 +493,7 @@ export default function SinglePropertyPage() {
           )}
         </section>
 
-        {/* ═══ VIDEOS ═══ */}
+        {/* ═══ VIDEOS (FIX 2: with thumbnails) ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -509,13 +522,34 @@ export default function SinglePropertyPage() {
                   new: "bg-blue-100 text-blue-700",
                   pending_payment: "bg-gray-100 text-gray-600",
                 };
+                // Get first photo URL for thumbnail
+                const firstPhotoUrl = Array.isArray(order.photos) && order.photos.length > 0
+                  ? order.photos[0]?.secure_url || null
+                  : null;
+
                 return (
                   <div
                     key={order.id}
                     className="p-4 rounded-xl bg-muted/30 border border-border"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center gap-4">
+                      {/* Thumbnail */}
+                      <div className="h-20 w-28 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border">
+                        {firstPhotoUrl ? (
+                          <img
+                            src={firstPhotoUrl}
+                            alt="Video thumbnail"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Film className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-foreground">
                             {order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}
@@ -528,8 +562,10 @@ export default function SinglePropertyPage() {
                           {order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}
                         </p>
                       </div>
+
+                      {/* Watch button */}
                       {order.delivery_url && (
-                        <Button asChild size="sm" variant="outline" className="font-semibold">
+                        <Button asChild size="sm" variant="outline" className="font-semibold flex-shrink-0">
                           <Link href={`/video/${order.order_id}`}>
                             <ExternalLink className="h-3 w-3 mr-1.5" />Watch
                           </Link>
@@ -543,7 +579,7 @@ export default function SinglePropertyPage() {
           )}
         </section>
 
-        {/* ═══ DESCRIPTIONS ═══ */}
+        {/* ═══ DESCRIPTIONS (FIX 1: filtered by property address) ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -557,7 +593,7 @@ export default function SinglePropertyPage() {
 
           {descriptions.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground mb-3">No descriptions generated yet.</p>
+              <p className="text-sm text-muted-foreground mb-3">Descriptions will appear here when generated from this property&apos;s portfolio page.</p>
               {isSubscriber ? (
                 <Button asChild size="sm" variant="outline" className="font-semibold">
                   <Link href="/dashboard/lens/descriptions">Write a Description</Link>
