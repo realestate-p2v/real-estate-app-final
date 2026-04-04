@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
@@ -114,6 +114,14 @@ const SURPRISE_SEGMENTS = [
    ═══════════════════════════════════════════ */
 
 export default function PhotoCoachPage() {
+  return (
+    <Suspense>
+      <PhotoCoachPageInner />
+    </Suspense>
+  );
+}
+
+function PhotoCoachPageInner() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
