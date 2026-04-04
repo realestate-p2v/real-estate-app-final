@@ -1183,14 +1183,16 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
     const priceText = price ? `$${price}` : "$000,000";
     const detailsText = [beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ");
 
+    const margin = 80;
+
     return (
-      <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, position: "relative" }}>
+      <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, position: "relative", padding: margin }}>
 
         {/* ── Accent header bar ── */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerBarH, backgroundColor: accent }} />
+        <div style={{ position: "absolute", top: margin, left: margin, right: margin, height: headerBarH, backgroundColor: accent }} />
 
         {/* ── HERO PHOTO — full width across top ── */}
-        <div style={{ position: "absolute", top: headerBarH, left: 0, right: 0, height: heroH, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: margin + headerBarH, left: margin, right: margin, height: heroH, overflow: "hidden" }}>
           {heroPhoto ? (
             <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
@@ -1198,19 +1200,18 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
               <span style={{ color: "#ccc", fontSize: 48, fontWeight: 500, letterSpacing: "0.08em" }}>HERO PHOTO</span>
             </div>
           )}
-          {/* Subtle gradient at bottom for text readability overlap */}
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 80, backgroundImage: "linear-gradient(to top, rgba(255,255,255,0.6), transparent)" }} />
         </div>
 
         {/* ── BOTTOM SECTION — details left, photos right ── */}
         <div style={{
-          position: "absolute", top: heroH + headerBarH, left: 0, right: 0, bottom: headerBarH,
+          position: "absolute", top: heroH + headerBarH + margin, left: margin, right: margin, bottom: margin + headerBarH,
           display: "flex",
         }}>
           {/* ── LEFT: Property Details ── */}
           <div style={{
             width: leftW,
-            padding: `${pad * 0.7}px ${pad * 0.7}px ${pad * 0.6}px ${pad}px`,
+            padding: `${pad * 0.6}px ${pad * 0.6}px ${pad * 0.5}px ${pad * 0.3}px`,
             display: "flex", flexDirection: "column",
             justifyContent: "flex-start",
             overflow: "hidden",
@@ -1303,7 +1304,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
           <div style={{
             width: rightW,
             display: "flex", flexDirection: "column",
-            padding: `${Math.round(pad * 0.5)}px ${pad}px ${Math.round(pad * 0.5)}px ${Math.round(pad * 0.5)}px`,
+            padding: `${Math.round(pad * 0.4)}px ${Math.round(pad * 0.3)}px ${Math.round(pad * 0.4)}px ${Math.round(pad * 0.4)}px`,
             gap: photoGap,
           }}>
             <div style={{ flex: 1, borderRadius: 16, overflow: "hidden" }}>
@@ -1328,7 +1329,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
         </div>
 
         {/* ── Bottom accent bar ── */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: headerBarH, backgroundColor: accent }} />
+        <div style={{ position: "absolute", bottom: margin, left: margin, right: margin, height: headerBarH, backgroundColor: accent }} />
       </div>
     );
   }
