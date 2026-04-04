@@ -219,7 +219,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
             }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ textAlign: "center", minWidth: 0 }}>
-                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, overflowWrap: "break-word" }}>{agentNameText}</p>
+                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, whiteSpace: "nowrap" }}>{agentNameText}</p>
                 <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), overflowWrap: "break-word" }}>{brokerageText}</p>
                 <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
               </div>
@@ -307,7 +307,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
             }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, overflowWrap: "break-word" }}>{agentNameText}</p>
+                <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, whiteSpace: "nowrap" }}>{agentNameText}</p>
                 <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(5 * unit), overflowWrap: "break-word" }}>{brokerageText}</p>
                 <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
               </div>
@@ -349,17 +349,17 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
   const barH = h * (1 - photoPercent / 100);
   const barPadX = Math.round(36 * unit);
   const barPadY = Math.round(20 * unit);
-  const headshotSize = Math.round(barH * 0.62);
+  const headshotSize = Math.round(barH * 0.52);
   const headshotBorder = Math.round(3 * unit);
 
   const badgeH = Math.round(barH * 0.14);
   const badgeFontSz = Math.round(barH * 0.052);
 
-  const agentNameFontSize = responsiveSize(Math.round(barH * 0.098), agentNameText, 18);
-  const brokerageFontSize = responsiveSize(Math.round(barH * 0.064), brokerageText, 24);
-  const phoneFontSize = Math.round(barH * 0.060);
+  const agentNameFontSize = responsiveSize(Math.round(barH * 0.082), agentNameText, 18);
+  const brokerageFontSize = responsiveSize(Math.round(barH * 0.055), brokerageText, 24);
+  const phoneFontSize = Math.round(barH * 0.052);
   const addressFontSize = responsiveSize(Math.round(barH * 0.094), addressText, 20);
-  const detailsFontSize = Math.round(barH * 0.060);
+  const detailsFontSize = Math.round(barH * 0.055);
   const priceFontSize = Math.round(barH * 0.15);
 
   return (
@@ -383,7 +383,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
           }}>
             {renderHeadshot(headshotSize, headshotBorder)}
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, overflowWrap: "break-word" }}>{agentNameText}</p>
+              <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, whiteSpace: "nowrap" }}>{agentNameText}</p>
               <p style={{ fontSize: brokerageFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(4 * unit), overflowWrap: "break-word" }}>{brokerageText}</p>
               <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(2 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
             </div>
