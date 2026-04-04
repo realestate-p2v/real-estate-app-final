@@ -428,6 +428,7 @@ function VirtualStagingPageInner() {
           style,
           user_id: user.id,
           user_email: user.email,
+          property_id: selectedPropertyId || null,
         }),
       });
 
@@ -454,21 +455,6 @@ function VirtualStagingPageInner() {
       setStagingCount((c) => c + 1);
       setMonthlyCount((c) => c + 1);
       setPreviousStagings((prev) => [newResult, ...prev]);
-
-      // Link staging to selected property
-      if (selectedPropertyId && data.staging_id) {
-        const supabase = (await import("@/lib/supabase/client")).createClient();
-        await supabase.from("lens_staging").update({ property_id: selectedPropertyId }).eq("id", data.staging_id);
-      } else if (selectedPropertyId) {
-        // Fallback: update the most recent staging by matching URLs
-        const supabase = (await import("@/lib/supabase/client")).createClient();
-        await supabase
-          .from("lens_staging")
-          .update({ property_id: selectedPropertyId })
-          .eq("user_id", user.id)
-          .eq("original_url", photoUrl)
-          .eq("staged_url", data.staged_url);
-      }
 
       if (data.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
