@@ -320,6 +320,7 @@ function DesignStudioPageInner() {
   // Pre-fill fields from URL query params (Property Portfolio → Design Studio)
   const searchParams = useSearchParams();
   useEffect(() => {
+    const propId = searchParams.get("propertyId");
     const a = searchParams.get("address");
     const city = searchParams.get("city");
     const state = searchParams.get("state");
@@ -328,6 +329,10 @@ function DesignStudioPageInner() {
     const sf = searchParams.get("sqft");
     const pr = searchParams.get("price");
     const features = searchParams.get("specialFeatures");
+
+    // Set property ID directly if provided
+    if (propId) setSelectedPropertyId(propId);
+
     if (a) {
       setAddress([a, city, state].filter(Boolean).join(", "));
       setPdfAddress(a);
@@ -340,17 +345,7 @@ function DesignStudioPageInner() {
     if (sf) { setSqft(sf); setPdfSqft(sf); }
     if (pr) { setPrice(pr); setPdfPrice(pr); setBrandPrice(pr); }
     if (features) { setPdfFeatures(features); setBrandFeatures(features); }
-
-    // Auto-match property from URL params
-    if (a && userProperties.length > 0) {
-      const normalizedInput = a.trim().toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd").replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
-      const match = userProperties.find((p: any) => {
-        const norm = (p.address_normalized || "").trim();
-        return norm && (normalizedInput.startsWith(norm) || norm.startsWith(normalizedInput));
-      });
-      if (match) setSelectedPropertyId(match.id);
-    }
-  }, [searchParams, userProperties]);
+  }, [searchParams]);
 
   const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => { if (!user) return; const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" }); };
 
