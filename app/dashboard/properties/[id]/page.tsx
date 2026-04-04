@@ -781,14 +781,23 @@ export default function SinglePropertyPage() {
                         {new Date(exp.created_at).toLocaleDateString()}
                       </p>
                       {downloadUrl && (
-                        <a
-                          href={downloadUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 mt-1.5"
-                        >
-                          <Download className="h-3 w-3" /> {exp.export_format === "mp4" ? "Watch" : "Download"}
-                        </a>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <a
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80"
+                          >
+                            <ExternalLink className="h-3 w-3" /> {exp.export_format === "mp4" ? "Watch" : "View"}
+                          </a>
+                          <a
+                            href={downloadUrl.includes("/upload/") ? downloadUrl.replace("/upload/", "/upload/fl_attachment/") : downloadUrl}
+                            download
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                          >
+                            <Download className="h-3 w-3" /> Download
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>
