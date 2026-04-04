@@ -168,7 +168,7 @@ function DescriptionWriterPageInner() {
     } catch (e) {
       console.error("Failed to load coach photos:", e);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
