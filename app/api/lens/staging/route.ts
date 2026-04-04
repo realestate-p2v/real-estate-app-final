@@ -53,7 +53,7 @@ function detectAspectSize(
 
 export async function POST(request: Request) {
   try {
-    const { photo_url, room_type, style, user_id, user_email } =
+    const { photo_url, room_type, style, user_id, user_email, property_id } =
       await request.json();
 
     if (!photo_url || !room_type || !style || !user_id) {
@@ -240,7 +240,7 @@ The result should look like a professional interior design photograph, photoreal
     const stagedImageUrl = await uploadBufferToCloudinary(imageBuffer, "staging", publicId);
 
     // ── Step 5: Save to Supabase ──
-    const { error: insertError } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from("lens_staging")
       .insert({
         user_id,
@@ -249,7 +249,10 @@ The result should look like a professional interior design photograph, photoreal
         room_type,
         style,
         room_analysis: roomAnalysis,
-      });
+        property_id: property_id || null,
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       console.error("[Staging] Supabase insert error:", insertError);
@@ -263,6 +266,7 @@ The result should look like a professional interior design photograph, photoreal
       success: true,
       staged_url: stagedImageUrl,
       room_analysis: roomAnalysis,
+      staging_id: insertData?.id || null,
       surprise,
     });
   } catch (error: any) {
