@@ -378,7 +378,16 @@ function DesignStudioPageInner() {
 
   useEffect(() => { if (!yardQrUrl) { setYardQrDataUrl(null); return; } let c = false; (async () => { try { const QR = (await import("qrcode")).default; const u = await QR.toDataURL(yardQrUrl, { width: 600, margin: 2, errorCorrectionLevel: "M" }); if (!c) setYardQrDataUrl(u); } catch { if (!c) setYardQrDataUrl(null); } })(); return () => { c = true; }; }, [yardQrUrl]);
 
-  const pdfTotalPages = 1 + Math.ceil(Math.max(0, pdfPhotos.length - 3) / 6);
+  const pdfDescLines = pdfDescription ? pdfDescription.split("\n").filter(Boolean).length : 0;
+  const pdfFeatureLines = pdfFeatures ? pdfFeatures.split("\n").filter(Boolean).length : 0;
+  const pdfEstFeatureH = pdfFeatureLines * 70 + (pdfFeatureLines > 0 ? 80 : 0);
+  const pdfMaxDescLines = Math.floor((1400 - pdfEstFeatureH) / 52);
+  const pdfHasOverflow = pdfDescLines > pdfMaxDescLines && pdfMaxDescLines > 0;
+  const pdfPage2Slots = pdfHasOverflow ? 4 : 6;
+  const pdfPhotosAfterP1 = Math.max(0, pdfPhotos.length - 3);
+  const pdfTotalPages = pdfHasOverflow
+    ? 2 + Math.ceil(Math.max(0, pdfPhotosAfterP1 - pdfPage2Slots) / 6)
+    : 1 + Math.ceil(pdfPhotosAfterP1 / 6);
 
   const getScaledDimensions = useCallback(() => {
     const maxW = 520, maxH = 560;
