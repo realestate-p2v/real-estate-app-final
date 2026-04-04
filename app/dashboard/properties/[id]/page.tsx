@@ -719,33 +719,78 @@ export default function SinglePropertyPage() {
                   mp4: "Video",
                 };
                 const downloadUrl = exp.export_url || exp.overlay_video_url;
+                // Build thumbnail URL
+                let thumbnailUrl: string | null = null;
+                if (downloadUrl && downloadUrl.includes("cloudinary.com")) {
+                  if (exp.export_format === "mp4" || downloadUrl.match(/\.(mp4|mov|webm)$/i)) {
+                    // Video: use Cloudinary video thumbnail (grab frame at 1 second)
+                    thumbnailUrl = downloadUrl
+                      .replace("/video/upload/", "/video/upload/so_1,w_400,h_300,c_fill,f_jpg/")
+                      .replace(/\.(mp4|mov|webm)$/i, ".jpg");
+                  } else if (exp.export_format === "pdf" || downloadUrl.match(/\.pdf$/i)) {
+                    // PDF: use Cloudinary page-to-image
+                    thumbnailUrl = downloadUrl
+                      .replace("/image/upload/", "/image/upload/w_400,h_300,c_fill,pg_1,f_jpg/");
+                  } else {
+                    // Image: use Cloudinary resize
+                    thumbnailUrl = downloadUrl.includes("/upload/")
+                      ? downloadUrl.replace("/upload/", "/upload/w_400,h_300,c_fill/")
+                      : downloadUrl;
+                  }
+                }
                 return (
-                  <div key={exp.id} className="p-3 rounded-xl bg-muted/30 border border-border">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                        {typeLabels[exp.template_type] || exp.template_type}
-                      </span>
-                      {exp.export_format && (
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"
-                        }`}>
-                          {formatLabels[exp.export_format] || exp.export_format.toUpperCase()}
+                  <div key={exp.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
+                    {/* Thumbnail */}
+                    {thumbnailUrl ? (
+                      <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="block">
+                        <div className="aspect-[4/3] relative bg-muted">
+                          <img
+                            src={thumbnailUrl}
+                            alt={typeLabels[exp.template_type] || "Export"}
+                            className="w-full h-full object-cover"
+                          />
+                          {exp.export_format === "mp4" && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center">
+                                <ExternalLink className="h-4 w-4 text-white ml-0.5" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </a>
+                    ) : (
+                      <div className="aspect-[4/3] bg-muted flex items-center justify-center">
+                        <PenTool className="h-8 w-8 text-muted-foreground/30" />
+                      </div>
+                    )}
+                    {/* Card body */}
+                    <div className="p-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                          {typeLabels[exp.template_type] || exp.template_type}
                         </span>
+                        {exp.export_format && (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"
+                          }`}>
+                            {formatLabels[exp.export_format] || exp.export_format.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        {new Date(exp.created_at).toLocaleDateString()}
+                      </p>
+                      {downloadUrl && (
+                        <a
+                          href={downloadUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 mt-1.5"
+                        >
+                          <Download className="h-3 w-3" /> {exp.export_format === "mp4" ? "Watch" : "Download"}
+                        </a>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(exp.created_at).toLocaleDateString()}
-                    </p>
-                    {downloadUrl && (
-                      <a
-                        href={downloadUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 mt-2"
-                      >
-                        <Download className="h-3 w-3" /> {exp.export_format === "mp4" ? "Watch" : "Download"}
-                      </a>
-                    )}
                   </div>
                 );
               })}
