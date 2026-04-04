@@ -133,6 +133,7 @@ export default function SinglePropertyPage() {
   const [selectedCoachPhotos, setSelectedCoachPhotos] = useState<Set<string>>(new Set());
   const [selectedClips, setSelectedClips] = useState<Set<number>>(new Set());
   const [stagingModal, setStagingModal] = useState<any>(null);
+  const [exportModal, setExportModal] = useState<any>(null);
   const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -259,6 +260,41 @@ export default function SinglePropertyPage() {
           </div>
         </div>
       )}
+
+      {/* Export Lightbox Modal */}
+      {exportModal && (() => {
+        const dl = exportModal.export_url || exportModal.overlay_video_url;
+        const isVideo = exportModal.export_format === "mp4" || dl?.match(/\.(mp4|mov|webm)$/i);
+        const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={() => setExportModal(null)}>
+            <div className="bg-card rounded-2xl border border-border w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2.5 py-0.5 rounded-full">{tl[exportModal.template_type] || exportModal.template_type}</span>
+                  <p className="text-xs text-muted-foreground">{new Date(exportModal.created_at).toLocaleDateString()}</p>
+                </div>
+                <button onClick={() => setExportModal(null)} className="p-2 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="bg-black">
+                {isVideo ? (
+                  <video src={dl} controls autoPlay playsInline className="w-full max-h-[60vh] object-contain" />
+                ) : (
+                  <img src={dl} alt={tl[exportModal.template_type] || "Export"} className="w-full max-h-[60vh] object-contain" />
+                )}
+              </div>
+              <div className="flex items-center gap-3 p-4 border-t border-border">
+                <a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-4 py-2 rounded-full">
+                  <Download className="h-3.5 w-3.5" />Download
+                </a>
+                <a href={dl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm px-4 py-2 rounded-full">
+                  <ExternalLink className="h-3.5 w-3.5" />Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
@@ -400,7 +436,7 @@ export default function SinglePropertyPage() {
                 }
                 return (
                   <div key={exp.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
-                    {thumb ? <a href={dl} target="_blank" rel="noopener noreferrer" className="block"><div className="aspect-[4/3] relative bg-muted"><img src={thumb} alt={tl[exp.template_type] || "Export"} className="w-full h-full object-cover" />{exp.export_format === "mp4" && <div className="absolute inset-0 flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center"><Play className="h-4 w-4 text-white ml-0.5" /></div></div>}</div></a> : <div className="aspect-[4/3] bg-muted flex items-center justify-center"><PenTool className="h-8 w-8 text-muted-foreground/30" /></div>}
+                    {thumb ? <button onClick={() => setExportModal(exp)} className="block w-full text-left"><div className="aspect-[4/3] relative bg-muted"><img src={thumb} alt={tl[exp.template_type] || "Export"} className="w-full h-full object-cover" />{exp.export_format === "mp4" && <div className="absolute inset-0 flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center"><Play className="h-4 w-4 text-white ml-0.5" /></div></div>}</div></button> : <button onClick={() => setExportModal(exp)} className="block w-full"><div className="aspect-[4/3] bg-muted flex items-center justify-center"><PenTool className="h-8 w-8 text-muted-foreground/30" /></div></button>}
                     <div className="p-3">
                       <div className="flex items-center gap-1.5 flex-wrap"><span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">{tl[exp.template_type] || exp.template_type}</span>{exp.export_format && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"}`}>{fl[exp.export_format] || exp.export_format.toUpperCase()}</span>}</div>
                       <p className="text-xs text-muted-foreground mt-1.5">{new Date(exp.created_at).toLocaleDateString()}</p>
