@@ -1,539 +1,606 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  Download,
-  Upload,
-  Image as ImageIcon,
-  PenTool,
-  Home,
-  DollarSign,
-  CheckCircle,
-  X,
-  Loader2,
-  Palette,
-  CreditCard,
-  Phone,
-  Mail,
-  User,
-  MapPin,
-  Calendar,
-  Play,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  LogIn,
-  Lock,
-  Sparkles,
+  Camera,
   Film,
-  Music,
+  FileText,
+  Sofa,
+  PenTool,
+  Pencil,
+  X,
   Check,
+  Loader2,
+  Lock,
+  Copy,
+  Download,
+  ExternalLink,
+  Home,
+  Image as ImageIcon,
+  Play,
+  ChevronDown,
+  ShoppingCart,
+  GripVertical,
+  CheckCircle,
+  Sparkles,
 } from "lucide-react";
-import {
-  InfoBarTemplate,
-  OpenHouseTemplate,
-  YardSignSplitBar,
-  YardSignSidebar,
-  YardSignTopHeavy,
-  PropertyPdfPage,
-  BrandingCardTemplate,
-  getBadgeConfig,
-  isLightColor,
-  type TemplateType,
-  type SizeConfig,
-} from "@/components/design-templates";
+import { createClient } from "@/lib/supabase/client";
 
-type SizeOption = "square" | "story" | "postcard";
-type StudioTab = "templates" | "branding-card" | "yard-sign" | "property-pdf";
-type YardSignDesign = "split-bar" | "sidebar" | "top-heavy";
-
-const TEMPLATES = [
-  { id: "just-listed" as TemplateType, label: "Just Listed", icon: Home },
-  { id: "open-house" as TemplateType, label: "Open House", icon: Calendar },
-  { id: "price-reduced" as TemplateType, label: "Price Reduced", icon: DollarSign },
-  { id: "just-sold" as TemplateType, label: "Just Sold", icon: CheckCircle },
-];
-
-const SIZES: SizeConfig[] = [
-  { id: "square", label: "Square", sublabel: "Instagram / Facebook", width: 1080, height: 1080 },
-  { id: "story", label: "Story", sublabel: "Instagram / TikTok", width: 1080, height: 1920 },
-  { id: "postcard", label: "Postcard", sublabel: "6×4 Print-Ready", width: 1800, height: 1200 },
-];
-
-const YARD_SIGN_SIZES = [
-  { id: "18x24" as const, label: '18×24"', sublabel: "Standard", width: 5400, height: 7200 },
-  { id: "24x36" as const, label: '24×36"', sublabel: "Large", width: 7200, height: 10800 },
-];
-
-const YARD_SIGN_DESIGNS: { id: YardSignDesign; label: string; description: string }[] = [
-  { id: "split-bar", label: "Split Bar", description: "Colored top & bottom bars with white center" },
-  { id: "sidebar", label: "Sidebar", description: "Vertical sidebar with centered headshot" },
-  { id: "top-heavy", label: "Top Heavy", description: "Large color header with photo below" },
-];
-
-const BRANDING_ORIENTATIONS = [
-  { id: "landscape" as const, label: "Landscape", sublabel: "1920×1080", width: 1920, height: 1080 },
-  { id: "vertical" as const, label: "Vertical", sublabel: "1080×1920", width: 1080, height: 1920 },
-];
-
-const BROKERAGE_COLORS = [
-  { hex: "#b40101", label: "KW Red" },{ hex: "#666666", label: "KW Gray" },{ hex: "#003399", label: "CB Blue" },{ hex: "#012169", label: "CB Navy" },{ hex: "#003da5", label: "RM Blue" },{ hex: "#dc1c2e", label: "RM Red" },{ hex: "#b5985a", label: "C21 Gold" },{ hex: "#1c1c1c", label: "C21 Black" },{ hex: "#000000", label: "CMP Black" },{ hex: "#333333", label: "CMP Dark" },{ hex: "#002349", label: "SIR Blue" },{ hex: "#1a1a1a", label: "SIR Black" },{ hex: "#552448", label: "BH Purple" },{ hex: "#2d1a33", label: "BH Dark" },{ hex: "#1c3f6e", label: "EXP Blue" },{ hex: "#006341", label: "HH Green" },{ hex: "#003d28", label: "HH Dk Green" },{ hex: "#4c8c2b", label: "BHG Green" },{ hex: "#d4272e", label: "EXT Red" },{ hex: "#e31937", label: "ERA Red" },{ hex: "#273691", label: "ERA Blue" },{ hex: "#a02021", label: "RF Red" },{ hex: "#ffffff", label: "White" },
-];
-
-const ACCENT_COLORS = ["#f59e0b","#ef4444","#3b82f6","#10b981","#8b5cf6","#ec4899","#06b6d4","#f97316","#d4af37","#c0c0c0","#ffffff","#000000"];
-
-const FONT_OPTIONS = [
-  { id: "serif", label: "Classic Serif", family: "Georgia, 'Times New Roman', serif" },
-  { id: "sans", label: "Clean Sans", family: "'Helvetica Neue', Arial, sans-serif" },
-  { id: "modern", label: "Modern", family: "'Trebuchet MS', 'Gill Sans', sans-serif" },
-  { id: "elegant", label: "Elegant", family: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" },
-];
-
-const VIBE_FILTERS = [
-  { key: "", label: "All", emoji: "🎵" },
-  { key: "upbeat_modern", label: "Upbeat", emoji: "🎶" },
-  { key: "chill_tropical", label: "Chill", emoji: "🌴" },
-  { key: "energetic_pop", label: "Energetic", emoji: "⚡" },
-  { key: "elegant_classical", label: "Elegant", emoji: "🎹" },
-  { key: "warm_acoustic", label: "Acoustic", emoji: "🎸" },
-  { key: "bold_cinematic", label: "Cinematic", emoji: "🎬" },
-  { key: "smooth_jazz", label: "Jazz", emoji: "🎺" },
-  { key: "ambient", label: "Ambient", emoji: "🌙" },
-];
-
-async function uploadToCloudinary(file: File | Blob, folder: string): Promise<string | null> {
-  try {
-    const sigResponse = await fetch("/api/cloudinary-signature", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder: `photo2video/${folder}` }) });
-    const sigData = await sigResponse.json();
-    if (!sigData.success) throw new Error("Signature failed");
-    const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
-    const fd = new FormData();
-    fd.append("file", file); fd.append("api_key", apiKey); fd.append("timestamp", timestamp.toString()); fd.append("signature", signature); fd.append("folder", folderPath); fd.append("resource_type", "auto");
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
-    const result = await res.json();
-    return result.secure_url || null;
-  } catch (error) { console.error("Cloudinary upload error:", error); return null; }
+interface Property {
+  id: string;
+  address: string;
+  address_normalized: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  status: string;
+  listing_type: string;
+  price: number | null;
+  price_period: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  sqft: number | null;
+  lot_size: string | null;
+  year_built: number | null;
+  property_type: string;
+  unit_count: number | null;
+  special_features: string[] | null;
+  created_at: string;
+  updated_at: string;
 }
 
-function ImageUploadBox({ label, imageUrl, onUpload, onClear, uploading, hint, className = "" }: { label: string; imageUrl: string | null; onUpload: (file: File) => void; onClear: () => void; uploading: boolean; hint?: string; className?: string; }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-100 text-green-700",
+  pending: "bg-amber-100 text-amber-700",
+  sold: "bg-blue-100 text-blue-700",
+  withdrawn: "bg-gray-100 text-gray-600",
+  rental: "bg-purple-100 text-purple-700",
+};
+
+const PROPERTY_TYPES: Record<string, string> = {
+  single_family: "Single Family",
+  condo: "Condo",
+  apartment: "Apartment",
+  townhouse: "Townhouse",
+  land: "Land",
+  commercial: "Commercial",
+};
+
+/* ─── Before/After Slider ─── */
+function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
+  const [position, setPosition] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const updatePosition = useCallback((clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setPosition(Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)));
+  }, []);
+  useEffect(() => {
+    const move = (e: MouseEvent) => { if (isDragging.current) updatePosition(e.clientX); };
+    const touchMove = (e: TouchEvent) => { if (isDragging.current) updatePosition(e.touches[0].clientX); };
+    const end = () => { isDragging.current = false; };
+    window.addEventListener("mousemove", move); window.addEventListener("mouseup", end);
+    window.addEventListener("touchmove", touchMove, { passive: true }); window.addEventListener("touchend", end);
+    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", end); window.removeEventListener("touchmove", touchMove); window.removeEventListener("touchend", end); };
+  }, [updatePosition]);
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <Label className="text-sm font-semibold">{label}</Label>
-      {imageUrl ? (
-        <div className="relative group rounded-xl overflow-hidden border border-border bg-muted aspect-square"><img src={imageUrl} alt={label} className="w-full h-full object-cover" /><button onClick={onClear} className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4" /></button></div>
-      ) : (
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="w-full aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground bg-muted/30">{uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Upload className="h-6 w-6" /><span className="text-xs font-medium">Upload</span></>}</button>
-      )}
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
-    </div>
-  );
-}
-
-function BrokerageSwatches({ currentColor, onSelect }: { currentColor: string; onSelect: (hex: string) => void }) {
-  return (<div className="flex flex-wrap gap-1.5">{BROKERAGE_COLORS.map((c) => (<button key={c.hex + c.label} onClick={() => onSelect(c.hex)} title={`${c.label} — ${c.hex}`} className={`relative group flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all text-[10px] font-medium ${currentColor === c.hex ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-border hover:border-primary/40"}`}><span className="w-4 h-4 rounded flex-shrink-0 border border-black/10" style={{ backgroundColor: c.hex }} /><span className="text-muted-foreground">{c.label}</span></button>))}</div>);
-}
-
-function AccentSwatches({ currentColor, onSelect }: { currentColor: string; onSelect: (hex: string) => void }) {
-  return (<div className="flex flex-wrap gap-2">{ACCENT_COLORS.map((c) => (<button key={c} onClick={() => onSelect(c)} className={`w-7 h-7 rounded-lg border-2 transition-all flex-shrink-0 ${currentColor === c ? "border-primary scale-110 ring-2 ring-primary/30" : "border-border"}`} style={{ backgroundColor: c }} title={c} />))}</div>);
-}
-
-function CompactMusicSelector({ selectedTrack, onSelect, customAudioFile, onCustomAudioChange }: { selectedTrack: string; onSelect: (selection: string) => void; customAudioFile: File | null; onCustomAudioChange: (file: File | null) => void; }) {
-  const [expanded, setExpanded] = useState(false);
-  const [vibeFilter, setVibeFilter] = useState("");
-  const [tracks, setTracks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const [audioPermission, setAudioPermission] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const fetchTracks = async (vibe: string = "") => { setLoading(true); try { const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`); const data = await resp.json(); setTracks(data.tracks || []); } catch (e) { console.error("Library fetch error:", e); } setLoading(false); };
-  useEffect(() => { if (expanded && tracks.length === 0) fetchTracks(); }, [expanded]);
-  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
-  const handlePlay = (trackId: string, url: string) => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } if (playingId === trackId) { setPlayingId(null); return; } const audio = new Audio(url); audio.play(); audio.onended = () => setPlayingId(null); audioRef.current = audio; setPlayingId(trackId); };
-  const getSelectedName = (): string | null => { if (customAudioFile) return customAudioFile.name; if (!selectedTrack) return null; const trackId = selectedTrack.split(":")[1]; const track = tracks.find((t) => t.id === trackId); return track?.display_name || "Selected track"; };
-  const selectedName = getSelectedName();
-  return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden">
-      <button type="button" onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"><div className="flex items-center gap-3"><div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center"><Music className="h-4 w-4 text-primary" /></div><div className="text-left"><p className="text-sm font-bold text-foreground">Background Music</p>{selectedName ? <p className="text-xs text-primary font-medium">♪ {selectedName}</p> : <p className="text-xs text-muted-foreground">Optional — add music to your video</p>}</div></div><ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} /></button>
-      {expanded && (
-        <div className="border-t border-border p-4 space-y-3">
-          <button type="button" onClick={() => { onSelect(""); onCustomAudioChange(null); }} className={`w-full flex items-center gap-3 p-2.5 rounded-lg border text-left text-sm transition-all ${!selectedTrack && !customAudioFile ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"}`}><X className="h-4 w-4 text-muted-foreground flex-shrink-0" /><span className="text-muted-foreground">No music (keep original audio)</span>{!selectedTrack && !customAudioFile && <Check className="h-4 w-4 text-primary ml-auto" />}</button>
-          <div className="flex flex-wrap gap-1">{VIBE_FILTERS.map((v) => (<button key={v.key} type="button" onClick={() => { setVibeFilter(v.key); fetchTracks(v.key); }} className={`text-[11px] py-1 px-2.5 rounded-md border transition-all ${vibeFilter === v.key ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border hover:bg-muted"}`}>{v.emoji} {v.label}</button>))}</div>
-          {loading ? <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div> : (
-            <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">{tracks.map((track) => { const isSelected = selectedTrack.includes(track.id); return (<button key={track.id} type="button" onClick={() => onSelect(`library:${track.id}:${track.file_url}`)} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"}`}><button type="button" onClick={(e) => { e.stopPropagation(); handlePlay(track.id, track.file_url); }} className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${playingId === track.id ? "bg-primary text-white" : "bg-primary/10 hover:bg-primary/20"}`}>{playingId === track.id ? <span className="text-[10px] font-bold">■</span> : <span className="text-primary text-[10px] font-bold ml-0.5">▶</span>}</button><div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{track.display_name}</p><p className="text-[11px] text-muted-foreground">{track.duration_seconds}s</p></div>{isSelected && <Check className="h-4 w-4 text-primary flex-shrink-0" />}</button>); })}</div>
-          )}
-          <div className="pt-2 border-t border-border"><p className="text-[11px] text-muted-foreground mb-1.5">Or upload your own audio:</p><input type="file" accept="audio/*" onChange={(e) => { const file = e.target.files?.[0] || null; onCustomAudioChange(file); if (file) { onSelect("custom"); setAudioPermission(false); } }} className="text-sm file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />{customAudioFile && (<div className="mt-2 space-y-1.5"><p className="text-xs text-green-600">✓ {customAudioFile.name}</p><label className="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked={audioPermission} onChange={(e) => { setAudioPermission(e.target.checked); if (!e.target.checked) { onCustomAudioChange(null); onSelect(""); } }} className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary" /><span className="text-[11px] text-muted-foreground">I have permission to use this audio.</span></label></div>)}</div>
+    <div ref={containerRef} className="relative aspect-[4/3] rounded-2xl overflow-hidden select-none cursor-ew-resize"
+      onMouseDown={(e) => { e.preventDefault(); isDragging.current = true; updatePosition(e.clientX); }}
+      onTouchStart={(e) => { isDragging.current = true; updatePosition(e.touches[0].clientX); }}>
+      <img src={afterUrl} alt="After" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
+        <img src={beforeUrl} alt="Before" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+      </div>
+      <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold px-2.5 py-1 rounded-full pointer-events-none">Before</div>
+      <div className="absolute top-3 right-3 bg-black/60 text-white text-xs font-bold px-2.5 py-1 rounded-full pointer-events-none">After</div>
+      <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none" style={{ left: `${position}%` }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 bg-white rounded-full shadow-lg flex items-center justify-center pointer-events-none">
+          <GripVertical className="h-4 w-4 text-gray-500" />
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function VideoExportModal({ progress, status, onCancel }: { progress: number; status: string; onCancel?: () => void }) {
-  return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"><div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full mx-4 text-center space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center"><Film className="h-8 w-8 text-accent animate-pulse" /></div><h3 className="text-xl font-extrabold text-foreground">Exporting Video</h3><p className="text-sm text-muted-foreground">{status}</p><div className="w-full h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${Math.max(progress, 2)}%` }} /></div><p className="text-sm font-bold text-foreground">{Math.round(progress)}%</p>{progress < 100 && onCancel && (<button onClick={onCancel} className="text-sm text-muted-foreground hover:text-foreground underline">Cancel</button>)}</div></div>);
-}
+export default function SinglePropertyPage() {
+  const params = useParams();
+  const router = useRouter();
+  const propertyId = params.id as string;
 
-export default function DesignStudioPage() {
-  return (
-    <Suspense>
-      <DesignStudioPageInner />
-    </Suspense>
-  );
-}
-
-function DesignStudioPageInner() {
-  const [tab, setTab] = useState<StudioTab>("templates");
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("just-listed");
-  const [selectedSize, setSelectedSize] = useState<SizeOption>("square");
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
-  const [freeExportsUsed, setFreeExportsUsed] = useState(0);
-  const [paywallHit, setPaywallHit] = useState(false);
-  const FREE_EXPORT_LIMIT = 3;
-  const [savedHeadshot, setSavedHeadshot] = useState<string | null>(null);
-  const [savedLogo, setSavedLogo] = useState<string | null>(null);
-  const [mediaMode, setMediaMode] = useState<"image" | "video">("image");
-  const [listingPhoto, setListingPhoto] = useState<string | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail: string; orderId: string } | null>(null);
-  const [userVideos, setUserVideos] = useState<any[]>([]);
-  const [loadingVideos, setLoadingVideos] = useState(false);
-  const [clipUrls, setClipUrls] = useState<string[]>([]);
-  const [currentClipIndex, setCurrentClipIndex] = useState(0);
-  const [headshot, setHeadshot] = useState<string | null>(null);
-  const [logo, setLogo] = useState<string | null>(null);
-  const [uploadingListing, setUploadingListing] = useState(false);
-  const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [address, setAddress] = useState("");
-  const [beds, setBeds] = useState("");
-  const [baths, setBaths] = useState("");
-  const [sqft, setSqft] = useState("");
-  const [price, setPrice] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [agentName, setAgentName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [agentEmail, setAgentEmail] = useState("");
-  const [brokerage, setBrokerage] = useState("");
-  const [listingFont, setListingFont] = useState("sans");
-  const [listingBarColor, setListingBarColor] = useState("#111827");
-  const [listingAccentColor, setListingAccentColor] = useState("");
-  const [overlayMusic, setOverlayMusic] = useState("");
-  const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
-  const [yardSignSize, setYardSignSize] = useState<"18x24" | "24x36">("18x24");
-  const [yardDesign, setYardDesign] = useState<YardSignDesign>("split-bar");
-  const [yardHeaderText, setYardHeaderText] = useState("FOR SALE");
-  const [yardTopColor, setYardTopColor] = useState("#dc1c2e");
-  const [yardBottomColor, setYardBottomColor] = useState("#003da5");
-  const [yardSidebarColor, setYardSidebarColor] = useState("#1c1c1c");
-  const [yardMainBgColor, setYardMainBgColor] = useState("#ffffff");
-  const [yardWebsite, setYardWebsite] = useState("");
-  const [yardOfficeName, setYardOfficeName] = useState("");
-  const [yardOfficePhone, setYardOfficePhone] = useState("");
-  const [yardQrUrl, setYardQrUrl] = useState("");
-  const [yardQrDataUrl, setYardQrDataUrl] = useState<string | null>(null);
-  const [pdfAddress, setPdfAddress] = useState("");
-  const [pdfCityStateZip, setPdfCityStateZip] = useState("");
-  const [pdfPrice, setPdfPrice] = useState("");
-  const [pdfBeds, setPdfBeds] = useState("");
-  const [pdfBaths, setPdfBaths] = useState("");
-  const [pdfSqft, setPdfSqft] = useState("");
-  const [pdfDescription, setPdfDescription] = useState("");
-  const [pdfFeatures, setPdfFeatures] = useState("");
-  const [pdfPhotos, setPdfPhotos] = useState<string[]>([]);
-  const [uploadingPdfPhoto, setUploadingPdfPhoto] = useState(false);
-  const [pdfPreviewPage, setPdfPreviewPage] = useState(0);
-  const [pdfAccentColor, setPdfAccentColor] = useState("#0d9488");
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
-  const [brandHeadshot, setBrandHeadshot] = useState<string | null>(null);
-  const [brandBgPhoto, setBrandBgPhoto] = useState<string | null>(null);
-  const [brandAgentName, setBrandAgentName] = useState("");
-  const [brandPhone, setBrandPhone] = useState("");
-  const [brandEmail, setBrandEmail] = useState("");
-  const [brandBrokerage, setBrandBrokerage] = useState("");
-  const [brandTagline, setBrandTagline] = useState("");
-  const [brandAddress, setBrandAddress] = useState("");
-  const [brandCityState, setBrandCityState] = useState("");
-  const [brandPrice, setBrandPrice] = useState("");
-  const [brandFeatures, setBrandFeatures] = useState("");
-  const [brandBgColor, setBrandBgColor] = useState("#14532d");
-  const [brandAccentColor, setBrandAccentColor] = useState("");
-  const [brandOrientation, setBrandOrientation] = useState<"landscape" | "vertical">("landscape");
-  const [brandFont, setBrandFont] = useState("serif");
-  const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
-  const [uploadingBrandHeadshot, setUploadingBrandHeadshot] = useState(false);
-  const [uploadingBrandBg, setUploadingBrandBg] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [videoExporting, setVideoExporting] = useState(false);
-  const [videoExportProgress, setVideoExportProgress] = useState(0);
-  const [videoExportStatus, setVideoExportStatus] = useState("");
-  const [userProperties, setUserProperties] = useState<any[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  const [loadingProperties, setLoadingProperties] = useState(false);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const currentSize = SIZES.find((s) => s.id === selectedSize)!;
-  const currentBrandOrientation = BRANDING_ORIENTATIONS.find((o) => o.id === brandOrientation)!;
-  const currentFontFamily = FONT_OPTIONS.find((f) => f.id === brandFont)?.family || FONT_OPTIONS[0].family;
-  const listingFontFamily = FONT_OPTIONS.find((f) => f.id === listingFont)?.family || FONT_OPTIONS[1].family;
-  const currentYardSize = YARD_SIGN_SIZES.find((s) => s.id === yardSignSize)!;
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [descriptions, setDescriptions] = useState<any[]>([]);
+  const [exports, setExports] = useState<any[]>([]);
+  const [stagings, setStagings] = useState<any[]>([]);
+  const [orderPhotos, setOrderPhotos] = useState<any[]>([]);
+  const [orderClips, setOrderClips] = useState<any[]>([]);
+  const [editForm, setEditForm] = useState<Partial<Property>>({});
 
-  // Auth init
-  useEffect(() => {
-    const init = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      setAuthLoading(false);
-      if (!authUser) return;
-      setUser(authUser);
-      const admin = authUser.email === "realestatephoto2video@gmail.com";
-      setIsAdmin(admin);
-      const { data } = await supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used").eq("user_id", authUser.id).single();
-      if (data) {
-        if (data.saved_headshot_url) { setSavedHeadshot(data.saved_headshot_url); setHeadshot(data.saved_headshot_url); setBrandHeadshot(data.saved_headshot_url); }
-        if (data.saved_logo_url) { setSavedLogo(data.saved_logo_url); setLogo(data.saved_logo_url); setBrandLogo(data.saved_logo_url); }
-        if (admin || data.is_subscriber) setIsSubscriber(true);
-        setFreeExportsUsed(data.free_design_exports_used || 0);
-      }
-      if (admin) setIsSubscriber(true);
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<number>>(new Set());
+  const [selectedCoachPhotos, setSelectedCoachPhotos] = useState<Set<string>>(new Set());
+  const [selectedClips, setSelectedClips] = useState<Set<number>>(new Set());
+  const [stagingModal, setStagingModal] = useState<any>(null);
+  const [exportModal, setExportModal] = useState<any>(null);
+  const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-      // Load user properties for the property selector
-      const { data: props } = await supabase
-        .from("agent_properties")
-        .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features")
-        .eq("user_id", authUser.id)
-        .order("updated_at", { ascending: false });
-      if (props) setUserProperties(props);
-    };
-    init();
-  }, []);
+  const supabase = createClient();
 
-  // Pre-fill fields from URL query params (Property Portfolio → Design Studio)
-  const searchParams = useSearchParams();
-  useEffect(() => {
-    const propId = searchParams.get("propertyId");
-    const a = searchParams.get("address");
-    const city = searchParams.get("city");
-    const state = searchParams.get("state");
-    const bd = searchParams.get("beds");
-    const ba = searchParams.get("baths");
-    const sf = searchParams.get("sqft");
-    const pr = searchParams.get("price");
-    const features = searchParams.get("specialFeatures");
-
-    // Set property ID directly if provided
-    if (propId) setSelectedPropertyId(propId);
-
-    if (a) {
-      setAddress([a, city, state].filter(Boolean).join(", "));
-      setPdfAddress(a);
-      setBrandAddress(a);
-      const cs = [city, state].filter(Boolean).join(", ");
-      if (cs) { setPdfCityStateZip(cs); setBrandCityState(cs); }
-    }
-    if (bd) { setBeds(bd); setPdfBeds(bd); }
-    if (ba) { setBaths(ba); setPdfBaths(ba); }
-    if (sf) { setSqft(sf); setPdfSqft(sf); }
-    if (pr) { setPrice(pr); setPdfPrice(pr); setBrandPrice(pr); }
-    if (features) { setPdfFeatures(features); setBrandFeatures(features); }
-  }, [searchParams]);
-
-  // Load clips from property portfolio (sent via sessionStorage)
-  useEffect(() => {
-    try {
-      const clipsJson = sessionStorage.getItem("design_studio_clips");
-      if (clipsJson) {
-        const parsed = JSON.parse(clipsJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setClipUrls(parsed);
-          setMediaMode("video");
-          setCurrentClipIndex(0);
-          setListingPhoto(null); // Clear image so video takes over
-          setTab("templates"); // Ensure we're on the templates tab
-          // Set selectedVideo so exports and videoPreviewElement work
-          setSelectedVideo({ url: parsed[0], thumbnail: "", orderId: "clips" });
-        }
-        sessionStorage.removeItem("design_studio_clips");
-      }
-    } catch (e) {
-      console.error("Failed to load clips:", e);
-    }
-  }, []);
-
-  const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => { if (!user) return; const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" }); };
-
-  useEffect(() => { if (!yardQrUrl) { setYardQrDataUrl(null); return; } let c = false; (async () => { try { const QR = (await import("qrcode")).default; const u = await QR.toDataURL(yardQrUrl, { width: 600, margin: 2, errorCorrectionLevel: "M" }); if (!c) setYardQrDataUrl(u); } catch { if (!c) setYardQrDataUrl(null); } })(); return () => { c = true; }; }, [yardQrUrl]);
-
-  const pdfTotalPages = 1 + Math.ceil(Math.max(0, pdfPhotos.length - 3) / 6);
-
-  const getScaledDimensions = useCallback(() => {
-    const maxW = 520, maxH = 560;
-    let w: number, h: number;
-    if (tab === "branding-card") { w = currentBrandOrientation.width; h = currentBrandOrientation.height; }
-    else if (tab === "yard-sign") { w = currentYardSize.width; h = currentYardSize.height; }
-    else if (tab === "property-pdf") { w = 2550; h = 3300; }
-    else { w = currentSize.width; h = currentSize.height; }
-    const s = Math.min(maxW / w, maxH / h, 1);
-    return { scale: s, width: w * s, height: h * s, rawW: w, rawH: h };
-  }, [tab, currentSize, currentBrandOrientation, currentYardSize]);
-
-  const { scale, width: previewW, height: previewH, rawW, rawH } = getScaledDimensions();
-
-  const handleUpload = async (file: File, folder: string, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, folder); setUrl(url); setLoading(false); };
-  const handleHeadshotUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) { setUrl(url); setHeadshot(url); setBrandHeadshot(url); saveAssetToDb("saved_headshot_url", url); setSavedHeadshot(url); } setLoading(false); };
-  const handleLogoUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) { setUrl(url); setLogo(url); setBrandLogo(url); saveAssetToDb("saved_logo_url", url); setSavedLogo(url); } setLoading(false); };
-  const handlePdfPhotoUpload = async (file: File) => { if (pdfPhotos.length >= 25) return; setUploadingPdfPhoto(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) setPdfPhotos(prev => [...prev, url]); setUploadingPdfPhoto(false); };
-
-  const loadUserVideos = async () => {
-    if (userVideos.length > 0) return;
-    setLoadingVideos(true);
-    try { const supabase = (await import("@/lib/supabase/client")).createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: orders } = await supabase.from("orders").select("order_id, delivery_url, unbranded_delivery_url, photos, created_at").eq("user_id", user.id).in("status", ["complete", "delivered", "closed"]).order("created_at", { ascending: false }); setUserVideos((orders || []).filter((o: any) => o.unbranded_delivery_url || o.delivery_url).map((o: any) => ({ orderId: o.order_id, url: o.unbranded_delivery_url || o.delivery_url, thumbnail: o.photos?.[0]?.secure_url || null, hasUnbranded: !!o.unbranded_delivery_url, date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) }))); } catch (err) { console.error(err); } finally { setLoadingVideos(false); }
+  const buildPropertyParams = (prop: Property) => {
+    const p = new URLSearchParams();
+    p.set("propertyId", prop.id);
+    if (prop.address) p.set("address", prop.address);
+    if (prop.city) p.set("city", prop.city);
+    if (prop.state) p.set("state", prop.state);
+    if (prop.zip) p.set("zip", prop.zip);
+    if (prop.bedrooms) p.set("beds", prop.bedrooms.toString());
+    if (prop.bathrooms) p.set("baths", prop.bathrooms.toString());
+    if (prop.sqft) p.set("sqft", prop.sqft.toString());
+    if (prop.lot_size) p.set("lotSize", prop.lot_size);
+    if (prop.year_built) p.set("yearBuilt", prop.year_built.toString());
+    if (prop.price) p.set("price", prop.price.toString());
+    if (prop.special_features && prop.special_features.length > 0) p.set("specialFeatures", prop.special_features.join(", "));
+    return p.toString();
   };
 
-  const incrementExportCounter = async () => { if (!isSubscriber && !isAdmin && user) { const newCount = freeExportsUsed + 1; setFreeExportsUsed(newCount); const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, free_design_exports_used: newCount }, { onConflict: "user_id" }); } };
-  const checkPaywall = (): boolean => { if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) { setPaywallHit(true); return true; } return false; };
+  const loadProperty = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
+    setUserId(user.id);
+    const isAdmin = user.email === "realestatephoto2video@gmail.com";
+    if (isAdmin) { setIsSubscriber(true); } else {
+      const { data: usage } = await supabase.from("lens_usage").select("is_subscriber").eq("user_id", user.id).single();
+      if (usage?.is_subscriber) setIsSubscriber(true);
+    }
+    const { data: prop, error } = await supabase.from("agent_properties").select("*").eq("id", propertyId).eq("user_id", user.id).single();
+    if (error || !prop) { router.push("/dashboard/properties"); return; }
+    setProperty(prop); setEditForm(prop);
+    const norm = prop.address_normalized;
+    const { data: sessionData } = await supabase.from("lens_sessions").select("*").eq("user_id", user.id).ilike("property_address", `${norm}%`).order("created_at", { ascending: false });
+    setPhotos(sessionData || []);
+    const { data: orderData } = await supabase.from("orders").select("*").eq("user_id", user.id).ilike("property_address", `${norm}%`).order("created_at", { ascending: false });
+    setVideos(orderData || []);
+    const allPhotos: any[] = [];
+    (orderData || []).forEach((order: any) => { if (Array.isArray(order.photos)) { order.photos.forEach((photo: any, idx: number) => { if (photo.secure_url) allPhotos.push({ ...photo, orderId: order.order_id || order.id, orderDate: order.created_at, index: idx }); }); } });
+    setOrderPhotos(allPhotos);
+    const allClips: any[] = [];
+    (orderData || []).forEach((order: any) => { if (Array.isArray(order.clip_urls)) { order.clip_urls.forEach((clip: any, idx: number) => { const clipUrl = clip.url || clip.clip_file || clip.drive_url || ""; if (clipUrl) allClips.push({ ...clip, clipUrl, photoUrl: clip.photo_url || "", orderId: order.order_id || order.id, orderDate: order.created_at, index: idx }); }); } });
+    setOrderClips(allClips);
+    const { data: descData } = await supabase.from("lens_descriptions").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    const filteredDescs = (descData || []).filter((desc: any) => { const descAddr = desc.property_data?.address || desc.property_data?.property_address || ""; if (!descAddr) return false; const n = descAddr.trim().toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd").replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim(); return n.startsWith(norm) || norm.startsWith(n); });
+    setDescriptions(filteredDescs);
+    const { data: exportData } = await supabase.from("design_exports").select("*").eq("property_id", propertyId).order("created_at", { ascending: false });
+    setExports(exportData || []);
+    const { data: stagingData } = await supabase.from("lens_staging").select("*").eq("property_id", propertyId).order("created_at", { ascending: false });
+    setStagings(stagingData || []);
+    setLoading(false);
+  }, [supabase, propertyId, router]);
 
-  const saveDesignExport = async (exportUrl: string | null, format: "png" | "pdf" | "mp4", overlayVideoUrl?: string) => {
-    if (!user) return;
-    const supabase = (await import("@/lib/supabase/client")).createClient();
-    const templateType = tab === "templates" ? selectedTemplate : tab === "branding-card" ? "branding_card" : tab === "yard-sign" ? "yard_sign" : tab === "property-pdf" ? "property_pdf" : tab;
-    const finalUrl = exportUrl || overlayVideoUrl || null;
-    const { error } = await supabase.from("design_exports").insert({
-      user_id: user.id,
-      property_id: selectedPropertyId || null,
-      template_type: templateType,
-      export_url: finalUrl,
-      export_format: format,
-      overlay_video_url: overlayVideoUrl || null,
-    });
-    if (error) console.error("Failed to save design export:", error);
+  useEffect(() => { loadProperty(); }, [loadProperty]);
+
+  const handleSave = async () => {
+    if (!property) return; setSaving(true);
+    const { error } = await supabase.from("agent_properties").update({ address: editForm.address || property.address, city: editForm.city || null, state: editForm.state || null, zip: editForm.zip || null, status: editForm.status || "active", listing_type: editForm.listing_type || "sale", price: editForm.price || null, bedrooms: editForm.bedrooms || null, bathrooms: editForm.bathrooms || null, sqft: editForm.sqft || null, lot_size: editForm.lot_size || null, year_built: editForm.year_built || null, property_type: editForm.property_type || "single_family", updated_at: new Date().toISOString() }).eq("id", property.id);
+    if (!error) { setProperty({ ...property, ...editForm, updated_at: new Date().toISOString() } as Property); setEditing(false); }
+    setSaving(false);
   };
 
-  const handleSelectProperty = (propertyId: string) => {
-    if (propertyId === "__new__") {
-      // Clear fields for manual entry
-      setSelectedPropertyId(null);
-      setAddress(""); setBeds(""); setBaths(""); setSqft(""); setPrice("");
-      setPdfAddress(""); setPdfCityStateZip(""); setPdfBeds(""); setPdfBaths(""); setPdfSqft(""); setPdfPrice("");
-      setBrandAddress(""); setBrandCityState(""); setBrandPrice("");
-      setPdfFeatures(""); setBrandFeatures("");
-      return;
-    }
-    const prop = userProperties.find((p: any) => p.id === propertyId);
-    if (!prop) return;
-    setSelectedPropertyId(prop.id);
-    const fullAddr = [prop.address, prop.city, prop.state].filter(Boolean).join(", ");
-    setAddress(fullAddr);
-    setPdfAddress(prop.address || "");
-    setBrandAddress(prop.address || "");
-    const cs = [prop.city, prop.state].filter(Boolean).join(", ");
-    if (cs) { setPdfCityStateZip(cs); setBrandCityState(cs); }
-    if (prop.bedrooms) { const b = prop.bedrooms.toString(); setBeds(b); setPdfBeds(b); }
-    if (prop.bathrooms) { const b = prop.bathrooms.toString(); setBaths(b); setPdfBaths(b); }
-    if (prop.sqft) { const s = prop.sqft.toString(); setSqft(s); setPdfSqft(s); }
-    if (prop.price) { const p = prop.price.toString(); setPrice(p); setPdfPrice(p); setBrandPrice(p); }
-    if (prop.special_features && prop.special_features.length > 0) {
-      const features = prop.special_features.join("\n");
-      setPdfFeatures(features);
-      setBrandFeatures(features);
-    }
+  const copyToClipboard = (text: string, id: string) => { navigator.clipboard.writeText(text); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
+
+  const sendPhotosToOrder = (photoList: any[]) => {
+    const photosForOrder = photoList.map((photo, i) => ({ id: `prop-${Date.now()}-${i}`, secure_url: photo.secure_url, preview: photo.secure_url, description: photo.description || "", uploadStatus: "complete", camera_direction: photo.camera_direction || null, camera_speed: photo.camera_speed || null, custom_motion: photo.custom_motion || "", crop_offset_landscape: photo.crop_offset_landscape ?? 50, crop_offset_vertical: photo.crop_offset_vertical ?? 50 }));
+    sessionStorage.setItem("coach_photos_for_order", JSON.stringify(photosForOrder));
+    if (property) sessionStorage.setItem("coach_property_address", property.address);
+    window.location.href = "/order";
   };
 
-  const prepareForExport = (el: HTMLElement): { restore: () => void } => { const parent = el.parentElement as HTMLElement; const savedTransform = el.style.transform; const savedOverflow = parent?.style.overflow; const savedWidth = parent?.style.width; const savedHeight = parent?.style.height; el.style.transform = "none"; if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; } return { restore: () => { el.style.transform = savedTransform; if (parent) { parent.style.overflow = savedOverflow || ""; parent.style.width = savedWidth || ""; parent.style.height = savedHeight || ""; } } }; };
+  const sendCoachPhotosToOrder = () => {
+    const allCoach: any[] = [];
+    photos.forEach((session: any) => { if (Array.isArray(session.photos)) { session.photos.filter((p: any) => p.approved).forEach((photo: any, i: number) => { const key = `${session.id}-${i}`; if (selectedCoachPhotos.size === 0 || selectedCoachPhotos.has(key)) { allCoach.push({ id: `coach-${Date.now()}-${allCoach.length}`, secure_url: photo.edited_url || photo.url, preview: photo.edited_url || photo.url, description: photo.room || "", uploadStatus: "complete", camera_direction: null, camera_speed: null, custom_motion: "", crop_offset_landscape: 50, crop_offset_vertical: 50 }); } }); } });
+    if (allCoach.length === 0) return;
+    sessionStorage.setItem("coach_photos_for_order", JSON.stringify(allCoach));
+    if (property) sessionStorage.setItem("coach_property_address", property.address);
+    window.location.href = "/order";
+  };
 
-  const handleExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) return; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH }); restore(); const link = document.createElement("a"); link.download = `p2v-${tab}-${Date.now()}.png`; link.href = canvas.toDataURL("image/png"); link.click(); await incrementExportCounter(); // Upload to Cloudinary and save to design_exports
-    const blob = await new Promise<Blob>((resolve) => { canvas.toBlob((b) => resolve(b!), "image/png"); });
-    const uploadedUrl = await uploadToCloudinary(new File([blob], `p2v-${tab}.png`, { type: "image/png" }), "design-studio/exports");
-    await saveDesignExport(uploadedUrl, "png"); } catch (err) { console.error(err); alert("Export failed."); } finally { setExporting(false); } };
+  const sendClipsToDesignStudio = () => {
+    const selected = orderClips.filter((_, i) => selectedClips.has(i));
+    if (selected.length === 0) return;
+    sessionStorage.setItem("design_studio_clips", JSON.stringify(selected.map(c => c.clipUrl)));
+    if (property) window.location.href = `/dashboard/lens/design-studio?${buildPropertyParams(property)}`;
+  };
 
-  const handlePdfExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const jsPDF = (await import("jspdf")).default; const html2canvas = (await import("html2canvas-pro")).default; const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" }); for (let page = 0; page < pdfTotalPages; page++) { setPdfPreviewPage(page); await new Promise(r => setTimeout(r, 400)); const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement; if (!el) continue; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 }); restore(); if (page > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11); } pdf.save(`${pdfAddress.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "property"}_sheet.pdf`); setPdfPreviewPage(0); await incrementExportCounter(); // Upload PDF to Cloudinary and save to design_exports
-    const pdfBlob = pdf.output("blob");
-    const uploadedUrl = await uploadToCloudinary(new File([pdfBlob], "property_sheet.pdf", { type: "application/pdf" }), "design-studio/exports");
-    await saveDesignExport(uploadedUrl, "pdf"); } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); } };
+  const QuickAction = ({ href, icon: Icon, label, requiresSub }: { href: string; icon: any; label: string; requiresSub?: boolean }) => {
+    if (requiresSub && !isSubscriber) return <Link href="/lens" className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-muted/50 border border-border text-sm font-semibold text-muted-foreground hover:border-accent/40 transition-all"><Lock className="h-3.5 w-3.5" />{label}</Link>;
+    return <Link href={href} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-sm font-semibold text-accent hover:bg-accent/20 transition-all"><Icon className="h-3.5 w-3.5" />{label}</Link>;
+  };
 
-  const getMusicSource = (): { type: "url"; url: string } | { type: "file"; file: File } | null => { if (overlayMusic.startsWith("library:")) { const parts = overlayMusic.split(":"); const url = parts.slice(2).join(":"); if (url) return { type: "url", url }; } if (overlayMusic === "custom" && customAudioFile) { return { type: "file", file: customAudioFile }; } return null; };
+  if (loading) return <div className="min-h-screen bg-background"><Navigation /><div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div></div>;
+  if (!property) return null;
 
-  const handleVideoExport = async () => { if (checkPaywall()) return; if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; } setVideoExporting(true); setVideoExportProgress(0); setVideoExportStatus("Loading video encoder..."); try { const { FFmpeg } = await import("@ffmpeg/ffmpeg"); const { toBlobURL, fetchFile } = await import("@ffmpeg/util"); const ffmpeg = new FFmpeg(); ffmpeg.on("progress", ({ progress: p }) => { setVideoExportProgress(Math.min(Math.round(p * 100), 99)); }); setVideoExportStatus("Downloading encoder (~30 MB)..."); const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd"; await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"), }); setVideoExportStatus("Downloading source video..."); setVideoExportProgress(5); const videoData = await fetchFile(selectedVideo.url); await ffmpeg.writeFile("input.mp4", videoData); const musicSource = getMusicSource(); let hasMusic = false; if (musicSource) { setVideoExportStatus("Loading music track..."); setVideoExportProgress(8); if (musicSource.type === "url") { const musicData = await fetchFile(musicSource.url); await ffmpeg.writeFile("music.mp3", musicData); hasMusic = true; } else { const buf = new Uint8Array(await musicSource.file.arrayBuffer()); await ffmpeg.writeFile("music.mp3", buf); hasMusic = true; } } setVideoExportStatus("Rendering overlay..."); setVideoExportProgress(10); const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) throw new Error("Export target not found"); const videoEls = el.querySelectorAll("video"); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; }); const placeholders = el.querySelectorAll("[data-video-area]"); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; }); const { restore } = prepareForExport(el); const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH }); restore(); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; }); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; }); const overlayBlob = await new Promise<Blob>((resolve) => { overlayCanvas.toBlob((b) => resolve(b!), "image/png"); }); const overlayData = new Uint8Array(await overlayBlob.arrayBuffer()); await ffmpeg.writeFile("overlay.png", overlayData); setVideoExportStatus(hasMusic ? "Compositing video with overlay & music..." : "Compositing video with overlay..."); setVideoExportProgress(15); const outW = currentSize.width; const outH = currentSize.height; if (hasMusic) { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-i", "music.mp3", "-t", "60", "-filter_complex", `[0:v]scale=${outW}:-2,pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:60,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`, "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } else { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-t", "60", "-filter_complex", `[0:v]scale=${outW}:-2,pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } setVideoExportStatus("Finalizing..."); setVideoExportProgress(95); const outputData = await ffmpeg.readFile("output.mp4"); const outputBlob = new Blob([outputData], { type: "video/mp4" }); const downloadUrl = URL.createObjectURL(outputBlob); const link = document.createElement("a"); link.download = `p2v-video-overlay-${Date.now()}.mp4`; link.href = downloadUrl; link.click(); URL.revokeObjectURL(downloadUrl); setVideoExportStatus("Saving to My Videos..."); setVideoExportProgress(98); const uploadedUrl = await uploadToCloudinary(new File([outputBlob], "overlay-video.mp4", { type: "video/mp4" }), "design-studio/videos"); if (uploadedUrl && user) { const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("orders").update({ overlay_video_url: uploadedUrl }).eq("order_id", selectedVideo.orderId); } setVideoExportProgress(100); setVideoExportStatus("Done!"); await incrementExportCounter(); await saveDesignExport(uploadedUrl, "mp4", uploadedUrl || undefined); setTimeout(() => { setVideoExporting(false); }, 1500); } catch (err: any) { console.error("Video export error:", err); alert("Video export failed: " + (err.message || "Unknown error")); setVideoExporting(false); } };
+  const qs = buildPropertyParams(property);
+  const inp = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50";
 
-  const badge = getBadgeConfig(selectedTemplate);
-
-  // Auto-play next clip when currentClipIndex changes
-  useEffect(() => {
-    if (clipUrls.length > 1 && videoRef.current) {
-      videoRef.current.load();
-      videoRef.current.play().catch(() => {});
-    }
-  }, [currentClipIndex, clipUrls.length]);
-
-  const videoPreviewElement = selectedVideo ? (<div className="w-full h-full relative" data-video-area><video ref={videoRef} src={clipUrls.length > 0 ? clipUrls[currentClipIndex] : selectedVideo.url} autoPlay loop={clipUrls.length <= 1} muted playsInline className="w-full h-full object-cover" crossOrigin="anonymous" onEnded={() => { if (clipUrls.length > 1) { const nextIdx = (currentClipIndex + 1) % clipUrls.length; setCurrentClipIndex(nextIdx); } }} />{clipUrls.length > 1 && <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none">Clip {currentClipIndex + 1}/{clipUrls.length}</div>}</div>) : undefined;
-
-  if (authLoading) { return (<div className="min-h-screen bg-background"><Navigation /><div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div></div>); }
-  if (!user) { return (<div className="min-h-screen bg-background"><Navigation /><div className="mx-auto max-w-2xl px-4 py-24 text-center"><div className="bg-card rounded-2xl border border-border p-10 space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center"><LogIn className="h-8 w-8 text-muted-foreground" /></div><h1 className="text-2xl font-extrabold text-foreground">Sign In to Use the Design Studio</h1><p className="text-muted-foreground max-w-md mx-auto">Create a free account to try the Marketing Design Studio. Your first 3 exports are free — no subscription required.</p><div className="flex flex-col sm:flex-row gap-3 justify-center pt-2"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/login?redirect=/dashboard/lens/design-studio"><LogIn className="mr-2 h-4 w-4" />Sign In</Link></Button><Button asChild variant="outline" className="px-8 py-6 text-base"><Link href="/lens">Learn About P2V Lens</Link></Button></div></div></div></div>); }
-  if (paywallHit) { return (<div className="min-h-screen bg-background"><Navigation /><div className="mx-auto max-w-2xl px-4 py-24 text-center"><div className="bg-card rounded-2xl border border-border p-10 space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center"><Lock className="h-8 w-8 text-accent" /></div><h1 className="text-2xl font-extrabold text-foreground">You&apos;ve Used Your 3 Free Exports</h1><p className="text-muted-foreground max-w-md mx-auto">Subscribe to P2V Lens for unlimited design exports, plus AI photo coaching, listing descriptions, virtual staging, and more — starting at $27.95/month.</p><div className="flex flex-col sm:flex-row gap-3 justify-center pt-2"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/lens"><Sparkles className="mr-2 h-4 w-4" />Subscribe to P2V Lens</Link></Button><Button variant="outline" className="px-8 py-6 text-base" onClick={() => setPaywallHit(false)}>Back to Design Studio</Button></div></div></div></div>); }
+  const allCoachApproved: any[] = [];
+  photos.forEach((session: any) => { if (Array.isArray(session.photos)) { session.photos.filter((p: any) => p.approved).forEach((photo: any, i: number) => { allCoachApproved.push({ ...photo, sessionId: session.id, indexInSession: i }); }); } });
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      {videoExporting && <VideoExportModal progress={videoExportProgress} status={videoExportStatus} onCancel={() => setVideoExporting(false)} />}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-3 mb-8"><Link href="/dashboard/lens" className="text-muted-foreground hover:text-foreground transition-colors"><ArrowLeft className="h-5 w-5" /></Link><div><h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Marketing Design Studio</h1><p className="text-muted-foreground mt-1">Create listing graphics, yard signs, property sheets, and branding cards</p></div></div>
 
-        {isAdmin ? (<div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" /><p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p></div>) : isSubscriber ? (<div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited exports</p></div>) : (<div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-accent flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold">Free trial:</span> {FREE_EXPORT_LIMIT - freeExportsUsed} of {FREE_EXPORT_LIMIT} exports remaining.</p></div>)}
-
-        {/* Property Selector */}
-        <div className="bg-card rounded-2xl border border-border p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <Home className="h-5 w-5 text-accent flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">Property</label>
-              <select
-                value={selectedPropertyId || ""}
-                onChange={(e) => handleSelectProperty(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 appearance-none"
-              >
-                <option value="">Select a property...</option>
-                {userProperties.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.address}{p.city ? `, ${p.city}` : ""}{p.state ? `, ${p.state}` : ""}
-                  </option>
-                ))}
-                <option value="__new__">＋ Enter address manually</option>
-              </select>
+      {/* Staging Before/After Modal */}
+      {stagingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={() => setStagingModal(null)}>
+          <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">{stagingModal.room_type ? stagingModal.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Virtual Staging"}</h3>
+                <p className="text-xs text-muted-foreground">{stagingModal.style} · {new Date(stagingModal.created_at).toLocaleDateString()}</p>
+              </div>
+              <button onClick={() => setStagingModal(null)} className="p-2 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
             </div>
-            {selectedPropertyId && (
-              <Link
-                href={`/dashboard/properties/${selectedPropertyId}`}
-                className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors flex-shrink-0 mt-4"
-              >
-                View →
-              </Link>
-            )}
+            <BeforeAfterSlider beforeUrl={stagingModal.original_url} afterUrl={stagingModal.staged_url} />
+            <div className="flex items-center gap-3 mt-4">
+              <a href={stagingModal.staged_url} target="_blank" rel="noopener noreferrer" download className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-4 py-2 rounded-full"><Download className="h-3.5 w-3.5" />Download Staged</a>
+              <a href={stagingModal.original_url} target="_blank" rel="noopener noreferrer" download className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm px-4 py-2 rounded-full"><Download className="h-3.5 w-3.5" />Original</a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Lightbox Modal */}
+      {exportModal && (() => {
+        const dl = exportModal.export_url || exportModal.overlay_video_url;
+        const isVideo = exportModal.export_format === "mp4" || dl?.match(/\.(mp4|mov|webm)$/i);
+        const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={() => setExportModal(null)}>
+            <div className="bg-card rounded-2xl border border-border w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2.5 py-0.5 rounded-full">{tl[exportModal.template_type] || exportModal.template_type}</span>
+                  <p className="text-xs text-muted-foreground">{new Date(exportModal.created_at).toLocaleDateString()}</p>
+                </div>
+                <button onClick={() => setExportModal(null)} className="p-2 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="bg-black">
+                {isVideo ? (
+                  <video src={dl} controls autoPlay playsInline className="w-full max-h-[60vh] object-contain" />
+                ) : (
+                  <img src={dl} alt={tl[exportModal.template_type] || "Export"} className="w-full max-h-[60vh] object-contain" />
+                )}
+              </div>
+              <div className="flex items-center gap-3 p-4 border-t border-border">
+                <a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-4 py-2 rounded-full">
+                  <Download className="h-3.5 w-3.5" />Download
+                </a>
+                <a href={dl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm px-4 py-2 rounded-full">
+                  <ExternalLink className="h-3.5 w-3.5" />Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <Link href="/dashboard/properties" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">{property.address}</h1>
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${STATUS_COLORS[property.status] || STATUS_COLORS.active}`}>{property.status}</span>
+            </div>
+            <p className="text-muted-foreground mt-0.5">{[property.city, property.state, property.zip].filter(Boolean).join(", ")}{property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-8">{([{ id: "templates" as StudioTab, label: "Listing Graphics", icon: PenTool },{ id: "branding-card" as StudioTab, label: "Branding Card", icon: CreditCard },{ id: "yard-sign" as StudioTab, label: "Yard Sign", icon: MapPin },{ id: "property-pdf" as StudioTab, label: "Property Sheet", icon: FileText },]).map((t) => (<button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all ${tab === t.id ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}><t.icon className="h-4 w-4" />{t.label}</button>))}</div>
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2 mt-6 mb-8">
+          <QuickAction href={`/order?${qs}`} icon={Film} label="Order Video" />
+          <QuickAction href={`/dashboard/lens/coach?${qs}`} icon={Camera} label="Photo Coach" requiresSub />
+          <QuickAction href={`/dashboard/lens/descriptions?${qs}`} icon={FileText} label="Write Description" requiresSub />
+          <QuickAction href={`/dashboard/lens/staging?${qs}`} icon={Sofa} label="Stage Room" requiresSub />
+          <QuickAction href={`/dashboard/lens/design-studio?${qs}`} icon={PenTool} label="Create Graphic" requiresSub />
+        </div>
 
-        {tab === "templates" && (<><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">{TEMPLATES.map((t) => (<button key={t.id} onClick={() => setSelectedTemplate(t.id)} className={`flex items-center gap-3 p-4 rounded-xl border-2 font-semibold text-sm transition-all ${selectedTemplate === t.id ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/40"}`}><t.icon className="h-5 w-5 flex-shrink-0" />{t.label}</button>))}</div><div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Media</h3><div className="flex gap-2 mb-4"><button onClick={() => { setMediaMode("image"); setSelectedVideo(null); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mediaMode === "image" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"}`}><ImageIcon className="h-4 w-4" />Image</button><button onClick={() => { setMediaMode("video"); setListingPhoto(null); loadUserVideos(); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mediaMode === "video" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"}`}><Play className="h-4 w-4" />Video Overlay</button></div>{mediaMode === "video" && (<p className="text-xs text-amber-600 font-medium mb-3 flex items-center gap-1">* Video overlay exports are limited to 60 seconds max</p>)}{mediaMode === "image" ? (<div className="grid grid-cols-3 gap-4"><ImageUploadBox label="Listing Photo *" imageUrl={listingPhoto} onUpload={(f) => handleUpload(f, "design-studio", setListingPhoto, setUploadingListing)} onClear={() => setListingPhoto(null)} uploading={uploadingListing} /><div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div></div>) : (<div className="space-y-4">{clipUrls.length > 0 ? (<div className="bg-violet-50 border border-violet-200 rounded-xl p-4 mb-3"><div className="flex items-center gap-3"><Play className="h-5 w-5 text-violet-600 flex-shrink-0" /><div><p className="text-sm font-bold text-violet-800">{clipUrls.length} clip{clipUrls.length !== 1 ? "s" : ""} loaded from property</p><p className="text-xs text-violet-600">Clips are looping in the preview. Customize your overlay and export.</p></div></div></div>) : null}<p className="text-sm text-muted-foreground">Select an unbranded video from your orders.</p>{loadingVideos ? <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : userVideos.length === 0 ? <div className="text-center py-8 bg-muted/30 rounded-xl border border-dashed border-border"><p className="text-sm text-muted-foreground">No completed videos found.</p></div> : (<div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto">{userVideos.map((v) => (<button key={v.orderId} onClick={() => { setSelectedVideo(v); if (v.thumbnail) setListingPhoto(v.thumbnail); }} className={`relative rounded-xl border-2 overflow-hidden text-left transition-all ${selectedVideo?.orderId === v.orderId ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}>{v.thumbnail ? <img src={v.thumbnail} alt="" className="w-full aspect-video object-cover" /> : <div className="w-full aspect-video bg-muted flex items-center justify-center"><Play className="h-8 w-8 text-muted-foreground" /></div>}<div className="p-2"><p className="text-xs font-semibold truncate">Order {v.orderId?.slice(0, 8)}</p><p className="text-[11px] text-muted-foreground">{v.date}</p></div>{selectedVideo?.orderId === v.orderId && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center"><CheckCircle className="h-4 w-4 text-white" /></div>}</button>))}</div>)}<div className="grid grid-cols-2 gap-4 pt-2"><div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div></div></div>)}</div>{mediaMode === "video" && (<CompactMusicSelector selectedTrack={overlayMusic} onSelect={setOverlayMusic} customAudioFile={customAudioFile} onCustomAudioChange={setCustomAudioFile} />)}<div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" />Property Details</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street, Anytown" /></div><div className="grid grid-cols-3 gap-3"><div className="space-y-1.5"><Label className="text-sm">Beds</Label><Input value={beds} onChange={(e) => setBeds(e.target.value)} placeholder="3" /></div><div className="space-y-1.5"><Label className="text-sm">Baths</Label><Input value={baths} onChange={(e) => setBaths(e.target.value)} placeholder="2" /></div><div className="space-y-1.5"><Label className="text-sm">Sq Ft</Label><Input value={sqft} onChange={(e) => setSqft(e.target.value)} placeholder="1,800" /></div></div><div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="450,000" /></div>{selectedTemplate === "open-house" && <div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Date</Label><Input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Saturday, March 22" /></div><div className="space-y-1.5"><Label className="text-sm">Time</Label><Input value={time} onChange={(e) => setTime(e.target.value)} placeholder="1:00 PM – 4:00 PM" /></div></div>}</div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Agent Info</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Jane Smith" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="Keller Williams" /></div></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Appearance</h3><Label className="text-sm font-semibold mb-2 block">Font Style</Label><div className="grid grid-cols-2 gap-2 mb-5">{FONT_OPTIONS.map((f) => (<button key={f.id} onClick={() => setListingFont(f.id)} className={`p-3 rounded-xl border-2 text-left transition-all ${listingFont === f.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{f.label}</p><p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: f.family }}>Aa Bb Cc 123</p></button>))}</div><Label className="text-sm font-semibold mb-2 block">Info Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={listingBarColor} onChange={(e) => setListingBarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={listingBarColor} onChange={(e) => setListingBarColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={listingBarColor} onSelect={setListingBarColor} /><Label className="text-sm font-semibold mb-2 block mt-5">Accent Color <span className="text-muted-foreground font-normal">(optional)</span></Label><div className="flex items-center gap-3"><input type="color" value={listingAccentColor || "#ffffff"} onChange={(e) => setListingAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={listingAccentColor} onChange={(e) => setListingAccentColor(e.target.value)} placeholder="None" className="w-28 font-mono text-sm" />{listingAccentColor && <button onClick={() => setListingAccentColor("")} className="text-xs text-muted-foreground hover:text-foreground underline">Clear</button>}</div><div className="mt-2"><AccentSwatches currentColor={listingAccentColor} onSelect={setListingAccentColor} /></div></div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: rawW, height: rawH }}>{selectedTemplate === "open-house" ? (<OpenHouseTemplate size={currentSize} listingPhoto={mediaMode === "video" ? null : listingPhoto} videoElement={mediaMode === "video" ? videoPreviewElement : undefined} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />) : (<InfoBarTemplate size={currentSize} listingPhoto={mediaMode === "video" ? null : listingPhoto} videoElement={mediaMode === "video" ? videoPreviewElement : undefined} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />)}</div></div></div><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Output Size</Label><div className="grid grid-cols-3 gap-2">{SIZES.map((s) => (<button key={s.id} onClick={() => setSelectedSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${selectedSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div>{mediaMode === "video" && selectedVideo ? (<div className="mt-5 space-y-3">{overlayMusic && (<div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20"><Music className="h-3.5 w-3.5 text-primary flex-shrink-0" /><p className="text-xs text-primary font-medium truncate">Music will be mixed into export</p></div>)}<Button onClick={handleVideoExport} disabled={exporting || videoExporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{videoExporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting Video...</> : <><Film className="mr-2 h-5 w-5" />Export as Video (MP4)</>}</Button><Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4"><Download className="mr-2 h-4 w-4" />Download Thumbnail (PNG)</Button></div>) : (<Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button>)}</div></div></div></>)}
+        {/* ═══ PROPERTY DETAILS ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-foreground">Property Details</h2>
+              <p className="text-sm text-muted-foreground mt-1">Complete details auto-fill your marketing tools, listing pages, and video branding.</p>
+            </div>
+            <Button onClick={() => { if (editing) handleSave(); else setEditing(true); }} variant={editing ? "default" : "outline"} className={`font-bold ${editing ? "bg-accent hover:bg-accent/90 text-accent-foreground" : ""}`}>
+              {editing ? <><Check className="h-4 w-4 mr-1.5" />Save</> : <><Pencil className="h-4 w-4 mr-1.5" />Edit Details</>}
+            </Button>
+          </div>
+          {editing ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Status</label><select value={editForm.status || "active"} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className={inp}><option value="active">Active</option><option value="pending">Pending</option><option value="sold">Sold</option><option value="withdrawn">Withdrawn</option><option value="rental">Rental</option></select></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Listing Type</label><select value={editForm.listing_type || "sale"} onChange={(e) => setEditForm({ ...editForm, listing_type: e.target.value })} className={inp}><option value="sale">Sale</option><option value="rental">Rental</option><option value="commercial">Commercial</option></select></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Property Type</label><select value={editForm.property_type || "single_family"} onChange={(e) => setEditForm({ ...editForm, property_type: e.target.value })} className={inp}><option value="single_family">Single Family</option><option value="condo">Condo</option><option value="apartment">Apartment</option><option value="townhouse">Townhouse</option><option value="land">Land</option><option value="commercial">Commercial</option></select></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Price</label><input type="number" value={editForm.price || ""} onChange={(e) => setEditForm({ ...editForm, price: e.target.value ? parseInt(e.target.value) : null })} placeholder="499000" className={inp} /></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Bedrooms</label><input type="number" value={editForm.bedrooms || ""} onChange={(e) => setEditForm({ ...editForm, bedrooms: e.target.value ? parseInt(e.target.value) : null })} className={inp} /></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Bathrooms</label><input type="number" value={editForm.bathrooms || ""} onChange={(e) => setEditForm({ ...editForm, bathrooms: e.target.value ? parseFloat(e.target.value) : null })} step="0.5" className={inp} /></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Sqft</label><input type="number" value={editForm.sqft || ""} onChange={(e) => setEditForm({ ...editForm, sqft: e.target.value ? parseInt(e.target.value) : null })} className={inp} /></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Lot Size</label><input type="text" value={editForm.lot_size || ""} onChange={(e) => setEditForm({ ...editForm, lot_size: e.target.value || null })} placeholder="0.25 acres" className={inp} /></div>
+                <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Year Built</label><input type="number" value={editForm.year_built || ""} onChange={(e) => setEditForm({ ...editForm, year_built: e.target.value ? parseInt(e.target.value) : null })} className={inp} /></div>
+              </div>
+              <Button onClick={() => { setEditing(false); setEditForm(property); }} variant="outline">Cancel</Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[
+                  { label: "Bedrooms", value: property.bedrooms, icon: "🛏️" },
+                  { label: "Bathrooms", value: property.bathrooms, icon: "🚿" },
+                  { label: "Sqft", value: property.sqft?.toLocaleString(), icon: "📐" },
+                  { label: "Lot Size", value: property.lot_size, icon: "🌳" },
+                  { label: "Year Built", value: property.year_built, icon: "🏗️" },
+                  { label: "Price", value: property.price ? `$${property.price.toLocaleString()}${property.price_period ? `/${property.price_period}` : ""}` : null, icon: "💰" },
+                  { label: "Listing Type", value: property.listing_type ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1) : null, icon: "📋" },
+                  { label: "Property Type", value: PROPERTY_TYPES[property.property_type] || property.property_type, icon: "🏠" },
+                ].map((item, i) => (
+                  <div key={i} className="bg-muted/30 rounded-xl p-3.5 border border-border/50">
+                    <div className="flex items-center gap-2 mb-1"><span className="text-sm">{item.icon}</span><p className="text-xs font-semibold text-muted-foreground">{item.label}</p></div>
+                    <p className="text-base font-bold text-foreground">{item.value || "—"}</p>
+                  </div>
+                ))}
+              </div>
+              {property.special_features && property.special_features.length > 0 && (
+                <div className="mt-5 pt-5 border-t border-border">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Special Features</p>
+                  <div className="flex flex-wrap gap-2">{property.special_features.map((f, i) => <span key={i} className="text-xs font-medium bg-accent/10 text-accent px-2.5 py-1 rounded-full">{f}</span>)}</div>
+                </div>
+              )}
+              {(!property.bedrooms || !property.bathrooms || !property.price || !property.sqft) && (
+                <div className="mt-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">Complete your property details</p>
+                    <p className="text-xs text-amber-700 mt-0.5">Adding beds, baths, price, and sqft lets your tools auto-fill — saving time when creating descriptions, graphics, and property sheets.</p>
+                    <button onClick={() => setEditing(true)} className="text-xs font-bold text-accent hover:text-accent/80 mt-2 underline">Edit Details →</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
 
-        {tab === "yard-sign" && (<div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4">Choose a Design</h3><div className="grid grid-cols-3 gap-3">{YARD_SIGN_DESIGNS.map((d) => (<button key={d.id} onClick={() => setYardDesign(d.id)} className={`p-4 rounded-xl border-2 text-center transition-all ${yardDesign === d.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-bold">{d.label}</p><p className="text-[11px] text-muted-foreground mt-1">{d.description}</p></button>))}</div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3><div className="grid grid-cols-2 gap-4"><div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Sign Details</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Header Text</Label><Input value={yardHeaderText} onChange={(e) => setYardHeaderText(e.target.value)} placeholder="FOR SALE" /></div><div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Jane Smith" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Email</Label><Input value={agentEmail} onChange={(e) => setAgentEmail(e.target.value)} placeholder="jane@email.com" /></div></div><div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="Coldwell Banker" /></div>{yardDesign === "split-bar" && <><div className="space-y-1.5"><Label className="text-sm">Office Name</Label><Input value={yardOfficeName} onChange={(e) => setYardOfficeName(e.target.value)} placeholder="Main Street Office" /></div><div className="space-y-1.5"><Label className="text-sm">Office Phone</Label><Input value={yardOfficePhone} onChange={(e) => setYardOfficePhone(e.target.value)} placeholder="800-555-4321" /></div></>}{yardDesign === "sidebar" && <div className="space-y-1.5"><Label className="text-sm">Website</Label><Input value={yardWebsite} onChange={(e) => setYardWebsite(e.target.value)} placeholder="www.janesmith.com" /></div>}<div className="space-y-1.5"><Label className="text-sm">QR Code URL <span className="text-muted-foreground font-normal">(optional)</span></Label><Input value={yardQrUrl} onChange={(e) => setYardQrUrl(e.target.value)} placeholder="https://janesmith.com" /></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Colors</h3>{yardDesign === "split-bar" && <><Label className="text-sm font-semibold mb-2 block">Top Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Bottom Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} /></>}{yardDesign === "sidebar" && <><Label className="text-sm font-semibold mb-2 block">Sidebar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardSidebarColor} onSelect={setYardSidebarColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Main Background</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardMainBgColor} onSelect={setYardMainBgColor} /></>}{yardDesign === "top-heavy" && <><Label className="text-sm font-semibold mb-2 block">Top Section Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Bottom Section Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} /></>}</div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: rawW, height: rawH }}>{yardDesign === "split-bar" && <YardSignSplitBar width={currentYardSize.width} height={currentYardSize.height} headshot={headshot} logo={logo} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} officeName={yardOfficeName} officePhone={yardOfficePhone} headerText={yardHeaderText} topColor={yardTopColor} bottomColor={yardBottomColor} fontFamily={listingFontFamily} qrDataUrl={yardQrDataUrl} />}{yardDesign === "sidebar" && <YardSignSidebar width={currentYardSize.width} height={currentYardSize.height} headshot={headshot} logo={logo} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} website={yardWebsite} headerText={yardHeaderText} sidebarColor={yardSidebarColor} mainBgColor={yardMainBgColor} fontFamily={listingFontFamily} qrDataUrl={yardQrDataUrl} />}{yardDesign === "top-heavy" && <YardSignTopHeavy width={currentYardSize.width} height={currentYardSize.height} headshot={headshot} logo={logo} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} headerText={yardHeaderText} topColor={yardTopColor} bottomColor={yardBottomColor} fontFamily={listingFontFamily} qrDataUrl={yardQrDataUrl} />}</div></div></div><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Sign Size</Label><div className="grid grid-cols-2 gap-2">{YARD_SIGN_SIZES.map((s) => (<button key={s.id} onClick={() => setYardSignSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${yardSignSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div><Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button></div></div></div>)}
+        {/* ═══ VIDEOS — playable ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><Film className="h-5 w-5 text-cyan-600" /><h2 className="text-lg font-bold text-foreground">Videos</h2>{videos.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{videos.length}</span>}</div>
+          </div>
+          {videos.length === 0 ? (
+            <div className="text-center py-10"><Film className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" /><p className="text-sm text-muted-foreground mb-3">No video orders for this property yet.</p><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold"><Link href={`/order?${qs}`}><Film className="h-4 w-4 mr-2" />Order a Video</Link></Button></div>
+          ) : (
+            <div className="space-y-6">
+              {videos.map((order: any) => {
+                const sc: Record<string, string> = { delivered: "bg-green-100 text-green-700", complete: "bg-green-100 text-green-700", processing: "bg-amber-100 text-amber-700", new: "bg-blue-100 text-blue-700", pending_payment: "bg-gray-100 text-gray-600" };
+                const videoUrl = order.delivery_url || order.unbranded_delivery_url;
+                return (
+                  <div key={order.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
+                    {videoUrl && <div className="aspect-video bg-black"><video src={videoUrl} controls playsInline preload="metadata" className="w-full h-full" /></div>}
+                    <div className="p-4 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2"><p className="text-sm font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${sc[order.status] || "bg-gray-100 text-gray-600"}`}>{order.status?.replace(/_/g, " ")}</span></div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {videoUrl && <a href={videoUrl.includes("/upload/") ? videoUrl.replace("/upload/", "/upload/fl_attachment/") : videoUrl} download className="text-xs font-semibold text-muted-foreground hover:text-foreground"><Download className="h-3.5 w-3.5 inline mr-1" />Download</a>}
+                        {order.delivery_url && <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/video/${order.order_id}`}><ExternalLink className="h-3 w-3 mr-1.5" />Share</Link></Button>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-        {tab === "property-pdf" && (<div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" />Property Details</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Address</Label><Input value={pdfAddress} onChange={(e) => setPdfAddress(e.target.value)} placeholder="Torres 34" /></div><div className="space-y-1.5"><Label className="text-sm">City, State, Zip</Label><Input value={pdfCityStateZip} onChange={(e) => setPdfCityStateZip(e.target.value)} placeholder="Playas Del Coco, Guanacaste" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={pdfPrice} onChange={(e) => setPdfPrice(e.target.value)} placeholder="129,000" /></div><div className="grid grid-cols-3 gap-2"><div className="space-y-1.5"><Label className="text-sm">Beds</Label><Input value={pdfBeds} onChange={(e) => setPdfBeds(e.target.value)} placeholder="1" /></div><div className="space-y-1.5"><Label className="text-sm">Baths</Label><Input value={pdfBaths} onChange={(e) => setPdfBaths(e.target.value)} placeholder="1" /></div><div className="space-y-1.5"><Label className="text-sm">Sq Ft</Label><Input value={pdfSqft} onChange={(e) => setPdfSqft(e.target.value)} placeholder="750" /></div></div></div><div className="space-y-1.5"><Label className="text-sm">Key Features (one per line)</Label><textarea value={pdfFeatures} onChange={(e) => setPdfFeatures(e.target.value)} placeholder={"1 bedroom with built-in closets\n1 bathroom\nBright and inviting interiors"} rows={6} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div><div className="space-y-1.5"><Label className="text-sm">Description <span className="text-muted-foreground font-normal">(optional)</span></Label><textarea value={pdfDescription} onChange={(e) => setPdfDescription(e.target.value)} placeholder="Investment opportunity details..." rows={4} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-accent" />Photos ({pdfPhotos.length}/25)</h3><p className="text-xs text-muted-foreground mb-4">First 3 photos appear on page 1. Remaining fill grids on additional pages.</p><div className="grid grid-cols-4 sm:grid-cols-5 gap-3 mb-4">{pdfPhotos.map((url, i) => (<div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square"><img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" /><div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{i < 3 ? `★ ${i + 1}` : i + 1}</div><button onClick={() => setPdfPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button></div>))}{pdfPhotos.length < 25 && (<label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer">{uploadingPdfPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Upload className="h-5 w-5" /><span className="text-[10px] font-medium">Add</span></>}<input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const files = Array.from(e.target.files || []); files.forEach(f => handlePdfPhotoUpload(f)); e.target.value = ""; }} /></label>)}</div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Accent Color</h3><div className="flex items-center gap-3 mb-2"><input type="color" value={pdfAccentColor} onChange={(e) => setPdfAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={pdfAccentColor} onChange={(e) => setPdfAccentColor(e.target.value)} className="w-28 font-mono text-sm" /></div><AccentSwatches currentColor={pdfAccentColor} onSelect={setPdfAccentColor} /></div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: 2550, height: 3300 }}><PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={listingFontFamily} /></div></div></div>{pdfTotalPages > 1 && (<div className="flex items-center justify-center gap-3 mt-3"><button onClick={() => setPdfPreviewPage(Math.max(0, pdfPreviewPage - 1))} disabled={pdfPreviewPage === 0} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button><span className="text-sm font-semibold">Page {pdfPreviewPage + 1} of {pdfTotalPages}</span><button onClick={() => setPdfPreviewPage(Math.min(pdfTotalPages - 1, pdfPreviewPage + 1))} disabled={pdfPreviewPage >= pdfTotalPages - 1} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button></div>)}<div className="mt-5 space-y-3"><Button onClick={handlePdfExport} disabled={exporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating PDF...</> : <><Download className="mr-2 h-5 w-5" />Download PDF</>}</Button><Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4"><Download className="mr-2 h-4 w-4" />Download Current Page as PNG</Button></div></div></div></div>)}
+        {/* ═══ MARKETING MATERIALS ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><PenTool className="h-5 w-5 text-orange-600" /><h2 className="text-lg font-bold text-foreground">Marketing Materials</h2>{exports.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{exports.length}</span>}</div>
+          </div>
+          {exports.length === 0 ? (
+            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">No design exports yet.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/design-studio?${qs}`}>Create a Graphic</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {exports.map((exp: any) => {
+                const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
+                const fl: Record<string, string> = { png: "PNG", pdf: "PDF", mp4: "Video" };
+                const dl = exp.export_url || exp.overlay_video_url;
+                let thumb: string | null = null;
+                if (dl?.includes("cloudinary.com")) {
+                  if (exp.export_format === "mp4" || dl.match(/\.(mp4|mov|webm)$/i)) thumb = dl.replace("/video/upload/", "/video/upload/so_1,w_400,h_300,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg");
+                  else if (exp.export_format === "pdf" || dl.match(/\.pdf$/i)) thumb = dl.replace("/image/upload/", "/image/upload/w_400,h_300,c_fill,pg_1,f_jpg/");
+                  else thumb = dl.includes("/upload/") ? dl.replace("/upload/", "/upload/w_400,h_300,c_fill/") : dl;
+                }
+                return (
+                  <div key={exp.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
+                    {thumb ? <button onClick={() => setExportModal(exp)} className="block w-full text-left"><div className="aspect-[4/3] relative bg-muted"><img src={thumb} alt={tl[exp.template_type] || "Export"} className="w-full h-full object-cover" />{exp.export_format === "mp4" && <div className="absolute inset-0 flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center"><Play className="h-4 w-4 text-white ml-0.5" /></div></div>}</div></button> : <button onClick={() => setExportModal(exp)} className="block w-full"><div className="aspect-[4/3] bg-muted flex items-center justify-center"><PenTool className="h-8 w-8 text-muted-foreground/30" /></div></button>}
+                    <div className="p-3">
+                      <div className="flex items-center gap-1.5 flex-wrap"><span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">{tl[exp.template_type] || exp.template_type}</span>{exp.export_format && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"}`}>{fl[exp.export_format] || exp.export_format.toUpperCase()}</span>}</div>
+                      <p className="text-xs text-muted-foreground mt-1.5">{new Date(exp.created_at).toLocaleDateString()}</p>
+                      {dl && <div className="flex items-center gap-2 mt-1.5"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">{exp.export_format === "mp4" ? "Watch" : "View"}</a><a href={dl.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a></div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-        {tab === "branding-card" && (<><div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 mb-8"><p className="text-sm text-cyan-800"><strong>Tip:</strong> Create your branding card here, download as PNG, then upload it in the order form under &ldquo;Custom branding cards.&rdquo; The PNG exports with a transparent background.</p></div><div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3><div className="grid grid-cols-3 gap-4"><div><ImageUploadBox label="Headshot" imageUrl={brandHeadshot} onUpload={(f) => handleHeadshotUpload(f, setBrandHeadshot, setUploadingBrandHeadshot)} onClear={() => setBrandHeadshot(null)} uploading={uploadingBrandHeadshot} />{!brandHeadshot && savedHeadshot && <button onClick={() => { setBrandHeadshot(savedHeadshot); setHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={brandLogo} onUpload={(f) => handleLogoUpload(f, setBrandLogo, setUploadingBrandLogo)} onClear={() => setBrandLogo(null)} uploading={uploadingBrandLogo} />{!brandLogo && savedLogo && <button onClick={() => { setBrandLogo(savedLogo); setLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div><ImageUploadBox label="Background Photo" imageUrl={brandBgPhoto} onUpload={(f) => handleUpload(f, "design-studio", setBrandBgPhoto, setUploadingBrandBg)} onClear={() => setBrandBgPhoto(null)} uploading={uploadingBrandBg} hint="Optional — overrides color" /></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Card Details</h3><p className="text-xs text-muted-foreground mb-4">All fields are optional.</p><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={brandAgentName} onChange={(e) => setBrandAgentName(e.target.value)} placeholder="Jane Smith" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={brandPhone} onChange={(e) => setBrandPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Email</Label><Input value={brandEmail} onChange={(e) => setBrandEmail(e.target.value)} placeholder="jane@email.com" /></div></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brandBrokerage} onChange={(e) => setBrandBrokerage(e.target.value)} placeholder="Keller Williams" /></div><div className="space-y-1.5"><Label className="text-sm">Tagline</Label><Input value={brandTagline} onChange={(e) => setBrandTagline(e.target.value)} placeholder="Your Home, Your Future" /></div></div><div className="h-[1px] bg-border my-1" /><p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Property Info (optional)</p><div className="space-y-1.5"><Label className="text-sm">Address</Label><Input value={brandAddress} onChange={(e) => setBrandAddress(e.target.value)} placeholder="21 N William St" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">City, State</Label><Input value={brandCityState} onChange={(e) => setBrandCityState(e.target.value)} placeholder="Pearl River, NY" /></div><div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={brandPrice} onChange={(e) => setBrandPrice(e.target.value)} placeholder="4250/mo" /></div></div><div className="space-y-1.5"><Label className="text-sm">Features (one per line)</Label><textarea value={brandFeatures} onChange={(e) => setBrandFeatures(e.target.value)} placeholder={"Downtown location\n6 office spaces"} rows={4} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Appearance</h3><Label className="text-sm font-semibold mb-2 block">Font Style</Label><div className="grid grid-cols-2 gap-2 mb-5">{FONT_OPTIONS.map((f) => (<button key={f.id} onClick={() => setBrandFont(f.id)} className={`p-3 rounded-xl border-2 text-left transition-all ${brandFont === f.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{f.label}</p><p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: f.family }}>Aa Bb Cc 123</p></button>))}</div><Label className="text-sm font-semibold mb-2 block">Background Color</Label><div className="flex items-center gap-4 mb-3"><input type="color" value={brandBgColor} onChange={(e) => setBrandBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={brandBgColor} onChange={(e) => setBrandBgColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={brandBgColor} onSelect={setBrandBgColor} /><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Accent Color <span className="text-muted-foreground font-normal">(optional)</span></Label><div className="flex items-center gap-3"><input type="color" value={brandAccentColor || "#ffffff"} onChange={(e) => setBrandAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={brandAccentColor} onChange={(e) => setBrandAccentColor(e.target.value)} placeholder="None" className="w-28 font-mono text-sm" />{brandAccentColor && <button onClick={() => setBrandAccentColor("")} className="text-xs text-muted-foreground hover:text-foreground underline">Clear</button>}</div><div className="mt-2"><AccentSwatches currentColor={brandAccentColor} onSelect={setBrandAccentColor} /></div></div></div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={tab === "branding-card" ? previewRef : undefined} className="rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12, backgroundImage: "linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)", backgroundSize: "20px 20px", backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px" }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: currentBrandOrientation.width, height: currentBrandOrientation.height }}><BrandingCardTemplate orientation={currentBrandOrientation} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={currentFontFamily} /></div></div></div><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Orientation</Label><div className="grid grid-cols-2 gap-2">{BRANDING_ORIENTATIONS.map((o) => (<button key={o.id} onClick={() => setBrandOrientation(o.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${brandOrientation === o.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{o.label}</p><p className="text-[11px] text-muted-foreground">{o.sublabel}</p></button>))}</div></div><Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button></div></div></div></>)}
+        {/* ═══ PHOTO COACH — selectable ═══ */}
+        {allCoachApproved.length > 0 && (
+          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2"><Camera className="h-5 w-5 text-blue-600" /><h2 className="text-lg font-bold text-foreground">Photo Coach</h2><span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{allCoachApproved.length} approved</span></div>
+              <button onClick={sendCoachPhotosToOrder} className="inline-flex items-center gap-1.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold text-xs px-3 py-2 rounded-lg"><ShoppingCart className="h-3.5 w-3.5" />Order Video{selectedCoachPhotos.size > 0 ? ` (${selectedCoachPhotos.size})` : ""}</button>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {allCoachApproved.map((photo: any, i: number) => {
+                const key = `${photo.sessionId}-${photo.indexInSession}`;
+                const sel = selectedCoachPhotos.has(key);
+                const url = (photo.edited_url || photo.url);
+                const th = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_300,h_225,c_fill/") : url;
+                return (
+                  <button key={key} onClick={() => setSelectedCoachPhotos(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; })} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-accent ring-2 ring-accent/30" : "border-border hover:border-accent/40"}`}>
+                    <div className="aspect-[4/3] bg-muted"><img src={th} alt={photo.room || `Photo ${i+1}`} className="w-full h-full object-cover" /></div>
+                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-accent flex items-center justify-center"><Check className="h-3.5 w-3.5 text-white" /></div>}
+                    <div className="absolute top-2 left-2 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{photo.score}/10</div>
+                    {photo.room && <div className="px-2 py-1 bg-card"><p className="text-[10px] font-semibold text-foreground truncate">{photo.room}</p></div>}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ═══ LISTING PHOTOS — selectable ═══ */}
+        {orderPhotos.length > 0 && (
+          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2"><ImageIcon className="h-5 w-5 text-emerald-600" /><h2 className="text-lg font-bold text-foreground">Listing Photos</h2><span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderPhotos.length}</span></div>
+              <div className="flex items-center gap-2">
+                {selectedPhotos.size > 0 && <button onClick={() => sendPhotosToOrder(orderPhotos.filter((_, i) => selectedPhotos.has(i)))} className="inline-flex items-center gap-1.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold text-xs px-3 py-2 rounded-lg"><ShoppingCart className="h-3.5 w-3.5" />Order Video ({selectedPhotos.size})</button>}
+                <button onClick={() => { if (selectedPhotos.size === orderPhotos.length) setSelectedPhotos(new Set()); else setSelectedPhotos(new Set(orderPhotos.map((_, i) => i))); }} className="text-xs font-semibold text-accent hover:text-accent/80">{selectedPhotos.size === orderPhotos.length ? "Deselect All" : "Select All"}</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {orderPhotos.map((photo: any, i: number) => {
+                const sel = selectedPhotos.has(i);
+                const th = photo.secure_url.includes("/upload/") ? photo.secure_url.replace("/upload/", "/upload/w_300,h_225,c_fill/") : photo.secure_url;
+                return (
+                  <button key={`${photo.orderId}-${photo.index}`} onClick={() => setSelectedPhotos(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; })} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-accent ring-2 ring-accent/30" : "border-border hover:border-accent/40"}`}>
+                    <div className="aspect-[4/3] bg-muted"><img src={th} alt={photo.description || `Photo ${i+1}`} className="w-full h-full object-cover" /></div>
+                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-accent flex items-center justify-center"><Check className="h-3.5 w-3.5 text-white" /></div>}
+                    {photo.description && <div className="px-2 py-1 bg-card"><p className="text-[10px] text-muted-foreground truncate">{photo.description}</p></div>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
+              <button onClick={() => sendPhotosToOrder(orderPhotos)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent/80"><ShoppingCart className="h-3 w-3" />Send All to Order</button>
+              <button onClick={() => { orderPhotos.forEach((p: any, i: number) => { setTimeout(() => { const url = p.secure_url; const dl = url.includes("/upload/") ? url.replace("/upload/", "/upload/fl_attachment/") : url; const a = document.createElement("a"); a.href = dl; a.download = `${property.address.replace(/[^a-zA-Z0-9]/g, "_")}_photo_${i+1}.jpg`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }, i * 300); }); }} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"><Download className="h-3 w-3" />Download All ({orderPhotos.length})</button>
+            </div>
+          </section>
+        )}
+
+        {/* ═══ VIDEO CLIPS — selectable, send to design studio ═══ */}
+        {orderClips.length > 0 && (
+          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2"><Play className="h-5 w-5 text-violet-600" /><h2 className="text-lg font-bold text-foreground">Video Clips</h2><span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderClips.length}</span></div>
+              {selectedClips.size > 0 && <button onClick={sendClipsToDesignStudio} className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-3 py-2 rounded-lg"><PenTool className="h-3.5 w-3.5" />Design Studio ({selectedClips.size})</button>}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {orderClips.map((clip: any, i: number) => {
+                const sel = selectedClips.has(i);
+                const pTh = clip.photoUrl?.includes("/upload/") ? clip.photoUrl.replace("/upload/", "/upload/w_400,h_225,c_fill/") : null;
+                const vTh = clip.clipUrl.includes("cloudinary.com") && clip.clipUrl.includes("/video/upload/") ? clip.clipUrl.replace("/video/upload/", "/video/upload/so_1,w_400,h_225,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg") : null;
+                const th = pTh || vTh;
+                return (
+                  <button key={`clip-${clip.orderId}-${clip.index}`} onClick={() => setSelectedClips(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; })} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-violet-500 ring-2 ring-violet-500/30" : "border-border hover:border-violet-500/40"}`}>
+                    <div className="aspect-video bg-black">{th ? <img src={th} alt={clip.description || `Clip ${i+1}`} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><Play className="h-8 w-8 text-muted-foreground/30" /></div>}</div>
+                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-violet-500 flex items-center justify-center"><Check className="h-3.5 w-3.5 text-white" /></div>}
+                    {clip.camera_direction && <span className="absolute top-2 left-2 text-[8px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">{clip.camera_direction.replace(/_/g, " ")}</span>}
+                    <div className="p-2"><p className="text-[10px] font-semibold text-foreground truncate">{clip.description || `Clip ${(clip.position || i) + 1}`}</p></div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ═══ VIRTUAL STAGING — click for before/after modal ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><Sofa className="h-5 w-5 text-indigo-600" /><h2 className="text-lg font-bold text-foreground">Virtual Staging</h2>{stagings.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{stagings.length}</span>}</div>
+          </div>
+          {stagings.length === 0 ? (
+            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/staging?${qs}`}>Stage a Room</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {stagings.map((s: any) => (
+                  <button key={s.id} onClick={() => setStagingModal(s)} className="rounded-xl border border-border overflow-hidden bg-muted/30 hover:border-indigo-500/40 hover:shadow-md transition-all text-left group">
+                    <div className="grid grid-cols-2 aspect-[8/3]">
+                      <div className="relative overflow-hidden"><img src={s.original_url} alt="Before" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span></div>
+                      <div className="relative overflow-hidden"><img src={s.staged_url} alt="After" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">After</span></div>
+                    </div>
+                    <div className="p-2.5"><p className="text-xs font-semibold text-foreground">{s.room_type ? s.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Room"}</p><p className="text-[10px] text-muted-foreground">{s.style} · Click to compare</p></div>
+                  </button>
+                ))}
+              </div>
+              {isSubscriber && <div className="text-center"><Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/staging?${qs}`}>Stage Another Room</Link></Button></div>}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ DESCRIPTIONS — collapsible ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-teal-600" /><h2 className="text-lg font-bold text-foreground">Descriptions</h2>{descriptions.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{descriptions.length}</span>}</div>
+          </div>
+          {descriptions.length === 0 ? (
+            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">Descriptions will appear here when generated.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/descriptions?${qs}`}>Write a Description</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
+          ) : (
+            <div className="space-y-3">
+              {descriptions.slice(0, 5).map((desc: any) => {
+                const isExp = expandedDesc === desc.id;
+                return (
+                  <div key={desc.id} className="p-4 rounded-xl bg-muted/30 border border-border">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-muted-foreground capitalize mb-1">{desc.style || "Professional"} style · {new Date(desc.created_at).toLocaleDateString()}</p>
+                        <p className={`text-sm text-foreground whitespace-pre-wrap ${isExp ? "" : "line-clamp-2"}`}>{desc.description}</p>
+                        {desc.description?.length > 150 && (
+                          <button onClick={() => setExpandedDesc(isExp ? null : desc.id)} className="text-xs font-semibold text-accent hover:text-accent/80 mt-1.5 flex items-center gap-1">
+                            <ChevronDown className={`h-3 w-3 transition-transform ${isExp ? "rotate-180" : ""}`} />{isExp ? "Show less" : "Read full description"}
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={() => copyToClipboard(desc.description || "", desc.id)} className="flex-shrink-0 p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground" title="Copy">
+                        {copiedId === desc.id ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
 
-      <footer className="bg-muted/50 border-t py-8 mt-12"><div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground"><p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p><div className="flex justify-center gap-6 mt-2"><Link href="/dashboard/lens" className="hover:text-foreground transition-colors">P2V Lens</Link><Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link><Link href="/support" className="hover:text-foreground transition-colors">Support</Link></div></div></footer>
+      <footer className="bg-muted/50 border-t py-8 mt-12">
+        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
+          <div className="flex justify-center gap-6 mt-2">
+            <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+            <Link href="/dashboard/properties" className="hover:text-foreground transition-colors">Properties</Link>
+            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
