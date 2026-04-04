@@ -33,7 +33,6 @@ const SURPRISE_SEGMENTS = [
   { value: 5,  label: "5%\nOFF",  color: "#22c55e", angle: 70 },
   { value: 8,  label: "8%\nOFF",  color: "#ec4899", angle: 55 },
 ];
-// Total: 70+55+70+40+70+55 = 360 ✓
 
 const ROOM_TYPES = [
   { value: "living_room", label: "Living Room" },
@@ -138,14 +137,12 @@ function BeforeAfterSlider({
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      {/* After (staged) — full background */}
       <img
         src={afterUrl}
         alt="Staged"
         className="absolute inset-0 w-full h-full object-cover"
         draggable={false}
       />
-      {/* Before (original) — clipped */}
       <div
         className="absolute inset-0 overflow-hidden"
         style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
@@ -157,19 +154,16 @@ function BeforeAfterSlider({
           draggable={false}
         />
       </div>
-      {/* Labels */}
       <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold px-2.5 py-1 rounded-full pointer-events-none">
         Before
       </div>
       <div className="absolute top-3 right-3 bg-black/60 text-white text-xs font-bold px-2.5 py-1 rounded-full pointer-events-none">
         After
       </div>
-      {/* Handle line */}
       <div
         className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none"
         style={{ left: `${position}%` }}
       >
-        {/* Drag handle circle */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 bg-white rounded-full shadow-lg flex items-center justify-center pointer-events-none">
           <GripVertical className="h-4 w-4 text-gray-500" />
         </div>
@@ -287,7 +281,6 @@ export default function VirtualStagingPage() {
         if (usage?.is_subscriber) setIsSubscriber(true);
       }
 
-      // Load total staging count + history
       const { data: stagings, count } = await supabase
         .from("lens_staging")
         .select("*", { count: "exact" })
@@ -297,7 +290,6 @@ export default function VirtualStagingPage() {
       setStagingCount(count || 0);
       setPreviousStagings(stagings || []);
 
-      // Calculate monthly count for usage bar
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
@@ -330,7 +322,6 @@ export default function VirtualStagingPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Local preview
     const reader = new FileReader();
     reader.onload = () => setPhotoPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -339,7 +330,6 @@ export default function VirtualStagingPage() {
     setError("");
 
     try {
-      // Get signature
       const sigRes = await fetch("/api/cloudinary-signature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -352,7 +342,6 @@ export default function VirtualStagingPage() {
         throw new Error("Failed to get upload signature");
       }
 
-      // Upload to Cloudinary
       const formData = new FormData();
       formData.append("file", file);
       formData.append("api_key", sigData.apiKey);
@@ -398,7 +387,6 @@ export default function VirtualStagingPage() {
     setGenerationStep("Analyzing room architecture...");
 
     try {
-      // Small delay so user sees the first step
       await new Promise((r) => setTimeout(r, 800));
       setGenerationStep("Generating furnished room...");
 
@@ -438,7 +426,6 @@ export default function VirtualStagingPage() {
       setMonthlyCount((c) => c + 1);
       setPreviousStagings((prev) => [newResult, ...prev]);
 
-      // Check for surprise discount (subscribers only)
       if (data.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
@@ -450,18 +437,15 @@ export default function VirtualStagingPage() {
     }
   };
 
-  // ── Try different style (keep same photo) ──
   const handleTryDifferentStyle = () => {
     setResult(null);
     setSelectedPrevious(null);
   };
 
-  // ── Access logic ──
   const canGenerate =
     isAdmin || (isSubscriber && monthlyCount < MONTHLY_STAGING_LIMIT) || (!isSubscriber && stagingCount < 1);
   const freeTrialUsed = !isAdmin && !isSubscriber && stagingCount >= 1;
 
-  // ── Subscription badge ──
   const renderBadge = () => {
     if (isAdmin) {
       return (
@@ -516,7 +500,6 @@ export default function VirtualStagingPage() {
     );
   }
 
-  // Active slider content (current result or selected previous)
   const activeSlider = selectedPrevious || result;
 
   return (
@@ -545,7 +528,6 @@ export default function VirtualStagingPage() {
           {renderBadge()}
         </div>
 
-        {/* ═══ Usage Bar (subscribers only) ═══ */}
         {isSubscriber && (
           <UsageBar
             used={monthlyCount}
@@ -554,7 +536,6 @@ export default function VirtualStagingPage() {
           />
         )}
 
-        {/* ═══ Main Tool Area ═══ */}
         {!activeSlider ? (
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Left: Photo upload + preview */}
@@ -619,7 +600,6 @@ export default function VirtualStagingPage() {
                 Staging Options
               </h2>
 
-              {/* Room type */}
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">
                   Room Type
@@ -640,7 +620,6 @@ export default function VirtualStagingPage() {
                 </div>
               </div>
 
-              {/* Style */}
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">
                   Design Style
@@ -662,7 +641,6 @@ export default function VirtualStagingPage() {
                 </div>
               </div>
 
-              {/* Error */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                   <p className="text-sm text-red-700">{error}</p>
@@ -677,7 +655,6 @@ export default function VirtualStagingPage() {
                 </div>
               )}
 
-              {/* Generate button */}
               {freeTrialUsed && !generating ? (
                 <div className="bg-muted/50 rounded-xl p-4 text-center space-y-3">
                   <Lock className="h-6 w-6 text-muted-foreground mx-auto" />
@@ -730,7 +707,6 @@ export default function VirtualStagingPage() {
             </div>
           </div>
         ) : (
-          /* ═══ Result View ═══ */
           <div className="space-y-6">
             <BeforeAfterSlider
               beforeUrl={activeSlider.original_url}
@@ -738,7 +714,6 @@ export default function VirtualStagingPage() {
               className="shadow-lg"
             />
 
-            {/* Info bar */}
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <span className="bg-muted px-2.5 py-1 rounded-full font-semibold">
@@ -770,7 +745,6 @@ export default function VirtualStagingPage() {
               </div>
             </div>
 
-            {/* Room analysis (expandable) */}
             {activeSlider.room_analysis && (
               <details className="bg-card rounded-2xl border border-border overflow-hidden">
                 <summary className="px-6 py-4 font-semibold text-sm text-foreground cursor-pointer hover:bg-muted/30 transition-colors">
@@ -786,7 +760,6 @@ export default function VirtualStagingPage() {
           </div>
         )}
 
-        {/* ═══ Previous Stagings ═══ */}
         {previousStagings.length > 0 && (
           <div className="mt-14">
             <div className="flex items-center gap-3 mb-6">
@@ -817,7 +790,6 @@ export default function VirtualStagingPage() {
                         : "border-border hover:border-accent/40 hover:shadow-lg"
                     }`}
                   >
-                    {/* Thumbnail: show staged version */}
                     <div className="aspect-[4/3] overflow-hidden">
                       <img
                         src={staging.staged_url}
@@ -825,7 +797,6 @@ export default function VirtualStagingPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    {/* Info */}
                     <div className="p-2.5">
                       <p className="text-xs font-semibold text-foreground truncate">
                         {ROOM_TYPES.find((r) => r.value === staging.room_type)?.label ||
@@ -833,7 +804,6 @@ export default function VirtualStagingPage() {
                       </p>
                       <p className="text-[10px] text-muted-foreground">{staging.style}</p>
                     </div>
-                    {/* Before/After indicator */}
                     <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                       View B/A
                     </div>
@@ -844,7 +814,6 @@ export default function VirtualStagingPage() {
           </div>
         )}
 
-        {/* ═══ Upsell CTA (non-subscribers) ═══ */}
         {!isAdmin && !isSubscriber && (
           <div className="mt-14 bg-card rounded-2xl border border-border p-8 text-center space-y-4">
             <Sofa className="h-10 w-10 text-accent mx-auto" />
@@ -887,7 +856,6 @@ export default function VirtualStagingPage() {
         </div>
       </footer>
 
-      {/* Surprise discount wheel */}
       {showSurpriseWheel && (
         <SpinWheel
           title="🎉 Surprise! Spin for a Video Discount!"
