@@ -331,7 +331,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
           {/* Logo — bottom-right */}
           {logo && (
             <img src={logo} alt="Logo" className="absolute object-contain" style={{
-              bottom: Math.round(10 * unit), right: barPadX,
+              bottom: Math.round(20 * unit), right: barPadX,
               maxWidth: Math.round(barH * 0.34), maxHeight: Math.round(barH * 0.18),
               opacity: 1,
             }} />
@@ -407,7 +407,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
         {/* Logo — bottom-right */}
         {logo && (
           <img src={logo} alt="Logo" className="absolute object-contain" style={{
-            bottom: Math.round(10 * unit), right: barPadX,
+            bottom: Math.round(20 * unit), right: barPadX,
             maxWidth: Math.round(barH * 0.30), maxHeight: Math.round(barH * 0.16),
             opacity: 1,
           }} />
