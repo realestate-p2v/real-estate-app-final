@@ -419,52 +419,261 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
 
 /* ═══════════════════════════════════════════════════════
    OPEN HOUSE TEMPLATE
+   ─────────────────────────────────────────────────────
+   Redesigned with:
+   • Sophisticated multi-layer gradient + radial vignette
+   • Frosted pill badge with letter-spacing & glow
+   • Horizontal rule separating date/time from property info
+   • Defined agent bar with rounded top, border, lifted feel
+   • Text shadows for legibility on any photo
+   • Date bolder than time for hierarchy
+   • whiteSpace nowrap on agent name
    ═══════════════════════════════════════════════════════ */
 
 export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, logo, address, beds, baths, sqft, price, date, time, agentName, phone, brokerage, fontFamily, barColor, accentColor }: {
   size: SizeConfig; listingPhoto: string | null; videoElement?: React.ReactNode; headshot: string | null; logo: string | null; address: string; beds: string; baths: string; sqft: string; price: string; date: string; time: string; agentName: string; phone: string; brokerage: string; fontFamily: string; barColor: string; accentColor: string;
 }) {
-  const w = size.width, h = size.height, isStory = size.id === "story", unit = w / 1080;
+  const w = size.width, h = size.height, isStory = size.id === "story", isPostcard = size.id === "postcard", unit = w / 1080;
   const accent = accentColor || "#ffffff";
   const badgeBg = accentColor || "#059669";
-  const pad = Math.round(40 * unit);
+  const barLight = isLightColor(barColor);
+  const pad = Math.round(44 * unit);
 
   const agentNameText = agentName || "Agent Name";
   const addressText = address || "123 Main Street";
+  const dateText = date || "Saturday, March 22";
+  const timeText = time || "1:00 PM – 4:00 PM";
+  const detailsText = [beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF";
+  const priceText = price ? `$${price}` : "$000,000";
   const contactLine = [brokerage, phone].filter(Boolean).join("  ·  ") || "Brokerage  ·  (555) 000-0000";
 
-  const addressFontSize = responsiveSize(Math.round(30 * unit), addressText, 24);
-  const agentFontSize = responsiveSize(Math.round(24 * unit), agentNameText, 20);
-  const contactFontSize = responsiveSize(Math.round(20 * unit), contactLine, 35);
+  // Size-aware scaling
+  const badgeFontSize = Math.round((isPostcard ? 42 : 36) * unit);
+  const badgePadY = Math.round((isPostcard ? 12 : 8) * unit);
+  const badgePadX = Math.round((isPostcard ? 32 : 24) * unit);
+  const dateFontSize = Math.round((isPostcard ? 36 : 32) * unit);
+  const timeFontSize = Math.round((isPostcard ? 28 : 24) * unit);
+  const addressFontSize = responsiveSize(Math.round((isPostcard ? 36 : 32) * unit), addressText, 22);
+  const detailsFontSz = Math.round((isPostcard ? 28 : 24) * unit);
+  const priceFontSize = Math.round((isPostcard ? 52 : 46) * unit);
+  const agentFontSize = responsiveSize(Math.round((isPostcard ? 28 : 24) * unit), agentNameText, 20);
+  const contactFontSize = responsiveSize(Math.round((isPostcard ? 22 : 18) * unit), contactLine, 35);
+  const headshotSz = Math.round((isPostcard ? 100 : 86) * unit);
+  const logoMaxW = Math.round((isPostcard ? 140 : 120) * unit);
+  const logoMaxH = Math.round((isPostcard ? 64 : 52) * unit);
+
+  // Agent bar height
+  const agentBarH = Math.round((isPostcard ? 120 : isStory ? 100 : 106) * unit);
+  const agentBarRadius = Math.round(14 * unit);
+
+  const textShadow = `0 ${Math.round(2 * unit)}px ${Math.round(8 * unit)}px rgba(0,0,0,0.5)`;
 
   return (
-    <div className="relative overflow-hidden bg-gray-900" style={{ width: w, height: h, fontFamily }}>
+    <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily, backgroundColor: "#111" }}>
+
+      {/* ── PHOTO ── */}
       {videoElement ? (
-        <div className="absolute inset-0">{videoElement}</div>
+        <div className="absolute inset-0" style={{ position: "relative", overflow: "hidden" }}>{videoElement}</div>
       ) : listingPhoto ? (
         <img src={listingPhoto} alt="Listing" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
-        <div className="absolute inset-0 bg-gray-700 flex items-center justify-center"><ImageIcon className="text-gray-500" style={{ width: 100 * unit, height: 100 * unit }} /></div>
-      )}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
-      <div className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center text-white" style={{ height: isStory ? "28%" : "36%", padding: `0 ${pad}px` }}>
-        <div className="inline-block text-white font-black uppercase tracking-[0.15em] rounded-sm" style={{ fontSize: Math.round(36 * unit), padding: `${Math.round(8 * unit)}px ${Math.round(24 * unit)}px`, backgroundColor: badgeBg }}>Open House</div>
-        <p className="font-bold text-white" style={{ fontSize: Math.round(32 * unit), marginTop: Math.round(16 * unit) }}>{date || "Saturday, March 22"}</p>
-        <p className="text-white/80 font-semibold" style={{ fontSize: Math.round(26 * unit), marginTop: Math.round(4 * unit) }}>{time || "1:00 PM – 4:00 PM"}</p>
-      </div>
-      <div className="absolute inset-x-0 bottom-0" style={{ padding: `0 ${pad}px` }}>
-        <div className="text-center text-white" style={{ marginBottom: Math.round(12 * unit) }}>
-          <p className="font-bold leading-tight" style={{ fontSize: addressFontSize, overflowWrap: "break-word" }}>{addressText}</p>
-          <p className="text-white/80" style={{ fontSize: Math.round(24 * unit), marginTop: Math.round(4 * unit) }}>{[beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ") || "3 BD  ·  2 BA  ·  1,800 SF"}</p>
-          <p className="font-black" style={{ fontSize: Math.round(44 * unit), marginTop: Math.round(8 * unit), lineHeight: 1.1, color: accent }}>{price ? `$${price}` : "$000,000"}</p>
-        </div>
-        <div className="flex items-center justify-center backdrop-blur-sm rounded-t-xl" style={{ padding: `${Math.round(14 * unit)}px ${Math.round(20 * unit)}px`, gap: Math.round(14 * unit), backgroundColor: barColor + "cc" }}>
-          {headshot ? <img src={headshot} alt="Agent" className="rounded-full object-cover flex-shrink-0" style={{ width: Math.round(90 * unit), height: Math.round(90 * unit), border: `${Math.round(3 * unit)}px solid rgba(255,255,255,0.3)` }} /> : <div className="rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0" style={{ width: Math.round(90 * unit), height: Math.round(90 * unit) }}><User className="text-gray-400" style={{ width: 32 * unit, height: 32 * unit }} /></div>}
-          <div className="text-white min-w-0">
-            <p className="font-bold" style={{ fontSize: agentFontSize, overflowWrap: "break-word" }}>{agentNameText}</p>
-            <p className="text-white/60" style={{ fontSize: contactFontSize, overflowWrap: "break-word" }}>{contactLine}</p>
+        <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: "#1a1a2e" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(12 * unit) }}>
+            <ImageIcon style={{ width: 64 * unit, height: 64 * unit, color: "rgba(255,255,255,0.12)" }} />
+            <span style={{ fontSize: Math.round(16 * unit), color: "rgba(255,255,255,0.18)", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" }}>Listing Photo</span>
           </div>
-          {logo && <img src={logo} alt="Logo" className="object-contain flex-shrink-0 ml-auto" style={{ maxWidth: Math.round(120 * unit), maxHeight: Math.round(56 * unit), opacity: 1 }} />}
+        </div>
+      )}
+
+      {/* ── GRADIENT OVERLAYS — multi-layer for depth ── */}
+      {/* Top gradient for badge/date readability */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 28%, transparent 45%)",
+      }} />
+      {/* Bottom gradient for property info + agent bar */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.50) 25%, transparent 50%)",
+      }} />
+      {/* Radial vignette for cinematic depth */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35) 100%)",
+      }} />
+
+      {/* ── TOP SECTION: Badge + Date/Time ── */}
+      <div className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center" style={{
+        height: isStory ? "26%" : "34%",
+        padding: `0 ${pad}px`,
+      }}>
+        {/* Frosted pill badge */}
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: `${badgePadY}px ${badgePadX}px`,
+          backgroundColor: badgeBg,
+          borderRadius: Math.round(6 * unit),
+          boxShadow: `0 ${Math.round(4 * unit)}px ${Math.round(24 * unit)}px ${hexToRgba(badgeBg, 0.4)}`,
+        }}>
+          <span style={{
+            fontSize: badgeFontSize,
+            fontWeight: 800,
+            color: isLightColor(badgeBg) ? "#111" : "#fff",
+            letterSpacing: "0.16em",
+            textTransform: "uppercase" as const,
+            lineHeight: 1,
+          }}>Open House</span>
+        </div>
+
+        {/* Date — bold, prominent */}
+        <p style={{
+          fontSize: dateFontSize,
+          fontWeight: 800,
+          color: "#ffffff",
+          margin: 0,
+          marginTop: Math.round(18 * unit),
+          textShadow,
+          letterSpacing: "0.02em",
+        }}>{dateText}</p>
+
+        {/* Time — lighter weight, smaller */}
+        <p style={{
+          fontSize: timeFontSize,
+          fontWeight: 500,
+          color: "rgba(255,255,255,0.75)",
+          margin: 0,
+          marginTop: Math.round(6 * unit),
+          textShadow,
+          letterSpacing: "0.03em",
+        }}>{timeText}</p>
+      </div>
+
+      {/* ── BOTTOM SECTION: Property Info + Agent Bar ── */}
+      <div className="absolute inset-x-0 bottom-0" style={{ padding: `0 ${pad}px` }}>
+
+        {/* Property info block */}
+        <div style={{ textAlign: "center", marginBottom: Math.round(14 * unit) }}>
+
+          {/* Thin horizontal rule */}
+          <div style={{
+            width: Math.round(60 * unit),
+            height: Math.round(1.5 * unit),
+            backgroundColor: "rgba(255,255,255,0.25)",
+            margin: `0 auto ${Math.round(16 * unit)}px`,
+            borderRadius: 1,
+          }} />
+
+          {/* Address */}
+          <p style={{
+            fontSize: addressFontSize,
+            fontWeight: 700,
+            color: "#ffffff",
+            lineHeight: 1.2,
+            margin: 0,
+            textShadow,
+            overflowWrap: "break-word",
+          }}>{addressText}</p>
+
+          {/* Details */}
+          <p style={{
+            fontSize: detailsFontSz,
+            fontWeight: 500,
+            color: "rgba(255,255,255,0.70)",
+            margin: 0,
+            marginTop: Math.round(6 * unit),
+            letterSpacing: "0.04em",
+            textShadow,
+          }}>{detailsText}</p>
+
+          {/* Thin accent rule above price */}
+          <div style={{
+            width: Math.round(50 * unit),
+            height: Math.round(2 * unit),
+            backgroundColor: accentColor || "rgba(255,255,255,0.20)",
+            margin: `${Math.round(10 * unit)}px auto ${Math.round(8 * unit)}px`,
+            borderRadius: 1,
+            opacity: accentColor ? 0.7 : 1,
+          }} />
+
+          {/* Price */}
+          <p style={{
+            fontSize: priceFontSize,
+            fontWeight: 800,
+            color: accent,
+            lineHeight: 1.0,
+            margin: 0,
+            letterSpacing: "-0.01em",
+            textShadow: accentColor
+              ? `0 ${Math.round(2 * unit)}px ${Math.round(14 * unit)}px ${hexToRgba(accentColor, 0.35)}`
+              : textShadow,
+          }}>{priceText}</p>
+        </div>
+
+        {/* ── Agent bar — frosted, defined shape ── */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: Math.round(14 * unit),
+          height: agentBarH,
+          padding: `0 ${Math.round(24 * unit)}px`,
+          backgroundColor: hexToRgba(barColor, 0.88),
+          borderRadius: `${agentBarRadius}px ${agentBarRadius}px 0 0`,
+          borderTop: `${Math.round(1.5 * unit)}px solid ${barLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.10)"}`,
+        }}>
+          {/* Headshot */}
+          {headshot ? (
+            <img src={headshot} alt="Agent" style={{
+              width: headshotSz,
+              height: headshotSz,
+              borderRadius: "50%",
+              objectFit: "cover",
+              flexShrink: 0,
+              border: `${Math.round(2.5 * unit)}px solid ${accentColor ? hexToRgba(accentColor, 0.5) : "rgba(255,255,255,0.25)"}`,
+            }} />
+          ) : (
+            <div style={{
+              width: headshotSz,
+              height: headshotSz,
+              borderRadius: "50%",
+              backgroundColor: barLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)",
+              border: `${Math.round(2.5 * unit)}px solid ${barLight ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.12)"}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <User style={{ width: headshotSz * 0.38, height: headshotSz * 0.38, color: barLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)" }} />
+            </div>
+          )}
+
+          {/* Agent text */}
+          <div style={{ minWidth: 0 }}>
+            <p style={{
+              fontSize: agentFontSize,
+              fontWeight: 700,
+              color: barLight ? "#111827" : "#ffffff",
+              margin: 0,
+              whiteSpace: "nowrap",
+            }}>{agentNameText}</p>
+            <p style={{
+              fontSize: contactFontSize,
+              fontWeight: 500,
+              color: barLight ? "rgba(17,24,39,0.50)" : "rgba(255,255,255,0.50)",
+              margin: 0,
+              marginTop: Math.round(2 * unit),
+              overflowWrap: "break-word",
+            }}>{contactLine}</p>
+          </div>
+
+          {/* Logo */}
+          {logo && (
+            <img src={logo} alt="Logo" style={{
+              maxWidth: logoMaxW,
+              maxHeight: logoMaxH,
+              objectFit: "contain" as const,
+              flexShrink: 0,
+              marginLeft: "auto",
+            }} />
+          )}
         </div>
       </div>
     </div>
