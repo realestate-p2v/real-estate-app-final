@@ -82,6 +82,7 @@ export default function SinglePropertyPage() {
   const [videos, setVideos] = useState<any[]>([]);
   const [descriptions, setDescriptions] = useState<any[]>([]);
   const [exports, setExports] = useState<any[]>([]);
+  const [stagings, setStagings] = useState<any[]>([]);
 
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<Property>>({});
@@ -189,6 +190,14 @@ export default function SinglePropertyPage() {
       .eq("property_id", propertyId)
       .order("created_at", { ascending: false });
     setExports(exportData || []);
+
+    // Load virtual stagings
+    const { data: stagingData } = await supabase
+      .from("lens_staging")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: false });
+    setStagings(stagingData || []);
 
     setLoading(false);
   }, [supabase, propertyId, router]);
@@ -660,20 +669,67 @@ export default function SinglePropertyPage() {
             <div className="flex items-center gap-2">
               <Sofa className="h-5 w-5 text-indigo-600" />
               <h2 className="text-lg font-bold text-foreground">Virtual Staging</h2>
+              {stagings.length > 0 && (
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{stagings.length}</span>
+              )}
             </div>
           </div>
-          <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>
-            {isSubscriber ? (
-              <Button asChild size="sm" variant="outline" className="font-semibold">
-                <Link href={`/dashboard/lens/staging?${qs}`}>Stage a Room</Link>
-              </Button>
-            ) : (
-              <Button asChild size="sm" variant="outline" className="font-semibold">
-                <Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe to Use Virtual Staging</Link>
-              </Button>
-            )}
-          </div>
+
+          {stagings.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>
+              {isSubscriber ? (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href={`/dashboard/lens/staging?${qs}`}>Stage a Room</Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline" className="font-semibold">
+                  <Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe to Use Virtual Staging</Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {stagings.map((s: any) => (
+                  <div key={s.id} className="rounded-xl border border-border overflow-hidden bg-muted/30">
+                    {/* Before/After side by side */}
+                    <div className="grid grid-cols-2 aspect-[8/3]">
+                      <div className="relative overflow-hidden">
+                        <img src={s.original_url} alt="Before" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span>
+                      </div>
+                      <div className="relative overflow-hidden">
+                        <img src={s.staged_url} alt="After" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">After</span>
+                      </div>
+                    </div>
+                    <div className="p-2.5">
+                      <p className="text-xs font-semibold text-foreground">
+                        {s.room_type ? s.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Room"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">{s.style} · {new Date(s.created_at).toLocaleDateString()}</p>
+                      <a
+                        href={s.staged_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-accent hover:text-accent/80 mt-1"
+                      >
+                        <Download className="h-2.5 w-2.5" /> Download
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {isSubscriber && (
+                <div className="text-center">
+                  <Button asChild size="sm" variant="outline" className="font-semibold">
+                    <Link href={`/dashboard/lens/staging?${qs}`}>Stage Another Room</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* ═══ MARKETING MATERIALS ═══ */}
