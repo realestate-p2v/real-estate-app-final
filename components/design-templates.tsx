@@ -1322,8 +1322,8 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
    • Property info is secondary, shown below agent
    ═══════════════════════════════════════════════════════ */
 
-export function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
-  orientation: { width: number; height: number; id: string }; logo: string | null; headshot: string | null; agentName: string; phone: string; email: string; brokerage: string; tagline: string; address: string; cityState: string; price: string; features: string; bgColor: string; accentColor: string; bgPhoto: string | null; fontFamily: string;
+export function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, website, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
+  orientation: { width: number; height: number; id: string }; logo: string | null; headshot: string | null; agentName: string; phone: string; email: string; brokerage: string; tagline: string; website: string; address: string; cityState: string; price: string; features: string; bgColor: string; accentColor: string; bgPhoto: string | null; fontFamily: string;
 }) {
   const w = orientation.width, h = orientation.height, isVertical = orientation.id === "vertical";
   const isLightBg = bgColor && !bgPhoto ? isLightColor(bgColor) : false;
@@ -1412,7 +1412,9 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
   const headshotSz = Math.round(innerH * 0.62);
   const headshotBorder = Math.round(10 * u);
   const nameFontSize = responsiveSize(Math.round(h * 0.095), nameText, 14);
-  const accentBg = accentColor || (isLightBg ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)");
+  const accentBg = accentColor || (isLightBg ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)");
+  const contactColor = isLightBg ? "#111" : "#ffffff";
+  const contactMuted = isLightBg ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.75)";
 
   return (
     <div style={{ width: w, height: h, background: "transparent" }}>
@@ -1436,25 +1438,26 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
             {(logo || brokerage) && (
               <div style={{ display: "flex", alignItems: "center", gap: Math.round(14 * u), marginBottom: Math.round(28 * u) }}>
                 {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.08), maxHeight: Math.round(innerH * 0.14), objectFit: "contain" as const }} />}
-                {brokerage && <p style={{ fontSize: Math.round(h * 0.038), color: textMuted, margin: 0, fontWeight: 600, letterSpacing: "0.02em" }}>{brokerage}</p>}
+                {brokerage && <p style={{ fontSize: Math.round(h * 0.038), color: contactMuted, margin: 0, fontWeight: 600, letterSpacing: "0.02em" }}>{brokerage}</p>}
               </div>
             )}
             {/* Agent Name — HERO */}
-            <p style={{ fontSize: nameFontSize, fontWeight: 900, color: textColor, margin: 0, lineHeight: 1.05, whiteSpace: "nowrap", textTransform: "uppercase" as const, letterSpacing: "0.02em" }}>{nameText}</p>
+            <p style={{ fontSize: nameFontSize, fontWeight: 900, color: contactColor, margin: 0, lineHeight: 1.05, whiteSpace: "nowrap", textTransform: "uppercase" as const, letterSpacing: "0.02em" }}>{nameText}</p>
             {/* Title / Tagline */}
-            <p style={{ fontSize: Math.round(h * 0.048), fontWeight: 500, color: textMuted, margin: 0, marginTop: Math.round(h * 0.01) }}>{tagline || "Real Estate Agent"}</p>
+            <p style={{ fontSize: Math.round(h * 0.048), fontWeight: 500, color: contactMuted, margin: 0, marginTop: Math.round(h * 0.008) }}>{tagline || "Real Estate Agent"}</p>
             {/* Accent rule */}
-            <div style={{ width: Math.round(60 * u), height: Math.round(4 * u), backgroundColor: accent, marginTop: Math.round(h * 0.035), marginBottom: Math.round(h * 0.03), borderRadius: 2 }} />
-            {/* Contact stacked */}
-            <div style={{ display: "flex", flexDirection: "column", gap: Math.round(h * 0.015) }}>
-              {phone && <p style={{ fontSize: Math.round(h * 0.044), color: textColor, fontWeight: 600, margin: 0 }}>{phone}</p>}
-              {email && <p style={{ fontSize: Math.round(h * 0.040), color: textMuted, margin: 0 }}>{email}</p>}
+            <div style={{ width: Math.round(60 * u), height: Math.round(5 * u), backgroundColor: accent, marginTop: Math.round(h * 0.035), marginBottom: Math.round(h * 0.03), borderRadius: 3 }} />
+            {/* Contact — BIGGER, whiter */}
+            <div style={{ display: "flex", flexDirection: "column", gap: Math.round(h * 0.018) }}>
+              {phone && <p style={{ fontSize: Math.round(h * 0.055), color: contactColor, fontWeight: 700, margin: 0 }}>{phone}</p>}
+              {email && <p style={{ fontSize: Math.round(h * 0.046), color: contactColor, fontWeight: 500, margin: 0, opacity: 0.9 }}>{email}</p>}
+              {website && <p style={{ fontSize: Math.round(h * 0.042), color: contactColor, fontWeight: 500, margin: 0, opacity: 0.8 }}>{website}</p>}
             </div>
             {/* Property info — secondary */}
             {hasProperty && (
-              <div style={{ marginTop: Math.round(h * 0.03), paddingTop: Math.round(h * 0.02), borderTop: `1px solid ${borderColor}` }}>
+              <div style={{ marginTop: Math.round(h * 0.03), paddingTop: Math.round(h * 0.02), borderTop: `2px solid ${borderColor}` }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: Math.round(16 * u), flexWrap: "wrap" }}>
-                  {address && <span style={{ fontSize: Math.round(h * 0.040), fontWeight: 600, color: textColor }}>{address}{cityState ? `, ${cityState}` : ""}</span>}
+                  {address && <span style={{ fontSize: Math.round(h * 0.040), fontWeight: 600, color: contactColor }}>{address}{cityState ? `, ${cityState}` : ""}</span>}
                   {price && <span style={{ fontSize: Math.round(h * 0.050), fontWeight: 800, color: accent }}>${price}</span>}
                 </div>
                 {features && <div style={{ marginTop: Math.round(h * 0.008), color: textMuted, fontSize: Math.round(h * 0.032), lineHeight: 1.5 }}>{features.split("\n").filter(Boolean).map((f, i) => <span key={i}>{i > 0 ? "  ·  " : ""}{f}</span>)}</div>}
@@ -1465,7 +1468,7 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
           {/* RIGHT — Circular headshot */}
           <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {headshot ? (
-              <div style={{ padding: headshotBorder, borderRadius: "50%", background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.4)})` : `linear-gradient(135deg, ${borderColor}, transparent)` }}>
+              <div style={{ padding: headshotBorder, borderRadius: "50%", background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.4)})` : `linear-gradient(135deg, ${borderColor}, transparent)`, boxShadow: `0 ${Math.round(10 * u)}px ${Math.round(36 * u)}px rgba(0,0,0,0.25)` }}>
                 <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", display: "block" }} />
               </div>
             ) : (
