@@ -253,7 +253,29 @@ export function BrandingSelector({
       if (!el) throw new Error("Card target not found");
       const cardW = cbOrientation === "landscape" ? 1920 : 1080;
       const cardH = cbOrientation === "landscape" ? 1080 : 1920;
+      
+      // Remove scale transform for full-resolution capture
+      const originalTransform = el.style.transform;
+      const originalWidth = el.parentElement?.style.width;
+      const originalHeight = el.parentElement?.style.height;
+      const originalOverflow = el.parentElement?.style.overflow;
+      el.style.transform = "none";
+      if (el.parentElement) {
+        el.parentElement.style.width = `${cardW}px`;
+        el.parentElement.style.height = `${cardH}px`;
+        el.parentElement.style.overflow = "hidden";
+      }
+      
       const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: cardW, height: cardH });
+      
+      // Restore scale transform
+      el.style.transform = originalTransform;
+      if (el.parentElement) {
+        el.parentElement.style.width = originalWidth || "";
+        el.parentElement.style.height = originalHeight || "";
+        el.parentElement.style.overflow = originalOverflow || "";
+      }
+      
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
       const url = await uploadToCloudinary(new File([blob], "branding-card.png", { type: "image/png" }), "design-studio");
       if (url) {
