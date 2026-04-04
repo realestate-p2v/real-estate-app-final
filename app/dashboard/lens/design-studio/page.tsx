@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Download,
@@ -557,6 +558,33 @@ export default function DesignStudioPage() {
         setFreeExportsUsed(data.free_design_exports_used || 0);
       }
       if (admin) setIsSubscriber(true);
+      // Pre-fill from query params (when navigating from Property Portfolio)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const paramAddress = searchParams.get("propertyAddress");
+    const paramCity = searchParams.get("propertyCity");
+    const paramState = searchParams.get("propertyState");
+    const paramBeds = searchParams.get("propertyBedrooms");
+    const paramBaths = searchParams.get("propertyBathrooms");
+    const paramSqft = searchParams.get("propertySqft");
+    const paramPrice = searchParams.get("propertyPrice");
+
+    if (paramAddress) {
+      const fullAddress = [paramAddress, paramCity, paramState].filter(Boolean).join(", ");
+      setAddress(fullAddress);
+      setPdfAddress(paramAddress);
+      setBrandAddress(paramAddress);
+      const cityState = [paramCity, paramState].filter(Boolean).join(", ");
+      if (cityState) {
+        setPdfCityStateZip(cityState);
+        setBrandCityState(cityState);
+      }
+    }
+    if (paramBeds) { setBeds(paramBeds); setPdfBeds(paramBeds); }
+    if (paramBaths) { setBaths(paramBaths); setPdfBaths(paramBaths); }
+    if (paramSqft) { setSqft(paramSqft); setPdfSqft(paramSqft); }
+    if (paramPrice) { setPrice(paramPrice); setPdfPrice(paramPrice); setBrandPrice(paramPrice); }
+  }, [searchParams]);
     };
     init();
   }, []);
