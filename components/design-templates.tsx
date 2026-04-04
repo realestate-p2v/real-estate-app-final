@@ -96,7 +96,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
   const renderPhoto = (photoHeight: string) => (
     <div className="absolute inset-x-0 top-0" style={{ height: photoHeight }}>
       {videoElement ? (
-        <div className="w-full h-full">{videoElement}</div>
+        <div className="w-full h-full" style={{ position: "relative", overflow: "hidden" }}>{videoElement}</div>
       ) : listingPhoto ? (
         <img src={listingPhoto} alt="Listing" className="w-full h-full object-cover" />
       ) : (
@@ -174,23 +174,23 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
      name/brokerage/phone below. Property info on right side.
      ═══════════════════════════════════════════════════════ */
   if (isStory) {
-    const photoPercent = 56;
-    const barH = h * (1 - photoPercent / 100); // ~845px
-    const barPadLeft = Math.round(72 * unit);
-    const barPadRight = Math.round(52 * unit);
-    const barPadY = Math.round(36 * unit);
-    const headshotSize = Math.round(barH * 0.34);
+    const photoPercent = 58;
+    const barH = h * (1 - photoPercent / 100);
+    const barPadLeft = Math.round(56 * unit);
+    const barPadRight = Math.round(44 * unit);
+    const barPadY = Math.round(28 * unit);
+    const headshotSize = Math.round(barH * 0.36);
     const headshotBorder = Math.round(4 * unit);
 
-    const badgeH = Math.round(barH * 0.070);
-    const badgeFontSz = Math.round(barH * 0.035);
+    const badgeH = Math.round(barH * 0.072);
+    const badgeFontSz = Math.round(barH * 0.036);
 
-    const agentNameFontSize = responsiveSize(Math.round(barH * 0.065), agentNameText, 18);
-    const brokerageFontSize = responsiveSize(Math.round(barH * 0.044), brokerageText, 24);
-    const phoneFontSize = Math.round(barH * 0.042);
-    const addressFontSize = responsiveSize(Math.round(barH * 0.058), addressText, 20);
-    const detailsFontSize = Math.round(barH * 0.038);
-    const priceFontSize = Math.round(barH * 0.095);
+    const agentNameFontSize = responsiveSize(Math.round(barH * 0.080), agentNameText, 18);
+    const brokerageFontSize = responsiveSize(Math.round(barH * 0.056), brokerageText, 24);
+    const phoneFontSize = Math.round(barH * 0.054);
+    const addressFontSize = responsiveSize(Math.round(barH * 0.072), addressText, 20);
+    const detailsFontSize = Math.round(barH * 0.048);
+    const priceFontSize = Math.round(barH * 0.105);
 
     return (
       <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
@@ -249,7 +249,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
               flex: 1, textAlign: "right", minWidth: 0,
               display: "flex", flexDirection: "column", justifyContent: "center",
             }}>
-              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
               <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(8 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
               <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(14 * unit), marginBottom: Math.round(10 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
               <p style={{
@@ -269,22 +269,22 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
      Uses a taller bar percentage and bigger font multipliers.
      ═══════════════════════════════════════════════════════ */
   if (isPostcard) {
-    const photoPercent = 52;
-    const barH = h * (1 - photoPercent / 100); // ~576px
-    const barPadX = Math.round(52 * unit);
-    const barPadY = Math.round(32 * unit);
-    const headshotSize = Math.round(barH * 0.62);
+    const photoPercent = 55;
+    const barH = h * (1 - photoPercent / 100);
+    const barPadX = Math.round(44 * unit);
+    const barPadY = Math.round(20 * unit);
+    const headshotSize = Math.round(barH * 0.78);
     const headshotBorder = Math.round(4 * unit);
 
-    const badgeH = Math.round(barH * 0.145);
-    const badgeFontSz = Math.round(barH * 0.058);
+    const badgeH = Math.round(barH * 0.16);
+    const badgeFontSz = Math.round(barH * 0.065);
 
-    const agentNameFontSize = responsiveSize(Math.round(barH * 0.090), agentNameText, 18);
-    const brokerageFontSize = responsiveSize(Math.round(barH * 0.058), brokerageText, 24);
-    const phoneFontSize = Math.round(barH * 0.054);
-    const addressFontSize = responsiveSize(Math.round(barH * 0.088), addressText, 20);
-    const detailsFontSize = Math.round(barH * 0.054);
-    const priceFontSize = Math.round(barH * 0.155);
+    const agentNameFontSize = responsiveSize(Math.round(barH * 0.125), agentNameText, 18);
+    const brokerageFontSize = responsiveSize(Math.round(barH * 0.080), brokerageText, 24);
+    const phoneFontSize = Math.round(barH * 0.074);
+    const addressFontSize = responsiveSize(Math.round(barH * 0.110), addressText, 20);
+    const detailsFontSize = Math.round(barH * 0.074);
+    const priceFontSize = Math.round(barH * 0.185);
 
     return (
       <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
@@ -318,7 +318,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
 
             {/* RIGHT: Property Info */}
             <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+              <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
               <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
               <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(10 * unit), marginBottom: Math.round(8 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
               <p style={{
@@ -347,20 +347,20 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
      ═══════════════════════════════════════════════════════ */
   const photoPercent = 58;
   const barH = h * (1 - photoPercent / 100);
-  const barPadX = Math.round(44 * unit);
-  const barPadY = Math.round(28 * unit);
-  const headshotSize = Math.round(barH * 0.52);
+  const barPadX = Math.round(36 * unit);
+  const barPadY = Math.round(20 * unit);
+  const headshotSize = Math.round(barH * 0.62);
   const headshotBorder = Math.round(3 * unit);
 
   const badgeH = Math.round(barH * 0.14);
   const badgeFontSz = Math.round(barH * 0.052);
 
-  const agentNameFontSize = responsiveSize(Math.round(barH * 0.082), agentNameText, 18);
-  const brokerageFontSize = responsiveSize(Math.round(barH * 0.050), brokerageText, 24);
-  const phoneFontSize = Math.round(barH * 0.048);
-  const addressFontSize = responsiveSize(Math.round(barH * 0.078), addressText, 20);
-  const detailsFontSize = Math.round(barH * 0.048);
-  const priceFontSize = Math.round(barH * 0.13);
+  const agentNameFontSize = responsiveSize(Math.round(barH * 0.098), agentNameText, 18);
+  const brokerageFontSize = responsiveSize(Math.round(barH * 0.064), brokerageText, 24);
+  const phoneFontSize = Math.round(barH * 0.060);
+  const addressFontSize = responsiveSize(Math.round(barH * 0.094), addressText, 20);
+  const detailsFontSize = Math.round(barH * 0.060);
+  const priceFontSize = Math.round(barH * 0.15);
 
   return (
     <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
@@ -394,7 +394,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
 
           {/* RIGHT: Property Info */}
           <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
+            <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, wordBreak: "break-word" }}>{addressText}</p>
             <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
             <div style={{ width: Math.round(60 * unit), height: Math.round(2 * unit), backgroundColor: accentColor || dividerColor, marginLeft: "auto", marginTop: Math.round(10 * unit), marginBottom: Math.round(8 * unit), borderRadius: 1, opacity: accentColor ? 0.7 : 1 }} />
             <p style={{
