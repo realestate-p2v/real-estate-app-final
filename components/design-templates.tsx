@@ -1353,48 +1353,46 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
   /* ══════════ VERTICAL (1080×1920) ══════════ */
   if (isVertical) {
     const u = w / 1080;
-    const inset = Math.round(24 * u), radius = Math.round(24 * u), border = Math.round(3 * u), pad = Math.round(44 * u);
-    const headshotSz = Math.round(400 * u), frameBorder = Math.round(6 * u);
-    const nameFontSize = responsiveSize(Math.round(60 * u), nameText, 16);
+    const inset = Math.round(24 * u), radius = Math.round(24 * u), border = Math.round(3 * u), pad = Math.round(36 * u);
+    const headshotSz = Math.round(560 * u), frameBorder = Math.round(8 * u);
+    const nameFontSize = responsiveSize(Math.round(80 * u), nameText, 14);
 
     return (
       <div style={{ width: w, height: h, background: "transparent", position: "relative" }}>
         <div style={{ position: "absolute", top: inset, left: inset, right: inset, bottom: inset, borderRadius: radius, border: `${border}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: pad, fontFamily }}>
           {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
           {renderCorners(Math.round(36 * u), Math.round(36 * u))}
-          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(6 * u) }}>
-            {/* Logo at top */}
-            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(320 * u), maxHeight: Math.round(120 * u), objectFit: "contain" as const, marginBottom: Math.round(16 * u) }} />}
-            {/* Headshot — rounded with accent ring */}
+          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(10 * u) }}>
+            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(400 * u), maxHeight: Math.round(160 * u), objectFit: "contain" as const, marginBottom: Math.round(14 * u) }} />}
             {headshot ? (
-              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : borderColor, borderRadius: Math.round(20 * u) }}>
-                <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: Math.round(16 * u), display: "block" }} />
+              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : borderColor, borderRadius: Math.round(20 * u), boxShadow: `0 ${Math.round(8 * u)}px ${Math.round(28 * u)}px rgba(0,0,0,0.2)` }}>
+                <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: Math.round(14 * u), display: "block" }} />
               </div>
             ) : (
               <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: Math.round(20 * u), display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
+                <User style={{ width: 100 * u, height: 100 * u, color: textMuted }} />
               </div>
             )}
-            {/* Agent Name — HERO */}
-            <p style={{ fontSize: nameFontSize, fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(14 * u), whiteSpace: "nowrap" }}>{nameText}</p>
-            {/* Accent rule */}
-            <div style={{ width: Math.round(60 * u), height: 2, backgroundColor: accent, opacity: 0.4, margin: `${Math.round(4 * u)}px 0` }} />
-            {/* Brokerage */}
-            {brokerage && <p style={{ fontSize: Math.round(34 * u), color: textMuted, margin: 0, fontWeight: 500 }}>{brokerage}</p>}
-            {/* Contact — prominent */}
-            <div style={{ display: "flex", justifyContent: "center", gap: Math.round(20 * u), flexWrap: "wrap", marginTop: Math.round(4 * u) }}>
-              {phone && <span style={{ fontSize: Math.round(32 * u), color: textColor, fontWeight: 600 }}>{phone}</span>}
-              {email && <span style={{ fontSize: Math.round(30 * u), color: textMuted }}>{email}</span>}
+            <p style={{ fontSize: nameFontSize, fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(18 * u), whiteSpace: "nowrap" }}>{nameText}</p>
+            <div style={{ width: Math.round(70 * u), height: 3, backgroundColor: accent, opacity: 0.4, margin: `${Math.round(6 * u)}px 0` }} />
+            {brokerage && <p style={{ fontSize: Math.round(40 * u), color: textMuted, margin: 0, fontWeight: 500 }}>{brokerage}</p>}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(8 * u), marginTop: Math.round(8 * u) }}>
+              {phone && <span style={{ fontSize: Math.round(44 * u), color: textColor, fontWeight: 700 }}>{phone}</span>}
+              {email && <span style={{ fontSize: Math.round(38 * u), color: textColor, opacity: 0.85 }}>{email}</span>}
             </div>
-            {/* Tagline */}
-            {tagline && <p style={{ fontSize: Math.round(28 * u), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(6 * u) }}>{tagline}</p>}
-            {/* Property info — secondary, below a divider */}
+            {website && (
+              <>
+                <div style={{ width: "60%", height: 1, backgroundColor: borderColor, marginTop: Math.round(10 * u) }} />
+                <p style={{ fontSize: Math.round(40 * u), color: textColor, fontWeight: 600, margin: 0, marginTop: Math.round(6 * u) }}>{website}</p>
+              </>
+            )}
+            {tagline && <p style={{ fontSize: Math.round(34 * u), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(8 * u) }}>{tagline}</p>}
             {hasProperty && (
-              <div style={{ marginTop: Math.round(24 * u), paddingTop: Math.round(20 * u), borderTop: `1px solid ${borderColor}`, width: "80%" }}>
-                {address && <p style={{ fontSize: responsiveSize(Math.round(54 * u), address, 18), fontWeight: 700, color: textColor, margin: 0, lineHeight: 1.1, overflowWrap: "break-word" }}>{address}</p>}
-                {cityState && <p style={{ fontSize: Math.round(36 * u), fontWeight: 500, color: textMuted, margin: 0, marginTop: Math.round(6 * u) }}>{cityState}</p>}
-                {price && <p style={{ fontSize: Math.round(50 * u), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(12 * u) }}>${price}</p>}
-                {features && <div style={{ marginTop: Math.round(10 * u), color: textMuted, fontSize: Math.round(30 * u), lineHeight: 1.6 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
+              <div style={{ marginTop: Math.round(24 * u), paddingTop: Math.round(20 * u), borderTop: `2px solid ${borderColor}`, width: "80%" }}>
+                {address && <p style={{ fontSize: responsiveSize(Math.round(60 * u), address, 16), fontWeight: 700, color: textColor, margin: 0, lineHeight: 1.1, overflowWrap: "break-word" }}>{address}</p>}
+                {cityState && <p style={{ fontSize: Math.round(40 * u), fontWeight: 500, color: textMuted, margin: 0, marginTop: Math.round(8 * u) }}>{cityState}</p>}
+                {price && <p style={{ fontSize: Math.round(56 * u), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(14 * u) }}>${price}</p>}
+                {features && <div style={{ marginTop: Math.round(12 * u), color: textMuted, fontSize: Math.round(34 * u), lineHeight: 1.6 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
               </div>
             )}
           </div>
