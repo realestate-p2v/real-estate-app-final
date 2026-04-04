@@ -260,7 +260,7 @@ export function HeroSection() {
       {/* Bottom credibility bar */}
       <div className="relative z-10 bg-blue-900 px-6 py-3">
         <p className="text-center text-md text-gray-300 font-medium">
-          Built for real estate agents by real estate marketers with{" "}
+          Built by real estate marketers with{" "}
           <span className="text-white font-bold">20+ years of experience</span>
         </p>
       </div>
