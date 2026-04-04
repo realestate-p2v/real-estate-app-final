@@ -207,6 +207,8 @@ function DesignStudioPageInner() {
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail: string; orderId: string } | null>(null);
   const [userVideos, setUserVideos] = useState<any[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
+  const [clipUrls, setClipUrls] = useState<string[]>([]);
+  const [currentClipIndex, setCurrentClipIndex] = useState(0);
   const [headshot, setHeadshot] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [uploadingListing, setUploadingListing] = useState(false);
@@ -347,6 +349,26 @@ function DesignStudioPageInner() {
     if (features) { setPdfFeatures(features); setBrandFeatures(features); }
   }, [searchParams]);
 
+  // Load clips from property portfolio (sent via sessionStorage)
+  useEffect(() => {
+    try {
+      const clipsJson = sessionStorage.getItem("design_studio_clips");
+      if (clipsJson) {
+        const parsed = JSON.parse(clipsJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setClipUrls(parsed);
+          setMediaMode("video");
+          setCurrentClipIndex(0);
+          // Set selectedVideo so exports work (use first clip as the source)
+          setSelectedVideo({ url: parsed[0], thumbnail: "", orderId: "clips" });
+        }
+        sessionStorage.removeItem("design_studio_clips");
+      }
+    } catch (e) {
+      console.error("Failed to load clips:", e);
+    }
+  }, []);
+
   const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => { if (!user) return; const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" }); };
 
   useEffect(() => { if (!yardQrUrl) { setYardQrDataUrl(null); return; } let c = false; (async () => { try { const QR = (await import("qrcode")).default; const u = await QR.toDataURL(yardQrUrl, { width: 600, margin: 2, errorCorrectionLevel: "M" }); if (!c) setYardQrDataUrl(u); } catch { if (!c) setYardQrDataUrl(null); } })(); return () => { c = true; }; }, [yardQrUrl]);
@@ -444,7 +466,15 @@ function DesignStudioPageInner() {
 
   const badge = getBadgeConfig(selectedTemplate);
 
-  const videoPreviewElement = selectedVideo ? (<div className="w-full h-full relative" data-video-area><video ref={videoRef} src={selectedVideo.url} autoPlay loop muted playsInline className="w-full h-full object-cover" crossOrigin="anonymous" /></div>) : undefined;
+  // Auto-play next clip when currentClipIndex changes
+  useEffect(() => {
+    if (clipUrls.length > 1 && videoRef.current) {
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
+  }, [currentClipIndex, clipUrls.length]);
+
+  const videoPreviewElement = selectedVideo ? (<div className="w-full h-full relative" data-video-area><video ref={videoRef} src={clipUrls.length > 0 ? clipUrls[currentClipIndex] : selectedVideo.url} autoPlay loop={clipUrls.length <= 1} muted playsInline className="w-full h-full object-cover" crossOrigin="anonymous" onEnded={() => { if (clipUrls.length > 1) { const nextIdx = (currentClipIndex + 1) % clipUrls.length; setCurrentClipIndex(nextIdx); } }} />{clipUrls.length > 1 && <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none">Clip {currentClipIndex + 1}/{clipUrls.length}</div>}</div>) : undefined;
 
   if (authLoading) { return (<div className="min-h-screen bg-background"><Navigation /><div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div></div>); }
   if (!user) { return (<div className="min-h-screen bg-background"><Navigation /><div className="mx-auto max-w-2xl px-4 py-24 text-center"><div className="bg-card rounded-2xl border border-border p-10 space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center"><LogIn className="h-8 w-8 text-muted-foreground" /></div><h1 className="text-2xl font-extrabold text-foreground">Sign In to Use the Design Studio</h1><p className="text-muted-foreground max-w-md mx-auto">Create a free account to try the Marketing Design Studio. Your first 3 exports are free — no subscription required.</p><div className="flex flex-col sm:flex-row gap-3 justify-center pt-2"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/login?redirect=/dashboard/lens/design-studio"><LogIn className="mr-2 h-4 w-4" />Sign In</Link></Button><Button asChild variant="outline" className="px-8 py-6 text-base"><Link href="/lens">Learn About P2V Lens</Link></Button></div></div></div></div>); }
