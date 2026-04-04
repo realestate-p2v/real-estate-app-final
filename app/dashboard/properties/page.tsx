@@ -30,6 +30,7 @@ function timeAgo(dateStr: string): string {
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<any[]>([]);
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,6 +58,26 @@ export default function PropertiesPage() {
       .order("updated_at", { ascending: false });
     setProperties(data || []);
     setLoading(false);
+
+    // Fetch thumbnails from orders (after setting loading false so cards render immediately)
+    if (data && data.length > 0) {
+      const thumbMap: Record<string, string> = {};
+      for (const prop of data) {
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("photos")
+          .eq("user_id", user.id)
+          .ilike("property_address", `${prop.address_normalized}%`)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (orders && orders.length > 0 && Array.isArray(orders[0].photos) && orders[0].photos.length > 0) {
+          const url = orders[0].photos[0]?.secure_url;
+          if (url) thumbMap[prop.id] = url;
+        }
+      }
+      setThumbnails(thumbMap);
+    }
   }
 
   async function handleAdd() {
@@ -134,16 +155,39 @@ export default function PropertiesPage() {
               <Link
                 key={p.id}
                 href={`/dashboard/properties/${p.id}`}
-                className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300 block group"
+                className="bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/40 hover:shadow-lg transition-all duration-300 block group"
               >
-                <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors truncate">{p.address}</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
-                <div className="flex items-center gap-2 mt-3">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${STATUS_COLORS[p.status] || STATUS_COLORS.active}`}>{p.status}</span>
-                  {p.bedrooms && <span className="text-xs text-muted-foreground">{p.bedrooms} bd</span>}
-                  {p.bathrooms && <span className="text-xs text-muted-foreground">{p.bathrooms} ba</span>}
+                {/* Thumbnail */}
+                <div className="h-36 w-full bg-muted relative">
+                  {thumbnails[p.id] ? (
+                    <img
+                      src={thumbnails[p.id]}
+                      alt={p.address}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <Home className="h-10 w-10 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  {/* Status badge overlaid on thumbnail */}
+                  <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize shadow-sm ${STATUS_COLORS[p.status] || STATUS_COLORS.active}`}>
+                    {p.status}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">{timeAgo(p.updated_at || p.created_at)}</p>
+
+                {/* Card body */}
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors truncate">{p.address}</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
+                  <div className="flex items-center gap-3 mt-3">
+                    {p.bedrooms && <span className="text-xs text-muted-foreground">{p.bedrooms} bd</span>}
+                    {p.bathrooms && <span className="text-xs text-muted-foreground">{p.bathrooms} ba</span>}
+                    {p.sqft && <span className="text-xs text-muted-foreground">{p.sqft.toLocaleString()} sqft</span>}
+                    {p.price && <span className="text-xs font-semibold text-foreground">${p.price.toLocaleString()}</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">{timeAgo(p.updated_at || p.created_at)}</p>
+                </div>
               </Link>
             ))}
           </div>
