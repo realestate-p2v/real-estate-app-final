@@ -1,6 +1,7 @@
- "use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,6 +115,7 @@ const SURPRISE_SEGMENTS = [
 
 export default function PhotoCoachPage() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
 
   // Auth
   const [user, setUser] = useState<any>(null);
@@ -144,13 +146,13 @@ export default function PhotoCoachPage() {
   const [uploading, setUploading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showRoomPicker, setShowRoomPicker] = useState(false);
-  const [shootingRoom, setShootingRoom] = useState<string>(""); // room key for the current photo
+  const [shootingRoom, setShootingRoom] = useState<string>("");
   const [addOtherRoom, setAddOtherRoom] = useState("");
   const [showAiEdit, setShowAiEdit] = useState(false);
   const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
 
   // HDR detection
-  const [hdrDetected, setHdrDetected] = useState<boolean | null>(null); // null = not checked yet
+  const [hdrDetected, setHdrDetected] = useState<boolean | null>(null);
   const [hdrBannerDismissed, setHdrBannerDismissed] = useState(false);
   const [showHdrHelp, setShowHdrHelp] = useState(false);
   const [showTips, setShowTips] = useState(false);
@@ -169,6 +171,18 @@ export default function PhotoCoachPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* ─── Pre-fill address from URL params (linked from property portfolio) ─── */
+  useEffect(() => {
+    const addr = searchParams.get("address");
+    if (addr) {
+      const city = searchParams.get("city") || "";
+      const state = searchParams.get("state") || "";
+      const parts = [addr, city, state].filter(Boolean).join(", ");
+      setNewAddress(parts);
+      setShowNewSession(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ─── Sound Effects via Web Audio API ─── */
   const playApprovedSound = useCallback(() => {
     if (!soundEnabled) return;
@@ -179,7 +193,7 @@ export default function PhotoCoachPage() {
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
       gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
       osc.start(ctx.currentTime);
@@ -191,7 +205,6 @@ export default function PhotoCoachPage() {
     if (!soundEnabled) return;
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      // Three ascending notes: C6, E6, G6
       const notes = [1047, 1319, 1568];
       notes.forEach((freq, i) => {
         const osc = ctx.createOscillator();
@@ -226,7 +239,6 @@ export default function PhotoCoachPage() {
         return;
       }
 
-      // Check lens_usage for subscription + free trial count
       const { data: usage } = await supabase
         .from("lens_usage")
         .select("*")
@@ -282,7 +294,7 @@ export default function PhotoCoachPage() {
       setSessions((prev) => [data as Session, ...prev]);
       setNewAddress("");
       setShowNewSession(false);
-      setShowChecklist(true); // Prompt checklist on new session
+      setShowChecklist(true);
       setChecklistSetup(false);
       setSelectedRooms({});
       setExtraBedrooms(0);
@@ -320,22 +332,18 @@ export default function PhotoCoachPage() {
   };
 
   const saveChecklist = async () => {
-    // Add extra bedrooms/bathrooms starting after the highest existing number
     const rooms = { ...selectedRooms };
     
-    // Find highest existing bedroom number
     const existingBedroomNums = Object.keys(rooms)
       .filter(k => k.startsWith("bedroom_"))
       .map(k => parseInt(k.split("_")[1]) || 0);
     const highestBedroom = existingBedroomNums.length > 0 ? Math.max(...existingBedroomNums) : 3;
-    // Also count master_bedroom as 1
     const startBedroom = rooms["master_bedroom"] ? Math.max(highestBedroom + 1, 4) : Math.max(highestBedroom + 1, 2);
     
     for (let i = 0; i < extraBedrooms; i++) {
       rooms[`bedroom_${startBedroom + i}`] = "pending";
     }
     
-    // Find highest existing bathroom number
     const existingBathroomNums = Object.keys(rooms)
       .filter(k => k.startsWith("bathroom_"))
       .map(k => parseInt(k.split("_")[1]) || 0);
@@ -382,12 +390,10 @@ export default function PhotoCoachPage() {
     for (const [k, v] of Object.entries(selectedRooms)) {
       updated[k] = v === "next" ? "pending" : v;
     }
-    // Toggle: if it was already "next", leave it as "pending"; otherwise set to "next"
     if (!isAlreadyNext) {
       updated[key] = "next";
     }
     setSelectedRooms(updated);
-    // Also clear shootingRoom if we just deselected
     if (isAlreadyNext) {
       setShootingRoom("");
     }
@@ -405,27 +411,22 @@ export default function PhotoCoachPage() {
     if (!shootingRoom) return "";
     const room = DEFAULT_ROOMS.find((r) => r.key === shootingRoom);
     if (room) return room.label;
-    // Dynamic rooms (extra bedrooms/bathrooms)
     if (shootingRoom.startsWith("bedroom_")) return `Bedroom ${shootingRoom.split("_")[1]}`;
     if (shootingRoom.startsWith("bathroom_")) return `Bathroom ${shootingRoom.split("_")[1]}`;
-    // Custom room
     return shootingRoom.replace("custom_", "").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   /* ─── Photo Capture & Upload ─── */
   const handleCapture = () => {
-    // Check paywall
     if (!isSubscriber && !isAdmin && freeApprovedUsed >= FREE_APPROVED_LIMIT) {
       setPaywallHit(true);
       return;
     }
-    // If checklist exists and has rooms, show room picker first
     const hasChecklist = checklistSetup && Object.keys(selectedRooms).length > 0;
     if (hasChecklist) {
       setShowRoomPicker(true);
       return;
     }
-    // No checklist — go straight to camera
     setShootingRoom("");
     fileInputRef.current?.click();
   };
@@ -433,7 +434,6 @@ export default function PhotoCoachPage() {
   const proceedWithRoom = (roomKey: string) => {
     setShootingRoom(roomKey);
     setShowRoomPicker(false);
-    // Small delay so state updates before file input triggers
     setTimeout(() => {
       fileInputRef.current?.click();
     }, 50);
@@ -467,13 +467,11 @@ export default function PhotoCoachPage() {
     setEditedPreviewUrl(null);
 
     try {
-      // Check HDR status from EXIF (only if not already checked this session)
       if (hdrDetected === null) {
         const isHdr = await checkHdr(file);
         setHdrDetected(isHdr);
       }
 
-      // Upload to Cloudinary (same signed pattern as descriptions page)
       const sigResponse = await fetch("/api/cloudinary-signature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -502,7 +500,6 @@ export default function PhotoCoachPage() {
       setUploading(false);
       setAnalyzing(true);
 
-      // Call Coach API
       const coachRes = await fetch("/api/lens/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -520,20 +517,16 @@ export default function PhotoCoachPage() {
 
       setLastResult(result);
 
-      // Check for surprise discount (subscribers only)
       if (result.surprise && isSubscriber) {
         setShowSurpriseWheel(true);
       }
 
-      // Play sound
       if (result.score === 10) {
         playPerfectSound();
       } else if (result.approved) {
         playApprovedSound();
       }
 
-      // If approved: do NOT auto-save — the AI Edit flow buttons handle saving
-      // If not approved: update total_analyses count only
       if (!result.approved) {
         const updatedTotal = (activeSession.total_analyses || 0) + 1;
         await supabase
@@ -579,7 +572,6 @@ export default function PhotoCoachPage() {
   /* ─── HDR Detection via EXIF data ─── */
   const checkHdr = async (file: File): Promise<boolean> => {
     try {
-      // First check device make/model — some phones always shoot HDR
       const basicExif = await exifr.parse(file, {
         pick: ["Make", "Model", "CustomRendered"],
         makerNote: false,
@@ -590,7 +582,6 @@ export default function PhotoCoachPage() {
         const make = String(basicExif.Make || "").toLowerCase();
         const model = String(basicExif.Model || "").toLowerCase();
 
-        // iPhone 12 and newer: HDR is always on, no toggle exists
         if (make.includes("apple") && model.includes("iphone")) {
           const modelMatch = model.match(/iphone\s*(\d+)/);
           if (modelMatch) {
@@ -599,16 +590,13 @@ export default function PhotoCoachPage() {
           }
         }
 
-        // Google Pixel: HDR+ is always on by default
         if (make.includes("google")) return true;
 
-        // Check CustomRendered — value 3 or 4 typically means HDR
         if (basicExif.CustomRendered && (basicExif.CustomRendered === 3 || basicExif.CustomRendered === 4 || String(basicExif.CustomRendered).toLowerCase().includes("hdr"))) {
           return true;
         }
       }
 
-      // Deeper scan for HDR metadata in all EXIF fields
       const fullExif = await exifr.parse(file, {
         makerNote: true,
         translateValues: false,
@@ -682,7 +670,6 @@ export default function PhotoCoachPage() {
         : prev
     );
 
-    // Mark room done in checklist
     if (shootingRoom && selectedRooms[shootingRoom]) {
       const updatedChecklist = { ...selectedRooms, [shootingRoom]: "done" };
       setSelectedRooms(updatedChecklist);
@@ -693,7 +680,6 @@ export default function PhotoCoachPage() {
       setActiveSession((prev) => prev ? { ...prev, checklist: updatedChecklist } : prev);
     }
 
-    // Update free trial usage
     if (!isSubscriber && !isAdmin) {
       const newUsed = freeApprovedUsed + 1;
       setFreeApprovedUsed(newUsed);
@@ -750,7 +736,6 @@ export default function PhotoCoachPage() {
       prev ? { ...prev, photos, approved_count: updatedCount } : prev
     );
 
-    // Delete from Cloudinary
     if (removed?.url) {
       fetch("/api/lens/coach", {
         method: "DELETE",
@@ -1214,7 +1199,6 @@ export default function PhotoCoachPage() {
               ))}
             </div>
 
-            {/* Extra bedrooms/bathrooms */}
             <div className="flex flex-wrap gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Extra Bedrooms:</span>
@@ -1250,7 +1234,6 @@ export default function PhotoCoachPage() {
               </div>
             </div>
 
-            {/* Custom room */}
             <div className="flex gap-2 mb-6">
               <Input
                 placeholder="Add other room..."
@@ -1396,7 +1379,6 @@ export default function PhotoCoachPage() {
                           </button>
                         </div>
 
-                        {/* Before/After if AI Edit is active */}
                         {galleryEditUrl ? (
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">
@@ -1431,7 +1413,6 @@ export default function PhotoCoachPage() {
                           </div>
                         ) : (
                           <>
-                            {/* Photo preview */}
                             <div className="rounded-xl overflow-hidden border border-border">
                               <img
                                 src={photo.edited_url || photo.url}
@@ -1440,10 +1421,8 @@ export default function PhotoCoachPage() {
                               />
                             </div>
 
-                            {/* Feedback */}
                             <p className="text-sm text-muted-foreground">{photo.feedback}</p>
 
-                            {/* Action buttons */}
                             <div className="flex gap-2">
                               {!photo.edited && (
                                 <Button
@@ -1477,7 +1456,6 @@ export default function PhotoCoachPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => {
-                    // Store approved photos in sessionStorage for the order form to pick up
                     const photosForOrder = approvedPhotos.map((photo, i) => ({
                       id: `coach-${Date.now()}-${i}`,
                       secure_url: photo.edited_url || photo.url,
@@ -1501,7 +1479,6 @@ export default function PhotoCoachPage() {
                 </button>
                 <button
                   onClick={() => {
-                    // Store approved photo URLs in sessionStorage for the description writer
                     const urlsForDescription = approvedPhotos.map(p => p.edited_url || p.url);
                     sessionStorage.setItem("coach_photos_for_description", JSON.stringify(urlsForDescription));
                     sessionStorage.setItem("coach_property_address", activeSession.property_address);
@@ -1514,11 +1491,9 @@ export default function PhotoCoachPage() {
                 </button>
                 <button
                   onClick={() => {
-                    // Staggered download using Cloudinary fl_attachment flag
                     approvedPhotos.forEach((photo, i) => {
                       setTimeout(() => {
                         const url = photo.edited_url || photo.url;
-                        // Add fl_attachment to Cloudinary URL to force download
                         const downloadUrl = url.includes("/upload/")
                           ? url.replace("/upload/", "/upload/fl_attachment/")
                           : url;
@@ -1528,7 +1503,7 @@ export default function PhotoCoachPage() {
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
-                      }, i * 500); // 500ms stagger between downloads
+                      }, i * 500);
                     });
                   }}
                   className="bg-card border border-border hover:border-accent/40 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-foreground text-sm sm:text-base"
@@ -1549,7 +1524,7 @@ export default function PhotoCoachPage() {
         ) : (
           /* ─── Shooting View ─── */
           <div className="space-y-6">
-            {/* ─── Room Picker (shown before each photo when checklist exists) ─── */}
+            {/* ─── Room Picker ─── */}
             {showRoomPicker && (
               <div className="bg-card rounded-2xl border border-accent/30 p-6 space-y-4">
                 <h3 className="text-lg font-bold text-foreground">Which room are we shooting?</h3>
@@ -1567,7 +1542,6 @@ export default function PhotoCoachPage() {
                   ))}
                 </div>
 
-                {/* Done rooms (collapsed, show as reference) */}
                 {Object.entries(selectedRooms).some(([, status]) => status === "done") && (
                   <div className="pt-2 border-t border-border">
                     <p className="text-xs text-muted-foreground mb-1.5">Completed:</p>
@@ -1587,7 +1561,6 @@ export default function PhotoCoachPage() {
                   </div>
                 )}
 
-                {/* Add Other */}
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground mb-2">Not on the list?</p>
                   <div className="flex gap-2">
@@ -1610,7 +1583,6 @@ export default function PhotoCoachPage() {
                   </div>
                 </div>
 
-                {/* Skip / no label */}
                 <div className="flex items-center justify-between pt-1">
                   <button
                     onClick={() => proceedWithRoom("")}
@@ -1628,7 +1600,7 @@ export default function PhotoCoachPage() {
               </div>
             )}
 
-            {/* Selected room indicator with Change option */}
+            {/* Selected room indicator */}
             {!showRoomPicker && !lastResult && !uploading && !analyzing && shootingRoom && (
               <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1646,7 +1618,7 @@ export default function PhotoCoachPage() {
               </div>
             )}
 
-            {/* Take Photo Button — hidden when room picker or result is showing */}
+            {/* Take Photo Button */}
             {!showRoomPicker && !lastResult && (
             <div className="text-center">
               <button
@@ -1663,15 +1635,12 @@ export default function PhotoCoachPage() {
               <p className="text-sm text-muted-foreground mt-3">
                 {uploading ? "Uploading..." : analyzing ? "AI is analyzing your photo..." : "Tap to take a photo"}
               </p>
-              {/* Gallery option as secondary */}
               {!uploading && !analyzing && (
                 <button
                   onClick={() => {
-                    // Remove capture attribute temporarily for gallery access
                     if (fileInputRef.current) {
                       fileInputRef.current.removeAttribute("capture");
                       fileInputRef.current.click();
-                      // Restore capture attribute after
                       setTimeout(() => {
                         fileInputRef.current?.setAttribute("capture", "environment");
                       }, 1000);
@@ -1685,7 +1654,6 @@ export default function PhotoCoachPage() {
             </div>
             )}
 
-            {/* Uploading / Analyzing indicator when camera was triggered from room picker */}
             {!showRoomPicker && !lastResult && (uploading || analyzing) && shootingRoom && (
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">
@@ -1708,7 +1676,6 @@ export default function PhotoCoachPage() {
                 }`}
                 style={{ userSelect: "none" }}
               >
-                {/* Score header */}
                 <div className="flex items-center gap-4">
                   <div
                     className={`h-16 w-16 rounded-2xl flex items-center justify-center text-white font-black text-2xl ${
@@ -1735,7 +1702,6 @@ export default function PhotoCoachPage() {
                   </div>
                 </div>
 
-                {/* Category breakdown */}
                 {lastResult.categories && lastResult.categories.length > 0 && (
                   <div className="space-y-2">
                     {lastResult.categories.map((cat, i) => (
@@ -1774,7 +1740,6 @@ export default function PhotoCoachPage() {
                   </div>
                 )}
 
-                {/* Photo preview with watermark overlay */}
                 {lastPhotoUrl && (
                   <div className="relative rounded-xl overflow-hidden bg-black/5">
                     <img
@@ -1783,14 +1748,12 @@ export default function PhotoCoachPage() {
                       className="w-full rounded-xl"
                       style={{ maxHeight: "300px", objectFit: "contain", pointerEvents: "none", userSelect: "none" }}
                     />
-                    {/* Light watermark */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ userSelect: "none" }}>
                       <span className="text-4xl font-black text-black opacity-10 rotate-[-20deg]">P2V LENS</span>
                     </div>
                   </div>
                 )}
 
-                {/* Feedback (actionable coaching tips — was fixable_issues) */}
                 {lastResult.feedback.length > 0 && (
                   <div>
                     <p className="text-sm font-bold text-foreground mb-2">
@@ -1809,7 +1772,6 @@ export default function PhotoCoachPage() {
                   </div>
                 )}
 
-                {/* Flagged issues (non-penalized) */}
                 {lastResult.flagged_issues.length > 0 && (
                   <div>
                     <p className="text-sm font-bold text-foreground mb-2">Noted for AI Editing:</p>
@@ -1824,7 +1786,6 @@ export default function PhotoCoachPage() {
                   </div>
                 )}
 
-                {/* What would make it a 10 */}
                 {lastResult.approved && lastResult.what_would_make_10 && lastResult.score < 10 && (
                   <div className="bg-white/60 dark:bg-white/5 rounded-xl p-3">
                     <p className="text-sm">
@@ -1834,18 +1795,15 @@ export default function PhotoCoachPage() {
                   </div>
                 )}
 
-                {/* Action buttons */}
                 <div className="space-y-3 pt-2">
                   {lastResult.approved ? (
                     showAiEdit ? (
-                      /* ─── AI Edit Before/After View ─── */
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Wand2 className="h-4 w-4 text-blue-500" />
                           <p className="text-sm font-bold text-foreground">AI Edit Preview</p>
                         </div>
 
-                        {/* Before/After comparison */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <p className="text-xs font-semibold text-muted-foreground text-center">Original</p>
@@ -1891,7 +1849,6 @@ export default function PhotoCoachPage() {
                         </div>
                       </div>
                     ) : (
-                      /* ─── Standard Approved Buttons ─── */
                       <div className="flex gap-3">
                         <Button
                           onClick={handleAiEdit}
@@ -1914,7 +1871,6 @@ export default function PhotoCoachPage() {
                     <div className="flex gap-3">
                       <Button
                         onClick={async () => {
-                          // User chose to reshoot — delete the photo from Cloudinary
                           if (lastPhotoUrl) {
                             fetch("/api/lens/coach", {
                               method: "DELETE",
@@ -1924,7 +1880,6 @@ export default function PhotoCoachPage() {
                           }
                           setLastResult(null);
                           setLastPhotoUrl(null);
-                          // Reshoot same room — skip room picker, go straight to camera
                           fileInputRef.current?.click();
                         }}
                         className={`flex-1 font-bold text-white ${
@@ -1938,7 +1893,6 @@ export default function PhotoCoachPage() {
                       </Button>
                       <Button
                         onClick={async () => {
-                          // User chose to keep the photo anyway — add to gallery
                           if (!activeSession || !lastPhotoUrl) return;
                           const roomLbl = getCurrentRoomLabel();
                           const newPhoto: SessionPhoto = {
@@ -1948,7 +1902,7 @@ export default function PhotoCoachPage() {
                             feedback: lastResult.summary,
                             fixable_issues: lastResult.feedback,
                             flagged_issues: lastResult.flagged_issues,
-                            approved: true, // User accepted it
+                            approved: true,
                             edited: false,
                             edited_url: null,
                             analyzed_at: new Date().toISOString(),
@@ -1965,7 +1919,6 @@ export default function PhotoCoachPage() {
                           setActiveSession((prev) =>
                             prev ? { ...prev, photos: updatedPhotos, approved_count: updatedCount } : prev
                           );
-                          // Count against free trial
                           if (!isSubscriber && !isAdmin) {
                             const newUsed = freeApprovedUsed + 1;
                             setFreeApprovedUsed(newUsed);
@@ -1977,7 +1930,6 @@ export default function PhotoCoachPage() {
                                 total_analyses: (activeSession.total_analyses || 0),
                               }, { onConflict: "user_id" });
                           }
-                          // Mark room done in checklist
                           if (shootingRoom && selectedRooms[shootingRoom]) {
                             const updatedChecklist = { ...selectedRooms, [shootingRoom]: "done" };
                             setSelectedRooms(updatedChecklist);
@@ -2018,7 +1970,7 @@ export default function PhotoCoachPage() {
               </div>
             )}
 
-            {/* Recent approved in this session (mini gallery) */}
+            {/* Recent approved mini gallery */}
             {approvedPhotos.length > 0 && !lastResult && (
               <div className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between mb-3">
