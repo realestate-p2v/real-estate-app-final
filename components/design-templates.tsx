@@ -1316,11 +1316,10 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
 /* ═══════════════════════════════════════════════════════
    BRANDING CARD TEMPLATE
    ─────────────────────────────────────────────────────
-   • Cinematic feel with corner accent marks
-   • Headshot with accent border glow
-   • Works generic or with property details
-   • Landscape: info left, headshot right
-   • Vertical: centered stack with elegant spacing
+   • Agent info is the HERO — name under headshot, prominent
+   • Rounded headshot with accent border
+   • Corner accent marks for premium frame
+   • Property info is secondary, shown below agent
    ═══════════════════════════════════════════════════════ */
 
 export function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
@@ -1329,82 +1328,90 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
   const w = orientation.width, h = orientation.height, isVertical = orientation.id === "vertical";
   const isLightBg = bgColor && !bgPhoto ? isLightColor(bgColor) : false;
   const textColor = isLightBg ? "#1a1a2e" : "#ffffff";
-  const textMuted = isLightBg ? "rgba(26,26,46,0.55)" : "rgba(255,255,255,0.6)";
-  const borderColor = isLightBg ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)";
+  const textMuted = isLightBg ? "rgba(26,26,46,0.50)" : "rgba(255,255,255,0.55)";
+  const borderColor = isLightBg ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)";
   const accent = accentColor || textColor;
   const cornerLen = isVertical ? 40 : 50;
   const cornerW = 2;
+  const hasProperty = !!(address || price);
 
-  const renderCorners = (insetX: number, insetY: number) => (
+  const renderCorners = (ix: number, iy: number) => (
     <>
-      <div style={{ position: "absolute", top: insetY, left: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", top: insetY, left: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", top: insetY, right: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", top: insetY, right: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", bottom: insetY, left: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", bottom: insetY, left: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", bottom: insetY, right: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
-      <div style={{ position: "absolute", bottom: insetY, right: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", top: iy, left: ix, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", top: iy, left: ix, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", top: iy, right: ix, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", top: iy, right: ix, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", bottom: iy, left: ix, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", bottom: iy, left: ix, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", bottom: iy, right: ix, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.35 }} />
+      <div style={{ position: "absolute", bottom: iy, right: ix, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.35 }} />
     </>
   );
 
+  const nameText = agentName || "Agent Name";
+
+  /* ══════════ VERTICAL (1080×1920) ══════════ */
   if (isVertical) {
     const u = w / 1080;
-    const inset = Math.round(24 * u), radius = Math.round(24 * u), border = Math.round(3 * u), pad = Math.round(48 * u);
-    const headshotSz = Math.round(420 * u), frameBorder = Math.round(6 * u);
-    const nameText = agentName || "Agent Name";
-    const nameFontSize = responsiveSize(Math.round(52 * u), nameText, 18);
-    const hasProperty = !!(address || price);
+    const inset = Math.round(24 * u), radius = Math.round(24 * u), border = Math.round(3 * u), pad = Math.round(44 * u);
+    const headshotSz = Math.round(400 * u), frameBorder = Math.round(6 * u);
+    const nameFontSize = responsiveSize(Math.round(60 * u), nameText, 16);
 
     return (
       <div style={{ width: w, height: h, background: "transparent" }}>
         <div style={{ position: "absolute", inset, borderRadius: radius, border: `${border}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: pad, fontFamily }}>
           {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
           {renderCorners(Math.round(36 * u), Math.round(36 * u))}
-          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(8 * u) }}>
-            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(340 * u), maxHeight: Math.round(140 * u), objectFit: "contain" as const, marginBottom: Math.round(12 * u) }} />}
+          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(6 * u) }}>
+            {/* Logo at top */}
+            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(320 * u), maxHeight: Math.round(120 * u), objectFit: "contain" as const, marginBottom: Math.round(16 * u) }} />}
+            {/* Headshot — rounded with accent ring */}
             {headshot ? (
-              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : borderColor, borderRadius: "50%" }}>
-                <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", display: "block" }} />
+              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : borderColor, borderRadius: Math.round(20 * u) }}>
+                <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: Math.round(16 * u), display: "block" }} />
               </div>
             ) : (
-              <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: Math.round(20 * u), display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
               </div>
             )}
-            <p style={{ fontSize: nameFontSize, fontWeight: 700, color: accent, margin: 0, marginTop: Math.round(12 * u), whiteSpace: "nowrap" }}>{nameText}</p>
-            <div style={{ width: Math.round(60 * u), height: 2, backgroundColor: accent, opacity: 0.4, margin: `${Math.round(6 * u)}px 0` }} />
-            {brokerage && <p style={{ fontSize: Math.round(32 * u), color: textMuted, margin: 0 }}>{brokerage}</p>}
-            {tagline && <p style={{ fontSize: Math.round(30 * u), color: accentColor || textMuted, fontStyle: "italic", margin: 0 }}>{tagline}</p>}
-            {hasProperty && (
-              <div style={{ marginTop: Math.round(20 * u) }}>
-                {address && <p style={{ fontSize: responsiveSize(Math.round(68 * u), address, 16), fontWeight: 800, color: textColor, margin: 0, lineHeight: 1.05, overflowWrap: "break-word" }}>{address}</p>}
-                {cityState && <p style={{ fontSize: Math.round(40 * u), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(6 * u) }}>{cityState}</p>}
-                {price && <p style={{ fontSize: Math.round(60 * u), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(14 * u) }}>${price}</p>}
-                {features && <div style={{ marginTop: Math.round(14 * u), color: textMuted, fontSize: Math.round(34 * u), lineHeight: 1.6 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
-              </div>
-            )}
-            <div style={{ marginTop: Math.round(20 * u), display: "flex", justifyContent: "center", gap: Math.round(24 * u), flexWrap: "wrap" }}>
-              {phone && <span style={{ fontSize: Math.round(30 * u), color: textMuted }}>{phone}</span>}
+            {/* Agent Name — HERO */}
+            <p style={{ fontSize: nameFontSize, fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(14 * u), whiteSpace: "nowrap" }}>{nameText}</p>
+            {/* Accent rule */}
+            <div style={{ width: Math.round(60 * u), height: 2, backgroundColor: accent, opacity: 0.4, margin: `${Math.round(4 * u)}px 0` }} />
+            {/* Brokerage */}
+            {brokerage && <p style={{ fontSize: Math.round(34 * u), color: textMuted, margin: 0, fontWeight: 500 }}>{brokerage}</p>}
+            {/* Contact — prominent */}
+            <div style={{ display: "flex", justifyContent: "center", gap: Math.round(20 * u), flexWrap: "wrap", marginTop: Math.round(4 * u) }}>
+              {phone && <span style={{ fontSize: Math.round(32 * u), color: textColor, fontWeight: 600 }}>{phone}</span>}
               {email && <span style={{ fontSize: Math.round(30 * u), color: textMuted }}>{email}</span>}
             </div>
+            {/* Tagline */}
+            {tagline && <p style={{ fontSize: Math.round(28 * u), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(6 * u) }}>{tagline}</p>}
+            {/* Property info — secondary, below a divider */}
+            {hasProperty && (
+              <div style={{ marginTop: Math.round(24 * u), paddingTop: Math.round(20 * u), borderTop: `1px solid ${borderColor}`, width: "80%" }}>
+                {address && <p style={{ fontSize: responsiveSize(Math.round(54 * u), address, 18), fontWeight: 700, color: textColor, margin: 0, lineHeight: 1.1, overflowWrap: "break-word" }}>{address}</p>}
+                {cityState && <p style={{ fontSize: Math.round(36 * u), fontWeight: 500, color: textMuted, margin: 0, marginTop: Math.round(6 * u) }}>{cityState}</p>}
+                {price && <p style={{ fontSize: Math.round(50 * u), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(12 * u) }}>${price}</p>}
+                {features && <div style={{ marginTop: Math.round(10 * u), color: textMuted, fontSize: Math.round(30 * u), lineHeight: 1.6 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
+              </div>
+            )}
           </div>
         </div>
       </div>
     );
   }
 
-  // ══════════════ LANDSCAPE ══════════════
+  /* ══════════ LANDSCAPE (1920×1080) ══════════ */
   const u = w / 1920, uh = h / 1080;
   const inset = Math.round(36 * u), radius = Math.round(36 * u), borderW = Math.round(4 * u);
-  const contentPadX = Math.round(64 * u), contentPadY = Math.round(48 * uh);
+  const contentPadX = Math.round(60 * u), contentPadY = Math.round(44 * uh);
   const innerH = h - inset * 2 - borderW * 2;
   const innerW = w - inset * 2 - borderW * 2;
-  const headshotW = Math.round(innerW * 0.28);
-  const headshotH = Math.round(innerH * 0.78);
+  const headshotSz = Math.round(innerH * 0.55);
   const frameBorder = Math.round(6 * u);
-  const nameText = agentName || "Your Name";
-  const hasProperty = !!(address || price);
+  const nameFontSize = responsiveSize(Math.round(h * 0.065), nameText, 16);
 
   return (
     <div style={{ width: w, height: h, background: "transparent" }}>
@@ -1412,55 +1419,50 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
         {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
         {renderCorners(Math.round(28 * u), Math.round(28 * u))}
         <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", width: "100%", height: "100%", padding: `${contentPadY}px ${contentPadX}px` }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: Math.round(30 * u), minWidth: 0 }}>
-            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.20), maxHeight: Math.round(innerH * 0.18), objectFit: "contain" as const, marginBottom: Math.round(20 * u) }} />}
-            {hasProperty ? (
-              <>
-                <p style={{ fontSize: responsiveSize(Math.round(h * 0.10), address || "", 16), fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0, overflowWrap: "break-word" }}>{address}</p>
-                {cityState && <p style={{ fontSize: Math.round(h * 0.055), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(h * 0.02) }}>{cityState}</p>}
-                <div style={{ width: Math.round(50 * u), height: 3, backgroundColor: accent, opacity: 0.5, marginTop: Math.round(h * 0.025), marginBottom: Math.round(h * 0.02), borderRadius: 2 }} />
-                {price && <p style={{ fontSize: Math.round(h * 0.085), fontWeight: 800, color: accent, margin: 0 }}>${price}</p>}
-                {features && <div style={{ marginTop: Math.round(h * 0.025), color: textMuted, fontSize: Math.round(h * 0.042), lineHeight: 1.55 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
-                <div style={{ marginTop: Math.round(h * 0.035), display: "flex", alignItems: "center", gap: Math.round(16 * u), flexWrap: "wrap" }}>
-                  <span style={{ fontSize: Math.round(h * 0.042), fontWeight: 600, color: accent }}>{nameText}</span>
-                  {brokerage && <span style={{ fontSize: Math.round(h * 0.032), color: textMuted }}>· {brokerage}</span>}
-                </div>
-                <div style={{ display: "flex", gap: Math.round(16 * u), marginTop: Math.round(h * 0.01), flexWrap: "wrap" }}>
-                  {phone && <span style={{ fontSize: Math.round(h * 0.032), color: textMuted }}>{phone}</span>}
-                  {email && <span style={{ fontSize: Math.round(h * 0.032), color: textMuted }}>{email}</span>}
-                </div>
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: responsiveSize(Math.round(h * 0.12), nameText, 14), fontWeight: 800, color: accent, lineHeight: 1.05, margin: 0, whiteSpace: "nowrap" }}>{nameText}</p>
-                <div style={{ width: Math.round(50 * u), height: 3, backgroundColor: accent, opacity: 0.5, marginTop: Math.round(h * 0.025), marginBottom: Math.round(h * 0.02), borderRadius: 2 }} />
-                {brokerage && <p style={{ fontSize: Math.round(h * 0.048), color: textMuted, margin: 0 }}>{brokerage}</p>}
-                {tagline && <p style={{ fontSize: Math.round(h * 0.042), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(h * 0.015) }}>{tagline}</p>}
-                <div style={{ marginTop: Math.round(h * 0.03), display: "flex", flexDirection: "column", gap: Math.round(h * 0.01) }}>
-                  {phone && <p style={{ fontSize: Math.round(h * 0.042), color: textMuted, margin: 0 }}>{phone}</p>}
-                  {email && <p style={{ fontSize: Math.round(h * 0.042), color: textMuted, margin: 0 }}>{email}</p>}
-                </div>
-              </>
-            )}
-          </div>
-          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+
+          {/* LEFT — Agent headshot + name (HERO) */}
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginRight: Math.round(40 * u) }}>
             {headshot ? (
-              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : `linear-gradient(135deg, ${borderColor}, transparent)`, borderRadius: Math.round(12 * u) }}>
-                <img src={headshot} alt="Agent" style={{ width: headshotW, height: headshotH, objectFit: "cover", borderRadius: Math.round(8 * u), display: "block" }} />
+              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : `linear-gradient(135deg, ${borderColor}, transparent)`, borderRadius: Math.round(16 * u) }}>
+                <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: Math.round(12 * u), display: "block" }} />
               </div>
             ) : (
-              <div style={{ width: headshotW, height: headshotH, backgroundColor: "rgba(255,255,255,0.04)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: Math.round(12 * u), display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.04)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: Math.round(16 * u), display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
               </div>
             )}
-            {!hasProperty && <p style={{ fontSize: Math.round(h * 0.032), color: textMuted, marginTop: Math.round(10 * uh), textAlign: "center", letterSpacing: "0.06em", textTransform: "uppercase" as const }}>Real Estate Agent</p>}
+            {/* Name under photo */}
+            <p style={{ fontSize: nameFontSize, fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(12 * uh), textAlign: "center", whiteSpace: "nowrap" }}>{nameText}</p>
+          </div>
+
+          {/* RIGHT — Info */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
+            {/* Logo */}
+            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.22), maxHeight: Math.round(innerH * 0.16), objectFit: "contain" as const, marginBottom: Math.round(16 * u) }} />}
+            {/* Brokerage */}
+            {brokerage && <p style={{ fontSize: Math.round(h * 0.042), color: textMuted, margin: 0 }}>{brokerage}</p>}
+            {/* Contact */}
+            <div style={{ display: "flex", gap: Math.round(20 * u), marginTop: Math.round(h * 0.012), flexWrap: "wrap" }}>
+              {phone && <span style={{ fontSize: Math.round(h * 0.042), color: textColor, fontWeight: 600 }}>{phone}</span>}
+              {email && <span style={{ fontSize: Math.round(h * 0.038), color: textMuted }}>{email}</span>}
+            </div>
+            {/* Tagline */}
+            {tagline && <p style={{ fontSize: Math.round(h * 0.038), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(h * 0.012) }}>{tagline}</p>}
+            {/* Property info — secondary, below divider */}
+            {hasProperty && (
+              <div style={{ marginTop: Math.round(h * 0.03), paddingTop: Math.round(h * 0.025), borderTop: `1px solid ${borderColor}` }}>
+                {address && <p style={{ fontSize: responsiveSize(Math.round(h * 0.072), address, 18), fontWeight: 700, color: textColor, margin: 0, lineHeight: 1.1, overflowWrap: "break-word" }}>{address}</p>}
+                {cityState && <p style={{ fontSize: Math.round(h * 0.042), fontWeight: 500, color: textMuted, margin: 0, marginTop: Math.round(h * 0.01) }}>{cityState}</p>}
+                {price && <p style={{ fontSize: Math.round(h * 0.065), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(h * 0.015) }}>${price}</p>}
+                {features && <div style={{ marginTop: Math.round(h * 0.015), color: textMuted, fontSize: Math.round(h * 0.036), lineHeight: 1.5 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
 
 /* ═══════════════════════════════════════════════════════
    BADGE CONFIG
