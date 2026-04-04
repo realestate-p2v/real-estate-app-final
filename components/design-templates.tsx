@@ -1144,17 +1144,9 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
 
 /* ═══════════════════════════════════════════════════════
    PROPERTY PDF PAGE
-   ═══════════════════════════════════════════════════════ */
-
-/* ═══════════════════════════════════════════════════════
-   PROPERTY PDF PAGE
    ─────────────────────────────────────────────────────
-   Redesigned with:
-   • Thin accent header bar across top
-   • Editorial typography — elegant hierarchy
-   • Clean price with accent underline (no clipPath)
-   • Accent-colored dash markers for features
-   • Vertical accent line between columns
+   • Full-width hero, editorial details below
+   • Description overflow continues to page 2
    • Photo grid with rounded corners + page footer
    ═══════════════════════════════════════════════════════ */
 
@@ -1163,35 +1155,45 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
 }) {
   const W = 2550;
   const H = 3300;
-  const accent = accentColor || "#1a8a8a";
-  const accentLight = hexToRgba(accent, 0.12);
+  const accent = accentColor || "#0e7490";
+  const headerBarH = 14;
+  const margin = 80;
+
+  // Estimate description overflow
+  const featureLines = features ? features.split("\n").filter(Boolean).length : 0;
+  const descLines = description ? description.split("\n").filter(Boolean) : [];
+  const estimatedFeatureH = featureLines * 70 + (featureLines > 0 ? 80 : 0);
+  const maxDescH = 1400 - estimatedFeatureH;
+  const descLineH = 52;
+  const maxDescLines = Math.floor(maxDescH / descLineH);
+
+  let page1Desc = descLines;
+  let overflowDesc: string[] = [];
+  if (descLines.length > maxDescLines && maxDescLines > 0) {
+    page1Desc = descLines.slice(0, maxDescLines);
+    overflowDesc = descLines.slice(maxDescLines);
+  }
+
+  const hasOverflow = overflowDesc.length > 0;
+  const page2PhotoSlots = hasOverflow ? 4 : 6;
 
   if (pageNumber === 0) {
     const heroPhoto = photos[0] || null;
     const photo2 = photos[1] || null;
     const photo3 = photos[2] || null;
     const pad = 100;
-    const headerBarH = 14;
     const photoGap = 10;
     const heroH = Math.round(H * 0.42);
-    const bottomH = H - heroH - headerBarH;
     const leftW = Math.round(W * 0.48);
     const rightW = W - leftW;
-
     const addressText = address || "Property Name";
     const cityText = cityStateZip || "City, State";
     const priceText = price ? `$${price}` : "$000,000";
     const detailsText = [beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ");
 
-    const margin = 80;
-
     return (
       <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, position: "relative", padding: margin }}>
-
-        {/* ── Accent header bar ── */}
         <div style={{ position: "absolute", top: margin, left: margin, right: margin, height: headerBarH, backgroundColor: accent }} />
-
-        {/* ── HERO PHOTO — full width across top ── */}
         <div style={{ position: "absolute", top: margin + headerBarH, left: margin, right: margin, height: heroH, overflow: "hidden" }}>
           {heroPhoto ? (
             <img src={heroPhoto} alt="Hero" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1202,69 +1204,17 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
           )}
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 80, backgroundImage: "linear-gradient(to top, rgba(255,255,255,0.6), transparent)" }} />
         </div>
-
-        {/* ── BOTTOM SECTION — details left, photos right ── */}
-        <div style={{
-          position: "absolute", top: heroH + headerBarH + margin, left: margin, right: margin, bottom: margin + headerBarH,
-          display: "flex",
-        }}>
-          {/* ── LEFT: Property Details ── */}
-          <div style={{
-            width: leftW,
-            padding: `${pad * 0.6}px ${pad * 0.6}px ${pad * 0.5}px ${pad * 0.3}px`,
-            display: "flex", flexDirection: "column",
-            justifyContent: "flex-start",
-            overflow: "hidden",
-          }}>
-            {/* "Introducing" label */}
-            <p style={{
-              fontSize: 42, color: accent, fontWeight: 500,
-              letterSpacing: "0.12em", textTransform: "uppercase" as const,
-              margin: 0, lineHeight: 1,
-            }}>Introducing</p>
-
-            {/* Address */}
-            <p style={{
-              fontSize: responsiveSize(88, addressText, 18),
-              color: "#1a1a1a", fontWeight: 800,
-              lineHeight: 1.05, margin: 0, marginTop: 12,
-              overflowWrap: "break-word",
-            }}>{addressText}</p>
-
-            {/* City/State */}
-            <p style={{
-              fontSize: 36, color: "#666", fontWeight: 500,
-              margin: 0, marginTop: 10,
-              letterSpacing: "0.02em",
-            }}>{cityText}</p>
-
-            {/* Accent rule */}
+        <div style={{ position: "absolute", top: heroH + headerBarH + margin, left: margin, right: margin, bottom: margin + headerBarH, display: "flex" }}>
+          <div style={{ width: leftW, padding: `${pad * 0.6}px ${pad * 0.6}px ${pad * 0.5}px ${pad * 0.3}px`, display: "flex", flexDirection: "column", justifyContent: "flex-start", overflow: "hidden" }}>
+            <p style={{ fontSize: 42, color: accent, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase" as const, margin: 0, lineHeight: 1 }}>Introducing</p>
+            <p style={{ fontSize: responsiveSize(88, addressText, 18), color: "#1a1a1a", fontWeight: 800, lineHeight: 1.05, margin: 0, marginTop: 12, overflowWrap: "break-word" }}>{addressText}</p>
+            <p style={{ fontSize: 36, color: "#666", fontWeight: 500, margin: 0, marginTop: 10, letterSpacing: "0.02em" }}>{cityText}</p>
             <div style={{ width: 70, height: 4, backgroundColor: accent, marginTop: 28, borderRadius: 2 }} />
-
-            {/* Price */}
-            <p style={{
-              fontSize: 96, fontWeight: 800, color: accent,
-              margin: 0, marginTop: 14, lineHeight: 1.0,
-              letterSpacing: "-0.02em",
-            }}>{priceText}</p>
-
-            {/* Details */}
-            {detailsText && (
-              <p style={{
-                fontSize: 36, color: "#555", fontWeight: 600,
-                margin: 0, marginTop: 10,
-                letterSpacing: "0.06em",
-              }}>{detailsText}</p>
-            )}
-
-            {/* Features */}
+            <p style={{ fontSize: 96, fontWeight: 800, color: accent, margin: 0, marginTop: 14, lineHeight: 1.0, letterSpacing: "-0.02em" }}>{priceText}</p>
+            {detailsText && <p style={{ fontSize: 36, color: "#555", fontWeight: 600, margin: 0, marginTop: 10, letterSpacing: "0.06em" }}>{detailsText}</p>}
             {features && (
               <div style={{ marginTop: 36 }}>
-                <p style={{
-                  fontSize: 32, fontWeight: 700, color: "#333",
-                  letterSpacing: "0.10em", textTransform: "uppercase" as const,
-                  margin: 0, marginBottom: 16,
-                }}>Key Features</p>
+                <p style={{ fontSize: 32, fontWeight: 700, color: "#333", letterSpacing: "0.10em", textTransform: "uppercase" as const, margin: 0, marginBottom: 16 }}>Key Features</p>
                 <div style={{ fontSize: 32, color: "#444", lineHeight: 2.0 }}>
                   {features.split("\n").filter(Boolean).map((f, i) => (
                     <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -1275,137 +1225,89 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
                 </div>
               </div>
             )}
-
-            {/* Description */}
-            {description && (
+            {page1Desc.length > 0 && (
               <div style={{ marginTop: 32 }}>
-                <p style={{
-                  fontSize: 32, fontWeight: 700, color: "#333",
-                  letterSpacing: "0.10em", textTransform: "uppercase" as const,
-                  margin: 0, marginBottom: 14,
-                }}>About This Property</p>
+                <p style={{ fontSize: 32, fontWeight: 700, color: "#333", letterSpacing: "0.10em", textTransform: "uppercase" as const, margin: 0, marginBottom: 14 }}>About This Property</p>
                 <div style={{ fontSize: 30, color: "#555", lineHeight: 1.7, overflowWrap: "break-word" }}>
-                  {description.split("\n").filter(Boolean).map((p, i) => (
-                    <p key={i} style={{ margin: 0, marginBottom: 10 }}>{p}</p>
-                  ))}
+                  {page1Desc.map((p, i) => <p key={i} style={{ margin: 0, marginBottom: 10 }}>{p}</p>)}
                 </div>
               </div>
             )}
           </div>
-
-          {/* ── VERTICAL DIVIDER ── */}
-          <div style={{
-            width: 3, backgroundColor: accent, opacity: 0.15,
-            marginTop: Math.round(pad * 0.5), marginBottom: Math.round(pad * 0.5),
-            flexShrink: 0,
-          }} />
-
-          {/* ── RIGHT: Two stacked landscape photos ── */}
-          <div style={{
-            width: rightW,
-            display: "flex", flexDirection: "column",
-            padding: `${Math.round(pad * 0.4)}px ${Math.round(pad * 0.3)}px ${Math.round(pad * 0.4)}px ${Math.round(pad * 0.4)}px`,
-            gap: photoGap,
-          }}>
+          <div style={{ width: 3, backgroundColor: accent, opacity: 0.15, marginTop: Math.round(pad * 0.5), marginBottom: Math.round(pad * 0.5), flexShrink: 0 }} />
+          <div style={{ width: rightW, display: "flex", flexDirection: "column", padding: `${Math.round(pad * 0.4)}px ${Math.round(pad * 0.3)}px ${Math.round(pad * 0.4)}px ${Math.round(pad * 0.4)}px`, gap: photoGap }}>
             <div style={{ flex: 1, borderRadius: 16, overflow: "hidden" }}>
-              {photo2 ? (
-                <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <div style={{ width: "100%", height: "100%", backgroundColor: "#f0efea", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "#ccc", fontSize: 38, fontWeight: 500 }}>Photo 2</span>
-                </div>
-              )}
+              {photo2 ? <img src={photo2} alt="Photo 2" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#f0efea", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#ccc", fontSize: 38, fontWeight: 500 }}>Photo 2</span></div>}
             </div>
             <div style={{ flex: 1, borderRadius: 16, overflow: "hidden" }}>
-              {photo3 ? (
-                <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <div style={{ width: "100%", height: "100%", backgroundColor: "#f5f5f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "#ccc", fontSize: 38, fontWeight: 500 }}>Photo 3</span>
-                </div>
-              )}
+              {photo3 ? <img src={photo3} alt="Photo 3" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#f5f5f0", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#ccc", fontSize: 38, fontWeight: 500 }}>Photo 3</span></div>}
             </div>
           </div>
         </div>
-
-        {/* ── Bottom accent bar ── */}
         <div style={{ position: "absolute", bottom: margin, left: margin, right: margin, height: headerBarH, backgroundColor: accent }} />
       </div>
     );
   }
 
-  /* ═══════════════════════════════════════════════════════
-     PHOTO GRID PAGES (page 2+)
-     ═══════════════════════════════════════════════════════ */
-
-  const startIdx = 3 + (pageNumber - 1) * 6;
-  const pagePhotos = photos.slice(startIdx, startIdx + 6);
+  /* ═══════════════════════════════════════
+     PHOTO GRID PAGES (page 2+) with overflow
+     ═══════════════════════════════════════ */
+  const isFirstGridPage = pageNumber === 1;
+  const showOverflow = isFirstGridPage && hasOverflow;
+  let startIdx: number;
+  if (pageNumber === 1) { startIdx = 3; }
+  else if (hasOverflow) { startIdx = 3 + page2PhotoSlots + (pageNumber - 2) * 6; }
+  else { startIdx = 3 + (pageNumber - 1) * 6; }
+  const slotsOnPage = (isFirstGridPage && hasOverflow) ? page2PhotoSlots : 6;
+  const pagePhotos = photos.slice(startIdx, startIdx + slotsOnPage);
   const pgPad = 100;
   const pgGap = 24;
-  const headerBarH = 14;
   const footerH = 80;
+  const overflowH = showOverflow ? 600 : 0;
+  const gridH = H - pgPad * 2 - footerH - headerBarH - overflowH;
   const colW = Math.round((W - pgPad * 2 - pgGap) / 2);
-  const photoH = Math.round((H - pgPad * 2 - pgGap * 2 - footerH - headerBarH) / 3);
+  const rows = showOverflow ? 2 : 3;
+  const photoH = Math.round((gridH - pgGap * (rows - 1)) / rows);
   const photoRadius = 16;
-  const totalPages = 1 + Math.ceil(Math.max(0, photos.length - 3) / 6);
+  const photosAfterPage1 = Math.max(0, photos.length - 3);
+  let totalPages: number;
+  if (hasOverflow) { const pAP2 = Math.max(0, photosAfterPage1 - page2PhotoSlots); totalPages = 2 + Math.ceil(pAP2 / 6); }
+  else { totalPages = 1 + Math.ceil(photosAfterPage1 / 6); }
 
   return (
     <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, position: "relative" }}>
-
-      {/* Accent header bar */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerBarH, backgroundColor: accent }} />
-
-      {/* Photo grid */}
-      <div style={{ padding: `${pgPad + headerBarH}px ${pgPad}px ${pgPad}px`, display: "flex", flexDirection: "column", height: H - footerH }}>
+      {showOverflow && (
+        <div style={{ padding: `${pgPad + headerBarH}px ${pgPad}px 0`, height: overflowH }}>
+          <div style={{ fontSize: 30, color: "#555", lineHeight: 1.7, overflowWrap: "break-word" }}>
+            {overflowDesc.map((p, i) => <p key={i} style={{ margin: 0, marginBottom: 10 }}>{p}</p>)}
+          </div>
+        </div>
+      )}
+      <div style={{ padding: `${showOverflow ? pgGap : pgPad + headerBarH}px ${pgPad}px ${pgPad}px`, display: "flex", flexDirection: "column", height: gridH + (showOverflow ? 0 : pgPad) }}>
         <div style={{ flex: 1, display: "flex", gap: pgGap }}>
           <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
-            {[0, 2, 4].map((idx) => {
+            {Array.from({ length: rows }, (_, r) => r * 2).map((idx) => {
               const photo = pagePhotos[idx];
-              return (
-                <div key={idx} style={{
-                  height: photoH, borderRadius: photoRadius, overflow: "hidden",
-                  backgroundColor: photo ? undefined : "#f5f5f0",
-                }}>
-                  {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                </div>
-              );
+              return (<div key={idx} style={{ height: photoH, borderRadius: photoRadius, overflow: "hidden", backgroundColor: photo ? undefined : "#f5f5f0" }}>{photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>);
             })}
           </div>
           <div style={{ width: colW, display: "flex", flexDirection: "column", gap: pgGap }}>
-            {[1, 3, 5].map((idx) => {
+            {Array.from({ length: rows }, (_, r) => r * 2 + 1).map((idx) => {
               const photo = pagePhotos[idx];
-              return (
-                <div key={idx} style={{
-                  height: photoH, borderRadius: photoRadius, overflow: "hidden",
-                  backgroundColor: photo ? undefined : "#f5f5f0",
-                }}>
-                  {photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                </div>
-              );
+              return (<div key={idx} style={{ height: photoH, borderRadius: photoRadius, overflow: "hidden", backgroundColor: photo ? undefined : "#f5f5f0" }}>{photo && <img src={photo} alt={`Photo ${startIdx + idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>);
             })}
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: footerH + headerBarH,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        paddingBottom: headerBarH,
-      }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: footerH + headerBarH, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: headerBarH }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div style={{ width: 40, height: 2, backgroundColor: "#ddd" }} />
-          <p style={{ fontSize: 30, color: "#999", fontWeight: 500, letterSpacing: "0.06em", margin: 0 }}>
-            {address}{cityStateZip ? ` · ${cityStateZip}` : ""}
-          </p>
+          <p style={{ fontSize: 30, color: "#999", fontWeight: 500, letterSpacing: "0.06em", margin: 0 }}>{address}{cityStateZip ? ` · ${cityStateZip}` : ""}</p>
           <div style={{ width: 40, height: 2, backgroundColor: "#ddd" }} />
-          <p style={{ fontSize: 28, color: "#bbb", fontWeight: 500, margin: 0 }}>
-            Page {pageNumber + 1} of {totalPages}
-          </p>
+          <p style={{ fontSize: 28, color: "#bbb", fontWeight: 500, margin: 0 }}>Page {pageNumber + 1} of {totalPages}</p>
         </div>
       </div>
-
-      {/* Bottom accent bar */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: headerBarH, backgroundColor: accent }} />
     </div>
   );
@@ -1413,6 +1315,12 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
 
 /* ═══════════════════════════════════════════════════════
    BRANDING CARD TEMPLATE
+   ─────────────────────────────────────────────────────
+   • Cinematic feel with corner accent marks
+   • Headshot with accent border glow
+   • Works generic or with property details
+   • Landscape: info left, headshot right
+   • Vertical: centered stack with elegant spacing
    ═══════════════════════════════════════════════════════ */
 
 export function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
@@ -1421,83 +1329,138 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
   const w = orientation.width, h = orientation.height, isVertical = orientation.id === "vertical";
   const isLightBg = bgColor && !bgPhoto ? isLightColor(bgColor) : false;
   const textColor = isLightBg ? "#1a1a2e" : "#ffffff";
-  const textMuted = isLightBg ? "rgba(26,26,46,0.6)" : "rgba(255,255,255,0.7)";
-  const borderColor = isLightBg ? "rgba(0,0,0,0.2)" : "rgba(180,180,180,0.5)";
+  const textMuted = isLightBg ? "rgba(26,26,46,0.55)" : "rgba(255,255,255,0.6)";
+  const borderColor = isLightBg ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)";
   const accent = accentColor || textColor;
+  const cornerLen = isVertical ? 40 : 50;
+  const cornerW = 2;
+
+  const renderCorners = (insetX: number, insetY: number) => (
+    <>
+      <div style={{ position: "absolute", top: insetY, left: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", top: insetY, left: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", top: insetY, right: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", top: insetY, right: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", bottom: insetY, left: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", bottom: insetY, left: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", bottom: insetY, right: insetX, width: cornerLen, height: cornerW, backgroundColor: accent, opacity: 0.4 }} />
+      <div style={{ position: "absolute", bottom: insetY, right: insetX, width: cornerW, height: cornerLen, backgroundColor: accent, opacity: 0.4 }} />
+    </>
+  );
 
   if (isVertical) {
     const u = w / 1080;
-    const inset = Math.round(24 * u), radius = Math.round(30 * u), border = Math.round(4 * u), pad = Math.round(56 * u);
-    const headshotSz = Math.round(520 * u), frameBorder = Math.round(10 * u);
-
+    const inset = Math.round(24 * u), radius = Math.round(24 * u), border = Math.round(3 * u), pad = Math.round(48 * u);
+    const headshotSz = Math.round(420 * u), frameBorder = Math.round(6 * u);
     const nameText = agentName || "Agent Name";
     const nameFontSize = responsiveSize(Math.round(52 * u), nameText, 18);
+    const hasProperty = !!(address || price);
 
     return (
       <div style={{ width: w, height: h, background: "transparent" }}>
         <div style={{ position: "absolute", inset, borderRadius: radius, border: `${border}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: pad, fontFamily }}>
           {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
-          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%" }}>
-            {headshot ? <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", border: `${frameBorder}px solid white`, margin: "0 auto", display: "block" }} /> : <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.08)", border: `${frameBorder}px solid ${borderColor}`, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: 100 * u, height: 100 * u, color: textMuted }} /></div>}
-            <p style={{ fontSize: nameFontSize, fontWeight: 700, color: accent, marginTop: Math.round(20 * u), overflowWrap: "break-word" }}>{nameText}</p>
-            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(400 * u), maxHeight: Math.round(180 * u), objectFit: "contain", margin: `${Math.round(32 * u)}px auto`, display: "block" }} />}
-            {address && <p style={{ fontSize: responsiveSize(Math.round(80 * u), address, 16), fontWeight: 800, color: textColor, marginTop: Math.round(28 * u), lineHeight: 1.05, overflowWrap: "break-word" }}>{address}</p>}
-            {cityState && <p style={{ fontSize: Math.round(48 * u), fontWeight: 600, color: textColor, marginTop: Math.round(10 * u) }}>{cityState}</p>}
-            {price && <p style={{ fontSize: Math.round(68 * u), fontWeight: 800, color: accent, marginTop: Math.round(24 * u) }}>${price}</p>}
-            {features && <div style={{ marginTop: Math.round(22 * u), color: textMuted, fontSize: Math.round(40 * u), lineHeight: 1.6 }}>{features.split("\n").map((f, i) => <div key={i}>{f}</div>)}</div>}
-            <div style={{ marginTop: Math.round(36 * u), display: "flex", justifyContent: "center", gap: Math.round(28 * u), flexWrap: "wrap" }}>
-              {phone && <span style={{ fontSize: Math.round(34 * u), color: textMuted }}>{phone}</span>}
-              {email && <span style={{ fontSize: Math.round(34 * u), color: textMuted, overflowWrap: "break-word" }}>{email}</span>}
+          {renderCorners(Math.round(36 * u), Math.round(36 * u))}
+          <div style={{ position: "relative", zIndex: 1, textAlign: "center", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(8 * u) }}>
+            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(340 * u), maxHeight: Math.round(140 * u), objectFit: "contain" as const, marginBottom: Math.round(12 * u) }} />}
+            {headshot ? (
+              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : borderColor, borderRadius: "50%" }}>
+                <img src={headshot} alt="Agent" style={{ width: headshotSz, height: headshotSz, objectFit: "cover", borderRadius: "50%", display: "block" }} />
+              </div>
+            ) : (
+              <div style={{ width: headshotSz, height: headshotSz, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
+              </div>
+            )}
+            <p style={{ fontSize: nameFontSize, fontWeight: 700, color: accent, margin: 0, marginTop: Math.round(12 * u), whiteSpace: "nowrap" }}>{nameText}</p>
+            <div style={{ width: Math.round(60 * u), height: 2, backgroundColor: accent, opacity: 0.4, margin: `${Math.round(6 * u)}px 0` }} />
+            {brokerage && <p style={{ fontSize: Math.round(32 * u), color: textMuted, margin: 0 }}>{brokerage}</p>}
+            {tagline && <p style={{ fontSize: Math.round(30 * u), color: accentColor || textMuted, fontStyle: "italic", margin: 0 }}>{tagline}</p>}
+            {hasProperty && (
+              <div style={{ marginTop: Math.round(20 * u) }}>
+                {address && <p style={{ fontSize: responsiveSize(Math.round(68 * u), address, 16), fontWeight: 800, color: textColor, margin: 0, lineHeight: 1.05, overflowWrap: "break-word" }}>{address}</p>}
+                {cityState && <p style={{ fontSize: Math.round(40 * u), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(6 * u) }}>{cityState}</p>}
+                {price && <p style={{ fontSize: Math.round(60 * u), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(14 * u) }}>${price}</p>}
+                {features && <div style={{ marginTop: Math.round(14 * u), color: textMuted, fontSize: Math.round(34 * u), lineHeight: 1.6 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
+              </div>
+            )}
+            <div style={{ marginTop: Math.round(20 * u), display: "flex", justifyContent: "center", gap: Math.round(24 * u), flexWrap: "wrap" }}>
+              {phone && <span style={{ fontSize: Math.round(30 * u), color: textMuted }}>{phone}</span>}
+              {email && <span style={{ fontSize: Math.round(30 * u), color: textMuted }}>{email}</span>}
             </div>
-            {brokerage && <p style={{ fontSize: Math.round(34 * u), color: textMuted, marginTop: Math.round(8 * u), overflowWrap: "break-word" }}>{brokerage}</p>}
-            {tagline && <p style={{ fontSize: Math.round(32 * u), color: accentColor || textMuted, fontStyle: "italic", marginTop: Math.round(10 * u) }}>{tagline}</p>}
           </div>
         </div>
       </div>
     );
   }
 
-  // Landscape
+  // ══════════════ LANDSCAPE ══════════════
   const u = w / 1920, uh = h / 1080;
-  const inset = Math.round(48 * u), radius = Math.round(48 * u), borderW = Math.round(7 * u);
-  const contentPadX = Math.round(72 * u), contentPadY = Math.round(52 * uh);
-  const innerH = h - inset * 2 - borderW * 2, innerW = w - inset * 2 - borderW * 2;
-  const frameH = Math.round(innerH * 0.82), frameW = Math.round(innerW * 0.237), frameBorder = Math.round(10 * u);
-
+  const inset = Math.round(36 * u), radius = Math.round(36 * u), borderW = Math.round(4 * u);
+  const contentPadX = Math.round(64 * u), contentPadY = Math.round(48 * uh);
+  const innerH = h - inset * 2 - borderW * 2;
+  const innerW = w - inset * 2 - borderW * 2;
+  const headshotW = Math.round(innerW * 0.28);
+  const headshotH = Math.round(innerH * 0.78);
+  const frameBorder = Math.round(6 * u);
   const nameText = agentName || "Your Name";
-  const addrFontSize = responsiveSize(Math.round(h * 0.11), address || nameText, 14);
+  const hasProperty = !!(address || price);
 
   return (
     <div style={{ width: w, height: h, background: "transparent" }}>
       <div style={{ position: "absolute", inset, borderRadius: radius, border: `${borderW}px solid ${borderColor}`, backgroundColor: bgColor || "#14532d", overflow: "hidden", fontFamily }}>
         {bgPhoto && <><img src={bgPhoto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }} /></>}
-        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "stretch", width: "100%", height: "100%", padding: `${contentPadY}px ${contentPadX}px` }}>
-          <div style={{ flex: "0 0 38%", display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: Math.round(20 * u), minWidth: 0 }}>
-            {address ? <p style={{ fontSize: addrFontSize, fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0, overflowWrap: "break-word" }}>{address}</p> : <p style={{ fontSize: addrFontSize, fontWeight: 800, color: accent, lineHeight: 1.05, margin: 0, overflowWrap: "break-word" }}>{nameText}</p>}
-            {cityState && <p style={{ fontSize: Math.round(h * 0.067), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(h * 0.035) }}>{cityState}</p>}
-            {price && <p style={{ fontSize: Math.round(h * 0.089), fontWeight: 800, color: accent, margin: 0, marginTop: Math.round(h * 0.045) }}>${price}</p>}
-            {features && <div style={{ marginTop: Math.round(h * 0.04), color: textMuted, fontSize: Math.round(h * 0.050), lineHeight: 1.55 }}>{features.split("\n").map((f, i) => <div key={i}>{f}</div>)}</div>}
-            {!address && tagline && <p style={{ fontSize: Math.round(h * 0.067), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(h * 0.03) }}>{tagline}</p>}
-            {!address && brokerage && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.02), overflowWrap: "break-word" }}>{brokerage}</p>}
-            {!address && phone && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.015) }}>{phone}</p>}
-            {!address && email && <p style={{ fontSize: Math.round(h * 0.050), color: textMuted, margin: 0, marginTop: Math.round(h * 0.010), overflowWrap: "break-word" }}>{email}</p>}
+        {renderCorners(Math.round(28 * u), Math.round(28 * u))}
+        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", width: "100%", height: "100%", padding: `${contentPadY}px ${contentPadX}px` }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: Math.round(30 * u), minWidth: 0 }}>
+            {logo && <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.20), maxHeight: Math.round(innerH * 0.18), objectFit: "contain" as const, marginBottom: Math.round(20 * u) }} />}
+            {hasProperty ? (
+              <>
+                <p style={{ fontSize: responsiveSize(Math.round(h * 0.10), address || "", 16), fontWeight: 800, color: textColor, lineHeight: 1.05, margin: 0, overflowWrap: "break-word" }}>{address}</p>
+                {cityState && <p style={{ fontSize: Math.round(h * 0.055), fontWeight: 600, color: textColor, margin: 0, marginTop: Math.round(h * 0.02) }}>{cityState}</p>}
+                <div style={{ width: Math.round(50 * u), height: 3, backgroundColor: accent, opacity: 0.5, marginTop: Math.round(h * 0.025), marginBottom: Math.round(h * 0.02), borderRadius: 2 }} />
+                {price && <p style={{ fontSize: Math.round(h * 0.085), fontWeight: 800, color: accent, margin: 0 }}>${price}</p>}
+                {features && <div style={{ marginTop: Math.round(h * 0.025), color: textMuted, fontSize: Math.round(h * 0.042), lineHeight: 1.55 }}>{features.split("\n").filter(Boolean).map((f, i) => <div key={i}>{f}</div>)}</div>}
+                <div style={{ marginTop: Math.round(h * 0.035), display: "flex", alignItems: "center", gap: Math.round(16 * u), flexWrap: "wrap" }}>
+                  <span style={{ fontSize: Math.round(h * 0.042), fontWeight: 600, color: accent }}>{nameText}</span>
+                  {brokerage && <span style={{ fontSize: Math.round(h * 0.032), color: textMuted }}>· {brokerage}</span>}
+                </div>
+                <div style={{ display: "flex", gap: Math.round(16 * u), marginTop: Math.round(h * 0.01), flexWrap: "wrap" }}>
+                  {phone && <span style={{ fontSize: Math.round(h * 0.032), color: textMuted }}>{phone}</span>}
+                  {email && <span style={{ fontSize: Math.round(h * 0.032), color: textMuted }}>{email}</span>}
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: responsiveSize(Math.round(h * 0.12), nameText, 14), fontWeight: 800, color: accent, lineHeight: 1.05, margin: 0, whiteSpace: "nowrap" }}>{nameText}</p>
+                <div style={{ width: Math.round(50 * u), height: 3, backgroundColor: accent, opacity: 0.5, marginTop: Math.round(h * 0.025), marginBottom: Math.round(h * 0.02), borderRadius: 2 }} />
+                {brokerage && <p style={{ fontSize: Math.round(h * 0.048), color: textMuted, margin: 0 }}>{brokerage}</p>}
+                {tagline && <p style={{ fontSize: Math.round(h * 0.042), color: accentColor || textMuted, fontStyle: "italic", margin: 0, marginTop: Math.round(h * 0.015) }}>{tagline}</p>}
+                <div style={{ marginTop: Math.round(h * 0.03), display: "flex", flexDirection: "column", gap: Math.round(h * 0.01) }}>
+                  {phone && <p style={{ fontSize: Math.round(h * 0.042), color: textMuted, margin: 0 }}>{phone}</p>}
+                  {email && <p style={{ fontSize: Math.round(h * 0.042), color: textMuted, margin: 0 }}>{email}</p>}
+                </div>
+              </>
+            )}
           </div>
-          <div style={{ flex: "0 0 24%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            {logo ? <img src={logo} alt="Logo" style={{ maxWidth: Math.round(innerW * 0.18), maxHeight: Math.round(innerH * 0.50), objectFit: "contain" }} /> : <div style={{ width: Math.round(120 * u), height: Math.round(120 * u), borderRadius: "50%", border: `3px dashed ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><ImageIcon style={{ width: 40 * u, height: 40 * u, color: textMuted }} /></div>}
-            {brokerage && address && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(16 * u), textAlign: "center", overflowWrap: "break-word" }}>{brokerage}</p>}
-            {tagline && address && <p style={{ fontSize: Math.round(h * 0.032), color: accentColor || textMuted, fontStyle: "italic", marginTop: Math.round(10 * u), textAlign: "center", maxWidth: Math.round(innerW * 0.18) }}>{tagline}</p>}
-          </div>
-          <div style={{ flex: "0 0 38%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            {headshot ? <img src={headshot} alt="Agent" style={{ width: frameW, height: frameH, objectFit: "cover", border: `${frameBorder}px solid white` }} /> : <div style={{ width: frameW, height: frameH, backgroundColor: "rgba(255,255,255,0.06)", border: `${frameBorder}px solid ${borderColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}><User style={{ width: 80 * u, height: 80 * u, color: textMuted }} /></div>}
-            <p style={{ fontSize: responsiveSize(Math.round(h * 0.055), address ? (agentName || "Agent Name") : "", 18), fontWeight: 600, color: accent, marginTop: Math.round(10 * uh), textAlign: "center", overflowWrap: "break-word" }}>{address ? (agentName || "Agent Name") : ""}</p>
-            {address && phone && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(4 * uh), textAlign: "center" }}>{phone}</p>}
-            {address && email && <p style={{ fontSize: Math.round(h * 0.035), color: textMuted, marginTop: Math.round(2 * uh), textAlign: "center", overflowWrap: "break-word" }}>{email}</p>}
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            {headshot ? (
+              <div style={{ padding: frameBorder, background: accentColor ? `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.3)})` : `linear-gradient(135deg, ${borderColor}, transparent)`, borderRadius: Math.round(12 * u) }}>
+                <img src={headshot} alt="Agent" style={{ width: headshotW, height: headshotH, objectFit: "cover", borderRadius: Math.round(8 * u), display: "block" }} />
+              </div>
+            ) : (
+              <div style={{ width: headshotW, height: headshotH, backgroundColor: "rgba(255,255,255,0.04)", border: `${frameBorder}px solid ${borderColor}`, borderRadius: Math.round(12 * u), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <User style={{ width: 80 * u, height: 80 * u, color: textMuted }} />
+              </div>
+            )}
+            {!hasProperty && <p style={{ fontSize: Math.round(h * 0.032), color: textMuted, marginTop: Math.round(10 * uh), textAlign: "center", letterSpacing: "0.06em", textTransform: "uppercase" as const }}>Real Estate Agent</p>}
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 /* ═══════════════════════════════════════════════════════
    BADGE CONFIG
