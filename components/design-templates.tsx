@@ -469,7 +469,7 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
   const textShadow = `0 ${Math.round(2 * unit)}px ${Math.round(8 * unit)}px rgba(0,0,0,0.5)`;
 
   return (
-    <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily, backgroundColor: "#111" }}>
+    <div className="relative overflow-hidden" style={{ width: w, height: h, fontFamily }}>
 
       {/* ── PHOTO ── */}
       {videoElement ? (
