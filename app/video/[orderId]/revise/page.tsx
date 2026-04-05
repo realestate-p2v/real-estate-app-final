@@ -424,39 +424,52 @@ export default function RevisionPage() {
     setSubmitting(true);
     setError(null);
 
-    // Upload new clip photos to Cloudinary via /api/upload
+    // Upload new clip photos to Cloudinary using the same signed upload
+    // flow as the photo uploader: /api/cloudinary-signature → direct Cloudinary upload
     let newClipPayloads: { position: number; photo_url: string; camera_direction: string; camera_speed: string; custom_motion: string; description: string }[] = [];
     if (newClips.length > 0) {
       try {
         for (const clip of newClips) {
           if (!clip.uploaded_file) continue;
 
-          // Convert file to base64 data URL for the upload endpoint
-          const base64DataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = () => reject(new Error("Failed to read file"));
-            reader.readAsDataURL(clip.uploaded_file!);
-          });
-
-          const uploadRes = await fetch("/api/upload", {
+          // Step 1: Get signed upload credentials
+          const sigRes = await fetch("/api/cloudinary-signature", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              image: base64DataUrl,
-              folder: "revision-clips",
-            }),
+            body: JSON.stringify({ folder: "photo2video/revision-clips" }),
           });
-          const uploadData = await uploadRes.json();
-          if (!uploadData.success || !uploadData.data?.secure_url) {
-            setError(`Failed to upload photo for new clip "${clip.description}". ${uploadData.error || "Please try again."}`);
+          const sigData = await sigRes.json();
+          if (!sigData.success) {
+            setError(`Upload failed for "${clip.description}": could not get upload credentials.`);
+            setSubmitting(false);
+            return;
+          }
+
+          const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
+
+          // Step 2: Upload directly to Cloudinary
+          const formData = new FormData();
+          formData.append("file", clip.uploaded_file);
+          formData.append("api_key", apiKey);
+          formData.append("timestamp", timestamp.toString());
+          formData.append("signature", signature);
+          formData.append("folder", folder);
+
+          const uploadRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+            { method: "POST", body: formData }
+          );
+          const result = await uploadRes.json();
+
+          if (!result.secure_url) {
+            setError(`Failed to upload photo for "${clip.description}". Please try again.`);
             setSubmitting(false);
             return;
           }
 
           newClipPayloads.push({
             position: clip.position,
-            photo_url: uploadData.data.secure_url,
+            photo_url: result.secure_url,
             camera_direction: clip.camera_direction,
             camera_speed: clip.camera_speed,
             custom_motion: clip.custom_motion,
@@ -674,10 +687,10 @@ export default function RevisionPage() {
           {/* Add clip button at the top */}
           <button
             onClick={() => triggerAddClip(-1)}
-            className="w-full py-2 border-2 border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-green-400 hover:text-green-600 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-4 border-2 border-dashed border-green-300 bg-green-50/50 rounded-xl text-sm font-semibold text-green-700 hover:border-green-500 hover:bg-green-50 transition-colors flex items-center justify-center gap-2"
           >
-            <Plus className="h-4 w-4" />
-            Add new clip here · $4.95
+            <Plus className="h-5 w-5" />
+            Add New Clip · $4.95 per clip
           </button>
 
           {clips.map((clip, index) => {
@@ -887,10 +900,10 @@ export default function RevisionPage() {
                 {/* Add clip button between clips */}
                 <button
                   onClick={() => triggerAddClip(index)}
-                  className="w-full py-1.5 mt-2 border-2 border-dashed border-transparent rounded-lg text-xs text-muted-foreground/50 hover:border-green-400 hover:text-green-600 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 mt-2 border-2 border-dashed border-green-200/60 rounded-xl text-xs font-medium text-green-600/70 hover:border-green-400 hover:text-green-700 hover:bg-green-50/50 transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Plus className="h-3 w-3" />
-                  Add clip · $4.95
+                  <Plus className="h-3.5 w-3.5" />
+                  Add clip here · $4.95
                 </button>
               </div>
             );
