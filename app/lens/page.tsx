@@ -1,553 +1,484 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, Suspense } from "react";
-import { Navigation } from "@/components/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
+import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
-  Download,
-  Upload,
-  Image as ImageIcon,
-  PenTool,
-  Home,
-  DollarSign,
-  CheckCircle,
-  X,
-  Loader2,
-  Palette,
-  CreditCard,
-  Phone,
-  Mail,
-  User,
-  MapPin,
-  Calendar,
-  Play,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  LogIn,
-  Lock,
+  Camera,
   Sparkles,
+  Zap,
+  Sofa,
+  CheckCircle,
+  ArrowRight,
+  MessageSquare,
+  Star,
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  ImageIcon,
+  TrendingUp,
+  LogIn,
+  PenTool,
+  Percent,
+  Clock,
   Film,
-  Music,
-  Check,
+  Globe,
+  FileText,
+  LayoutDashboard,
+  MapPin,
+  Lightbulb,
+  TreePine,
+  DollarSign,
+  Search,
+  BookOpen,
 } from "lucide-react";
-import {
-  InfoBarTemplate,
-  OpenHouseTemplate,
-  YardSignSplitBar,
-  YardSignSidebar,
-  YardSignTopHeavy,
-  PropertyPdfPage,
-  BrandingCardTemplate,
-  getBadgeConfig,
-  isLightColor,
-  type TemplateType,
-  type SizeConfig,
-} from "@/components/design-templates";
 
-type SizeOption = "square" | "story" | "postcard";
-type StudioTab = "templates" | "branding-card" | "yard-sign" | "property-pdf";
-type YardSignDesign = "split-bar" | "sidebar" | "top-heavy";
-
-const TEMPLATES = [
-  { id: "just-listed" as TemplateType, label: "Just Listed", icon: Home },
-  { id: "open-house" as TemplateType, label: "Open House", icon: Calendar },
-  { id: "price-reduced" as TemplateType, label: "Price Reduced", icon: DollarSign },
-  { id: "just-sold" as TemplateType, label: "Just Sold", icon: CheckCircle },
-];
-
-const SIZES: SizeConfig[] = [
-  { id: "square", label: "Square", sublabel: "Instagram / Facebook", width: 1080, height: 1080 },
-  { id: "story", label: "Story", sublabel: "Instagram / TikTok", width: 1080, height: 1920 },
-  { id: "postcard", label: "Postcard", sublabel: "6×4 Print-Ready", width: 1800, height: 1200 },
-];
-
-const YARD_SIGN_SIZES = [
-  { id: "18x24" as const, label: '18×24"', sublabel: "Standard", width: 5400, height: 7200 },
-  { id: "24x36" as const, label: '24×36"', sublabel: "Large", width: 7200, height: 10800 },
-];
-
-const YARD_SIGN_DESIGNS: { id: YardSignDesign; label: string; description: string }[] = [
-  { id: "split-bar", label: "Split Bar", description: "Colored top & bottom bars with white center" },
-  { id: "sidebar", label: "Sidebar", description: "Vertical sidebar with centered headshot" },
-  { id: "top-heavy", label: "Top Heavy", description: "Large color header with photo below" },
-];
-
-const BRANDING_ORIENTATIONS = [
-  { id: "landscape" as const, label: "Landscape", sublabel: "1920×1080", width: 1920, height: 1080 },
-  { id: "vertical" as const, label: "Vertical", sublabel: "1080×1920", width: 1080, height: 1920 },
-];
-
-const BROKERAGE_COLORS = [
-  { hex: "#b40101", label: "KW Red" },{ hex: "#666666", label: "KW Gray" },{ hex: "#003399", label: "CB Blue" },{ hex: "#012169", label: "CB Navy" },{ hex: "#003da5", label: "RM Blue" },{ hex: "#dc1c2e", label: "RM Red" },{ hex: "#b5985a", label: "C21 Gold" },{ hex: "#1c1c1c", label: "C21 Black" },{ hex: "#000000", label: "CMP Black" },{ hex: "#333333", label: "CMP Dark" },{ hex: "#002349", label: "SIR Blue" },{ hex: "#1a1a1a", label: "SIR Black" },{ hex: "#552448", label: "BH Purple" },{ hex: "#2d1a33", label: "BH Dark" },{ hex: "#1c3f6e", label: "EXP Blue" },{ hex: "#006341", label: "HH Green" },{ hex: "#003d28", label: "HH Dk Green" },{ hex: "#4c8c2b", label: "BHG Green" },{ hex: "#d4272e", label: "EXT Red" },{ hex: "#e31937", label: "ERA Red" },{ hex: "#273691", label: "ERA Blue" },{ hex: "#a02021", label: "RF Red" },{ hex: "#ffffff", label: "White" },
-];
-
-const ACCENT_COLORS = ["#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185d","#0e7490","#c2410c","#8b6914","#71717a","#ffffff","#000000"];
-
-const FONT_OPTIONS = [
-  { id: "serif", label: "Classic Serif", family: "Georgia, 'Times New Roman', serif" },
-  { id: "sans", label: "Clean Sans", family: "'Helvetica Neue', Arial, sans-serif" },
-  { id: "modern", label: "Modern", family: "'Trebuchet MS', 'Gill Sans', sans-serif" },
-  { id: "elegant", label: "Elegant", family: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" },
-];
-
-const VIBE_FILTERS = [
-  { key: "", label: "All", emoji: "🎵" },
-  { key: "upbeat_modern", label: "Upbeat", emoji: "🎶" },
-  { key: "chill_tropical", label: "Chill", emoji: "🌴" },
-  { key: "energetic_pop", label: "Energetic", emoji: "⚡" },
-  { key: "elegant_classical", label: "Elegant", emoji: "🎹" },
-  { key: "warm_acoustic", label: "Acoustic", emoji: "🎸" },
-  { key: "bold_cinematic", label: "Cinematic", emoji: "🎬" },
-  { key: "smooth_jazz", label: "Jazz", emoji: "🎺" },
-  { key: "ambient", label: "Ambient", emoji: "🌙" },
-];
-
-async function uploadToCloudinary(file: File | Blob, folder: string): Promise<string | null> {
-  try {
-    const sigResponse = await fetch("/api/cloudinary-signature", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder: `photo2video/${folder}` }) });
-    const sigData = await sigResponse.json();
-    if (!sigData.success) throw new Error("Signature failed");
-    const { signature, timestamp, cloudName, apiKey, folder: folderPath } = sigData.data;
-    const fd = new FormData();
-    fd.append("file", file); fd.append("api_key", apiKey); fd.append("timestamp", timestamp.toString()); fd.append("signature", signature); fd.append("folder", folderPath); fd.append("resource_type", "auto");
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
-    const result = await res.json();
-    return result.secure_url || null;
-  } catch (error) { console.error("Cloudinary upload error:", error); return null; }
-}
-
-function ImageUploadBox({ label, imageUrl, onUpload, onClear, uploading, hint, className = "" }: { label: string; imageUrl: string | null; onUpload: (file: File) => void; onClear: () => void; uploading: boolean; hint?: string; className?: string; }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return (
-    <div className={`space-y-1.5 ${className}`}>
-      <Label className="text-sm font-semibold">{label}</Label>
-      {imageUrl ? (
-        <div className="relative group rounded-xl overflow-hidden border border-border bg-muted aspect-square"><img src={imageUrl} alt={label} className="w-full h-full object-cover" /><button onClick={onClear} className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4" /></button></div>
-      ) : (
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="w-full aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground bg-muted/30">{uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Upload className="h-6 w-6" /><span className="text-xs font-medium">Upload</span></>}</button>
-      )}
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
-    </div>
-  );
-}
-
-function BrokerageSwatches({ currentColor, onSelect }: { currentColor: string; onSelect: (hex: string) => void }) {
-  return (<div className="flex flex-wrap gap-1.5">{BROKERAGE_COLORS.map((c) => (<button key={c.hex + c.label} onClick={() => onSelect(c.hex)} title={`${c.label} — ${c.hex}`} className={`relative group flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all text-[10px] font-medium ${currentColor === c.hex ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-border hover:border-primary/40"}`}><span className="w-4 h-4 rounded flex-shrink-0 border border-black/10" style={{ backgroundColor: c.hex }} /><span className="text-muted-foreground">{c.label}</span></button>))}</div>);
-}
-
-function AccentSwatches({ currentColor, onSelect }: { currentColor: string; onSelect: (hex: string) => void }) {
-  return (<div className="flex flex-wrap gap-2">{ACCENT_COLORS.map((c) => (<button key={c} onClick={() => onSelect(c)} className={`w-7 h-7 rounded-lg border-2 transition-all flex-shrink-0 ${currentColor === c ? "border-primary scale-110 ring-2 ring-primary/30" : "border-border"}`} style={{ backgroundColor: c }} title={c} />))}</div>);
-}
-
-function CompactMusicSelector({ selectedTrack, onSelect, customAudioFile, onCustomAudioChange }: { selectedTrack: string; onSelect: (selection: string) => void; customAudioFile: File | null; onCustomAudioChange: (file: File | null) => void; }) {
-  const [expanded, setExpanded] = useState(false);
-  const [vibeFilter, setVibeFilter] = useState("");
-  const [tracks, setTracks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const [audioPermission, setAudioPermission] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const fetchTracks = async (vibe: string = "") => { setLoading(true); try { const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`); const data = await resp.json(); setTracks(data.tracks || []); } catch (e) { console.error("Library fetch error:", e); } setLoading(false); };
-  useEffect(() => { if (expanded && tracks.length === 0) fetchTracks(); }, [expanded]);
-  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
-  const handlePlay = (trackId: string, url: string) => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } if (playingId === trackId) { setPlayingId(null); return; } const audio = new Audio(url); audio.play(); audio.onended = () => setPlayingId(null); audioRef.current = audio; setPlayingId(trackId); };
-  const getSelectedName = (): string | null => { if (customAudioFile) return customAudioFile.name; if (!selectedTrack) return null; const trackId = selectedTrack.split(":")[1]; const track = tracks.find((t) => t.id === trackId); return track?.display_name || "Selected track"; };
-  const selectedName = getSelectedName();
-  return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden">
-      <button type="button" onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-accent/15 flex items-center justify-center"><Music className="h-5 w-5 text-accent" /></div><div className="text-left"><p className="text-sm font-extrabold text-foreground">Background Music</p>{selectedName ? <p className="text-xs text-accent font-semibold">♪ {selectedName}</p> : <p className="text-xs text-muted-foreground">Optional — add a soundtrack to your video</p>}</div></div><ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} /></button>
-      {expanded && (
-        <div className="border-t border-border p-4 space-y-3">
-          <button type="button" onClick={() => { onSelect(""); onCustomAudioChange(null); }} className={`w-full flex items-center gap-3 p-2.5 rounded-lg border text-left text-sm transition-all ${!selectedTrack && !customAudioFile ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"}`}><X className="h-4 w-4 text-muted-foreground flex-shrink-0" /><span className="text-muted-foreground">No music (keep original audio)</span>{!selectedTrack && !customAudioFile && <Check className="h-4 w-4 text-primary ml-auto" />}</button>
-          <div className="flex flex-wrap gap-1">{VIBE_FILTERS.map((v) => (<button key={v.key} type="button" onClick={() => { setVibeFilter(v.key); fetchTracks(v.key); }} className={`text-[11px] py-1 px-2.5 rounded-md border transition-all ${vibeFilter === v.key ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border hover:bg-muted"}`}>{v.emoji} {v.label}</button>))}</div>
-          {loading ? <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div> : (
-            <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">{tracks.map((track) => { const isSelected = selectedTrack.includes(track.id); return (<button key={track.id} type="button" onClick={() => onSelect(`library:${track.id}:${track.file_url}`)} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"}`}><button type="button" onClick={(e) => { e.stopPropagation(); handlePlay(track.id, track.file_url); }} className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${playingId === track.id ? "bg-primary text-white" : "bg-primary/10 hover:bg-primary/20"}`}>{playingId === track.id ? <span className="text-[10px] font-bold">■</span> : <span className="text-primary text-[10px] font-bold ml-0.5">▶</span>}</button><div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{track.display_name}</p><p className="text-[11px] text-muted-foreground">{track.duration_seconds}s</p></div>{isSelected && <Check className="h-4 w-4 text-primary flex-shrink-0" />}</button>); })}</div>
-          )}
-          <div className="pt-2 border-t border-border"><p className="text-[11px] text-muted-foreground mb-1.5">Or upload your own audio:</p><input type="file" accept="audio/*" onChange={(e) => { const file = e.target.files?.[0] || null; onCustomAudioChange(file); if (file) { onSelect("custom"); setAudioPermission(false); } }} className="text-sm file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />{customAudioFile && (<div className="mt-2 space-y-1.5"><p className="text-xs text-green-600">✓ {customAudioFile.name}</p><label className="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked={audioPermission} onChange={(e) => { setAudioPermission(e.target.checked); if (!e.target.checked) { onCustomAudioChange(null); onSelect(""); } }} className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary" /><span className="text-[11px] text-muted-foreground">I have permission to use this audio.</span></label></div>)}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VideoExportModal({ progress, status, onCancel }: { progress: number; status: string; onCancel?: () => void }) {
-  return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"><div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full mx-4 text-center space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center"><Film className="h-8 w-8 text-accent animate-pulse" /></div><h3 className="text-xl font-extrabold text-foreground">Exporting Video</h3><p className="text-sm text-muted-foreground">{status}</p><div className="w-full h-3 bg-muted rounded-full overflow-hidden"><div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${Math.max(progress, 2)}%` }} /></div><p className="text-sm font-bold text-foreground">{Math.round(progress)}%</p>{progress < 100 && onCancel && (<button onClick={onCancel} className="text-sm text-muted-foreground hover:text-foreground underline">Cancel</button>)}</div></div>);
-}
-
-export default function DesignStudioPage() {
-  return (
-    <Suspense>
-      <DesignStudioPageInner />
-    </Suspense>
-  );
-}
-
-function DesignStudioPageInner() {
-  const [tab, setTab] = useState<StudioTab>("templates");
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("just-listed");
-  const [selectedSize, setSelectedSize] = useState<SizeOption>("square");
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+export default function LensPage() {
+  const router = useRouter();
+  const [billingToggle, setBillingToggle] = useState<"monthly" | "yearly">("monthly");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribingPro, setSubscribingPro] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
-  const [freeExportsUsed, setFreeExportsUsed] = useState(0);
-  const [paywallHit, setPaywallHit] = useState(false);
-  const FREE_EXPORT_LIMIT = 3;
-  const [savedHeadshot, setSavedHeadshot] = useState<string | null>(null);
-  const [savedLogo, setSavedLogo] = useState<string | null>(null);
-  const [mediaMode, setMediaMode] = useState<"image" | "video">("image");
-  const [listingPhoto, setListingPhoto] = useState<string | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail: string; orderId: string } | null>(null);
-  const [userVideos, setUserVideos] = useState<any[]>([]);
-  const [loadingVideos, setLoadingVideos] = useState(false);
-  const [clipUrls, setClipUrls] = useState<string[]>([]);
-  const [currentClipIndex, setCurrentClipIndex] = useState(0);
-  const [headshot, setHeadshot] = useState<string | null>(null);
-  const [logo, setLogo] = useState<string | null>(null);
-  const [uploadingListing, setUploadingListing] = useState(false);
-  const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [address, setAddress] = useState("");
-  const [beds, setBeds] = useState("");
-  const [baths, setBaths] = useState("");
-  const [sqft, setSqft] = useState("");
-  const [price, setPrice] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [agentName, setAgentName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [agentEmail, setAgentEmail] = useState("");
-  const [brokerage, setBrokerage] = useState("");
-  const [listingFont, setListingFont] = useState("sans");
-  const [listingBarColor, setListingBarColor] = useState("#111827");
-  const [listingAccentColor, setListingAccentColor] = useState("");
-  const [overlayMusic, setOverlayMusic] = useState("");
-  const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
-  const [yardSignSize, setYardSignSize] = useState<"18x24" | "24x36">("18x24");
-  const [yardDesign, setYardDesign] = useState<YardSignDesign>("split-bar");
-  const [yardHeaderText, setYardHeaderText] = useState("FOR SALE");
-  const [yardTopColor, setYardTopColor] = useState("#dc1c2e");
-  const [yardBottomColor, setYardBottomColor] = useState("#003da5");
-  const [yardSidebarColor, setYardSidebarColor] = useState("#1c1c1c");
-  const [yardMainBgColor, setYardMainBgColor] = useState("#ffffff");
-  const [yardWebsite, setYardWebsite] = useState("");
-  const [yardOfficeName, setYardOfficeName] = useState("");
-  const [yardOfficePhone, setYardOfficePhone] = useState("");
-  const [yardQrUrl, setYardQrUrl] = useState("");
-  const [yardQrDataUrl, setYardQrDataUrl] = useState<string | null>(null);
-  const [yardBullet1, setYardBullet1] = useState("");
-  const [yardBullet2, setYardBullet2] = useState("");
-  const [yardBullet3, setYardBullet3] = useState("");
-  const [pdfAddress, setPdfAddress] = useState("");
-  const [pdfCityStateZip, setPdfCityStateZip] = useState("");
-  const [pdfPrice, setPdfPrice] = useState("");
-  const [pdfBeds, setPdfBeds] = useState("");
-  const [pdfBaths, setPdfBaths] = useState("");
-  const [pdfSqft, setPdfSqft] = useState("");
-  const [pdfDescription, setPdfDescription] = useState("");
-  const [pdfFeatures, setPdfFeatures] = useState("");
-  const [pdfPhotos, setPdfPhotos] = useState<string[]>([]);
-  const [uploadingPdfPhoto, setUploadingPdfPhoto] = useState(false);
-  const [pdfPreviewPage, setPdfPreviewPage] = useState(0);
-  const [pdfAccentColor, setPdfAccentColor] = useState("#0e7490");
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
-  const [brandHeadshot, setBrandHeadshot] = useState<string | null>(null);
-  const [brandBgPhoto, setBrandBgPhoto] = useState<string | null>(null);
-  const [brandAgentName, setBrandAgentName] = useState("");
-  const [brandPhone, setBrandPhone] = useState("");
-  const [brandEmail, setBrandEmail] = useState("");
-  const [brandWebsite, setBrandWebsite] = useState("");
-  const [brandBrokerage, setBrandBrokerage] = useState("");
-  const [brandTagline, setBrandTagline] = useState("");
-  const [brandAddress, setBrandAddress] = useState("");
-  const [brandCityState, setBrandCityState] = useState("");
-  const [brandPrice, setBrandPrice] = useState("");
-  const [brandFeatures, setBrandFeatures] = useState("");
-  const [brandBgColor, setBrandBgColor] = useState("#14532d");
-  const [brandAccentColor, setBrandAccentColor] = useState("");
-  const [brandOrientation, setBrandOrientation] = useState<"landscape" | "vertical">("landscape");
-  const [brandFont, setBrandFont] = useState("serif");
-  const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
-  const [uploadingBrandHeadshot, setUploadingBrandHeadshot] = useState(false);
-  const [uploadingBrandBg, setUploadingBrandBg] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [videoExporting, setVideoExporting] = useState(false);
-  const [videoExportProgress, setVideoExportProgress] = useState(0);
-  const [videoExportStatus, setVideoExportStatus] = useState("");
-  const [userProperties, setUserProperties] = useState<any[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  const [loadingProperties, setLoadingProperties] = useState(false);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  const currentSize = SIZES.find((s) => s.id === selectedSize)!;
-  const currentBrandOrientation = BRANDING_ORIENTATIONS.find((o) => o.id === brandOrientation)!;
-  const currentFontFamily = FONT_OPTIONS.find((f) => f.id === brandFont)?.family || FONT_OPTIONS[0].family;
-  const listingFontFamily = FONT_OPTIONS.find((f) => f.id === listingFont)?.family || FONT_OPTIONS[1].family;
-  const currentYardSize = YARD_SIGN_SIZES.find((s) => s.id === yardSignSize)!;
-
-  // Auth init
   useEffect(() => {
     const init = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      setAuthLoading(false);
-      if (!authUser) return;
-      setUser(authUser);
-      const admin = authUser.email === "realestatephoto2video@gmail.com";
-      setIsAdmin(admin);
-      const { data } = await supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used").eq("user_id", authUser.id).single();
-      if (data) {
-        if (data.saved_headshot_url) { setSavedHeadshot(data.saved_headshot_url); setHeadshot(data.saved_headshot_url); setBrandHeadshot(data.saved_headshot_url); }
-        if (data.saved_logo_url) { setSavedLogo(data.saved_logo_url); setLogo(data.saved_logo_url); setBrandLogo(data.saved_logo_url); }
-        if (admin || data.is_subscriber) setIsSubscriber(true);
-        setFreeExportsUsed(data.free_design_exports_used || 0);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser({ id: user.id, email: user.email || "" });
+        const { data: usage } = await supabase.from("lens_usage").select("is_subscriber").eq("user_id", user.id).single();
+        if (usage?.is_subscriber) setIsSubscriber(true);
       }
-      if (admin) setIsSubscriber(true);
-
-      // Load user properties for the property selector
-      const { data: props } = await supabase
-        .from("agent_properties")
-        .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features, description")
-        .eq("user_id", authUser.id)
-        .order("updated_at", { ascending: false });
-      if (props) setUserProperties(props);
+      setLoadingUser(false);
     };
     init();
   }, []);
 
-  // Pre-fill fields from URL query params (Property Portfolio → Design Studio)
-  const searchParams = useSearchParams();
-  useEffect(() => {
-    const propId = searchParams.get("propertyId");
-    const a = searchParams.get("address");
-    const city = searchParams.get("city");
-    const state = searchParams.get("state");
-    const bd = searchParams.get("beds");
-    const ba = searchParams.get("baths");
-    const sf = searchParams.get("sqft");
-    const pr = searchParams.get("price");
-    const features = searchParams.get("specialFeatures");
-
-    // Set property ID directly if provided
-    if (propId) setSelectedPropertyId(propId);
-
-    if (a) {
-      setAddress([a, city, state].filter(Boolean).join(", "));
-      setPdfAddress(a);
-      setBrandAddress(a);
-      const cs = [city, state].filter(Boolean).join(", ");
-      if (cs) { setPdfCityStateZip(cs); setBrandCityState(cs); }
-    }
-    if (bd) { setBeds(bd); setPdfBeds(bd); }
-    if (ba) { setBaths(ba); setPdfBaths(ba); }
-    if (sf) { setSqft(sf); setPdfSqft(sf); }
-    if (pr) { setPrice(pr); setPdfPrice(pr); setBrandPrice(pr); }
-    if (features) { setPdfFeatures(features); setBrandFeatures(features); }
-  }, [searchParams]);
-
-  // Load clips from property portfolio (sent via sessionStorage)
-  useEffect(() => {
+  const handleSubscribe = async (plan: "monthly" | "yearly") => {
+    if (!user) { router.push("/login?redirect=/lens"); return; }
+    setSubscribing(true);
     try {
-      const clipsJson = sessionStorage.getItem("design_studio_clips");
-      if (clipsJson) {
-        const parsed = JSON.parse(clipsJson);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setClipUrls(parsed);
-          setMediaMode("video");
-          setCurrentClipIndex(0);
-          setListingPhoto(null); // Clear image so video takes over
-          setTab("templates"); // Ensure we're on the templates tab
-          // Set selectedVideo so exports and videoPreviewElement work
-          setSelectedVideo({ url: parsed[0], thumbnail: "", orderId: "clips" });
-        }
-        sessionStorage.removeItem("design_studio_clips");
-      }
-    } catch (e) {
-      console.error("Failed to load clips:", e);
-    }
-  }, []);
-
-  const saveAssetToDb = async (field: "saved_headshot_url" | "saved_logo_url", url: string) => { if (!user) return; const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: url }, { onConflict: "user_id" }); };
-
-  useEffect(() => { if (!yardQrUrl) { setYardQrDataUrl(null); return; } let c = false; (async () => { try { const QR = (await import("qrcode")).default; const u = await QR.toDataURL(yardQrUrl, { width: 600, margin: 2, errorCorrectionLevel: "M" }); if (!c) setYardQrDataUrl(u); } catch { if (!c) setYardQrDataUrl(null); } })(); return () => { c = true; }; }, [yardQrUrl]);
-
-  const pdfDescLines = pdfDescription ? pdfDescription.split("\n").filter(Boolean).length : 0;
-  const pdfFeatureLines = pdfFeatures ? pdfFeatures.split("\n").filter(Boolean).length : 0;
-  const pdfEstFeatureH = pdfFeatureLines * 70 + (pdfFeatureLines > 0 ? 80 : 0);
-  const pdfMaxDescLines = Math.floor((1400 - pdfEstFeatureH) / 52);
-  const pdfHasOverflow = pdfDescLines > pdfMaxDescLines && pdfMaxDescLines > 0;
-  const pdfPage2Slots = pdfHasOverflow ? 4 : 6;
-  const pdfPhotosAfterP1 = Math.max(0, pdfPhotos.length - 3);
-  const pdfTotalPages = pdfHasOverflow
-    ? 2 + Math.ceil(Math.max(0, pdfPhotosAfterP1 - pdfPage2Slots) / 6)
-    : 1 + Math.ceil(pdfPhotosAfterP1 / 6);
-
-  const getScaledDimensions = useCallback(() => {
-    const maxW = 520, maxH = 560;
-    let w: number, h: number;
-    if (tab === "branding-card") { w = currentBrandOrientation.width; h = currentBrandOrientation.height; }
-    else if (tab === "yard-sign") { w = currentYardSize.width; h = currentYardSize.height; }
-    else if (tab === "property-pdf") { w = 2550; h = 3300; }
-    else { w = currentSize.width; h = currentSize.height; }
-    const s = Math.min(maxW / w, maxH / h, 1);
-    return { scale: s, width: w * s, height: h * s, rawW: w, rawH: h };
-  }, [tab, currentSize, currentBrandOrientation, currentYardSize]);
-
-  const { scale, width: previewW, height: previewH, rawW, rawH } = getScaledDimensions();
-
-  const handleUpload = async (file: File, folder: string, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, folder); setUrl(url); setLoading(false); };
-  const handleHeadshotUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) { setUrl(url); setHeadshot(url); setBrandHeadshot(url); saveAssetToDb("saved_headshot_url", url); setSavedHeadshot(url); } setLoading(false); };
-  const handleLogoUpload = async (file: File, setUrl: (u: string | null) => void, setLoading: (v: boolean) => void) => { setLoading(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) { setUrl(url); setLogo(url); setBrandLogo(url); saveAssetToDb("saved_logo_url", url); setSavedLogo(url); } setLoading(false); };
-  const handlePdfPhotoUpload = async (file: File) => { if (pdfPhotos.length >= 25) return; setUploadingPdfPhoto(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) setPdfPhotos(prev => [...prev, url]); setUploadingPdfPhoto(false); };
-
-  const loadUserVideos = async () => {
-    if (userVideos.length > 0) return;
-    setLoadingVideos(true);
-    try { const supabase = (await import("@/lib/supabase/client")).createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data: orders } = await supabase.from("orders").select("order_id, delivery_url, unbranded_delivery_url, photos, created_at").eq("user_id", user.id).in("status", ["complete", "delivered", "closed"]).order("created_at", { ascending: false }); setUserVideos((orders || []).filter((o: any) => o.unbranded_delivery_url || o.delivery_url).map((o: any) => ({ orderId: o.order_id, url: o.unbranded_delivery_url || o.delivery_url, thumbnail: o.photos?.[0]?.secure_url || null, hasUnbranded: !!o.unbranded_delivery_url, date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) }))); } catch (err) { console.error(err); } finally { setLoadingVideos(false); }
+      const res = await fetch("/api/lens/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, user_id: user.id, user_email: user.email }) });
+      const data = await res.json();
+      if (data.success && data.url) { window.location.href = data.url; } else { alert(data.error || "Something went wrong. Please try again."); }
+    } catch { alert("Something went wrong. Please try again."); } finally { setSubscribing(false); }
   };
 
-  const incrementExportCounter = async () => { if (!isSubscriber && !isAdmin && user) { const newCount = freeExportsUsed + 1; setFreeExportsUsed(newCount); const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("lens_usage").upsert({ user_id: user.id, free_design_exports_used: newCount }, { onConflict: "user_id" }); } };
-  const checkPaywall = (): boolean => { if (!isSubscriber && !isAdmin && freeExportsUsed >= FREE_EXPORT_LIMIT) { setPaywallHit(true); return true; } return false; };
-
-  const saveDesignExport = async (exportUrl: string | null, format: "png" | "pdf" | "mp4", overlayVideoUrl?: string) => {
-    if (!user) return;
-    const supabase = (await import("@/lib/supabase/client")).createClient();
-    const templateType = tab === "templates" ? selectedTemplate : tab === "branding-card" ? "branding_card" : tab === "yard-sign" ? "yard_sign" : tab === "property-pdf" ? "property_pdf" : tab;
-    const finalUrl = exportUrl || overlayVideoUrl || null;
-    const { error } = await supabase.from("design_exports").insert({
-      user_id: user.id,
-      property_id: selectedPropertyId || null,
-      template_type: templateType,
-      export_url: finalUrl,
-      export_format: format,
-      overlay_video_url: overlayVideoUrl || null,
-    });
-    if (error) console.error("Failed to save design export:", error);
+  const handleSubscribePro = async (plan: "monthly" | "yearly") => {
+    if (!user) { router.push("/login?redirect=/lens"); return; }
+    setSubscribingPro(true);
+    try {
+      const res = await fetch("/api/lens/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan === "monthly" ? "pro_monthly" : "pro_yearly", user_id: user.id, user_email: user.email }) });
+      const data = await res.json();
+      if (data.success && data.url) { window.location.href = data.url; } else { alert(data.error || "Something went wrong. Please try again."); }
+    } catch { alert("Something went wrong. Please try again."); } finally { setSubscribingPro(false); }
   };
 
-  const handleSelectProperty = (propertyId: string) => {
-    if (propertyId === "__new__") {
-      // Clear fields for manual entry
-      setSelectedPropertyId(null);
-      setAddress(""); setBeds(""); setBaths(""); setSqft(""); setPrice("");
-      setPdfAddress(""); setPdfCityStateZip(""); setPdfBeds(""); setPdfBaths(""); setPdfSqft(""); setPdfPrice("");
-      setBrandAddress(""); setBrandCityState(""); setBrandPrice("");
-      setPdfFeatures(""); setBrandFeatures("");
-      return;
-    }
-    const prop = userProperties.find((p: any) => p.id === propertyId);
-    if (!prop) return;
-    setSelectedPropertyId(prop.id);
-    const fullAddr = [prop.address, prop.city, prop.state].filter(Boolean).join(", ");
-    setAddress(fullAddr);
-    setPdfAddress(prop.address || "");
-    setBrandAddress(prop.address || "");
-    const cs = [prop.city, prop.state].filter(Boolean).join(", ");
-    if (cs) { setPdfCityStateZip(cs); setBrandCityState(cs); }
-    if (prop.bedrooms) { const b = prop.bedrooms.toString(); setBeds(b); setPdfBeds(b); }
-    if (prop.bathrooms) { const b = prop.bathrooms.toString(); setBaths(b); setPdfBaths(b); }
-    if (prop.sqft) { const s = prop.sqft.toString(); setSqft(s); setPdfSqft(s); }
-    if (prop.price) { const p = prop.price.toString(); setPrice(p); setPdfPrice(p); setBrandPrice(p); }
-    if (prop.special_features && prop.special_features.length > 0) {
-      const features = prop.special_features.join("\n");
-      setPdfFeatures(features);
-      setBrandFeatures(features);
-    }
-    if (prop.description) { setPdfDescription(prop.description); }
-  };
+  const toolLink = (path: string) => (user ? path : `/login?redirect=${path}`);
 
-  const prepareForExport = (el: HTMLElement): { restore: () => void } => { const parent = el.parentElement as HTMLElement; const savedTransform = el.style.transform; const savedOverflow = parent?.style.overflow; const savedWidth = parent?.style.width; const savedHeight = parent?.style.height; el.style.transform = "none"; if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; } return { restore: () => { el.style.transform = savedTransform; if (parent) { parent.style.overflow = savedOverflow || ""; parent.style.width = savedWidth || ""; parent.style.height = savedHeight || ""; } } }; };
-
-  const handleExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) return; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: tab === "property-pdf" ? "#ffffff" : null, width: rawW, height: rawH }); restore(); const link = document.createElement("a"); link.download = `p2v-${tab}-${Date.now()}.png`; link.href = canvas.toDataURL("image/png"); link.click(); await incrementExportCounter(); // Upload to Cloudinary and save to design_exports
-    const blob = await new Promise<Blob>((resolve) => { canvas.toBlob((b) => resolve(b!), "image/png"); });
-    const uploadedUrl = await uploadToCloudinary(new File([blob], `p2v-${tab}.png`, { type: "image/png" }), "design-studio/exports");
-    await saveDesignExport(uploadedUrl, "png"); } catch (err) { console.error(err); alert("Export failed."); } finally { setExporting(false); } };
-
-  const handlePdfExport = async () => { if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true); try { const jsPDF = (await import("jspdf")).default; const html2canvas = (await import("html2canvas-pro")).default; const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" }); for (let page = 0; page < pdfTotalPages; page++) { setPdfPreviewPage(page); await new Promise(r => setTimeout(r, 400)); const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement; if (!el) continue; const { restore } = prepareForExport(el); const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 2550, height: 3300 }); restore(); if (page > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11); } pdf.save(`${pdfAddress.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "property"}_sheet.pdf`); setPdfPreviewPage(0); await incrementExportCounter(); // Upload PDF to Cloudinary and save to design_exports
-    const pdfBlob = pdf.output("blob");
-    const uploadedUrl = await uploadToCloudinary(new File([pdfBlob], "property_sheet.pdf", { type: "application/pdf" }), "design-studio/exports");
-    await saveDesignExport(uploadedUrl, "pdf"); } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); } };
-
-  const getMusicSource = (): { type: "url"; url: string } | { type: "file"; file: File } | null => { if (overlayMusic.startsWith("library:")) { const parts = overlayMusic.split(":"); const url = parts.slice(2).join(":"); if (url) return { type: "url", url }; } if (overlayMusic === "custom" && customAudioFile) { return { type: "file", file: customAudioFile }; } return null; };
-
-  const handleVideoExport = async () => { if (checkPaywall()) return; if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; } setVideoExporting(true); setVideoExportProgress(0); setVideoExportStatus("Loading video encoder..."); try { const { FFmpeg } = await import("@ffmpeg/ffmpeg"); const { toBlobURL, fetchFile } = await import("@ffmpeg/util"); const ffmpeg = new FFmpeg(); ffmpeg.on("progress", ({ progress: p }) => { setVideoExportProgress(Math.min(Math.round(p * 100), 99)); }); setVideoExportStatus("Downloading encoder (~30 MB)..."); const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd"; await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"), }); setVideoExportStatus("Downloading source video..."); setVideoExportProgress(5); const videoData = await fetchFile(selectedVideo.url); await ffmpeg.writeFile("input.mp4", videoData); const musicSource = getMusicSource(); let hasMusic = false; if (musicSource) { setVideoExportStatus("Loading music track..."); setVideoExportProgress(8); if (musicSource.type === "url") { const musicData = await fetchFile(musicSource.url); await ffmpeg.writeFile("music.mp3", musicData); hasMusic = true; } else { const buf = new Uint8Array(await musicSource.file.arrayBuffer()); await ffmpeg.writeFile("music.mp3", buf); hasMusic = true; } } setVideoExportStatus("Rendering overlay..."); setVideoExportProgress(10); const html2canvas = (await import("html2canvas-pro")).default; const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) throw new Error("Export target not found"); const videoEls = el.querySelectorAll("video"); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; }); const placeholders = el.querySelectorAll("[data-video-area]"); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; }); const { restore } = prepareForExport(el); const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH }); restore(); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; }); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; }); const overlayBlob = await new Promise<Blob>((resolve) => { overlayCanvas.toBlob((b) => resolve(b!), "image/png"); }); const overlayData = new Uint8Array(await overlayBlob.arrayBuffer()); await ffmpeg.writeFile("overlay.png", overlayData); setVideoExportStatus(hasMusic ? "Compositing video with overlay & music..." : "Compositing video with overlay..."); setVideoExportProgress(15); const outW = currentSize.width; const outH = currentSize.height; const photoPercent = selectedTemplate === "open-house" ? 100 : selectedSize === "postcard" ? 55 : 58; const photoH = Math.round(outH * photoPercent / 100); if (hasMusic) { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-i", "music.mp3", "-t", "119", "-filter_complex", `[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:119,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`, "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } else { await ffmpeg.exec(["-i", "input.mp4", "-i", "overlay.png", "-t", "119", "-filter_complex", `[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-y", "output.mp4"]); } setVideoExportStatus("Finalizing..."); setVideoExportProgress(95); const outputData = await ffmpeg.readFile("output.mp4"); const outputBlob = new Blob([outputData], { type: "video/mp4" }); const downloadUrl = URL.createObjectURL(outputBlob); const link = document.createElement("a"); link.download = `p2v-video-overlay-${Date.now()}.mp4`; link.href = downloadUrl; link.click(); URL.revokeObjectURL(downloadUrl); setVideoExportStatus("Saving to My Videos..."); setVideoExportProgress(98); const uploadedUrl = await uploadToCloudinary(new File([outputBlob], "overlay-video.mp4", { type: "video/mp4" }), "design-studio/videos"); if (uploadedUrl && user) { const supabase = (await import("@/lib/supabase/client")).createClient(); await supabase.from("orders").update({ overlay_video_url: uploadedUrl }).eq("order_id", selectedVideo.orderId); } setVideoExportProgress(100); setVideoExportStatus("Done!"); await incrementExportCounter(); await saveDesignExport(uploadedUrl, "mp4", uploadedUrl || undefined); setTimeout(() => { setVideoExporting(false); }, 1500); } catch (err: any) { console.error("Video export error:", err); alert("Video export failed: " + (err.message || "Unknown error")); setVideoExporting(false); } };
-
-  const badge = getBadgeConfig(selectedTemplate);
-
-  // Auto-play next clip when currentClipIndex changes
-  useEffect(() => {
-    if (clipUrls.length > 1 && videoRef.current) {
-      videoRef.current.load();
-      videoRef.current.play().catch(() => {});
-    }
-  }, [currentClipIndex, clipUrls.length]);
-
-  const videoPreviewElement = selectedVideo ? (<div className="w-full h-full relative" data-video-area><video ref={videoRef} src={clipUrls.length > 0 ? clipUrls[currentClipIndex] : selectedVideo.url} autoPlay loop={clipUrls.length <= 1} muted playsInline className="w-full h-full object-cover" crossOrigin="anonymous" onEnded={() => { if (clipUrls.length > 1) { const nextIdx = (currentClipIndex + 1) % clipUrls.length; setCurrentClipIndex(nextIdx); } }} />{clipUrls.length > 1 && <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none">Clip {currentClipIndex + 1}/{clipUrls.length}</div>}</div>) : undefined;
-
-  if (authLoading) { return (<div className="min-h-screen bg-background"><Navigation /><div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div></div>); }
-  if (!user) { return (<div className="min-h-screen bg-background"><Navigation /><div className="mx-auto max-w-2xl px-4 py-24 text-center"><div className="bg-card rounded-2xl border border-border p-10 space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center"><LogIn className="h-8 w-8 text-muted-foreground" /></div><h1 className="text-2xl font-extrabold text-foreground">Sign In to Use the Design Studio</h1><p className="text-muted-foreground max-w-md mx-auto">Create a free account to try the Marketing Design Studio. Your first 3 exports are free — no subscription required.</p><div className="flex flex-col sm:flex-row gap-3 justify-center pt-2"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/login?redirect=/dashboard/lens/design-studio"><LogIn className="mr-2 h-4 w-4" />Sign In</Link></Button><Button asChild variant="outline" className="px-8 py-6 text-base"><Link href="/lens">Learn About P2V Lens</Link></Button></div></div></div></div>); }
-  if (paywallHit) { return (<div className="min-h-screen bg-background"><Navigation /><div className="mx-auto max-w-2xl px-4 py-24 text-center"><div className="bg-card rounded-2xl border border-border p-10 space-y-5"><div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center"><Lock className="h-8 w-8 text-accent" /></div><h1 className="text-2xl font-extrabold text-foreground">You&apos;ve Used Your 3 Free Exports</h1><p className="text-muted-foreground max-w-md mx-auto">Subscribe to P2V Lens for unlimited design exports, plus AI photo coaching, listing descriptions, virtual staging, and more — starting at $27.95/month.</p><div className="flex flex-col sm:flex-row gap-3 justify-center pt-2"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base"><Link href="/lens"><Sparkles className="mr-2 h-4 w-4" />Subscribe to P2V Lens</Link></Button><Button variant="outline" className="px-8 py-6 text-base" onClick={() => setPaywallHit(false)}>Back to Design Studio</Button></div></div></div></div>); }
+  const faqs = [
+    { q: "How does the AI Photo Coach work?", a: "Upload any listing photo and our AI (powered by Claude Vision) analyzes it instantly. You get specific, actionable feedback — not vague tips, but exactly what to fix: \"The kitchen is underexposed. Open the blinds on the east wall, turn on the overhead light, and retake from the doorway at chest height.\" Use it during your photo shoot to coach yourself room by room." },
+    { q: "How is P2V Lens different from other AI tools?", a: "P2V Lens is built specifically for real estate listing marketing — not repurposed from a generic AI platform. Every tool understands MLS requirements, listing photography standards, and what actually sells homes. The Photo Coach scores photos based on real estate criteria. The Description Writer knows MLS formatting rules. The Design Studio has templates for Just Listed, Open House, and Price Reduced — not generic flyer makers. This is the difference between a tool built by real estate marketers and one built by a tech company." },
+    { q: "What counts as one \"analysis\"?", a: "Each photo you upload for AI feedback counts as one analysis. You get 200 per month — enough for about 2 full listing shoots with coaching on every single photo (25 photos × 4 attempts each = 100 analyses per listing)." },
+    { q: "How does Quick Video pricing work?", a: "Subscribers can order short-form videos with 5–14 clips at $4.95 per clip. This rate already includes your 10% subscriber savings. Quick Videos include branding and music but do not include a free revision — paid revisions are available at standard rates. Upload 15+ photos and you'll automatically get the Standard package ($79) with your 10% subscriber discount at checkout." },
+    { q: "What's the difference between Lens and Lens Pro?", a: "Lens ($27.95/mo) includes all the core marketing tools: Photo Coach, Description Writer, Design Studio, Virtual Staging, Quick Videos, and subscriber perks. Lens Pro ($49.95/mo) adds everything in Lens plus your own agent website with custom domain, AI-generated blog, property portfolios, single-listing websites with lead capture, Location Value Scores, staging and landscaping ideas, Value Boost Reports, and Lead Finder with skip tracing." },
+    { q: "How does the Agent Website Builder work?", a: "Connect your own domain and get a professional agent website with your branding, listings, and contact info. The AI Blog automatically generates SEO-optimized posts about your market area. Property Websites create single-listing microsites with lead capture forms — share a branded link instead of a Zillow page." },
+    { q: "What is the Location Value Score?", a: "A composite 1–100 score for any property address based on five sub-scores: school quality, walkability, safety, amenities, and market trends. Use it in listing presentations to quantify neighborhood value for buyers, or in listing appointments to show sellers how their location adds value." },
+    { q: "How does Lead Finder work?", a: "Search public records to find motivated sellers — pre-foreclosures, divorces, probate, tax liens, and more. Lens Pro includes 100 searches per month and 50 skip traces to get phone numbers and emails for the leads you find." },
+    { q: "Do I need to be a P2V video customer to use Lens?", a: "No — P2V Lens works as a standalone subscription. The AI Photo Coach helps you take better photos regardless of whether you order videos from us. But if you do order videos, your subscription includes free photo enhancement, 10% off every order, priority processing, and per-clip Quick Video pricing." },
+    { q: "How does brokerage pricing work?", a: "Brokerage plans are $19.95 per agent per month with a minimum of 10 agents. Each agent gets their own login and 200 analyses per month. Contact us to set up your brokerage account." },
+    { q: "Can I cancel anytime?", a: "Yes — cancel anytime from your Account Settings. Your subscription stays active through the end of your current billing period. No contracts, no cancellation fees." },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      {videoExporting && <VideoExportModal progress={videoExportProgress} status={videoExportStatus} onCancel={() => setVideoExporting(false)} />}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-3 mb-8"><Link href="/dashboard/lens" className="text-muted-foreground hover:text-foreground transition-colors"><ArrowLeft className="h-5 w-5" /></Link><div><h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Marketing Design Studio</h1><p className="text-muted-foreground mt-1">Create listing graphics, yard signs, property sheets, and branding cards</p></div></div>
 
-        {isAdmin ? (<div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" /><p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p></div>) : isSubscriber ? (<div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited exports</p></div>) : (<div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-6 flex items-center gap-3"><Sparkles className="h-5 w-5 text-accent flex-shrink-0" /><p className="text-sm text-foreground"><span className="font-bold">Free trial:</span> {FREE_EXPORT_LIMIT - freeExportsUsed} of {FREE_EXPORT_LIMIT} exports remaining.</p></div>)}
-
-        {/* Property Selector */}
-        <div className="bg-card rounded-2xl border border-border p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <Home className="h-5 w-5 text-accent flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">Property</label>
-              <select
-                value={selectedPropertyId || ""}
-                onChange={(e) => handleSelectProperty(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 appearance-none"
-              >
-                <option value="">Select a property...</option>
-                {userProperties.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.address}{p.city ? `, ${p.city}` : ""}{p.state ? `, ${p.state}` : ""}
-                  </option>
-                ))}
-                <option value="__new__">＋ Enter address manually</option>
-              </select>
+      {/* HERO */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-orange-50/80 via-white to-white">
+        <div className="absolute inset-0 z-0">
+          <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-[0.19]">
+            <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div className="absolute inset-0 overflow-hidden z-[1]">
+          <div className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-gradient-to-br from-red-200/40 to-orange-200/30 rounded-full blur-[80px]" />
+          <div className="absolute top-1/3 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-cyan-200/30 to-blue-200/20 rounded-full blur-[80px]" />
+          <div className="absolute -bottom-20 right-1/4 w-[350px] h-[350px] bg-gradient-to-br from-purple-200/25 to-pink-200/20 rounded-full blur-[80px]" />
+        </div>
+        <div className="relative z-[2] mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
+          <div className="max-w-3xl mx-auto bg-white/10 backdrop-blur-xl border border-white/40 rounded-3xl shadow-xl p-8 sm:p-12 text-center">
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent text-sm font-bold px-4 py-1.5 rounded-full mb-6">
+              <Sparkles className="w-4 h-4" />
+              Purpose-Built for Real Estate
             </div>
-            {selectedPropertyId && (
-              <Link
-                href={`/dashboard/properties/${selectedPropertyId}`}
-                className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors flex-shrink-0 mt-4"
-              >
-                View →
-              </Link>
-            )}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight tracking-tight">
+              The AI Marketing Suite<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-orange-500 to-purple-600">That Sells Homes</span>
+            </h1>
+            <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Photo coaching, marketing design, listing descriptions, virtual staging, agent websites, lead generation, and short-form videos — all in one subscription.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              {[
+                { icon: Camera, label: "15+ AI Tools" },
+                { icon: Sparkles, label: "200 Analyses/Mo" },
+                { icon: Film, label: "Videos from $24.75" },
+                { icon: CheckCircle, label: "Cancel Anytime" },
+              ].map((badge) => (
+                <span key={badge.label} className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 bg-white/80 border border-border/50 rounded-full px-3 py-1.5 shadow-sm">
+                  <badge.icon className="h-3.5 w-3.5 text-accent" />
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              {isSubscriber ? (
+                <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
+                  <Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                </Button>
+              ) : (
+                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
+                  See Plans & Pricing <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              )}
+              <Button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="bg-white border border-border text-foreground hover:bg-muted h-14 px-8 text-lg font-bold rounded-full shadow-sm">
+                See All Features
+              </Button>
+            </div>
           </div>
         </div>
+      </section>
 
-        <div className="flex flex-wrap gap-2 mb-8">{([{ id: "templates" as StudioTab, label: "Listing Graphics", icon: PenTool },{ id: "branding-card" as StudioTab, label: "Branding Card", icon: CreditCard },{ id: "yard-sign" as StudioTab, label: "Yard Sign", icon: MapPin },{ id: "property-pdf" as StudioTab, label: "Property Sheet", icon: FileText },]).map((t) => (<button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all ${tab === t.id ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}><t.icon className="h-4 w-4" />{t.label}</button>))}</div>
+      {/* SOCIAL PROOF */}
+      <section className="bg-muted/30 border-b border-border">
+        <div className="mx-auto max-w-5xl px-4 py-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-center">
+          <div className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-accent" /><span className="text-sm font-semibold text-foreground">Listings with video get <span className="text-accent">403% more inquiries</span></span></div>
+          <div className="hidden sm:block h-5 w-px bg-border" />
+          <div className="flex items-center gap-2"><Camera className="h-5 w-5 text-accent" /><span className="text-sm font-semibold text-foreground">Professional photos sell <span className="text-accent">32% faster</span></span></div>
+          <div className="hidden sm:block h-5 w-px bg-border" />
+          <div className="flex items-center gap-2"><Star className="h-5 w-5 text-accent" /><span className="text-sm font-semibold text-foreground">15+ AI tools · <span className="text-accent">two plans</span></span></div>
+        </div>
+      </section>
 
-        {tab === "templates" && (<><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">{TEMPLATES.map((t) => (<button key={t.id} onClick={() => setSelectedTemplate(t.id)} className={`flex items-center gap-3 p-4 rounded-xl border-2 font-semibold text-sm transition-all ${selectedTemplate === t.id ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/40"}`}><t.icon className="h-5 w-5 flex-shrink-0" />{t.label}</button>))}</div><div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Media</h3><div className="flex gap-2 mb-4"><button onClick={() => { setMediaMode("image"); setSelectedVideo(null); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mediaMode === "image" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"}`}><ImageIcon className="h-4 w-4" />Image</button><button onClick={() => { setMediaMode("video"); setListingPhoto(null); loadUserVideos(); }} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mediaMode === "video" ? "bg-primary/10 border-2 border-primary text-foreground" : "border-2 border-border text-muted-foreground hover:border-primary/40"}`}><Play className="h-4 w-4" />Video Overlay</button></div>{mediaMode === "video" && (<p className="text-xs text-amber-600 font-medium mb-3 flex items-center gap-1">* Video overlay exports are limited to 119 seconds max</p>)}{mediaMode === "image" ? (<div className="grid grid-cols-3 gap-4"><ImageUploadBox label="Listing Photo *" imageUrl={listingPhoto} onUpload={(f) => handleUpload(f, "design-studio", setListingPhoto, setUploadingListing)} onClear={() => setListingPhoto(null)} uploading={uploadingListing} /><div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div></div>) : (<div className="space-y-4">{clipUrls.length > 0 ? (<div className="bg-violet-50 border border-violet-200 rounded-xl p-4 mb-3"><div className="flex items-center gap-3"><Play className="h-5 w-5 text-violet-600 flex-shrink-0" /><div><p className="text-sm font-bold text-violet-800">{clipUrls.length} clip{clipUrls.length !== 1 ? "s" : ""} loaded from property</p><p className="text-xs text-violet-600">Clips are looping in the preview. Customize your overlay and export.</p></div></div></div>) : null}<p className="text-sm text-muted-foreground">Select an unbranded video from your orders.</p>{loadingVideos ? <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : userVideos.length === 0 ? <div className="text-center py-8 bg-muted/30 rounded-xl border border-dashed border-border"><p className="text-sm text-muted-foreground">No completed videos found.</p></div> : (<div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto">{userVideos.map((v) => (<button key={v.orderId} onClick={() => { setSelectedVideo(v); if (v.thumbnail) setListingPhoto(v.thumbnail); }} className={`relative rounded-xl border-2 overflow-hidden text-left transition-all ${selectedVideo?.orderId === v.orderId ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}>{v.thumbnail ? <img src={v.thumbnail} alt="" className="w-full aspect-video object-cover" /> : <div className="w-full aspect-video bg-muted flex items-center justify-center"><Play className="h-8 w-8 text-muted-foreground" /></div>}<div className="p-2"><p className="text-xs font-semibold truncate">Order {v.orderId?.slice(0, 8)}</p><p className="text-[11px] text-muted-foreground">{v.date}</p></div>{selectedVideo?.orderId === v.orderId && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center"><CheckCircle className="h-4 w-4 text-white" /></div>}</button>))}</div>)}<div className="grid grid-cols-2 gap-4 pt-2"><div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div></div></div>)}</div>{mediaMode === "video" && (<div className="bg-accent/5 rounded-2xl border-2 border-accent/30 p-1"><CompactMusicSelector selectedTrack={overlayMusic} onSelect={setOverlayMusic} customAudioFile={customAudioFile} onCustomAudioChange={setCustomAudioFile} /></div>)}<div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" />Property Details</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street, Anytown" /></div><div className="grid grid-cols-3 gap-3"><div className="space-y-1.5"><Label className="text-sm">Beds</Label><Input value={beds} onChange={(e) => setBeds(e.target.value)} placeholder="3" /></div><div className="space-y-1.5"><Label className="text-sm">Baths</Label><Input value={baths} onChange={(e) => setBaths(e.target.value)} placeholder="2" /></div><div className="space-y-1.5"><Label className="text-sm">Sq Ft</Label><Input value={sqft} onChange={(e) => setSqft(e.target.value)} placeholder="1,800" /></div></div><div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="450,000" /></div>{selectedTemplate === "open-house" && <div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Date</Label><Input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Saturday, March 22" /></div><div className="space-y-1.5"><Label className="text-sm">Time</Label><Input value={time} onChange={(e) => setTime(e.target.value)} placeholder="1:00 PM – 4:00 PM" /></div></div>}</div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Agent Info</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Jane Smith" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="Keller Williams" /></div></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Appearance</h3><Label className="text-sm font-semibold mb-2 block">Font Style</Label><div className="grid grid-cols-2 gap-2 mb-5">{FONT_OPTIONS.map((f) => (<button key={f.id} onClick={() => setListingFont(f.id)} className={`p-3 rounded-xl border-2 text-left transition-all ${listingFont === f.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{f.label}</p><p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: f.family }}>Aa Bb Cc 123</p></button>))}</div><Label className="text-sm font-semibold mb-2 block">Info Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={listingBarColor} onChange={(e) => setListingBarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={listingBarColor} onChange={(e) => setListingBarColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={listingBarColor} onSelect={setListingBarColor} /><Label className="text-sm font-semibold mb-2 block mt-5">Accent Color <span className="text-muted-foreground font-normal">(optional)</span></Label><div className="flex items-center gap-3"><input type="color" value={listingAccentColor || "#ffffff"} onChange={(e) => setListingAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={listingAccentColor} onChange={(e) => setListingAccentColor(e.target.value)} placeholder="None" className="w-28 font-mono text-sm" />{listingAccentColor && <button onClick={() => setListingAccentColor("")} className="text-xs text-muted-foreground hover:text-foreground underline">Clear</button>}</div><div className="mt-2"><AccentSwatches currentColor={listingAccentColor} onSelect={setListingAccentColor} /></div></div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: rawW, height: rawH }}>{selectedTemplate === "open-house" ? (<OpenHouseTemplate size={currentSize} listingPhoto={mediaMode === "video" ? null : listingPhoto} videoElement={mediaMode === "video" ? videoPreviewElement : undefined} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />) : (<InfoBarTemplate size={currentSize} listingPhoto={mediaMode === "video" ? null : listingPhoto} videoElement={mediaMode === "video" ? videoPreviewElement : undefined} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={listingFontFamily} barColor={listingBarColor} accentColor={listingAccentColor} />)}</div></div></div><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Output Size</Label><div className="grid grid-cols-3 gap-2">{SIZES.map((s) => (<button key={s.id} onClick={() => setSelectedSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${selectedSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div>{mediaMode === "video" && selectedVideo ? (<div className="mt-5 space-y-3">{overlayMusic && (<div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20"><Music className="h-3.5 w-3.5 text-primary flex-shrink-0" /><p className="text-xs text-primary font-medium truncate">Music will be mixed into export</p></div>)}<Button onClick={handleVideoExport} disabled={exporting || videoExporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{videoExporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting Video...</> : <><Film className="mr-2 h-5 w-5" />Export as Video (MP4)</>}</Button><Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4"><Download className="mr-2 h-4 w-4" />Download Thumbnail (PNG)</Button></div>) : (<Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button>)}</div></div></div></>)}
+      {/* QUICK VIDEO */}
+      <section className="py-16 sm:py-20 bg-gradient-to-b from-cyan-50/50 to-background">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="bg-card rounded-2xl border border-cyan-200 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center"><Film className="h-5 w-5 text-cyan-600" /></div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-extrabold text-foreground">Quick Videos</h2>
+                  <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">SUBSCRIBER EXCLUSIVE</span>
+                </div>
+                <p className="text-sm text-muted-foreground">5–14 clips at $4.95/clip · Starting at $24.75</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="text-center p-3 bg-muted/50 rounded-xl"><p className="text-lg font-extrabold text-cyan-700">$24.75</p><p className="text-xs text-muted-foreground">Social Teaser · 5 clips</p></div>
+              <div className="text-center p-3 bg-muted/50 rounded-xl"><p className="text-lg font-extrabold text-cyan-700">$39.60</p><p className="text-xs text-muted-foreground">Listing Refresh · 8 clips</p></div>
+              <div className="text-center p-3 bg-muted/50 rounded-xl"><p className="text-lg font-extrabold text-cyan-700">$59.40</p><p className="text-xs text-muted-foreground">Open House · 12 clips</p></div>
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-5">
+              {["Custom branding", "Choice of music", "Under 12h delivery", "HD quality"].map((item) => (
+                <span key={item} className="flex items-center gap-1.5 text-sm text-muted-foreground"><CheckCircle className="h-3.5 w-3.5 text-cyan-600" />{item}</span>
+              ))}
+            </div>
+            <div className="text-center">
+              {isSubscriber ? (
+                <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-5 text-base"><Link href="/order">Order a Quick Video <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+              ) : (
+                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-5 text-base">
+                  Subscribe to Unlock Quick Videos <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {tab === "yard-sign" && (<div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4">Choose a Design</h3><div className="grid grid-cols-3 gap-3">{YARD_SIGN_DESIGNS.map((d) => (<button key={d.id} onClick={() => setYardDesign(d.id)} className={`p-4 rounded-xl border-2 text-center transition-all ${yardDesign === d.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-bold">{d.label}</p><p className="text-[11px] text-muted-foreground mt-1">{d.description}</p></button>))}</div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3><div className="grid grid-cols-2 gap-4"><div><ImageUploadBox label="Headshot" imageUrl={headshot} onUpload={(f) => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} />{!headshot && savedHeadshot && <button onClick={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={logo} onUpload={(f) => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} hint="Optional" />{!logo && savedLogo && <button onClick={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Sign Details</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Header Text</Label><Input value={yardHeaderText} onChange={(e) => setYardHeaderText(e.target.value)} placeholder="FOR SALE" /></div><div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="Jane Smith" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Email</Label><Input value={agentEmail} onChange={(e) => setAgentEmail(e.target.value)} placeholder="jane@email.com" /></div></div><div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="Coldwell Banker" /></div>{yardDesign === "split-bar" && <><div className="space-y-1.5"><Label className="text-sm">Office Name</Label><Input value={yardOfficeName} onChange={(e) => setYardOfficeName(e.target.value)} placeholder="Main Street Office" /></div><div className="space-y-1.5"><Label className="text-sm">Office Phone</Label><Input value={yardOfficePhone} onChange={(e) => setYardOfficePhone(e.target.value)} placeholder="800-555-4321" /></div></>}{yardDesign === "sidebar" && <div className="space-y-1.5"><Label className="text-sm">Website</Label><Input value={yardWebsite} onChange={(e) => setYardWebsite(e.target.value)} placeholder="www.janesmith.com" /></div>}<div className="space-y-1.5"><Label className="text-sm">QR Code URL <span className="text-muted-foreground font-normal">(optional)</span></Label><Input value={yardQrUrl} onChange={(e) => setYardQrUrl(e.target.value)} placeholder="https://janesmith.com" /></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Home className="h-4 w-4 text-accent" />Property Highlights</h3><p className="text-xs text-muted-foreground mb-3">Add up to 3 features that appear on your sign</p><div className="grid gap-3"><Input value={yardBullet1} onChange={(e) => setYardBullet1(e.target.value)} placeholder="e.g. 3 BDR / 2 BTH" /><Input value={yardBullet2} onChange={(e) => setYardBullet2(e.target.value)} placeholder="e.g. Pool & Spa" /><Input value={yardBullet3} onChange={(e) => setYardBullet3(e.target.value)} placeholder="e.g. Ocean View" /></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Colors</h3>{yardDesign === "split-bar" && <><Label className="text-sm font-semibold mb-2 block">Top Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Bottom Bar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} /></>}{yardDesign === "sidebar" && <><Label className="text-sm font-semibold mb-2 block">Sidebar Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardSidebarColor} onChange={(e) => setYardSidebarColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardSidebarColor} onSelect={setYardSidebarColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Main Background</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardMainBgColor} onChange={(e) => setYardMainBgColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardMainBgColor} onSelect={setYardMainBgColor} /></>}{yardDesign === "top-heavy" && <><Label className="text-sm font-semibold mb-2 block">Top Section Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardTopColor} onChange={(e) => setYardTopColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardTopColor} onSelect={setYardTopColor} /><Label className="text-sm font-semibold mb-2 block mt-4">Bottom Section Color</Label><div className="flex items-center gap-3 mb-2"><input type="color" value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={yardBottomColor} onChange={(e) => setYardBottomColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={yardBottomColor} onSelect={setYardBottomColor} /></>}</div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: rawW, height: rawH }}>{yardDesign === "split-bar" && <YardSignSplitBar width={currentYardSize.width} height={currentYardSize.height} headshot={headshot} logo={logo} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} officeName={yardOfficeName} officePhone={yardOfficePhone} headerText={yardHeaderText} topColor={yardTopColor} bottomColor={yardBottomColor} fontFamily={listingFontFamily} qrDataUrl={yardQrDataUrl} bulletPoints={[yardBullet1, yardBullet2, yardBullet3]} />}{yardDesign === "sidebar" && <YardSignSidebar width={currentYardSize.width} height={currentYardSize.height} headshot={headshot} logo={logo} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} website={yardWebsite} headerText={yardHeaderText} sidebarColor={yardSidebarColor} mainBgColor={yardMainBgColor} fontFamily={listingFontFamily} qrDataUrl={yardQrDataUrl} bulletPoints={[yardBullet1, yardBullet2, yardBullet3]} />}{yardDesign === "top-heavy" && <YardSignTopHeavy width={currentYardSize.width} height={currentYardSize.height} headshot={headshot} logo={logo} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} headerText={yardHeaderText} topColor={yardTopColor} bottomColor={yardBottomColor} fontFamily={listingFontFamily} qrDataUrl={yardQrDataUrl}  bulletPoints={[yardBullet1, yardBullet2, yardBullet3]} />}</div></div></div><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Sign Size</Label><div className="grid grid-cols-2 gap-2">{YARD_SIGN_SIZES.map((s) => (<button key={s.id} onClick={() => setYardSignSize(s.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${yardSignSize === s.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{s.label}</p><p className="text-[11px] text-muted-foreground">{s.sublabel}</p></button>))}</div></div><Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button></div></div></div>)}
+      {/* FEATURES */}
+      <section id="features" className="py-20 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">Everything You Need to Market Your Listings</h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Purpose-built for real estate agents by real estate marketing professionals — not a generic AI platform.</p>
+          </div>
 
-        {tab === "property-pdf" && (<div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" />Property Details</h3><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Address</Label><Input value={pdfAddress} onChange={(e) => setPdfAddress(e.target.value)} placeholder="Torres 34" /></div><div className="space-y-1.5"><Label className="text-sm">City, State, Zip</Label><Input value={pdfCityStateZip} onChange={(e) => setPdfCityStateZip(e.target.value)} placeholder="Playas Del Coco, Guanacaste" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={pdfPrice} onChange={(e) => setPdfPrice(e.target.value)} placeholder="129,000" /></div><div className="grid grid-cols-3 gap-2"><div className="space-y-1.5"><Label className="text-sm">Beds</Label><Input value={pdfBeds} onChange={(e) => setPdfBeds(e.target.value)} placeholder="1" /></div><div className="space-y-1.5"><Label className="text-sm">Baths</Label><Input value={pdfBaths} onChange={(e) => setPdfBaths(e.target.value)} placeholder="1" /></div><div className="space-y-1.5"><Label className="text-sm">Sq Ft</Label><Input value={pdfSqft} onChange={(e) => setPdfSqft(e.target.value)} placeholder="750" /></div></div></div><div className="space-y-1.5"><Label className="text-sm">Key Features (one per line)</Label><textarea value={pdfFeatures} onChange={(e) => setPdfFeatures(e.target.value)} placeholder={"1 bedroom with built-in closets\n1 bathroom\nBright and inviting interiors"} rows={6} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div><div className="space-y-1.5"><Label className="text-sm">Description <span className="text-muted-foreground font-normal">(optional)</span></Label><textarea value={pdfDescription} onChange={(e) => setPdfDescription(e.target.value)} placeholder="Investment opportunity details..." rows={4} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-accent" />Photos ({pdfPhotos.length}/25)</h3><p className="text-xs text-muted-foreground mb-4">First 3 photos appear on page 1. Remaining fill grids on additional pages.</p><div className="grid grid-cols-4 sm:grid-cols-5 gap-3 mb-4">{pdfPhotos.map((url, i) => (<div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square"><img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" /><div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{i < 3 ? `★ ${i + 1}` : i + 1}</div><button onClick={() => setPdfPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button></div>))}{pdfPhotos.length < 25 && (<label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer">{uploadingPdfPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Upload className="h-5 w-5" /><span className="text-[10px] font-medium">Add</span></>}<input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const files = Array.from(e.target.files || []); files.forEach(f => handlePdfPhotoUpload(f)); e.target.value = ""; }} /></label>)}</div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Accent Color</h3><div className="flex items-center gap-3 mb-2"><input type="color" value={pdfAccentColor} onChange={(e) => setPdfAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={pdfAccentColor} onChange={(e) => setPdfAccentColor(e.target.value)} className="w-28 font-mono text-sm" /></div><Label className="text-sm font-semibold mb-2 block mt-4">Brokerage Colors</Label><BrokerageSwatches currentColor={pdfAccentColor} onSelect={setPdfAccentColor} /><Label className="text-sm font-semibold mb-2 block mt-4">More Colors</Label><AccentSwatches currentColor={pdfAccentColor} onSelect={setPdfAccentColor} /></div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={previewRef} className="bg-muted/50 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12 }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: 2550, height: 3300 }}><PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={listingFontFamily} /></div></div></div>{pdfTotalPages > 1 && (<div className="flex items-center justify-center gap-3 mt-3"><button onClick={() => setPdfPreviewPage(Math.max(0, pdfPreviewPage - 1))} disabled={pdfPreviewPage === 0} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button><span className="text-sm font-semibold">Page {pdfPreviewPage + 1} of {pdfTotalPages}</span><button onClick={() => setPdfPreviewPage(Math.min(pdfTotalPages - 1, pdfPreviewPage + 1))} disabled={pdfPreviewPage >= pdfTotalPages - 1} className="p-1.5 rounded-lg border border-border disabled:opacity-30 hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button></div>)}<div className="mt-5 space-y-3"><Button onClick={handlePdfExport} disabled={exporting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating PDF...</> : <><Download className="mr-2 h-5 w-5" />Download PDF</>}</Button><Button onClick={handleExport} disabled={exporting} variant="outline" className="w-full py-4"><Download className="mr-2 h-4 w-4" />Download Current Page as PNG</Button></div></div></div></div>)}
+          {/* Core Tools */}
+          <div className="flex items-center gap-2 mb-8">
+            <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center"><Sparkles className="h-4 w-4 text-accent" /></div>
+            <h3 className="text-xl font-extrabold text-foreground">Core Marketing Tools</h3>
+            <span className="text-xs bg-accent/10 text-accent font-bold px-2 py-0.5 rounded-full">INCLUDED IN ALL PLANS</span>
+          </div>
 
-        {tab === "branding-card" && (<><div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 mb-8"><p className="text-sm text-cyan-800"><strong>Tip:</strong> Create your branding card here, download as PNG, then upload it in the order form under &ldquo;Custom branding cards.&rdquo; The PNG exports with a transparent background.</p></div><div className="grid lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Upload className="h-4 w-4 text-accent" />Upload Images</h3><div className="grid grid-cols-3 gap-4"><div><ImageUploadBox label="Headshot" imageUrl={brandHeadshot} onUpload={(f) => handleHeadshotUpload(f, setBrandHeadshot, setUploadingBrandHeadshot)} onClear={() => setBrandHeadshot(null)} uploading={uploadingBrandHeadshot} />{!brandHeadshot && savedHeadshot && <button onClick={() => { setBrandHeadshot(savedHeadshot); setHeadshot(savedHeadshot); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved headshot</button>}</div><div><ImageUploadBox label="Logo" imageUrl={brandLogo} onUpload={(f) => handleLogoUpload(f, setBrandLogo, setUploadingBrandLogo)} onClear={() => setBrandLogo(null)} uploading={uploadingBrandLogo} />{!brandLogo && savedLogo && <button onClick={() => { setBrandLogo(savedLogo); setLogo(savedLogo); }} className="text-xs text-accent hover:text-accent/80 font-semibold mt-1">Use saved logo</button>}</div><ImageUploadBox label="Background Photo" imageUrl={brandBgPhoto} onUpload={(f) => handleUpload(f, "design-studio", setBrandBgPhoto, setUploadingBrandBg)} onClear={() => setBrandBgPhoto(null)} uploading={uploadingBrandBg} hint="Optional — overrides color" /></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><User className="h-4 w-4 text-accent" />Card Details</h3><p className="text-xs text-muted-foreground mb-4">All fields are optional.</p><div className="grid gap-4"><div className="space-y-1.5"><Label className="text-sm">Agent Name</Label><Input value={brandAgentName} onChange={(e) => setBrandAgentName(e.target.value)} placeholder="Jane Smith" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Phone</Label><Input value={brandPhone} onChange={(e) => setBrandPhone(e.target.value)} placeholder="(555) 123-4567" /></div><div className="space-y-1.5"><Label className="text-sm">Email</Label><Input value={brandEmail} onChange={(e) => setBrandEmail(e.target.value)} placeholder="jane@email.com" /></div></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">Brokerage</Label><Input value={brandBrokerage} onChange={(e) => setBrandBrokerage(e.target.value)} placeholder="Keller Williams" /></div><div className="space-y-1.5"><Label className="text-sm">Tagline</Label><Input value={brandTagline} onChange={(e) => setBrandTagline(e.target.value)} placeholder="Your Home, Your Future" /></div></div><div className="space-y-1.5"><Label className="text-sm">Website</Label><Input value={brandWebsite} onChange={(e) => setBrandWebsite(e.target.value)} placeholder="www.janesmith.com" /></div><div className="h-[1px] bg-border my-1" /><p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Property Info (optional)</p><div className="space-y-1.5"><Label className="text-sm">Address</Label><Input value={brandAddress} onChange={(e) => setBrandAddress(e.target.value)} placeholder="21 N William St" /></div><div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-sm">City, State</Label><Input value={brandCityState} onChange={(e) => setBrandCityState(e.target.value)} placeholder="Pearl River, NY" /></div><div className="space-y-1.5"><Label className="text-sm">Price</Label><Input value={brandPrice} onChange={(e) => setBrandPrice(e.target.value)} placeholder="4250/mo" /></div></div><div className="space-y-1.5"><Label className="text-sm">Features (one per line)</Label><textarea value={brandFeatures} onChange={(e) => setBrandFeatures(e.target.value)} placeholder={"Downtown location\n6 office spaces"} rows={4} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" /></div></div></div><div className="bg-card rounded-2xl border border-border p-6"><h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><Palette className="h-4 w-4 text-accent" />Appearance</h3><Label className="text-sm font-semibold mb-2 block">Font Style</Label><div className="grid grid-cols-2 gap-2 mb-5">{FONT_OPTIONS.map((f) => (<button key={f.id} onClick={() => setBrandFont(f.id)} className={`p-3 rounded-xl border-2 text-left transition-all ${brandFont === f.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{f.label}</p><p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: f.family }}>Aa Bb Cc 123</p></button>))}</div><Label className="text-sm font-semibold mb-2 block">Background Color</Label><div className="flex items-center gap-4 mb-3"><input type="color" value={brandBgColor} onChange={(e) => setBrandBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={brandBgColor} onChange={(e) => setBrandBgColor(e.target.value)} className="w-28 font-mono text-sm" /></div><BrokerageSwatches currentColor={brandBgColor} onSelect={setBrandBgColor} /><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Accent Color <span className="text-muted-foreground font-normal">(optional)</span></Label><div className="flex items-center gap-3"><input type="color" value={brandAccentColor || "#ffffff"} onChange={(e) => setBrandAccentColor(e.target.value)} className="w-10 h-10 rounded-lg border border-border cursor-pointer" /><Input value={brandAccentColor} onChange={(e) => setBrandAccentColor(e.target.value)} placeholder="None" className="w-28 font-mono text-sm" />{brandAccentColor && <button onClick={() => setBrandAccentColor("")} className="text-xs text-muted-foreground hover:text-foreground underline">Clear</button>}</div><div className="mt-2"><AccentSwatches currentColor={brandAccentColor} onSelect={setBrandAccentColor} /></div></div></div></div><div className="space-y-4"><div className="bg-card rounded-2xl border border-border p-6 sticky top-24"><h3 className="font-bold text-foreground mb-4">Live Preview</h3><div ref={tab === "branding-card" ? previewRef : undefined} className="rounded-xl overflow-hidden flex items-center justify-center" style={{ width: "100%", height: previewH + 24, padding: 12, backgroundImage: "linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)", backgroundSize: "20px 20px", backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px" }}><div style={{ width: previewW, height: previewH, overflow: "hidden" }}><div data-export-target="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: currentBrandOrientation.width, height: currentBrandOrientation.height }}><BrandingCardTemplate orientation={currentBrandOrientation} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} website={brandWebsite} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={currentFontFamily} /></div></div></div><div className="mt-5"><Label className="text-sm font-semibold mb-2 block">Orientation</Label><div className="grid grid-cols-2 gap-2">{BRANDING_ORIENTATIONS.map((o) => (<button key={o.id} onClick={() => setBrandOrientation(o.id)} className={`p-3 rounded-xl border-2 text-center transition-all ${brandOrientation === o.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}><p className="text-sm font-semibold">{o.label}</p><p className="text-[11px] text-muted-foreground">{o.sublabel}</p></button>))}</div></div><Button onClick={handleExport} disabled={exporting} className="w-full mt-5 bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-lg">{exporting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exporting...</> : <><Download className="mr-2 h-5 w-5" />Download PNG</>}</Button></div></div></div></>)}
-      </div>
+          {/* Photo Coach */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center"><Camera className="h-6 w-6 text-blue-600" /></div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Never Miss a Shot with <span className="text-blue-600">AI Photo Coach</span></h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">Open a session per property, and the smart checklist makes sure you never forget a room. Snap a photo and get instant AI scoring with specific feedback — &ldquo;move 3 feet left, turn on the overhead light&rdquo; — then reshoot on the spot until it&apos;s perfect.</p>
+              <div className="space-y-2 mb-5">
+                {["Room-by-room checklist so you never miss a shot", "Instant 1-10 scoring with specific actionable feedback", "AI Edit: auto brightness, color, contrast correction", "HDR detection and horizon straightening", "Gallery management — approved photos ready for video orders"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
+                ))}
+              </div>
+              <Link href={toolLink("/dashboard/lens/coach")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Try Photo Coach <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <div className="flex items-center gap-3 mb-4"><div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center"><Sparkles className="h-4 w-4 text-blue-600" /></div><p className="text-sm font-semibold text-foreground">AI Photo Coach — Sample Feedback</p></div>
+              <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-3"><div className="h-5 w-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5"><span className="text-red-600 text-xs font-bold">!</span></div><p className="text-sm text-foreground"><strong>Lighting:</strong> The kitchen is underexposed. Open the blinds on the east-facing window and turn on the overhead recessed lights.</p></div>
+                <div className="flex items-start gap-3"><div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5"><span className="text-amber-600 text-xs font-bold">~</span></div><p className="text-sm text-foreground"><strong>Angle:</strong> Step back 3 feet and shoot from the doorway at chest height to show full room depth.</p></div>
+                <div className="flex items-start gap-3"><div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5"><CheckCircle className="h-3.5 w-3.5 text-green-600" /></div><p className="text-sm text-foreground"><strong>Composition:</strong> Good framing with the island as a leading line. Keep this angle after fixing the lighting.</p></div>
+              </div>
+            </div>
+          </div>
 
-      <footer className="bg-muted/50 border-t py-8 mt-12"><div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground"><p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p><div className="flex justify-center gap-6 mt-2"><Link href="/dashboard/lens" className="hover:text-foreground transition-colors">P2V Lens</Link><Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link><Link href="/support" className="hover:text-foreground transition-colors">Support</Link></div></div></footer>
+          {/* Design Studio */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <div className="bg-card rounded-2xl border border-border p-6 space-y-3">
+                <p className="text-sm font-semibold text-foreground mb-2">Template Types:</p>
+                {["Just Listed", "Open House", "Price Reduced", "Just Sold", "Yard Signs", "Property PDF Sheets", "Video Branding Cards"].map((t, i) => (
+                  <div key={i} className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-muted/50"><PenTool className="h-3.5 w-3.5 text-orange-500" /><span className="text-sm font-medium text-foreground">{t}</span></div>
+                ))}
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center"><PenTool className="h-6 w-6 text-orange-600" /></div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Professional Marketing in 60 Seconds with <span className="text-orange-600">Design Studio</span></h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">Just Listed, Open House, Price Reduced, Just Sold graphics. Yard signs for print shops. Property PDF sheets. Video branding cards. Upload your headshot and logo once — they&apos;re saved for next time.</p>
+              <div className="space-y-2 mb-5">
+                {["7 template types for every listing stage", "Brokerage brand colors built in", "Saved headshot & logo auto-populate", "PNG + PDF export for print and social", "Video branding card designer for your orders"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
+                ))}
+              </div>
+              <Link href={toolLink("/dashboard/lens/design-studio")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Open Design Studio <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+          </div>
+
+          {/* Description Writer */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-teal-500/10 flex items-center justify-center"><MessageSquare className="h-6 w-6 text-teal-600" /></div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">MLS Descriptions That Sell with <span className="text-teal-600">Description Writer</span></h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">Upload listing photos, enter property details, pick a writing style. AI analyzes every room then writes a polished, MLS-ready description.</p>
+              <div className="space-y-2 mb-5">
+                {["Claude Vision photo analysis — sees what's in every room", "4 styles: Professional, Luxury, Conversational, Concise", "Edit in-place, then copy to clipboard", "Works with Photo Coach gallery photos"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
+                ))}
+              </div>
+              <Link href={toolLink("/dashboard/lens/descriptions")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Write a Description <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <p className="text-sm font-semibold text-foreground mb-3">Writing Styles:</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[{ style: "Professional", desc: "Clean, MLS-standard tone" }, { style: "Luxury", desc: "Elevated, high-end language" }, { style: "Conversational", desc: "Warm, relatable voice" }, { style: "Concise", desc: "Tight, punchy, no fluff" }].map((s, i) => (
+                  <div key={i} className="bg-muted/50 rounded-xl p-3"><p className="font-bold text-foreground text-sm">{s.style}</p><p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p></div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Virtual Staging */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <p className="text-sm font-semibold text-foreground mb-3">8 Design Styles:</p>
+                <div className="flex flex-wrap gap-2">{["Modern", "Traditional", "Minimalist", "Coastal", "Farmhouse", "Mid-Century", "Scandinavian", "Industrial"].map((s, i) => (<span key={i} className="text-xs font-medium bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg">{s}</span>))}</div>
+                <p className="text-sm font-semibold text-foreground mt-4 mb-2">8 Room Types:</p>
+                <div className="flex flex-wrap gap-2">{["Living Room", "Bedroom", "Kitchen", "Dining Room", "Office", "Bathroom", "Nursery", "Patio"].map((r, i) => (<span key={i} className="text-xs font-medium bg-muted text-foreground px-3 py-1.5 rounded-lg">{r}</span>))}</div>
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center"><Sofa className="h-6 w-6 text-indigo-600" /></div>
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
+              </div>
+              <h3 className="text-2xl font-extrabold text-foreground mb-3">Furnish Empty Rooms Instantly with <span className="text-indigo-600">Virtual Staging</span></h3>
+              <p className="text-muted-foreground leading-relaxed mb-4">Upload a photo of an empty room, choose a style, and AI adds furniture while preserving the actual room architecture. Before/after comparison slider. 8 styles from Modern to Farmhouse.</p>
+              <div className="space-y-2 mb-5">
+                {["Preserves real room structure (not text-to-image)", "8 furniture styles × 8 room types", "Before/after comparison slider", "~$0.07 per staging — pennies per room"].map((point, i) => (
+                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
+                ))}
+              </div>
+              <Link href={toolLink("/dashboard/lens/staging")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Stage a Room <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+          </div>
+
+          {/* Subscriber Perks */}
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-extrabold text-foreground">Subscriber Perks on Every Video Order</h3>
+            <p className="mt-2 text-muted-foreground">Automatic benefits when you order listing videos</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4"><Film className="h-6 w-6 text-cyan-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">Quick Videos</h4><p className="text-sm text-muted-foreground leading-relaxed">5–14 clips at $4.95/clip. Starting at $24.75.</p></div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4"><ImageIcon className="h-6 w-6 text-emerald-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">Free Photo Enhancement</h4><p className="text-sm text-muted-foreground leading-relaxed">AI corrections on every photo — brightness, color, white balance. Normally $2.99/photo.</p></div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4"><Clock className="h-6 w-6 text-amber-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">Priority Processing</h4><p className="text-sm text-muted-foreground leading-relaxed">Your orders are processed first. Faster delivery every time.</p></div>
+            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4"><Percent className="h-6 w-6 text-purple-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">10% Off Every Video</h4><p className="text-sm text-muted-foreground leading-relaxed">Automatic discount at checkout. No coupon needed.</p></div>
+          </div>
+
+          {/* Pro Tools — CHANGED: Added "Coming Soon" badge to each card */}
+          <div className="mt-20">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center"><Zap className="h-4 w-4 text-purple-600" /></div>
+              <h3 className="text-xl font-extrabold text-foreground">Pro Tools</h3>
+              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">LENS PRO</span>
+            </div>
+            <p className="text-muted-foreground mb-10 max-w-2xl">Everything in Lens, plus a full business platform — your own website, AI-generated content, lead generation, and property intelligence tools.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { icon: Globe, title: "Agent Website Builder", desc: "Your own professional website with custom domain. Branded, mobile-responsive, and built for lead capture." },
+                { icon: BookOpen, title: "AI Blog", desc: "Auto-generated SEO blog posts about your market area. Fresh content keeps your site ranking and builds authority." },
+                { icon: LayoutDashboard, title: "Property Portfolio", desc: "Private dashboard hub linking all content by address — photos, videos, descriptions, staging, and marketing materials in one place." },
+                { icon: FileText, title: "Property Websites", desc: "Single-listing microsites with lead capture. Share a branded link instead of a Zillow page. Every lead goes directly to you." },
+                { icon: MapPin, title: "Location Value Score", desc: "1–100 composite score with 5 sub-scores: schools, walkability, safety, amenities, and market trends. Use in listing presentations." },
+                { icon: Lightbulb, title: "Staging Ideas", desc: "Room-by-room staging suggestions powered by AI. Show sellers exactly how to prepare each room for photos and showings." },
+                { icon: TreePine, title: "Landscaping Ideas", desc: "Exterior improvement suggestions to boost curb appeal. AI analyzes the property and recommends high-impact, low-cost changes." },
+                { icon: DollarSign, title: "Value Boost Report", desc: "Private seller report with improvement recommendations and estimated ROI. Includes product links so sellers can take action immediately." },
+                { icon: Search, title: "Lead Finder", desc: "Search public records for motivated sellers — pre-foreclosures, divorces, probate, tax liens. 100 searches/mo + 50 skip traces included." },
+              ].map((tool, i) => (
+                <div key={i} className="bg-card rounded-2xl border border-border p-6 hover:border-purple-300 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center"><tool.icon className="h-6 w-6 text-purple-600" /></div>
+                    <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-foreground mb-2">{tool.title}</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="py-20 sm:py-24 bg-muted/30">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">How It Works</h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Subscribe once, use everything — on every listing.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: "Subscribe", description: "Pick Lens or Lens Pro. Instant access to all tools — no setup, no onboarding.", icon: <Sparkles className="h-8 w-8" /> },
+              { step: "2", title: "Use the Tools", description: "Photo Coach during shoots, Design Studio for marketing, Description Writer for MLS, Virtual Staging for empty rooms. Pro adds websites, leads, and more.", icon: <Camera className="h-8 w-8" /> },
+              { step: "3", title: "Order Videos", description: "Quick Videos from $24.75, or full listings with priority processing, free photo editing, and 10% off — automatically.", icon: <Zap className="h-8 w-8" /> },
+            ].map((s, i) => (
+              <div key={i} className="text-center">
+                <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-5">{s.icon}</div>
+                <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-accent text-accent-foreground text-sm font-bold mb-3">{s.step}</div>
+                <h3 className="text-xl font-bold text-foreground mb-2">{s.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{s.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className="py-20 sm:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">Simple, Transparent Pricing</h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Two plans — pick the one that matches where you are in your business.</p>
+          </div>
+          <div className="flex items-center justify-center gap-3 mb-10">
+            <button onClick={() => setBillingToggle("monthly")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${billingToggle === "monthly" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}>Monthly</button>
+            <button onClick={() => setBillingToggle("yearly")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${billingToggle === "yearly" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}>Yearly<span className="ml-1.5 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded-full font-bold">Save 2 months</span></button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* Lens */}
+            <div className="bg-card rounded-2xl border-2 border-accent/40 p-8 relative">
+              <span className="absolute -top-3 left-6 bg-accent/10 text-accent text-xs font-bold px-3 py-1 rounded-full">MOST POPULAR</span>
+              <h3 className="text-lg font-bold text-foreground mb-1">P2V Lens</h3>
+              <p className="text-sm text-muted-foreground mb-5">Core marketing tools for every agent</p>
+              <div className="mb-6">{billingToggle === "monthly" ? (<div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$27.95</span><span className="text-muted-foreground text-sm">/month</span></div>) : (<div><div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$279</span><span className="text-muted-foreground text-sm">/year</span></div><p className="text-sm text-green-600 font-medium mt-1">$23.25/month — save $55.40</p></div>)}</div>
+              <ul className="space-y-3 mb-8">{["200 photo analyses / month", "AI Photo Coach with instant feedback", "Marketing Design Studio (7 templates)", "AI Listing Description Writer", "Virtual Staging (8 styles)", "Quick Videos ($4.95/clip, 5–14 clips)", "Free photo enhancement on video orders", "10% off all video orders", "Priority processing — first in queue"].map((item, i) => (<li key={i} className="flex items-start gap-2.5 text-sm text-foreground"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />{item}</li>))}</ul>
+              {isSubscriber ? (
+                <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-6 text-base"><Link href="/dashboard/lens"><CheckCircle className="mr-2 h-4 w-4" />You&apos;re Subscribed — Go to Dashboard</Link></Button>
+              ) : (
+                <Button onClick={() => handleSubscribe(billingToggle)} disabled={subscribing || loadingUser} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-base">{subscribing ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting to checkout...</>) : !user && !loadingUser ? (<><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</>) : (<>Subscribe Now<ArrowRight className="ml-2 h-4 w-4" /></>)}</Button>
+              )}
+              {!isSubscriber && <p className="text-center mt-3 text-xs text-muted-foreground">Try free — 3 photo analyses, 1 description, 1 staging, 3 design exports</p>}
+            </div>
+            {/* Lens Pro */}
+            <div className="bg-card rounded-2xl border-2 border-purple-400/40 p-8 relative">
+              <span className="absolute -top-3 left-6 bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">FULL PLATFORM</span>
+              <h3 className="text-lg font-bold text-foreground mb-1">P2V Lens Pro</h3>
+              <p className="text-sm text-muted-foreground mb-5">Marketing + websites + lead gen</p>
+              <div className="mb-6">{billingToggle === "monthly" ? (<div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$49.95</span><span className="text-muted-foreground text-sm">/month</span></div>) : (<div><div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$499</span><span className="text-muted-foreground text-sm">/year</span></div><p className="text-sm text-green-600 font-medium mt-1">$41.58/month — save $100.40</p></div>)}</div>
+              <ul className="space-y-3 mb-8">{["Everything in P2V Lens", "Agent Website Builder (custom domain)", "AI Blog (auto-generated SEO posts)", "Property Portfolio dashboard", "Property Websites with lead capture", "Location Value Score (1–100)", "Staging Ideas (room-by-room)", "Landscaping Ideas (curb appeal)", "Value Boost Report for sellers", "Lead Finder (100 searches/mo)", "Skip Tracing (50 records/mo)"].map((item, i) => (<li key={i} className="flex items-start gap-2.5 text-sm text-foreground"><CheckCircle className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />{item}</li>))}</ul>
+              <Button onClick={() => handleSubscribePro(billingToggle)} disabled={subscribingPro || loadingUser} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black py-6 text-base">{subscribingPro ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting to checkout...</>) : !user && !loadingUser ? (<><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</>) : (<>Subscribe to Pro<ArrowRight className="ml-2 h-4 w-4" /></>)}</Button>
+            </div>
+          </div>
+          {/* Brokerage */}
+          <div className="mt-10 max-w-4xl mx-auto">
+            <div className="bg-muted/50 rounded-2xl border border-border p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+              <Building2 className="h-8 w-8 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 text-center sm:text-left"><h4 className="text-lg font-bold text-foreground">Brokerage Plans</h4><p className="text-sm text-muted-foreground mt-1">$19.95/agent/month · Minimum 10 agents · Each agent gets their own login, 200 analyses/month, and all Lens tools.</p></div>
+              <div className="flex flex-col gap-2 flex-shrink-0"><Button asChild variant="outline" className="font-bold"><Link href="mailto:support@realestatephoto2video.com?subject=Brokerage%20Pricing%20Inquiry">Contact Us <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Link href="/P2V_Brokerage_Presentation.pdf" target="_blank" className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors text-center">Download PDF</Link></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 sm:py-24 bg-muted/30">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14"><h2 className="text-3xl font-extrabold text-foreground">Frequently Asked Questions</h2></div>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border overflow-hidden">
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
+                  <span className="font-semibold text-foreground text-sm sm:text-base">{faq.q}</span>
+                  {openFaq === i ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                </button>
+                {openFaq === i && <div className="px-6 pb-4"><p className="text-sm text-muted-foreground leading-relaxed">{faq.a}</p></div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">Start Your Free Trial Today</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">3 free photo analyses, 1 listing description, 1 virtual staging, 3 design exports — no credit card required to try.</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {isSubscriber ? (
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg"><Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+            ) : (
+              <Button onClick={() => handleSubscribe(billingToggle)} disabled={subscribing} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">{subscribing ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Redirecting...</>) : (<>Subscribe to P2V Lens<ArrowRight className="ml-2 h-5 w-5" /></>)}</Button>
+            )}
+            <Button asChild variant="outline" className="px-8 py-6 text-lg font-bold"><Link href="/order">Create a Listing Video</Link></Button>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   );
 }
