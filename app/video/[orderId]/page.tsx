@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  Plus,
 } from "lucide-react";
 
 interface Order {
@@ -122,116 +123,6 @@ function MultiVideoPlayer({ videos, isClosed }: { videos: { label: string; url: 
       <p className="text-xs text-muted-foreground">
         {videos.length} video versions available. Click the tabs above to preview each version.
       </p>
-    </div>
-  );
-}
-
-// ── Individual Clip Player for review ──
-function ClipPreviewPlayer({ clip, index }: { clip: any; index: number }) {
-  const playbackUrl = getClipPlaybackUrl(clip);
-
-  if (!playbackUrl) {
-    return (
-      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-        <Play className="h-6 w-6 text-muted-foreground/40" />
-      </div>
-    );
-  }
-
-  return <VideoPlayer url={playbackUrl} className="aspect-video" />;
-}
-
-function ClipReviewSection({ clips, orderId }: { clips: any[]; orderId: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [activeClipIndex, setActiveClipIndex] = useState(0);
-
-  if (!clips || clips.length === 0) return null;
-
-  return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden mb-8">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-5 hover:bg-muted/30 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <Camera className="h-5 w-5 text-primary" />
-          <div className="text-left">
-            <h3 className="font-bold text-foreground">Review Individual Clips</h3>
-            <p className="text-sm text-muted-foreground">{clips.length} clips — watch each one to check for issues</p>
-          </div>
-        </div>
-        {expanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
-      </button>
-
-      {expanded && (
-        <div className="border-t border-border p-5 space-y-4">
-          {/* Clip selector tabs */}
-          <div className="flex flex-wrap gap-1.5">
-            {clips.map((clip, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveClipIndex(i)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                  activeClipIndex === i
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30"
-                }`}
-              >
-                Clip {(clip.position || i + 1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Active clip player */}
-          <div className="max-w-3xl">
-            <ClipPreviewPlayer clip={clips[activeClipIndex]} index={activeClipIndex} />
-          </div>
-
-          {/* Clip description */}
-          {clips[activeClipIndex]?.description && (
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">Shot {clips[activeClipIndex].position || activeClipIndex + 1}:</strong>{" "}
-              {clips[activeClipIndex].description}
-            </p>
-          )}
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActiveClipIndex(Math.max(0, activeClipIndex - 1))}
-              disabled={activeClipIndex === 0}
-            >
-              ← Previous Clip
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {activeClipIndex + 1} of {clips.length}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActiveClipIndex(Math.min(clips.length - 1, activeClipIndex + 1))}
-              disabled={activeClipIndex === clips.length - 1}
-            >
-              Next Clip →
-            </Button>
-          </div>
-
-          {/* CTA to revise */}
-          <div className="pt-3 border-t border-border">
-            <p className="text-sm text-muted-foreground mb-2">
-              See something that needs fixing? Mark specific clips for revision.
-            </p>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/video/${orderId}/revise`}>
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                Open Revision Tool
-              </Link>
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -455,9 +346,9 @@ export default function VideoDeliveryPage() {
   const hasDeliveredAt = !!order.delivered_at;
   const reviewWindowExpired = timeRemaining?.expired ?? false;
   const freeRevisionUsed = (order.revision_count || 0) >= (order.revisions_allowed || 1);
-  // Quick videos never get free revisions
   const canRequestFreeRevision = !isQuickVideo && isDelivered && !isClosed && !isRevisionInProgress && !freeRevisionUsed && !reviewWindowExpired;
   const canRequestPaidRevision = (isClosed || reviewWindowExpired || isQuickVideo) && !isRevisionInProgress;
+  const clipCount = hasClips ? order.clip_urls.length : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -545,8 +436,8 @@ export default function VideoDeliveryPage() {
                 ) : (
                   <>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                    <h3 className="font-bold text-foreground">Review your video</h3>
-                    <span className={`text-sm font-bold flex-shrink-0 ${timeRemaining.days <= 1 ? "text-amber-700" : "text-blue-700"}`}>
+                      <h3 className="font-bold text-foreground">Review your video</h3>
+                      <span className={`text-sm font-bold flex-shrink-0 ${timeRemaining.days <= 1 ? "text-amber-700" : "text-blue-700"}`}>
                         {timeRemaining.days > 0 && `${timeRemaining.days}d `}
                         {timeRemaining.hours}h {timeRemaining.minutes}m remaining
                       </span>
@@ -558,7 +449,7 @@ export default function VideoDeliveryPage() {
                     </p>
                   </>
                 )}
-               <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                <div className="flex flex-col sm:flex-row gap-2 mt-3">
                   {!reviewWindowExpired && !freeRevisionUsed && (
                     <Button asChild size="sm" variant="outline">
                       <Link href={`/video/${orderId}/revise`}>
@@ -586,40 +477,37 @@ export default function VideoDeliveryPage() {
           </div>
         )}
 
-        {/* Quick Video — paid revisions only banner */}
+        {/* Quick Video banner — streamlined */}
         {isQuickVideo && isDelivered && !isClosed && !isRevisionInProgress && (
           <div className="bg-cyan-50 border border-cyan-200 rounded-2xl p-5 mb-6">
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
                 <Sparkles className="h-5 w-5 text-cyan-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-foreground mb-1">Subscriber Quick Video</h3>
-                <p className="text-sm text-muted-foreground">
-                  Quick Video orders include paid revisions only.
-                  Request a revision anytime — pricing starts at $1.99/clip.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/video/${orderId}/revise`}>
-                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                      Request Paid Revision
-                    </Link>
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleAcceptClose}
-                    disabled={accepting}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {accepting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                    ) : (
-                      <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    Accept & Download
-                  </Button>
-                </div>
+                <h3 className="font-bold text-foreground">Subscriber Quick Video</h3>
+                <p className="text-sm text-muted-foreground">Paid revisions available from $1.99/clip. Add new clips for $4.95 each.</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/video/${orderId}/revise`}>
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    Revise
+                  </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAcceptClose}
+                  disabled={accepting}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {accepting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Accept
+                </Button>
               </div>
             </div>
           </div>
@@ -650,13 +538,40 @@ export default function VideoDeliveryPage() {
           </div>
         )}
 
-        {/* ═══ INDIVIDUAL CLIP REVIEW ═══ */}
-        {hasClips && isDelivered && (
-          <ClipReviewSection clips={order.clip_urls} orderId={orderId} />
+        {/* ═══ REVISION TOOL CTA — single, clear entry point ═══ */}
+        {isDelivered && !isRevisionInProgress && (
+          <Link
+            href={`/video/${orderId}/revise`}
+            className="group block bg-card rounded-xl border border-border hover:border-primary/40 hover:shadow-md transition-all mb-8 overflow-hidden"
+          >
+            <div className="flex items-center gap-4 p-5">
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
+                <RefreshCw className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
+                  {canRequestFreeRevision ? "Review Clips & Request Revision" : "Revision Tool"}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {clipCount > 0 && `${clipCount} clips · `}
+                  Reorder, revise, remove, or add new clips
+                  {canRequestFreeRevision && (
+                    <span className="text-green-600 font-semibold"> · 1 free revision available</span>
+                  )}
+                  {canRequestPaidRevision && !canRequestFreeRevision && (
+                    <span className="text-muted-foreground"> · Revisions from $1.99/clip, new clips $4.95</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors">
+                <ExternalLink className="h-5 w-5" />
+              </div>
+            </div>
+          </Link>
         )}
 
         {/* Action Buttons */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
           {/* Single video download (only when no multiple versions) */}
           {isClosed && order.delivery_url && !hasMultipleVideos && (
             <Button asChild className="bg-primary hover:bg-primary/90">
@@ -677,8 +592,8 @@ export default function VideoDeliveryPage() {
             </Button>
           )}
 
-          {/* Accept button (delivered but not closed, non-quick-video) */}
-          {isDelivered && !isClosed && !isRevisionInProgress && !isQuickVideo && (
+          {/* Accept button (delivered but not closed, non-quick-video, not already in review window banner) */}
+          {isDelivered && !isClosed && !isRevisionInProgress && !isQuickVideo && !(!reviewWindowExpired && hasDeliveredAt && timeRemaining && !timeRemaining.expired) && (
             <Button
               onClick={handleAcceptClose}
               disabled={accepting}
@@ -690,26 +605,6 @@ export default function VideoDeliveryPage() {
                 <ThumbsUp className="h-4 w-4 mr-2" />
               )}
               Accept & Download
-            </Button>
-          )}
-
-          {/* Free revision button — not for quick videos, not during revision processing */}
-          {!isQuickVideo && !isRevisionInProgress && !isClosed && isDelivered && (
-            <Button asChild variant="outline">
-              <Link href={`/video/${orderId}/revise`}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Request Revision
-              </Link>
-            </Button>
-          )}
-
-          {/* Paid revision after closing OR for quick videos */}
-          {(isClosed || (isQuickVideo && isDelivered && !isRevisionInProgress)) && (
-            <Button asChild variant="outline">
-              <Link href={`/video/${orderId}/revise`}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Request Paid Revision
-              </Link>
             </Button>
           )}
         </div>
@@ -770,47 +665,19 @@ export default function VideoDeliveryPage() {
                   Your revision is being processed. You'll receive an email when the updated video is ready.
                 </p>
               </>
-            ) : isQuickVideo ? (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  This is a Subscriber Quick Video. Paid revisions are available at standard rates.
-                  We only regenerate the clips you flag — everything else stays the same.
-                </p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/video/${orderId}/revise`}>
-                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                    Request Paid Revision
-                  </Link>
-                </Button>
-              </>
-            ) : isClosed ? (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  This order has been accepted and closed. You can still request <strong className="text-foreground">paid revisions</strong> if you need changes.
-                </p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/video/${orderId}/revise`}>
-                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                    Request Paid Revision
-                  </Link>
-                </Button>
-              </>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Every order includes <strong className="text-foreground">1 free revision</strong> within {REVIEW_WINDOW_DAYS} days of delivery. Use the revision tool to pick which clips you want redone.
+                  {isQuickVideo
+                    ? "Quick Videos include paid revisions at standard rates. We only regenerate the clips you flag — everything else stays the same."
+                    : isClosed
+                    ? "This order is complete. You can still request paid revisions or add new clips anytime."
+                    : <>Every order includes <strong className="text-foreground">1 free revision</strong> within {REVIEW_WINDOW_DAYS} days of delivery. We only regenerate the clips you flag — everything else stays the same.</>
+                  }
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  We only regenerate the clips you flag — everything else stays the same.
-                </p>
-                {!freeRevisionUsed && (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/video/${orderId}/revise`}>
-                      <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                      Request Revision
-                    </Link>
-                  </Button>
-                )}
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Revisions from $1.99/clip · New clips $4.95 each · Reordering always free</p>
+                </div>
               </>
             )}
           </div>
