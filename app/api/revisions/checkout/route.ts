@@ -4,14 +4,26 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+const NEW_CLIP_PRICE = 4.95;
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orderId, clips, notes } = body;
+    const { orderId, clips, notes, sequence, newClips } = body;
 
-    if (!orderId || !clips || !Array.isArray(clips) || clips.length === 0) {
+    if (!orderId) {
       return NextResponse.json(
-        { success: false, error: "orderId and clips are required" },
+        { success: false, error: "orderId is required" },
+        { status: 400 }
+      );
+    }
+
+    const hasClipChanges = clips && Array.isArray(clips) && clips.length > 0;
+    const hasNewClips = newClips && Array.isArray(newClips) && newClips.length > 0;
+
+    if (!hasClipChanges && !hasNewClips) {
+      return NextResponse.json(
+        { success: false, error: "No billable changes. Reordering and removals are free — submit directly." },
         { status: 400 }
       );
     }
@@ -51,8 +63,32 @@ export async function POST(request: Request) {
     const revisionNumber = (order.revision_count || 0) + 1;
     const isFree = revisionNumber <= (order.revisions_allowed || 1);
 
-    // If this is a free revision, don't create a checkout — tell frontend to submit directly
-    if (isFree) {
+    // ── Calculate pricing ──
+
+    // Revised clips — tiered pricing (only if past free revisions)
+    const reviseClips = hasClipChanges ? clips.filter((c: any) => c.action === "revise") : [];
+    const reviseCount = reviseClips.length;
+    let reviseCost = 0;
+    let pricePerReviseClip = 0;
+
+    if (!isFree && reviseCount > 0) {
+      const is1080 = order.resolution === "1080P";
+      if (reviseCount === 1) pricePerReviseClip = is1080 ? 2.49 : 1.99;
+      else if (reviseCount <= 5) pricePerReviseClip = is1080 ? 1.99 : 1.49;
+      else if (reviseCount <= 15) pricePerReviseClip = is1080 ? 1.74 : 1.24;
+      else pricePerReviseClip = is1080 ? 1.49 : 0.99;
+      reviseCost = Math.round(reviseCount * pricePerReviseClip * 100) / 100;
+    }
+
+    // New clips — always $4.95 each regardless of free/paid revision status
+    const newClipCount = hasNewClips ? newClips.length : 0;
+    const newClipCost = Math.round(newClipCount * NEW_CLIP_PRICE * 100) / 100;
+
+    const totalAmount = Math.round((reviseCost + newClipCost) * 100) / 100;
+    const amountCents = Math.round(totalAmount * 100);
+
+    // If everything is actually free (free revision, no new clips)
+    if (totalAmount === 0) {
       return NextResponse.json({
         success: false,
         error: "This revision is free. Submit directly without payment.",
@@ -60,29 +96,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Calculate per-clip pricing with volume tiers
-    const clipCount = clips.filter((c: any) => c.action === "revise").length;
-    if (clipCount === 0) {
-      return NextResponse.json({
-        success: false,
-        error: "No clips marked for revision. Removals and reordering are free.",
-      });
-    }
-
-    const is1080 = order.resolution === "1080P";
-    let pricePerClip: number;
-    if (clipCount === 1) pricePerClip = is1080 ? 2.49 : 1.99;
-    else if (clipCount <= 5) pricePerClip = is1080 ? 1.99 : 1.49;
-    else if (clipCount <= 15) pricePerClip = is1080 ? 1.74 : 1.24;
-    else pricePerClip = is1080 ? 1.49 : 0.99;
-
-    const totalAmount = Math.round(clipCount * pricePerClip * 100) / 100;
-    const amountCents = Math.round(totalAmount * 100);
-
     const origin = request.headers.get("origin") || "https://realestatephoto2video.com";
 
     // Store the pending revision data so we can retrieve it after payment
-    // We store clips + notes in a pending revision_requests row with status "awaiting_payment"
     const { data: pendingRevision, error: insertError } = await supabase
       .from("revision_requests")
       .insert({
@@ -91,8 +107,10 @@ export async function POST(request: Request) {
         is_paid: true,
         payment_amount: totalAmount,
         status: "awaiting_payment",
-        clips,
+        clips: hasClipChanges ? clips : [],
         notes: notes || "",
+        sequence: sequence || null,
+        new_clips: hasNewClips ? newClips : null,
       })
       .select("id")
       .single();
@@ -105,26 +123,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build a nice description for the Stripe line item
+    // Build Stripe line items
     const address = order.property_address || `Order ${(order.order_id || order.id).slice(0, 8)}`;
-    const description = `${clipCount} clip${clipCount !== 1 ? "s" : ""} × $${pricePerClip.toFixed(2)}/clip (${order.resolution || "768P"})`;
+    const lineItems: any[] = [];
+
+    if (reviseCost > 0) {
+      const reviseDescription = `${reviseCount} clip${reviseCount !== 1 ? "s" : ""} × $${pricePerReviseClip.toFixed(2)}/clip (${order.resolution || "768P"})`;
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `Video Revision — ${address}`,
+            description: reviseDescription,
+          },
+          unit_amount: Math.round(reviseCost * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    if (newClipCost > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `New Clips — ${address}`,
+            description: `${newClipCount} new clip${newClipCount !== 1 ? "s" : ""} × $${NEW_CLIP_PRICE.toFixed(2)}/clip`,
+          },
+          unit_amount: Math.round(newClipCost * 100),
+        },
+        quantity: 1,
+      });
+    }
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `Video Revision — ${address}`,
-              description,
-            },
-            unit_amount: amountCents,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       mode: "payment",
       success_url: `${origin}/video/${orderId}/revise/success?session_id={CHECKOUT_SESSION_ID}&revision_id=${pendingRevision.id}`,
       cancel_url: `${origin}/video/${orderId}/revise?cancelled=true`,
@@ -135,7 +170,8 @@ export async function POST(request: Request) {
         urlOrderId: orderId,
         revisionId: pendingRevision.id,
         revisionNumber: String(revisionNumber),
-        clipCount: String(clipCount),
+        reviseClipCount: String(reviseCount),
+        newClipCount: String(newClipCount),
         totalAmount: totalAmount.toFixed(2),
       },
     });
@@ -145,8 +181,9 @@ export async function POST(request: Request) {
       url: session.url,
       sessionId: session.id,
       amount: totalAmount,
-      clipCount,
-      pricePerClip,
+      reviseCount,
+      newClipCount,
+      pricePerReviseClip,
     });
   } catch (error) {
     console.error("[Revision Checkout] Error:", error);
