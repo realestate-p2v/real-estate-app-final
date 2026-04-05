@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+
 export async function GET(
   request: Request,
   { params }: { params: { orderId: string } }
@@ -70,7 +71,7 @@ export async function POST(
     const { orderId } = await params;
     if (!orderId) return NextResponse.json({ success: false, error: "orderId required" }, { status: 400 });
 
-    const { clips, notes, sequence, newClips } = await request.json();
+    const { clips, notes, sequence, newClips, adminBypass } = await request.json();
 
     // Allow empty clips array for reorder-only or new-clip-only submissions
     // But require at least SOME change: clips, sequence reorder, or newClips
@@ -115,6 +116,10 @@ export async function POST(
 
     const realOrderId = order.id;
 
+    // Verify admin bypass server-side
+    const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+    const isAdminRequest = adminBypass && order.customer_email && ADMIN_EMAILS.includes(order.customer_email);
+
     const revisionNumber = (order.revision_count || 0) + 1;
     const isFree = revisionNumber <= (order.revisions_allowed || 1);
 
@@ -138,7 +143,8 @@ export async function POST(
     }
     paymentAmount = Math.round(paymentAmount * 100) / 100;
 
-    if (paymentAmount > 0) {
+    // Admin skips payment entirely
+    if (paymentAmount > 0 && !isAdminRequest) {
       return NextResponse.json({
         success: false,
         requiresPayment: true,
