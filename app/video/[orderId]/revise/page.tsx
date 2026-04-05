@@ -191,6 +191,7 @@ export default function RevisionPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
   // Check if current user is admin
   useEffect(() => {
@@ -201,6 +202,7 @@ export default function RevisionPage() {
         const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
         if (user?.email && ADMIN_EMAILS.includes(user.email)) {
           setIsAdmin(true);
+          setAdminEmail(user.email);
         }
       } catch {}
     };
@@ -595,6 +597,7 @@ export default function RevisionPage() {
           sequence: sequencePayload,
           newClips: newClipPayloads,
           adminBypass: isAdmin || undefined,
+          adminEmail: isAdmin ? adminEmail : undefined,
         }),
       });
       const data = await res.json();
