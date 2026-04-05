@@ -456,7 +456,7 @@ export default function RevisionPage() {
           formData.append("folder", folder);
 
           const uploadRes = await fetch(
-            `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+            `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
             { method: "POST", body: formData }
           );
           const result = await uploadRes.json();
