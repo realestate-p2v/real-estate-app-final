@@ -70,7 +70,7 @@ export async function POST(
     const { orderId } = await params;
     if (!orderId) return NextResponse.json({ success: false, error: "orderId required" }, { status: 400 });
 
-    const { clips, notes } = await request.json();
+    const { clips, notes, sequence } = await request.json();
     if (!clips || !Array.isArray(clips) || clips.length === 0) {
       return NextResponse.json({ success: false, error: "At least one clip revision required" }, { status: 400 });
     }
@@ -146,6 +146,7 @@ export async function POST(
         status: "pending",
         clips,
         notes: notes || "",
+        sequence: sequence || null,
       })
       .select()
       .single();
@@ -165,6 +166,7 @@ export async function POST(
         revision_count: revisionNumber,
         client_revision_notes: clips,
         revision_notes: revisionNotes,
+        clip_reorder: sequence || null,
       })
       .eq("id", realOrderId);
 
@@ -176,7 +178,10 @@ export async function POST(
         const clipSummary = clips.map((c: any) =>
           `  [${c.position}] ${c.action === "remove" ? "REMOVE" : c.camera_direction || "change"} — ${c.problem_description || "no notes"}`
         ).join("\n");
-        const telegramMsg = `🔄 *Client Revision Request*\n\n📍 *${order.property_address || orderId.slice(0, 8)}*\nRevision #${revisionNumber} ${isFree ? "(free)" : `($${paymentAmount})`}\n${clips.length} clip(s) affected\n\n${clipSummary}\n\n${notes ? `📝 Notes: ${notes}\n\n` : ""}Go to admin dashboard to review.`;
+        const reorderNote = sequence && sequence.some((s: any) => s.original_position !== s.new_position)
+          ? `\n🔀 Clips reordered: ${sequence.map((s: any) => `${s.original_position}→${s.new_position}`).join(", ")}`
+          : "";
+        const telegramMsg = `🔄 *Client Revision Request*\n\n📍 *${order.property_address || orderId.slice(0, 8)}*\nRevision #${revisionNumber} ${isFree ? "(free)" : `($${paymentAmount})`}\n${clips.length} clip(s) affected${reorderNote}\n\n${clipSummary}\n\n${notes ? `📝 Notes: ${notes}\n\n` : ""}Go to admin dashboard to review.`;
         await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
