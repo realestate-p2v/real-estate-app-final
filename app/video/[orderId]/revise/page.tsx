@@ -190,6 +190,22 @@ export default function RevisionPage() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+        if (user?.email && ADMIN_EMAILS.includes(user.email)) {
+          setIsAdmin(true);
+        }
+      } catch {}
+    };
+    checkAdmin();
+  }, []);
 
   // Check for cancelled Stripe session
   useEffect(() => {
@@ -304,7 +320,7 @@ export default function RevisionPage() {
   };
 
   const totalCost = getRevisionCost();
-  const needsPayment = totalCost > 0;
+  const needsPayment = !isAdmin && totalCost > 0;
 
   const handleDragStart = (index: number) => setDraggedIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -568,7 +584,7 @@ export default function RevisionPage() {
       }
     }
 
-    // Free submit (reorder/remove only, no new clips, no paid revisions)
+    // Free submit (or admin bypass)
     try {
       const res = await fetch(`/api/video/${orderId}/revise`, {
         method: "POST",
@@ -578,6 +594,7 @@ export default function RevisionPage() {
           notes: generalNotes,
           sequence: sequencePayload,
           newClips: newClipPayloads,
+          adminBypass: isAdmin || undefined,
         }),
       });
       const data = await res.json();
