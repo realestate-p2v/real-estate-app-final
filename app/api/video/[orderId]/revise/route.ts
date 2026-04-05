@@ -71,7 +71,7 @@ export async function POST(
     const { orderId } = await params;
     if (!orderId) return NextResponse.json({ success: false, error: "orderId required" }, { status: 400 });
 
-    const { clips, notes, sequence, newClips, adminBypass } = await request.json();
+    const { clips, notes, sequence, newClips, adminBypass, adminEmail } = await request.json();
 
     // Allow empty clips array for reorder-only or new-clip-only submissions
     // But require at least SOME change: clips, sequence reorder, or newClips
@@ -118,7 +118,7 @@ export async function POST(
 
     // Verify admin bypass server-side
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
-    const isAdminRequest = adminBypass && order.customer_email && ADMIN_EMAILS.includes(order.customer_email);
+    const isAdminRequest = !!(adminBypass && adminEmail && ADMIN_EMAILS.includes(adminEmail));
 
     const revisionNumber = (order.revision_count || 0) + 1;
     const isFree = revisionNumber <= (order.revisions_allowed || 1);
