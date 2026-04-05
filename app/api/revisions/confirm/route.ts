@@ -83,22 +83,40 @@ export async function POST(request: Request) {
     }
 
     // Build revision notes string for pipeline
-    const revisionNotes = clips
-      .map(
-        (c: any) =>
-          `[${c.position}] ${c.camera_direction || ""} ${c.problem_description || ""} ${c.action === "remove" ? "REMOVE" : ""}`.trim()
-      )
-      .join(", ");
+    const revisionNotes = clips.length > 0
+      ? clips
+          .map(
+            (c: any) =>
+              `[${c.position}] ${c.camera_direction || ""} ${c.problem_description || ""} ${c.action === "remove" ? "REMOVE" : ""}`.trim()
+          )
+          .join(", ")
+      : "";
 
     // Update the order to trigger the pipeline
+    const orderUpdate: any = {
+      status: "revision_requested",
+      revision_count: revision.revision_number,
+    };
+
+    // Always include clip changes if present
+    if (clips.length > 0) {
+      orderUpdate.client_revision_notes = clips;
+      orderUpdate.revision_notes = revisionNotes;
+    }
+
+    // Include sequence/reorder data if saved on the revision request
+    if (revision.sequence) {
+      orderUpdate.clip_reorder = revision.sequence;
+    }
+
+    // Include new clips if saved on the revision request
+    if (revision.new_clips) {
+      orderUpdate.new_clips = revision.new_clips;
+    }
+
     const { error: updateOrderError } = await supabase
       .from("orders")
-      .update({
-        status: "revision_requested",
-        revision_count: revision.revision_number,
-        client_revision_notes: clips,
-        revision_notes: revisionNotes,
-      })
+      .update(orderUpdate)
       .eq("id", realOrderId);
 
     if (updateOrderError) {
@@ -118,14 +136,23 @@ export async function POST(request: Request) {
       const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
       const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
       if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-        const clipSummary = clips
-          .map(
-            (c: any) =>
-              `  [${c.position}] ${c.action === "remove" ? "REMOVE" : c.camera_direction || "change"} — ${c.problem_description || "no notes"}`
-          )
-          .join("\n");
+        const clipSummary = clips.length > 0
+          ? clips
+              .map(
+                (c: any) =>
+                  `  [${c.position}] ${c.action === "remove" ? "REMOVE" : c.camera_direction || "change"} — ${c.problem_description || "no notes"}`
+              )
+              .join("\n")
+          : "  No clip changes";
         const address = order?.property_address || realOrderId.slice(0, 8);
-        const telegramMsg = `🔄💰 *Paid Revision Confirmed*\n\n📍 *${address}*\nRevision #${revision.revision_number} — *$${revision.payment_amount}*\n${clips.length} clip(s) affected\n\n${clipSummary}\n\n${revision.notes ? `📝 Notes: ${revision.notes}\n\n` : ""}✅ Payment confirmed via Stripe\nPipeline will process automatically.`;
+        const newClipCount = revision.new_clips?.length || 0;
+        const reorderNote = revision.sequence?.some((s: any) => s.original_position !== s.new_position)
+          ? `\n🔀 Clips reordered`
+          : "";
+        const newClipNote = newClipCount > 0
+          ? `\n➕ ${newClipCount} new clip${newClipCount !== 1 ? "s" : ""} added`
+          : "";
+        const telegramMsg = `🔄💰 *Paid Revision Confirmed*\n\n📍 *${address}*\nRevision #${revision.revision_number} — *$${revision.payment_amount}*\n${clips.length} clip(s) affected${reorderNote}${newClipNote}\n\n${clipSummary}\n\n${revision.notes ? `📝 Notes: ${revision.notes}\n\n` : ""}✅ Payment confirmed via Stripe\nPipeline will process automatically.`;
         await fetch(
           `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
           {
