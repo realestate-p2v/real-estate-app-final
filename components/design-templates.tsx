@@ -704,7 +704,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
             {page1Desc.length > 0 && (
               <div style={{ marginTop: 32 }}>
                 <p style={{ fontSize: 38, fontWeight: 700, color: "#333", letterSpacing: "0.10em", textTransform: "uppercase" as const, margin: 0, marginBottom: 14 }}>About This Property</p>
-                <div style={{ fontSize: 36, color: "#555", lineHeight: 1.7, overflowWrap: "break-word" }}>
+                <div style={{ fontSize: 38, color: "#555", lineHeight: 1.7, overflowWrap: "break-word" }}>
                   {page1Desc.map((p, i) => <p key={i} style={{ margin: 0, marginBottom: 10 }}>{p}</p>)}
                 </div>
               </div>
@@ -752,7 +752,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerBarH, backgroundColor: accent }} />
       {showOverflow && (
         <div style={{ padding: `${pgPad + headerBarH}px ${pgPad}px 0`, height: overflowH }}>
-          <div style={{ fontSize: 36, color: "#555", lineHeight: 1.7, overflowWrap: "break-word" }}>
+          <div style={{ fontSize: 38, color: "#555", lineHeight: 1.7, overflowWrap: "break-word" }}>
             {overflowDesc.map((p, i) => <p key={i} style={{ margin: 0, marginBottom: 10 }}>{p}</p>)}
           </div>
         </div>
