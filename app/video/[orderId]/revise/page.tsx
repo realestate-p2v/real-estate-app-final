@@ -462,7 +462,8 @@ export default function RevisionPage() {
           const result = await uploadRes.json();
 
           if (!result.secure_url) {
-            setError(`Failed to upload photo for "${clip.description}". Please try again.`);
+            console.error("[Revision Upload] Cloudinary error:", result);
+            setError(`Failed to upload photo for "${clip.description}": ${result.error?.message || JSON.stringify(result.error) || "Unknown error"}`);
             setSubmitting(false);
             return;
           }
