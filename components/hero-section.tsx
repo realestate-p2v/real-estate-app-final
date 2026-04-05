@@ -22,9 +22,16 @@ import {
 export function HeroSection() {
   return (
     <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-white">
-      {/* Animated mesh gradient background */}
+      {/* Background video — lowest layer */}
+      <div className="absolute inset-0 z-0">
+        <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-[0.16]">
+          <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      {/* Animated mesh gradient background — on top of video */}
       <div
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-[1]"
         style={{
           background: `
             radial-gradient(ellipse 80% 60% at 10% 20%, rgba(167, 243, 208, 0.35) 0%, transparent 50%),
@@ -38,7 +45,7 @@ export function HeroSection() {
       />
 
       {/* Floating geometric shapes */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 z-[2] overflow-hidden">
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full border-[3px] border-green-200/40 opacity-60" />
         <div className="absolute -top-10 -right-10 w-60 h-60 rounded-full border-[2px] border-cyan-200/30 opacity-50" />
         <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full border-[3px] border-emerald-200/40 opacity-50" />
