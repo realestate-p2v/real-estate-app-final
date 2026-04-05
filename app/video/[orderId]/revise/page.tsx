@@ -447,9 +447,39 @@ export default function RevisionPage() {
 
           const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
 
-          // Step 2: Upload directly to Cloudinary
+          // Step 2: Resize to max 1920px and compress before uploading
+          const resizedBlob = await new Promise<Blob>((resolve) => {
+            const img = document.createElement("img");
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              let { width, height } = img;
+              const maxDim = 1920;
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height / width) * maxDim);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width / height) * maxDim);
+                  height = maxDim;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d")!;
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob(
+                (blob) => resolve(blob || clip.uploaded_file!),
+                "image/jpeg",
+                0.85
+              );
+              URL.revokeObjectURL(img.src);
+            };
+            img.src = URL.createObjectURL(clip.uploaded_file!);
+          });
+
+          // Step 3: Upload directly to Cloudinary
           const formData = new FormData();
-          formData.append("file", clip.uploaded_file);
+          formData.append("file", resizedBlob, clip.uploaded_file.name);
           formData.append("api_key", apiKey);
           formData.append("timestamp", timestamp.toString());
           formData.append("signature", signature);
@@ -720,15 +750,15 @@ export default function RevisionPage() {
                 >
                   <div className="flex items-center gap-3 p-3">
                     {/* Drag handle + reorder */}
-                    <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                      <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab" />
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                      <GripVertical className="h-5 w-5 text-muted-foreground/40 cursor-grab" />
                       <button onClick={() => moveClip(index, "up")} disabled={index === 0}
-                        className={`p-0.5 ${index === 0 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}>
-                        <ChevronUp className="h-3.5 w-3.5" />
+                        className={`p-1.5 rounded-lg transition-colors ${index === 0 ? "text-muted-foreground/20" : "text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80"}`}>
+                        <ChevronUp className="h-5 w-5" />
                       </button>
                       <button onClick={() => moveClip(index, "down")} disabled={index === clips.length - 1}
-                        className={`p-0.5 ${index === clips.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}>
-                        <ChevronDown className="h-3.5 w-3.5" />
+                        className={`p-1.5 rounded-lg transition-colors ${index === clips.length - 1 ? "text-muted-foreground/20" : "text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80"}`}>
+                        <ChevronDown className="h-5 w-5" />
                       </button>
                     </div>
 
