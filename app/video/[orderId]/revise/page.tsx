@@ -424,30 +424,39 @@ export default function RevisionPage() {
     setSubmitting(true);
     setError(null);
 
-    // Upload new clip photos first
-    let uploadedNewClips: { position: number; photo_url: string; camera_direction: string; camera_speed: string; custom_motion: string; description: string }[] = [];
+    // Upload new clip photos to Cloudinary via /api/upload
+    let newClipPayloads: { position: number; photo_url: string; camera_direction: string; camera_speed: string; custom_motion: string; description: string }[] = [];
     if (newClips.length > 0) {
       try {
         for (const clip of newClips) {
           if (!clip.uploaded_file) continue;
-          const formData = new FormData();
-          formData.append("file", clip.uploaded_file);
-          formData.append("orderId", orderId);
-          formData.append("type", "revision_new_clip");
+
+          // Convert file to base64 data URL for the upload endpoint
+          const base64DataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error("Failed to read file"));
+            reader.readAsDataURL(clip.uploaded_file!);
+          });
 
           const uploadRes = await fetch("/api/upload", {
             method: "POST",
-            body: formData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              image: base64DataUrl,
+              folder: "revision-clips",
+            }),
           });
           const uploadData = await uploadRes.json();
-          if (!uploadData.success || !uploadData.url) {
-            setError(`Failed to upload photo for new clip "${clip.description}". Please try again.`);
+          if (!uploadData.success || !uploadData.data?.secure_url) {
+            setError(`Failed to upload photo for new clip "${clip.description}". ${uploadData.error || "Please try again."}`);
             setSubmitting(false);
             return;
           }
-          uploadedNewClips.push({
+
+          newClipPayloads.push({
             position: clip.position,
-            photo_url: uploadData.url,
+            photo_url: uploadData.data.secure_url,
             camera_direction: clip.camera_direction,
             camera_speed: clip.camera_speed,
             custom_motion: clip.custom_motion,
@@ -485,7 +494,7 @@ export default function RevisionPage() {
       clips: clipPayload,
       notes: generalNotes,
       sequence: sequencePayload,
-      newClips: uploadedNewClips,
+      newClips: newClipPayloads,
     };
 
     // Route to checkout if payment is needed
@@ -524,7 +533,7 @@ export default function RevisionPage() {
           clips: clipPayload.length > 0 ? clipPayload : [],
           notes: generalNotes,
           sequence: sequencePayload,
-          newClips: uploadedNewClips,
+          newClips: newClipPayloads,
         }),
       });
       const data = await res.json();
