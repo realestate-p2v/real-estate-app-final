@@ -48,6 +48,7 @@ interface RevisionClip {
   original_position: number;
   file_id: string;
   playback_url: string;
+  photo_url: string;
   description: string;
   action: "keep" | "revise" | "remove";
   camera_direction: string;
@@ -80,16 +81,21 @@ const SPEEDS = [
 // Handles both Cloudinary URLs and Drive file IDs
 function ClipPreview({ clip, isRemoved }: { clip: RevisionClip; isRemoved: boolean }) {
   const url = clip.playback_url;
+  const posterUrl = clip.photo_url || undefined;
 
   if (!url) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <Play className="h-6 w-6 text-white/40" />
+        {posterUrl ? (
+          <img src={posterUrl} alt={clip.description} className="w-full h-full object-cover" />
+        ) : (
+          <Play className="h-6 w-6 text-white/40" />
+        )}
       </div>
     );
   }
 
-  // Cloudinary or direct URL: use native video
+  // Cloudinary or direct URL: use native video with poster
   if (isCloudinaryUrl(url) || !isDriveUrl(url)) {
     return (
       <>
@@ -97,7 +103,8 @@ function ClipPreview({ clip, isRemoved }: { clip: RevisionClip; isRemoved: boole
           src={url}
           controls
           playsInline
-          preload="none"
+          preload="metadata"
+          poster={posterUrl}
           className="w-full h-full object-cover"
         />
         {isRemoved && (
@@ -194,6 +201,7 @@ export default function RevisionPage() {
               original_position: clip.position,
               file_id: clip.file_id || "",
               playback_url: getClipPlaybackUrl(clip) || "",
+              photo_url: clip.photo_url || "",
               description: clip.description || `Clip ${clip.position}`,
               action: "keep" as const,
               camera_direction: clip.camera_direction || "",
@@ -294,6 +302,14 @@ export default function RevisionPage() {
       action: c.action,
     }));
 
+    // Full clip sequence — all non-removed clips in their new order
+    const sequencePayload = clips
+      .filter((c) => c.action !== "remove")
+      .map((c, i) => ({
+        original_position: c.original_position,
+        new_position: i + 1,
+      }));
+
     // For PAID revisions: redirect to Stripe checkout
     if (!isFree && revisedClips.filter((c) => c.action === "revise").length > 0) {
       try {
@@ -304,6 +320,7 @@ export default function RevisionPage() {
             orderId,
             clips: clipPayload,
             notes: generalNotes,
+            sequence: sequencePayload,
           }),
         });
         const data = await res.json();
@@ -331,6 +348,7 @@ export default function RevisionPage() {
         body: JSON.stringify({
           clips: clipPayload,
           notes: generalNotes,
+          sequence: sequencePayload,
         }),
       });
       const data = await res.json();
@@ -348,6 +366,7 @@ export default function RevisionPage() {
                 orderId,
                 clips: clipPayload,
                 notes: generalNotes,
+                sequence: sequencePayload,
               }),
             });
             const checkoutData = await checkoutRes.json();
