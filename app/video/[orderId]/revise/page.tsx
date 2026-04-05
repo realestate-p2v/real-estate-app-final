@@ -1,6 +1,6 @@
 "use client"; 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
@@ -25,6 +25,9 @@ import {
   Send,
   DollarSign,
   CreditCard,
+  Plus,
+  ImagePlus,
+  Upload,
 } from "lucide-react";
 
 interface ClipData {
@@ -50,12 +53,18 @@ interface RevisionClip {
   playback_url: string;
   photo_url: string;
   description: string;
-  action: "keep" | "revise" | "remove";
+  action: "keep" | "revise" | "remove" | "new";
   camera_direction: string;
   camera_speed: string;
   custom_motion: string;
   problem_description: string;
+  // New clip fields
+  is_new: boolean;
+  uploaded_file?: File;
+  uploaded_preview?: string;
 }
+
+const NEW_CLIP_PRICE = 4.95;
 
 const DIRECTIONS = [
   { key: "push_in", label: "Fwd" },
@@ -78,10 +87,24 @@ const SPEEDS = [
 ];
 
 // ── Clip Preview Component ──
-// Handles both Cloudinary URLs and Drive file IDs
+// Handles Cloudinary URLs, Drive file IDs, and new clip uploads
 function ClipPreview({ clip, isRemoved }: { clip: RevisionClip; isRemoved: boolean }) {
   const url = clip.playback_url;
-  const posterUrl = clip.photo_url || undefined;
+  const posterUrl = clip.uploaded_preview || clip.photo_url || undefined;
+
+  // New clip with uploaded photo
+  if (clip.is_new && posterUrl) {
+    return (
+      <>
+        <img src={posterUrl} alt={clip.description} className="w-full h-full object-cover" />
+        {isRemoved && (
+          <div className="absolute inset-0 bg-red-500/30 flex items-center justify-center">
+            <X className="h-8 w-8 text-white" />
+          </div>
+        )}
+      </>
+    );
+  }
 
   if (!url) {
     return (
@@ -165,6 +188,8 @@ export default function RevisionPage() {
   const [expandedClip, setExpandedClip] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
 
   // Check for cancelled Stripe session
   useEffect(() => {
@@ -208,6 +233,7 @@ export default function RevisionPage() {
               camera_speed: clip.camera_speed || "",
               custom_motion: "",
               problem_description: "",
+              is_new: false,
             }))
           );
         }
@@ -224,21 +250,61 @@ export default function RevisionPage() {
   const nextRevisionNumber = revisionCount + 1;
   const isFree = nextRevisionNumber <= revisionsAllowed;
   const revisedClips = clips.filter((c) => c.action === "revise" || c.action === "remove");
+  const newClips = clips.filter((c) => c.is_new);
   const activeClips = clips.filter((c) => c.action !== "remove");
 
-  // Calculate cost for paid revisions
+  // Check if existing clips have been reordered from their original positions
+  const isReorderOnly = (() => {
+    const existingClips = clips.filter((c) => !c.is_new && c.action !== "remove");
+    const originalOrder = existingClips.map((c) => c.original_position);
+    return originalOrder.some((pos, i) => i > 0 && pos < originalOrder[i - 1]);
+  })();
+
+  // Has any changes at all (revise, remove, reorder, or new clips)
+  const hasChanges = revisedClips.length > 0 || newClips.length > 0 || isReorderOnly;
+
+  // Calculate cost — new clips always $4.95, revisions use tier pricing if not free
   const getRevisionCost = () => {
-    if (isFree) return 0;
-    const count = revisedClips.filter((c) => c.action === "revise").length;
-    if (count === 0) return 0;
-    const is1080 = resolution === "1080P";
-    let perClip;
-    if (count === 1) perClip = is1080 ? 2.49 : 1.99;
-    else if (count <= 5) perClip = is1080 ? 1.99 : 1.49;
-    else if (count <= 15) perClip = is1080 ? 1.74 : 1.24;
-    else perClip = is1080 ? 1.49 : 0.99;
-    return Math.round(count * perClip * 100) / 100;
+    let total = 0;
+    total += newClips.length * NEW_CLIP_PRICE;
+
+    if (!isFree) {
+      const count = revisedClips.filter((c) => c.action === "revise").length;
+      if (count > 0) {
+        const is1080 = resolution === "1080P";
+        let perClip;
+        if (count === 1) perClip = is1080 ? 2.49 : 1.99;
+        else if (count <= 5) perClip = is1080 ? 1.99 : 1.49;
+        else if (count <= 15) perClip = is1080 ? 1.74 : 1.24;
+        else perClip = is1080 ? 1.49 : 0.99;
+        total += Math.round(count * perClip * 100) / 100;
+      }
+    }
+
+    return Math.round(total * 100) / 100;
   };
+
+  const getRevisionCostBreakdown = () => {
+    const reviseCount = revisedClips.filter((c) => c.action === "revise").length;
+    const newCount = newClips.length;
+    let reviseCost = 0;
+    const newCost = Math.round(newCount * NEW_CLIP_PRICE * 100) / 100;
+
+    if (!isFree && reviseCount > 0) {
+      const is1080 = resolution === "1080P";
+      let perClip;
+      if (reviseCount === 1) perClip = is1080 ? 2.49 : 1.99;
+      else if (reviseCount <= 5) perClip = is1080 ? 1.99 : 1.49;
+      else if (reviseCount <= 15) perClip = is1080 ? 1.74 : 1.24;
+      else perClip = is1080 ? 1.49 : 0.99;
+      reviseCost = Math.round(reviseCount * perClip * 100) / 100;
+    }
+
+    return { reviseCount, reviseCost, newCount, newCost };
+  };
+
+  const totalCost = getRevisionCost();
+  const needsPayment = totalCost > 0;
 
   const handleDragStart = (index: number) => setDraggedIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -247,10 +313,10 @@ export default function RevisionPage() {
   };
   const handleDrop = () => {
     if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
-      const newClips = [...clips];
-      const [moved] = newClips.splice(draggedIndex, 1);
-      newClips.splice(dragOverIndex, 0, moved);
-      setClips(newClips.map((c, i) => ({ ...c, position: i + 1 })));
+      const updated = [...clips];
+      const [moved] = updated.splice(draggedIndex, 1);
+      updated.splice(dragOverIndex, 0, moved);
+      setClips(updated.map((c, i) => ({ ...c, position: i + 1 })));
     }
     setDraggedIndex(null);
     setDragOverIndex(null);
@@ -259,9 +325,9 @@ export default function RevisionPage() {
   const moveClip = (index: number, direction: "up" | "down") => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= clips.length) return;
-    const newClips = [...clips];
-    [newClips[index], newClips[newIndex]] = [newClips[newIndex], newClips[index]];
-    setClips(newClips.map((c, i) => ({ ...c, position: i + 1 })));
+    const updated = [...clips];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    setClips(updated.map((c, i) => ({ ...c, position: i + 1 })));
   };
 
   const toggleRevise = (index: number) => {
@@ -276,6 +342,15 @@ export default function RevisionPage() {
   };
 
   const removeClip = (index: number) => {
+    const clip = clips[index];
+    // For new clips, remove entirely from the list
+    if (clip.is_new) {
+      if (clip.uploaded_preview) URL.revokeObjectURL(clip.uploaded_preview);
+      const updated = clips.filter((_, i) => i !== index);
+      setClips(updated.map((c, i) => ({ ...c, position: i + 1 })));
+      return;
+    }
+    // For existing clips, toggle remove
     setClips(
       clips.map((c, i) =>
         i === index ? { ...c, action: c.action === "remove" ? "keep" : "remove" } : c
@@ -283,16 +358,110 @@ export default function RevisionPage() {
     );
   };
 
-  const handleSubmit = async () => {
-    const changedClips = clips.filter((c) => c.action === "revise" || c.action === "remove");
-    if (changedClips.length === 0) {
-      setError("Please mark at least one clip for revision or removal");
+  // ── Add New Clip ──
+  const triggerAddClip = (afterIndex: number) => {
+    setAddingAtIndex(afterIndex);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || addingAtIndex === null) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file (JPG, PNG, WEBP)");
+      e.target.value = "";
       return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Image must be under 20MB");
+      e.target.value = "";
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    const insertAt = addingAtIndex + 1;
+
+    const newClip: RevisionClip = {
+      position: insertAt,
+      original_position: -1,
+      file_id: "",
+      playback_url: "",
+      photo_url: "",
+      description: file.name.replace(/\.[^/.]+$/, ""),
+      action: "new",
+      camera_direction: "",
+      camera_speed: "",
+      custom_motion: "",
+      problem_description: "",
+      is_new: true,
+      uploaded_file: file,
+      uploaded_preview: previewUrl,
+    };
+
+    const updated = [...clips];
+    updated.splice(insertAt, 0, newClip);
+    setClips(updated.map((c, i) => ({ ...c, position: i + 1 })));
+    setExpandedClip(insertAt);
+    setAddingAtIndex(null);
+    e.target.value = "";
+  };
+
+  const handleSubmit = async () => {
+    if (!hasChanges) {
+      setError("No changes to submit. Reorder clips, mark clips for revision/removal, or add new clips.");
+      return;
+    }
+
+    for (const clip of newClips) {
+      if (!clip.uploaded_file) {
+        setError("All new clips must have a photo uploaded");
+        return;
+      }
     }
 
     setSubmitting(true);
     setError(null);
 
+    // Upload new clip photos first
+    let uploadedNewClips: { position: number; photo_url: string; camera_direction: string; camera_speed: string; custom_motion: string; description: string }[] = [];
+    if (newClips.length > 0) {
+      try {
+        for (const clip of newClips) {
+          if (!clip.uploaded_file) continue;
+          const formData = new FormData();
+          formData.append("file", clip.uploaded_file);
+          formData.append("orderId", orderId);
+          formData.append("type", "revision_new_clip");
+
+          const uploadRes = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const uploadData = await uploadRes.json();
+          if (!uploadData.success || !uploadData.url) {
+            setError(`Failed to upload photo for new clip "${clip.description}". Please try again.`);
+            setSubmitting(false);
+            return;
+          }
+          uploadedNewClips.push({
+            position: clip.position,
+            photo_url: uploadData.url,
+            camera_direction: clip.camera_direction,
+            camera_speed: clip.camera_speed,
+            custom_motion: clip.custom_motion,
+            description: clip.description,
+          });
+        }
+      } catch (err) {
+        setError("Failed to upload new clip photos. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    const changedClips = clips.filter((c) => c.action === "revise" || c.action === "remove");
     const clipPayload = changedClips.map((c) => ({
       position: c.original_position,
       camera_direction: c.camera_direction,
@@ -306,68 +475,69 @@ export default function RevisionPage() {
     const sequencePayload = clips
       .filter((c) => c.action !== "remove")
       .map((c, i) => ({
-        original_position: c.original_position,
+        original_position: c.original_position, // -1 for new clips
         new_position: i + 1,
+        is_new: c.is_new,
       }));
 
-    // For PAID revisions: redirect to Stripe checkout
-    if (!isFree && revisedClips.filter((c) => c.action === "revise").length > 0) {
+    const payload = {
+      orderId,
+      clips: clipPayload,
+      notes: generalNotes,
+      sequence: sequencePayload,
+      newClips: uploadedNewClips,
+    };
+
+    // Route to checkout if payment is needed
+    if (needsPayment) {
       try {
         const res = await fetch("/api/revisions/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId,
-            clips: clipPayload,
-            notes: generalNotes,
-            sequence: sequencePayload,
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
 
         if (data.success && data.url) {
-          // Redirect to Stripe Checkout
           window.location.href = data.url;
-          return; // Don't setSubmitting(false) — we're navigating away
+          return;
+        } else if (data.isFree) {
+          // Checkout said it's free — fall through to direct submit
         } else {
           setError(data.error || "Failed to create payment session. Please try again.");
           setSubmitting(false);
+          return;
         }
       } catch (err) {
         setError("Failed to connect to payment service. Please try again.");
         setSubmitting(false);
+        return;
       }
-      return;
     }
 
-    // For FREE revisions: submit directly (existing flow)
+    // Free submit (reorder/remove only, no new clips, no paid revisions)
     try {
       const res = await fetch(`/api/video/${orderId}/revise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clips: clipPayload,
+          clips: clipPayload.length > 0 ? clipPayload : [],
           notes: generalNotes,
           sequence: sequencePayload,
+          newClips: uploadedNewClips,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setSubmitted(true);
       } else if (data.requiresPayment) {
-        // Fallback: if somehow the free check was wrong, redirect to checkout
         setError(data.message + " Redirecting to payment...");
         setTimeout(async () => {
           try {
             const checkoutRes = await fetch("/api/revisions/checkout", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                orderId,
-                clips: clipPayload,
-                notes: generalNotes,
-                sequence: sequencePayload,
-              }),
+              body: JSON.stringify(payload),
             });
             const checkoutData = await checkoutRes.json();
             if (checkoutData.success && checkoutData.url) {
@@ -438,9 +608,20 @@ export default function RevisionPage() {
     );
   }
 
+  const breakdown = getRevisionCostBreakdown();
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+
+      {/* Hidden file input for new clip uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -465,7 +646,7 @@ export default function RevisionPage() {
         {/* Instructions */}
         <div className="bg-muted/30 rounded-xl border border-border p-4 mb-6">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">How it works:</strong> Watch each clip below. Mark clips you want changed, describe the issue, and pick a new camera direction. You can also drag to reorder clips or remove them entirely. Unchanged clips will stay exactly as they are.
+            <strong className="text-foreground">How it works:</strong> Watch each clip below. Mark clips you want changed, describe the issue, and pick a new camera direction. You can also drag to reorder clips, remove them, or add new clips ($4.95/clip). Unchanged clips will stay exactly as they are.
           </p>
         </div>
 
@@ -481,182 +662,227 @@ export default function RevisionPage() {
 
         {/* Clips List */}
         <div className="space-y-3 mb-8">
+          {/* Add clip button at the top */}
+          <button
+            onClick={() => triggerAddClip(-1)}
+            className="w-full py-2 border-2 border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-green-400 hover:text-green-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add new clip here · $4.95
+          </button>
+
           {clips.map((clip, index) => {
             const isRemoved = clip.action === "remove";
             const isRevising = clip.action === "revise";
-            const isExpanded = expandedClip === index;
+            const isNew = clip.is_new;
 
             return (
-              <div
-                key={`${clip.original_position}-${index}`}
-                draggable={!isRemoved}
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={handleDrop}
-                className={`bg-card rounded-xl border overflow-hidden transition-all ${
-                  isRemoved
-                    ? "border-red-200 opacity-50"
-                    : isRevising
-                    ? "border-amber-400 ring-1 ring-amber-200"
-                    : dragOverIndex === index
-                    ? "border-primary border-2"
-                    : "border-border"
-                } ${draggedIndex === index ? "opacity-40" : ""}`}
-              >
-                <div className="flex items-center gap-3 p-3">
-                  {/* Drag handle + reorder */}
-                  <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                    <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab" />
-                    <button onClick={() => moveClip(index, "up")} disabled={index === 0}
-                      className={`p-0.5 ${index === 0 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}>
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => moveClip(index, "down")} disabled={index === clips.length - 1}
-                      className={`p-0.5 ${index === clips.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}>
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+              <div key={`clip-${clip.original_position}-${index}-${clip.is_new ? "new" : "existing"}`}>
+                <div
+                  draggable={!isRemoved}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={handleDrop}
+                  className={`bg-card rounded-xl border overflow-hidden transition-all ${
+                    isNew
+                      ? "border-green-400 ring-1 ring-green-200"
+                      : isRemoved
+                      ? "border-red-200 opacity-50"
+                      : isRevising
+                      ? "border-amber-400 ring-1 ring-amber-200"
+                      : dragOverIndex === index
+                      ? "border-primary border-2"
+                      : "border-border"
+                  } ${draggedIndex === index ? "opacity-40" : ""}`}
+                >
+                  <div className="flex items-center gap-3 p-3">
+                    {/* Drag handle + reorder */}
+                    <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                      <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab" />
+                      <button onClick={() => moveClip(index, "up")} disabled={index === 0}
+                        className={`p-0.5 ${index === 0 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}>
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => moveClip(index, "down")} disabled={index === clips.length - 1}
+                        className={`p-0.5 ${index === clips.length - 1 ? "text-muted-foreground/20" : "hover:bg-muted rounded"}`}>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
 
-                  {/* Position number */}
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                    isRemoved ? "bg-red-100 text-red-500 line-through" :
-                    isRevising ? "bg-amber-100 text-amber-700" :
-                    "bg-primary text-primary-foreground"
-                  }`}>
-                    {index + 1}
-                  </div>
+                    {/* Position number */}
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                      isNew ? "bg-green-100 text-green-700" :
+                      isRemoved ? "bg-red-100 text-red-500 line-through" :
+                      isRevising ? "bg-amber-100 text-amber-700" :
+                      "bg-primary text-primary-foreground"
+                    }`}>
+                      {index + 1}
+                    </div>
 
-                  {/* Clip preview — universal player */}
-                  <div className="w-64 h-[144px] sm:w-80 sm:h-[180px] rounded-lg overflow-hidden flex-shrink-0 bg-black relative">
-                    <ClipPreview clip={clip} isRemoved={isRemoved} />
-                  </div>
+                    {/* Clip preview */}
+                    <div className="w-64 h-[144px] sm:w-80 sm:h-[180px] rounded-lg overflow-hidden flex-shrink-0 bg-black relative">
+                      <ClipPreview clip={clip} isRemoved={isRemoved} />
+                    </div>
 
-                  {/* Clip info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-sm truncate">
-                      {clip.description || `Clip ${clip.original_position}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {clip.camera_direction || "Auto"} · {clip.camera_speed || "Default"}
-                    </p>
-                  </div>
+                    {/* Clip info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground text-sm truncate">
+                        {isNew && <span className="text-green-600 mr-1">NEW</span>}
+                        {clip.description || `Clip ${clip.original_position}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {isNew ? (
+                          <span className="text-green-600 font-medium">$4.95 · New clip</span>
+                        ) : (
+                          <>{clip.camera_direction || "Auto"} · {clip.camera_speed || "Default"}</>
+                        )}
+                      </p>
+                    </div>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => toggleRevise(index)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                        isRevising
-                          ? "bg-amber-100 border-amber-300 text-amber-700"
-                          : "border-border text-muted-foreground hover:border-amber-300 hover:text-amber-700"
-                      }`}
-                    >
-                      <RefreshCw className="h-3 w-3 inline mr-1" />
-                      Revise
-                    </button>
-                    <button
-                      onClick={() => removeClip(index)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                        isRemoved
-                          ? "bg-red-100 border-red-300 text-red-700"
-                          : "border-border text-muted-foreground hover:border-red-300 hover:text-red-600"
-                      }`}
-                    >
-                      <Trash2 className="h-3 w-3 inline mr-1" />
-                      {isRemoved ? "Restore" : "Remove"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded revision controls */}
-                {isRevising && (
-                  <div className="border-t border-border p-4 bg-amber-50/30 space-y-3">
-                    <div>
-                      <p className="text-xs font-semibold text-foreground mb-2">New camera direction:</p>
-                      <div className="flex flex-wrap gap-1.5">
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {!isNew && (
                         <button
-                          onClick={() =>
-                            setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: "", custom_motion: "" } : c))
-                          }
-                          className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
-                            !clip.camera_direction && !clip.custom_motion
-                              ? "bg-primary/10 border-primary text-primary font-semibold"
-                              : "border-border hover:bg-muted"
+                          onClick={() => toggleRevise(index)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                            isRevising
+                              ? "bg-amber-100 border-amber-300 text-amber-700"
+                              : "border-border text-muted-foreground hover:border-amber-300 hover:text-amber-700"
                           }`}
                         >
-                          🤖 Auto
+                          <RefreshCw className="h-3 w-3 inline mr-1" />
+                          Revise
                         </button>
-                        {DIRECTIONS.map((d) => (
-                          <button
-                            key={d.key}
-                            onClick={() =>
-                              setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: d.key, custom_motion: "" } : c))
-                            }
-                            className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
-                              clip.camera_direction === d.key
-                                ? "bg-primary/10 border-primary text-primary font-semibold"
-                                : "border-border hover:bg-muted"
-                            }`}
-                          >
-                            {d.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {clip.camera_direction !== "bring_to_life" && (
-                    <div>
-                      <p className="text-xs font-semibold text-foreground mb-2">Speed:</p>
-                      <div className="flex gap-1.5">
-                        {SPEEDS.map((s) => (
-                          <button
-                            key={s.key}
-                            onClick={() =>
-                              setClips(clips.map((c, i) => i === index ? { ...c, camera_speed: s.key } : c))
-                            }
-                            className={`text-xs py-1.5 px-4 rounded-lg border transition-all ${
-                              clip.camera_speed === s.key
-                                ? "bg-primary/10 border-primary text-primary font-semibold"
-                                : "border-border hover:bg-muted"
-                            }`}
-                          >
-                            {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    )}
-                    <div>
-                      <p className="text-xs font-semibold text-foreground mb-1">
-                        {clip.camera_direction === "bring_to_life"
-                          ? "Describe the action (warm, friendly actions work best):"
-                          : "Or describe your own camera movement:"}
-                      </p>
-                      <Input
-                        value={clip.custom_motion || ""}
-                        onChange={(e) =>
-                          setClips(clips.map((c, i) => i === index ? { ...c, custom_motion: e.target.value, camera_direction: e.target.value ? "" : c.camera_direction } : c))
-                        }
-                        placeholder={clip.camera_direction === "bring_to_life"
-                          ? "e.g. Agent waves warmly at camera and smiles"
-                          : "e.g. Slowly zoom into the fireplace then pan right"}
-                        maxLength={80}
-                        className="text-sm h-9"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-foreground mb-1">Describe the problem & what you want:</p>
-                      <Textarea
-                        value={clip.problem_description}
-                        onChange={(e) =>
-                          setClips(clips.map((c, i) => i === index ? { ...c, problem_description: e.target.value } : c))
-                        }
-                        placeholder="e.g., Camera moves too fast to the right. I'd prefer a slow push-in toward the fireplace."
-                        rows={2}
-                        className="text-sm"
-                      />
+                      )}
+                      <button
+                        onClick={() => removeClip(index)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                          isRemoved
+                            ? "bg-red-100 border-red-300 text-red-700"
+                            : "border-border text-muted-foreground hover:border-red-300 hover:text-red-600"
+                        }`}
+                      >
+                        <Trash2 className="h-3 w-3 inline mr-1" />
+                        {isNew ? "Delete" : isRemoved ? "Restore" : "Remove"}
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  {/* Expanded controls — for revise OR new clips */}
+                  {(isRevising || isNew) && (
+                    <div className={`border-t border-border p-4 space-y-3 ${isNew ? "bg-green-50/30" : "bg-amber-50/30"}`}>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground mb-2">Camera direction:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            onClick={() =>
+                              setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: "", custom_motion: "" } : c))
+                            }
+                            className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
+                              !clip.camera_direction && !clip.custom_motion
+                                ? "bg-primary/10 border-primary text-primary font-semibold"
+                                : "border-border hover:bg-muted"
+                            }`}
+                          >
+                            🤖 Auto
+                          </button>
+                          {DIRECTIONS.map((d) => (
+                            <button
+                              key={d.key}
+                              onClick={() =>
+                                setClips(clips.map((c, i) => i === index ? { ...c, camera_direction: d.key, custom_motion: "" } : c))
+                              }
+                              className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
+                                clip.camera_direction === d.key
+                                  ? "bg-primary/10 border-primary text-primary font-semibold"
+                                  : "border-border hover:bg-muted"
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {clip.camera_direction !== "bring_to_life" && (
+                      <div>
+                        <p className="text-xs font-semibold text-foreground mb-2">Speed:</p>
+                        <div className="flex gap-1.5">
+                          {SPEEDS.map((s) => (
+                            <button
+                              key={s.key}
+                              onClick={() =>
+                                setClips(clips.map((c, i) => i === index ? { ...c, camera_speed: s.key } : c))
+                              }
+                              className={`text-xs py-1.5 px-4 rounded-lg border transition-all ${
+                                clip.camera_speed === s.key
+                                  ? "bg-primary/10 border-primary text-primary font-semibold"
+                                  : "border-border hover:bg-muted"
+                              }`}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-foreground mb-1">
+                          {clip.camera_direction === "bring_to_life"
+                            ? "Describe the action (warm, friendly actions work best):"
+                            : "Or describe your own camera movement:"}
+                        </p>
+                        <Input
+                          value={clip.custom_motion || ""}
+                          onChange={(e) =>
+                            setClips(clips.map((c, i) => i === index ? { ...c, custom_motion: e.target.value, camera_direction: e.target.value ? "" : c.camera_direction } : c))
+                          }
+                          placeholder={clip.camera_direction === "bring_to_life"
+                            ? "e.g. Agent waves warmly at camera and smiles"
+                            : "e.g. Slowly zoom into the fireplace then pan right"}
+                          maxLength={80}
+                          className="text-sm h-9"
+                        />
+                      </div>
+                      {!isNew && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Describe the problem & what you want:</p>
+                          <Textarea
+                            value={clip.problem_description}
+                            onChange={(e) =>
+                              setClips(clips.map((c, i) => i === index ? { ...c, problem_description: e.target.value } : c))
+                            }
+                            placeholder="e.g., Camera moves too fast to the right. I'd prefer a slow push-in toward the fireplace."
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+                      )}
+                      {isNew && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Clip description (optional):</p>
+                          <Input
+                            value={clip.description}
+                            onChange={(e) =>
+                              setClips(clips.map((c, i) => i === index ? { ...c, description: e.target.value } : c))
+                            }
+                            placeholder="e.g. Front entrance, Backyard pool area"
+                            maxLength={80}
+                            className="text-sm h-9"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add clip button between clips */}
+                <button
+                  onClick={() => triggerAddClip(index)}
+                  className="w-full py-1.5 mt-2 border-2 border-dashed border-transparent rounded-lg text-xs text-muted-foreground/50 hover:border-green-400 hover:text-green-600 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add clip · $4.95
+                </button>
               </div>
             );
           })}
@@ -677,7 +903,7 @@ export default function RevisionPage() {
         {/* Summary + Submit */}
         <div className="bg-card rounded-xl border border-border p-6 space-y-4">
           <h3 className="font-bold text-foreground">Revision Summary</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-black text-foreground">{activeClips.length}</div>
               <div className="text-xs text-muted-foreground">Clips in video</div>
@@ -690,19 +916,28 @@ export default function RevisionPage() {
               <div className="text-2xl font-black text-red-500">{revisedClips.filter(c => c.action === "remove").length}</div>
               <div className="text-xs text-muted-foreground">Clips to remove</div>
             </div>
+            <div>
+              <div className="text-2xl font-black text-green-600">{newClips.length}</div>
+              <div className="text-xs text-muted-foreground">New clips</div>
+            </div>
           </div>
 
-          {!isFree && revisedClips.filter(c => c.action === "revise").length > 0 && (
+          {/* Payment breakdown */}
+          {needsPayment && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-amber-600" />
-                <p className="font-semibold text-amber-800">Paid Revision — ${getRevisionCost().toFixed(2)}</p>
+                <p className="font-semibold text-amber-800">Payment Required — ${totalCost.toFixed(2)}</p>
               </div>
-              <p className="text-xs text-amber-700 mb-2">
-                Your {revisionsAllowed} free revision{revisionsAllowed !== 1 ? "s have" : " has"} been used. This revision costs{" "}
-                ${getRevisionCost().toFixed(2)} for {revisedClips.filter(c => c.action === "revise").length} clip(s).
-                Removals and reordering are always free.
-              </p>
+              <div className="text-xs text-amber-700 space-y-1 mb-2">
+                {breakdown.newCount > 0 && (
+                  <p>{breakdown.newCount} new clip{breakdown.newCount !== 1 ? "s" : ""} × ${NEW_CLIP_PRICE.toFixed(2)} = ${breakdown.newCost.toFixed(2)}</p>
+                )}
+                {breakdown.reviseCount > 0 && breakdown.reviseCost > 0 && (
+                  <p>{breakdown.reviseCount} revised clip{breakdown.reviseCount !== 1 ? "s" : ""} = ${breakdown.reviseCost.toFixed(2)}</p>
+                )}
+                <p className="text-amber-600">Removals and reordering are always free.</p>
+              </div>
               <div className="flex items-center gap-1.5 text-xs text-amber-700">
                 <CreditCard className="h-3.5 w-3.5" />
                 <span>You'll be redirected to a secure Stripe checkout to complete payment.</span>
@@ -712,29 +947,24 @@ export default function RevisionPage() {
 
           <Button
             onClick={handleSubmit}
-            disabled={submitting || revisedClips.length === 0}
+            disabled={submitting || !hasChanges}
             className={`w-full py-5 text-lg ${
-              !isFree && revisedClips.filter(c => c.action === "revise").length > 0
+              needsPayment
                 ? "bg-amber-600 hover:bg-amber-700"
                 : "bg-accent hover:bg-accent/90"
             }`}
           >
             {submitting ? (
-              <><Loader2 className="h-5 w-5 animate-spin mr-2" /> {!isFree ? "Redirecting to payment..." : "Submitting..."}</>
-            ) : isFree ? (
-              <>
-                <Send className="h-5 w-5 mr-2" />
-                Submit Revision (Free)
-              </>
-            ) : revisedClips.filter(c => c.action === "revise").length > 0 ? (
+              <><Loader2 className="h-5 w-5 animate-spin mr-2" /> {needsPayment ? "Redirecting to payment..." : "Submitting..."}</>
+            ) : needsPayment ? (
               <>
                 <CreditCard className="h-5 w-5 mr-2" />
-                Pay ${getRevisionCost().toFixed(2)} & Submit Revision
+                Pay ${totalCost.toFixed(2)} & Submit Revision
               </>
             ) : (
               <>
                 <Send className="h-5 w-5 mr-2" />
-                Submit Changes (Free — removals/reorder only)
+                Submit Revision (Free)
               </>
             )}
           </Button>
