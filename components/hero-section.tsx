@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  Play,
-  Pause,
   Clock,
   ShieldCheck,
   Sparkles,
@@ -19,13 +17,57 @@ import {
   Film,
   Percent,
   ImageIcon,
-  CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
+
+/* ─────────────────────────────────────────────
+   Keyframe styles injected once via <style> tag
+   ───────────────────────────────────────────── */
+const heroStyles = `
+  @keyframes hero-fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes hero-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes hero-glow-pulse {
+    0%, 100% { box-shadow: 0 0 24px rgba(var(--hero-accent-rgb), 0.35), 0 0 64px rgba(var(--hero-accent-rgb), 0.15); }
+    50%      { box-shadow: 0 0 32px rgba(var(--hero-accent-rgb), 0.5),  0 0 80px rgba(var(--hero-accent-rgb), 0.25); }
+  }
+  @keyframes hero-scroll-hint {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50%      { transform: translateY(6px); opacity: 0.9; }
+  }
+  @keyframes hero-chip-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .hero-animate {
+    opacity: 0;
+    animation: hero-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .hero-animate-fade {
+    opacity: 0;
+    animation: hero-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .hero-chip-animate {
+    opacity: 0;
+    animation: hero-chip-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .hero-glow-btn {
+    animation: hero-glow-pulse 3s ease-in-out infinite;
+  }
+  .hero-scroll-hint {
+    animation: hero-scroll-hint 2.2s ease-in-out infinite;
+  }
+`;
 
 export function HeroSection() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -47,245 +89,302 @@ export function HeroSection() {
     init();
   }, []);
 
-  const handleVideoToggle = () => {
-    if (!videoRef.current) return;
-    if (isVideoPlaying) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play();
-    }
-    setIsVideoPlaying(!isVideoPlaying);
-  };
+  const tools = [
+    { icon: Video, label: "Listing Videos", featured: true },
+    { icon: Camera, label: "Photo Coach", featured: false },
+    { icon: PenTool, label: "Design Studio", featured: false },
+    { icon: FileText, label: "Descriptions", featured: false },
+    { icon: Sofa, label: "Virtual Staging", featured: false },
+    { icon: Film, label: "Quick Videos", featured: false },
+  ];
 
   return (
-    <section className="relative overflow-hidden bg-background">
-      {/* Subtle dot pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, currentColor 0.8px, transparent 0.8px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
+    <>
+      {/* Inject keyframe animations */}
+      <style dangerouslySetInnerHTML={{ __html: heroStyles }} />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
-        {/* Stat ribbon */}
-        <div className="mb-6 flex justify-center lg:justify-start">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm sm:text-sm">
-            <Sparkles className="h-3.5 w-3.5 text-accent-foreground" />
-            Listings with video get 403% more inquiries
-            <span className="text-muted-foreground/50">— NAR</span>
-          </span>
+      <section
+        className="relative flex min-h-[100svh] flex-col overflow-hidden bg-gray-950"
+        style={
+          {
+            "--hero-accent-rgb": "34, 197, 94",
+          } as React.CSSProperties
+        }
+      >
+        {/* ── LAYER 1: Full-bleed background video ── */}
+        <div className="absolute inset-0 z-0">
+          <video
+            ref={videoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="h-full w-full object-cover"
+          >
+            <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
+          </video>
+          {/* Dark cinematic scrim — heavier at top for text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-950/80 via-gray-950/60 to-gray-950/85" />
+          {/* Subtle vignette */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 60% at 50% 40%, transparent 0%, rgba(3,7,18,0.4) 100%)",
+            }}
+          />
         </div>
 
-        {/* Asymmetric grid */}
-        <div className="grid items-start gap-8 lg:grid-cols-[1fr_400px] lg:gap-10 xl:grid-cols-[1fr_440px]">
-          {/* ──────────────────────────────────────────
-              LEFT — Headline, tools, subscribe CTA
-              ────────────────────────────────────────── */}
-          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-            {/* Headline — Lens is the product */}
-            <h1 className="max-w-2xl text-[2rem] font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-[3.25rem]">
-              Every Marketing Tool
-              <br className="hidden sm:block" /> a Real Estate Agent Needs.{" "}
-              <span className="text-accent-foreground">One&nbsp;Subscription.</span>
-            </h1>
+        {/* ── LAYER 2: Grain texture for cinematic depth ── */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] opacity-[0.06] mix-blend-overlay"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          }}
+        />
 
-            {/* Subheadline — video is the hook */}
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Cinematic listing videos, AI photo coaching, marketing design,
-              listing descriptions, virtual staging, and more — starting at
-              $27.95/mo.
-            </p>
-
-            {/* Tool chips — headliner first */}
-            <div className="mt-5 flex flex-wrap justify-center gap-2 lg:justify-start">
-              {[
-                { icon: Video, label: "Listing Videos", featured: true },
-                { icon: Camera, label: "Photo Coach", featured: false },
-                { icon: PenTool, label: "Design Studio", featured: false },
-                { icon: FileText, label: "Description Writer", featured: false },
-                { icon: Sofa, label: "Virtual Staging", featured: false },
-                { icon: Film, label: "Quick Videos", featured: false },
-              ].map((tool) => (
-                <span
-                  key={tool.label}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold sm:text-sm ${
-                    tool.featured
-                      ? "border-accent/30 bg-accent/10 text-accent-foreground"
-                      : "border-border bg-card text-foreground/70"
-                  }`}
-                >
-                  <tool.icon className={`h-3.5 w-3.5 ${tool.featured ? "text-accent-foreground" : "text-muted-foreground"}`} />
-                  {tool.label}
-                </span>
-              ))}
-              <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground sm:text-sm">
-                +10 more
-              </span>
-            </div>
-
-            {/* Primary CTA — Subscribe */}
-            <div className="mt-7 flex flex-col items-center gap-2.5 sm:mt-8 lg:items-start">
-              {isSubscriber ? (
-                <Link href="/dashboard/lens" passHref>
-                  <Button
-                    size="lg"
-                    className="group h-auto rounded-xl bg-accent px-7 py-3.5 text-base font-extrabold text-accent-foreground shadow-lg shadow-accent/20 transition-all hover:shadow-xl hover:shadow-accent/30 hover:brightness-110 sm:px-9 sm:py-4 sm:text-lg"
+        {/* ── LAYER 3: Content ── */}
+        <div className="relative z-10 flex flex-1 flex-col">
+          {/* Main content — vertically centered */}
+          <div className="flex flex-1 items-center">
+            <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+              <div className="grid items-center gap-10 lg:grid-cols-[1fr_380px] lg:gap-12 xl:grid-cols-[1fr_420px]">
+                {/* ─────────────────────────────────────
+                    LEFT — Copy, tools, CTA
+                    ───────────────────────────────────── */}
+                <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+                  {/* Eyebrow */}
+                  <div
+                    className="hero-animate mb-5"
+                    style={{ animationDelay: "0.1s" }}
                   >
-                    Go to Your Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5 sm:h-5 sm:w-5" />
-                  </Button>
-                </Link>
-              ) : (
-                <Link href="/lens" passHref>
-                  <Button
-                    size="lg"
-                    className="group h-auto rounded-xl bg-accent px-7 py-3.5 text-base font-extrabold text-accent-foreground shadow-lg shadow-accent/20 transition-all hover:shadow-xl hover:shadow-accent/30 hover:brightness-110 sm:px-9 sm:py-4 sm:text-lg"
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white/70 backdrop-blur-md sm:text-sm">
+                      <Sparkles className="h-3.5 w-3.5 text-green-400" />
+                      AI-Powered Real Estate Marketing
+                    </span>
+                  </div>
+
+                  {/* Headline */}
+                  <h1
+                    className="hero-animate max-w-2xl text-[2.25rem] font-extrabold leading-[1.06] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[3.75rem]"
+                    style={{ animationDelay: "0.25s" }}
                   >
-                    Explore P2V Lens — $27.95/mo
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5 sm:h-5 sm:w-5" />
-                  </Button>
-                </Link>
-              )}
+                    Listing Videos.
+                    <br />
+                    Photo Coaching.
+                    <br />
+                    <span className="text-green-400">
+                      Your Entire Marketing Team.
+                    </span>
+                  </h1>
 
-              {/* Secondary CTA — one-off video */}
-              <Link
-                href="/order"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Or order a single video
-                <span className="text-muted-foreground/50 line-through">$119</span>
-                <span className="font-bold text-foreground">$79</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+                  {/* Subheadline */}
+                  <p
+                    className="hero-animate mt-5 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg sm:leading-relaxed"
+                    style={{ animationDelay: "0.4s" }}
+                  >
+                    Cinematic walkthrough videos, AI photo coaching, marketing
+                    design, listing descriptions, virtual staging — everything
+                    you need to market your listings, in one subscription.
+                  </p>
 
-            {/* Subscriber perks row */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground sm:text-sm lg:justify-start">
-              <span className="inline-flex items-center gap-1">
-                <Percent className="h-3.5 w-3.5 text-accent-foreground/70" />
-                10% off every video
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <ImageIcon className="h-3.5 w-3.5 text-accent-foreground/70" />
-                Free photo enhancement
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5 text-accent-foreground/70" />
-                Priority processing
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5 text-accent-foreground/70" />
-                Cancel anytime
-              </span>
-            </div>
-          </div>
+                  {/* Tool chips */}
+                  <div
+                    className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start"
+                  >
+                    {tools.map((tool, i) => (
+                      <span
+                        key={tool.label}
+                        className={`hero-chip-animate inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold backdrop-blur-sm sm:text-sm ${
+                          tool.featured
+                            ? "border-green-400/30 bg-green-400/10 text-green-300"
+                            : "border-white/10 bg-white/[0.05] text-white/60"
+                        }`}
+                        style={{ animationDelay: `${0.5 + i * 0.07}s` }}
+                      >
+                        <tool.icon
+                          className={`h-3.5 w-3.5 ${
+                            tool.featured ? "text-green-400" : "text-white/40"
+                          }`}
+                        />
+                        {tool.label}
+                      </span>
+                    ))}
+                    <span
+                      className="hero-chip-animate inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-white/40 backdrop-blur-sm sm:text-sm"
+                      style={{ animationDelay: `${0.5 + tools.length * 0.07}s` }}
+                    >
+                      +10 more
+                    </span>
+                  </div>
 
-          {/* ──────────────────────────────────────────
-              RIGHT — Video preview + remix callout
-              ────────────────────────────────────────── */}
-          <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Video preview — the headliner tool in action */}
-            <div
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card shadow-xl transition-shadow hover:shadow-2xl"
-              onClick={handleVideoToggle}
-              role="button"
-              tabIndex={0}
-              aria-label={isVideoPlaying ? "Pause video" : "Play video"}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleVideoToggle();
-                }
-              }}
-            >
-              <div className="relative aspect-[16/10] bg-foreground/5">
-                <video
-                  ref={videoRef}
-                  src="/p2v-website-her-vid.mp4"
-                  className="h-full w-full object-cover"
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                />
-                {/* Play / Pause overlay */}
-                <div
-                  className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-                    isVideoPlaying
-                      ? "bg-transparent opacity-0 group-hover:opacity-100"
-                      : "bg-black/20"
-                  }`}
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur transition-transform group-hover:scale-110">
-                    {isVideoPlaying ? (
-                      <Pause className="h-5 w-5 text-gray-900" />
+                  {/* CTA cluster */}
+                  <div
+                    className="hero-animate mt-8 flex flex-col items-center gap-4 sm:flex-row sm:gap-5 lg:items-start"
+                    style={{ animationDelay: "0.95s" }}
+                  >
+                    {/* Primary — Subscribe / Dashboard */}
+                    {isSubscriber ? (
+                      <Link href="/dashboard/lens" passHref>
+                        <Button
+                          size="lg"
+                          className="hero-glow-btn group h-auto rounded-xl bg-green-500 px-8 py-4 text-base font-extrabold text-white transition-all hover:bg-green-400 sm:text-lg"
+                        >
+                          Go to Your Dashboard
+                          <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+                        </Button>
+                      </Link>
                     ) : (
-                      <Play className="ml-0.5 h-5 w-5 text-gray-900" />
+                      <Link href="/lens" passHref>
+                        <Button
+                          size="lg"
+                          className="hero-glow-btn group h-auto rounded-xl bg-green-500 px-8 py-4 text-base font-extrabold text-white transition-all hover:bg-green-400 sm:text-lg"
+                        >
+                          Explore P2V Lens — $27.95/mo
+                          <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+                        </Button>
+                      </Link>
                     )}
+
+                    {/* Secondary — one-off video */}
+                    <Link href="/order" passHref>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="h-auto rounded-xl border-white/15 bg-white/[0.05] px-6 py-4 text-base font-bold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 sm:text-lg"
+                      >
+                        Just a Video —{" "}
+                        <span className="ml-1 text-white/40 line-through">$119</span>
+                        <span className="ml-1.5 text-green-400">$79</span>
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* Subscriber perks */}
+                  <div
+                    className="hero-animate-fade mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-white/40 sm:text-sm lg:justify-start"
+                    style={{ animationDelay: "1.15s" }}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Percent className="h-3.5 w-3.5 text-green-400/60" />
+                      10% off every video
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <ImageIcon className="h-3.5 w-3.5 text-green-400/60" />
+                      Free photo enhancement
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5 text-green-400/60" />
+                      Priority processing
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <ShieldCheck className="h-3.5 w-3.5 text-green-400/60" />
+                      Cancel anytime
+                    </span>
                   </div>
                 </div>
-                {/* "Included" badge */}
-                <div className="absolute left-3 top-3 rounded-full bg-accent/90 px-2.5 py-1 text-[10px] font-black tracking-wide text-accent-foreground shadow-md backdrop-blur sm:text-xs">
-                  ★ HEADLINER TOOL
-                </div>
-              </div>
-              {/* Caption bar */}
-              <div className="flex items-center justify-between px-4 py-2.5 text-xs text-muted-foreground sm:text-sm">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <Video className="h-3.5 w-3.5 text-accent-foreground" />
-                  Listing Photos → Cinematic Video
-                </span>
-                <span className="text-muted-foreground/60">Under 12h</span>
-              </div>
-            </div>
 
-            {/* Unlimited Remixes callout */}
-            <div className="rounded-xl border border-border bg-card/70 p-3.5 shadow-sm backdrop-blur-sm sm:p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-                  <Repeat className="h-4 w-4 text-accent-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-foreground sm:text-[0.925rem]">
-                    Buy the clips once. Remix them forever.
-                  </p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                    Recut clips into Just Listed, Open House, Just Sold, social
-                    teasers — unlimited times in Design Studio, no extra cost.
-                  </p>
+                {/* ─────────────────────────────────────
+                    RIGHT — Frosted glass info cards
+                    ───────────────────────────────────── */}
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  {/* Card 1: Stats */}
+                  <div
+                    className="hero-animate rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl sm:p-6"
+                    style={{ animationDelay: "0.6s" }}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-4 w-4 text-green-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                        Why Video Works
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-white/[0.04] p-3.5 text-center">
+                        <p className="text-2xl font-extrabold text-green-400 sm:text-3xl">
+                          403%
+                        </p>
+                        <p className="mt-0.5 text-[11px] leading-tight text-white/40 sm:text-xs">
+                          more inquiries
+                          <br />
+                          with video — NAR
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.04] p-3.5 text-center">
+                        <p className="text-2xl font-extrabold text-green-400 sm:text-3xl">
+                          32%
+                        </p>
+                        <p className="mt-0.5 text-[11px] leading-tight text-white/40 sm:text-xs">
+                          faster sales with
+                          <br />
+                          pro photos — RESA
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Unlimited Remixes */}
+                  <div
+                    className="hero-animate rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl sm:p-6"
+                    style={{ animationDelay: "0.75s" }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-400/10 ring-1 ring-green-400/20">
+                        <Repeat className="h-4.5 w-4.5 text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white sm:text-[0.95rem]">
+                          Buy the clips once. Remix them forever.
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-white/40 sm:text-sm sm:leading-relaxed">
+                          Recut clips into Just Listed, Open House, Just Sold,
+                          social teasers — unlimited times in Design Studio, no
+                          extra cost.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Delivery & trust */}
+                  <div
+                    className="hero-animate rounded-2xl border border-white/10 bg-white/[0.05] p-4 backdrop-blur-xl sm:p-5"
+                    style={{ animationDelay: "0.9s" }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-white/50 sm:text-sm">
+                          <Clock className="h-3.5 w-3.5 text-green-400/70" />
+                          Under 12h delivery
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-white/50 sm:text-sm">
+                          <ShieldCheck className="h-3.5 w-3.5 text-green-400/70" />
+                          Satisfaction guarantee
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Stats */}
-            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground sm:gap-6 sm:text-sm">
-              <span>
-                Videos get{" "}
-                <span className="font-semibold text-foreground">403%</span> more
-                inquiries
-              </span>
-              <span className="text-border">|</span>
-              <span>
-                Photos sell{" "}
-                <span className="font-semibold text-foreground">32%</span> faster
-              </span>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Bottom credibility bar */}
-      <div className="relative bg-blue-900 px-6 py-3">
-        <p className="text-center text-sm font-medium text-gray-300 sm:text-base">
-          Built by real estate marketers with{" "}
-          <span className="font-bold text-white">
-            20+ years of experience
-          </span>
-        </p>
-      </div>
-    </section>
+          {/* Scroll indicator */}
+          <div className="hero-scroll-hint flex justify-center pb-6">
+            <ChevronDown className="h-6 w-6 text-white/30" />
+          </div>
+        </div>
+
+        {/* ── Bottom credibility bar ── */}
+        <div className="relative z-10 border-t border-white/[0.06] bg-gray-950/80 px-6 py-3 backdrop-blur-sm">
+          <p className="text-center text-sm font-medium text-white/40 sm:text-base">
+            Built by real estate marketers with{" "}
+            <span className="font-bold text-white/70">
+              20+ years of experience
+            </span>
+          </p>
+        </div>
+      </section>
+    </>
   );
 }
