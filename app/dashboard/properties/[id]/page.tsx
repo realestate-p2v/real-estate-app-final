@@ -28,6 +28,9 @@ import {
   GripVertical,
   CheckCircle,
   Sparkles,
+  Globe,
+  Eye,
+  Link2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -50,6 +53,13 @@ interface Property {
   property_type: string;
   unit_count: number | null;
   special_features: string[] | null;
+  website_published: boolean;
+  website_slug: string | null;
+  website_template: string | null;
+  website_modules: Record<string, boolean> | null;
+  website_curated: Record<string, string[]> | null;
+  booking_enabled: boolean;
+  lensy_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +80,34 @@ const PROPERTY_TYPES: Record<string, string> = {
   land: "Land",
   commercial: "Commercial",
 };
+
+const TEMPLATES = [
+  { id: "modern_clean", label: "Modern Clean", desc: "White, sans-serif, minimal", colors: "bg-white border-gray-200 text-gray-800" },
+  { id: "luxury_dark", label: "Luxury Dark", desc: "Dark, gold accents, serif", colors: "bg-gray-900 border-amber-500/50 text-amber-100" },
+  { id: "classic_light", label: "Classic Light", desc: "Cream, navy accents, traditional", colors: "bg-amber-50 border-blue-900/30 text-blue-900" },
+];
+
+const MODULE_LABELS: Record<string, string> = {
+  photos: "Photos",
+  videos: "Videos",
+  description: "Description",
+  staging: "Virtual Staging",
+  exports: "Marketing Materials",
+  booking: "Booking Calendar",
+  lead_capture: "Lead Capture Form",
+  lensy: "Lensy Chat",
+};
+
+function generateSlug(address: string, city?: string | null, state?: string | null): string {
+  const parts = [address, city, state].filter(Boolean).join(" ");
+  return parts
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
+}
 
 /* ─── Before/After Slider ─── */
 function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
@@ -137,6 +175,18 @@ export default function SinglePropertyPage() {
   const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Publish section state
+  const [pubTemplate, setPubTemplate] = useState<string>("modern_clean");
+  const [pubModules, setPubModules] = useState<Record<string, boolean>>({
+    photos: true, videos: true, description: true, staging: true,
+    exports: true, booking: false, lead_capture: true, lensy: false,
+  });
+  const [pubCurated, setPubCurated] = useState<Record<string, string[]>>({});
+  const [pubSlug, setPubSlug] = useState("");
+  const [pubPublished, setPubPublished] = useState(false);
+  const [pubSaving, setPubSaving] = useState(false);
+  const [slugCopied, setSlugCopied] = useState(false);
+
   const supabase = createClient();
 
   const buildPropertyParams = (prop: Property) => {
@@ -156,6 +206,18 @@ export default function SinglePropertyPage() {
     return p.toString();
   };
 
+  // Initialize publish state from property data
+  function initPublishState(prop: Property) {
+    setPubTemplate(prop.website_template || "modern_clean");
+    setPubModules(prop.website_modules || {
+      photos: true, videos: true, description: true, staging: true,
+      exports: true, booking: false, lead_capture: true, lensy: false,
+    });
+    setPubCurated(prop.website_curated || {});
+    setPubSlug(prop.website_slug || generateSlug(prop.address, prop.city, prop.state));
+    setPubPublished(prop.website_published || false);
+  }
+
   const loadProperty = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
@@ -168,6 +230,7 @@ export default function SinglePropertyPage() {
     const { data: prop, error } = await supabase.from("agent_properties").select("*").eq("id", propertyId).eq("user_id", user.id).single();
     if (error || !prop) { router.push("/dashboard/properties"); return; }
     setProperty(prop); setEditForm(prop);
+    initPublishState(prop);
     const norm = prop.address_normalized;
     const { data: sessionData } = await supabase.from("lens_sessions").select("*").eq("user_id", user.id).ilike("property_address", `${norm}%`).order("created_at", { ascending: false });
     setPhotos(sessionData || []);
@@ -197,6 +260,81 @@ export default function SinglePropertyPage() {
     if (!error) { setProperty({ ...property, ...editForm, updated_at: new Date().toISOString() } as Property); setEditing(false); }
     setSaving(false);
   };
+
+  const handlePublishSave = async () => {
+    if (!property) return;
+    setPubSaving(true);
+    const slug = pubSlug.trim() || generateSlug(property.address, property.city, property.state);
+    const { error } = await supabase.from("agent_properties").update({
+      website_template: pubTemplate,
+      website_modules: pubModules,
+      website_curated: pubCurated,
+      website_slug: slug,
+      website_published: pubPublished,
+      updated_at: new Date().toISOString(),
+    }).eq("id", property.id);
+    if (error) {
+      alert("Failed to save: " + error.message);
+    } else {
+      setProperty({
+        ...property,
+        website_template: pubTemplate,
+        website_modules: pubModules,
+        website_curated: pubCurated,
+        website_slug: slug,
+        website_published: pubPublished,
+        updated_at: new Date().toISOString(),
+      } as Property);
+      setPubSlug(slug);
+    }
+    setPubSaving(false);
+  };
+
+  const togglePublish = async () => {
+    const next = !pubPublished;
+    setPubPublished(next);
+    if (!property) return;
+    const slug = pubSlug.trim() || generateSlug(property.address, property.city, property.state);
+    setPubSlug(slug);
+    setPubSaving(true);
+    await supabase.from("agent_properties").update({
+      website_published: next,
+      website_slug: slug,
+      website_template: pubTemplate,
+      website_modules: pubModules,
+      website_curated: pubCurated,
+      updated_at: new Date().toISOString(),
+    }).eq("id", property.id);
+    setProperty({
+      ...property,
+      website_published: next,
+      website_slug: slug,
+      website_template: pubTemplate,
+      website_modules: pubModules,
+      website_curated: pubCurated,
+      updated_at: new Date().toISOString(),
+    } as Property);
+    setPubSaving(false);
+  };
+
+  function toggleCuratedItem(category: string, itemId: string) {
+    setPubCurated(prev => {
+      const list = prev[category] || [];
+      if (list.includes(itemId)) {
+        return { ...prev, [category]: list.filter(x => x !== itemId) };
+      } else {
+        return { ...prev, [category]: [...list, itemId] };
+      }
+    });
+  }
+
+  function selectAllCurated(category: string, items: string[]) {
+    setPubCurated(prev => ({ ...prev, [category]: [...items] }));
+  }
+
+  function deselectAllCurated(category: string) {
+    setPubCurated(prev => ({ ...prev, [category]: [] }));
+  }
 
   const copyToClipboard = (text: string, id: string) => { navigator.clipboard.writeText(text); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
 
@@ -236,6 +374,15 @@ export default function SinglePropertyPage() {
 
   const allCoachApproved: any[] = [];
   photos.forEach((session: any) => { if (Array.isArray(session.photos)) { session.photos.filter((p: any) => p.approved).forEach((photo: any, i: number) => { allCoachApproved.push({ ...photo, sessionId: session.id, indexInSession: i }); }); } });
+
+  // Build lists for curation
+  const curatedPhotoUrls = orderPhotos.map(p => p.secure_url).filter(Boolean);
+  const curatedVideoUrls = videos.map(v => v.delivery_url || v.unbranded_delivery_url).filter(Boolean);
+  const curatedDescIds = descriptions.map(d => d.id);
+  const curatedStagingIds = stagings.map(s => s.id);
+  const curatedExportIds = exports.map(e => e.id);
+
+  const pubUrl = `/p/${pubSlug}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -304,6 +451,9 @@ export default function SinglePropertyPage() {
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">{property.address}</h1>
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${STATUS_COLORS[property.status] || STATUS_COLORS.active}`}>{property.status}</span>
+              {pubPublished && (
+                <span className="text-green-600 bg-green-100 text-[10px] font-semibold px-2 py-0.5 rounded-full">Live</span>
+              )}
             </div>
             <p className="text-muted-foreground mt-0.5">{[property.city, property.state, property.zip].filter(Boolean).join(", ")}{property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}</p>
           </div>
@@ -506,102 +656,4 @@ export default function SinglePropertyPage() {
         )}
 
         {/* ═══ VIDEO CLIPS — selectable, send to design studio ═══ */}
-        {orderClips.length > 0 && (
-          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2"><Play className="h-5 w-5 text-violet-600" /><h2 className="text-lg font-bold text-foreground">Video Clips</h2><span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderClips.length}</span></div>
-              {selectedClips.length > 0 && <button onClick={sendClipsToDesignStudio} className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-3 py-2 rounded-lg"><PenTool className="h-3.5 w-3.5" />Design Studio ({selectedClips.length})</button>}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {orderClips.map((clip: any, i: number) => {
-                const sel = selectedClips.includes(i);
-                const selOrder = sel ? selectedClips.indexOf(i) + 1 : 0;
-                const pTh = clip.photoUrl?.includes("/upload/") ? clip.photoUrl.replace("/upload/", "/upload/w_400,h_225,c_fill/") : null;
-                const vTh = clip.clipUrl.includes("cloudinary.com") && clip.clipUrl.includes("/video/upload/") ? clip.clipUrl.replace("/video/upload/", "/video/upload/so_1,w_400,h_225,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg") : null;
-                const th = pTh || vTh;
-                return (
-                  <button key={`clip-${clip.orderId}-${clip.index}`} onClick={() => setSelectedClips(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-violet-500 ring-2 ring-violet-500/30" : "border-border hover:border-violet-500/40"}`}>
-                    <div className="aspect-video bg-black">{th ? <img src={th} alt={clip.description || `Clip ${i+1}`} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><Play className="h-8 w-8 text-muted-foreground/30" /></div>}</div>
-                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-violet-500 flex items-center justify-center text-[10px] font-bold text-white">{selOrder}</div>}
-                    {clip.camera_direction && <span className="absolute top-2 left-2 text-[8px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">{clip.camera_direction.replace(/_/g, " ")}</span>}
-                    <div className="p-2"><p className="text-[10px] font-semibold text-foreground truncate">{clip.description || `Clip ${(clip.position || i) + 1}`}</p></div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* ═══ VIRTUAL STAGING — click for before/after modal ═══ */}
-        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><Sofa className="h-5 w-5 text-indigo-600" /><h2 className="text-lg font-bold text-foreground">Virtual Staging</h2>{stagings.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{stagings.length}</span>}</div>
-          </div>
-          {stagings.length === 0 ? (
-            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/staging?${qs}`}>Stage a Room</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {stagings.map((s: any) => (
-                  <button key={s.id} onClick={() => setStagingModal(s)} className="rounded-xl border border-border overflow-hidden bg-muted/30 hover:border-indigo-500/40 hover:shadow-md transition-all text-left group">
-                    <div className="grid grid-cols-2 aspect-[8/3]">
-                      <div className="relative overflow-hidden"><img src={s.original_url} alt="Before" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span></div>
-                      <div className="relative overflow-hidden"><img src={s.staged_url} alt="After" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">After</span></div>
-                    </div>
-                    <div className="p-2.5"><p className="text-xs font-semibold text-foreground">{s.room_type ? s.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Room"}</p><p className="text-[10px] text-muted-foreground">{s.style} · Click to compare</p></div>
-                  </button>
-                ))}
-              </div>
-              {isSubscriber && <div className="text-center"><Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/staging?${qs}`}>Stage Another Room</Link></Button></div>}
-            </div>
-          )}
-        </section>
-
-        {/* ═══ DESCRIPTIONS — collapsible ═══ */}
-        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-teal-600" /><h2 className="text-lg font-bold text-foreground">Descriptions</h2>{descriptions.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{descriptions.length}</span>}</div>
-          </div>
-          {descriptions.length === 0 ? (
-            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">Descriptions will appear here when generated.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/descriptions?${qs}`}>Write a Description</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
-          ) : (
-            <div className="space-y-3">
-              {descriptions.slice(0, 5).map((desc: any) => {
-                const isExp = expandedDesc === desc.id;
-                return (
-                  <div key={desc.id} className="p-4 rounded-xl bg-muted/30 border border-border">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-muted-foreground capitalize mb-1">{desc.style || "Professional"} style · {new Date(desc.created_at).toLocaleDateString()}</p>
-                        <p className={`text-sm text-foreground whitespace-pre-wrap ${isExp ? "" : "line-clamp-2"}`}>{desc.description}</p>
-                        {desc.description?.length > 150 && (
-                          <button onClick={() => setExpandedDesc(isExp ? null : desc.id)} className="text-xs font-semibold text-accent hover:text-accent/80 mt-1.5 flex items-center gap-1">
-                            <ChevronDown className={`h-3 w-3 transition-transform ${isExp ? "rotate-180" : ""}`} />{isExp ? "Show less" : "Read full description"}
-                          </button>
-                        )}
-                      </div>
-                      <button onClick={() => copyToClipboard(desc.description || "", desc.id)} className="flex-shrink-0 p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground" title="Copy">
-                        {copiedId === desc.id ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </div>
-
-      <footer className="bg-muted/50 border-t py-8 mt-12">
-        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-            <Link href="/dashboard/properties" className="hover:text-foreground transition-colors">Properties</Link>
-            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+        {orderCli
