@@ -4,11 +4,11 @@ import { Metadata } from "next";
 import PropertyWebsiteClient from "./client";
 
 interface Props {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = params.slug;
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -57,10 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PropertyWebsitePage({ params }: Props) {
-  const { slug } = await params;
+  const slug = params.slug;
   const supabase = await createClient();
 
-  // Fetch property
   const { data: property } = await supabase
     .from("agent_properties")
     .select("*")
@@ -71,18 +70,15 @@ export default async function PropertyWebsitePage({ params }: Props) {
 
   if (!property) notFound();
 
-  // Fetch agent info
   const { data: agent } = await supabase
     .from("lens_usage")
     .select("saved_agent_name, saved_phone, saved_email, saved_company, saved_logo_url, saved_headshot_url")
     .eq("user_id", property.user_id)
     .single();
 
-  // Fetch curated assets
   const modules = (property.website_modules || {}) as Record<string, boolean>;
   const curated = (property.website_curated || {}) as Record<string, string[]>;
 
-  // Descriptions
   let descriptions: any[] = [];
   if (modules.description && curated.descriptions?.length) {
     const { data } = await supabase
@@ -92,7 +88,6 @@ export default async function PropertyWebsitePage({ params }: Props) {
     descriptions = data || [];
   }
 
-  // Staging
   let stagings: any[] = [];
   if (modules.staging && curated.staging?.length) {
     const { data } = await supabase
@@ -102,7 +97,6 @@ export default async function PropertyWebsitePage({ params }: Props) {
     stagings = data || [];
   }
 
-  // Exports
   let exports: any[] = [];
   if (modules.exports && curated.exports?.length) {
     const { data } = await supabase
@@ -112,7 +106,6 @@ export default async function PropertyWebsitePage({ params }: Props) {
     exports = data || [];
   }
 
-  // JSON-LD structured data
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
