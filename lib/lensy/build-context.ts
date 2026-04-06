@@ -374,3 +374,110 @@ YOUR ROLE:
 - Keep responses concise and helpful
 - If asked about things outside P2V, politely redirect`;
 }
+
+// ============================================================
+// Agent Persona Builder
+// Builds a complete context for an agent's Lensy on their
+// agent website — includes ALL listings, agent bio, market info
+// ============================================================
+
+export async function buildAgentPersonaContext(
+  agentUserId: string
+): Promise<string> {
+  const supabase = createAdminClient();
+
+  // 1. Agent info
+  const { data: lensUsage } = await supabase
+    .from("lens_usage")
+    .select("saved_agent_name, saved_phone, saved_email, saved_company")
+    .eq("user_id", agentUserId)
+    .single();
+
+  // 2. Agent website config (bio, specialties, etc.)
+  const { data: agentSite } = await supabase
+    .from("agent_websites")
+    .select("bio, contact_info, seo_meta")
+    .eq("user_id", agentUserId)
+    .single();
+
+  // 3. ALL published properties
+  const { data: properties } = await supabase
+    .from("agent_properties")
+    .select("id, address, city, state, status, listing_type, price, bedrooms, bathrooms, sqft, property_type, special_features, booking_enabled")
+    .eq("user_id", agentUserId)
+    .eq("agent_site_visible", true)
+    .is("merged_into_id", null)
+    .order("created_at", { ascending: false });
+
+  // 4. Fetch descriptions for all properties (for richer listing context)
+  const { data: allDescriptions } = await supabase
+    .from("lens_descriptions")
+    .select("content, property_data")
+    .eq("user_id", agentUserId)
+    .order("created_at", { ascending: false });
+
+  const agentName = lensUsage?.saved_agent_name || "the agent";
+  const agentCompany = lensUsage?.saved_company || "";
+
+  let prompt = `You are Lensy, the personal AI assistant for ${agentName}${agentCompany ? ` of ${agentCompany}` : ""}. You represent this agent on their website and speak as their knowledgeable, friendly team member.`;
+
+  // Agent bio
+  if (agentSite?.bio) {
+    prompt += `\n\nABOUT ${agentName.toUpperCase()}:\n${agentSite.bio}`;
+  }
+
+  // Contact
+  const phone = lensUsage?.saved_phone || agentSite?.contact_info?.phone;
+  const email = lensUsage?.saved_email || agentSite?.contact_info?.email;
+  if (phone || email) {
+    prompt += `\n\nCONTACT: ${[phone, email].filter(Boolean).join(" | ")}`;
+  }
+
+  // All listings
+  if (properties && properties.length > 0) {
+    prompt += `\n\nACTIVE LISTINGS (${properties.length} total):`;
+
+    for (const prop of properties) {
+      prompt += `\n\n📍 ${prop.address}${prop.city ? `, ${prop.city}` : ""}${prop.state ? `, ${prop.state}` : ""}`;
+      prompt += `\n   Status: ${prop.status} | Type: ${(prop.listing_type || "sale")}`;
+      if (prop.price) prompt += ` | Price: $${prop.price.toLocaleString()}${prop.listing_type === "rental" ? "/mo" : ""}`;
+      if (prop.bedrooms) prompt += ` | ${prop.bedrooms}bd`;
+      if (prop.bathrooms) prompt += `/${prop.bathrooms}ba`;
+      if (prop.sqft) prompt += ` | ${prop.sqft.toLocaleString()} sqft`;
+      if (prop.special_features?.length) prompt += `\n   Features: ${prop.special_features.join(", ")}`;
+
+      // Try to find a matching description
+      if (allDescriptions) {
+        const normalizedPropAddr = (prop.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        for (const desc of allDescriptions) {
+          if (!desc.property_data) continue;
+          const pd = typeof desc.property_data === "string" ? JSON.parse(desc.property_data) : desc.property_data;
+          const descAddr = (pd.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (descAddr && normalizedPropAddr.includes(descAddr.substring(0, 15))) {
+            // Truncate long descriptions to keep prompt manageable
+            const truncated = desc.content.length > 200 ? desc.content.substring(0, 200) + "..." : desc.content;
+            prompt += `\n   Description: ${truncated}`;
+            break;
+          }
+        }
+      }
+
+      if (prop.booking_enabled) prompt += `\n   📅 Booking available`;
+    }
+  } else {
+    prompt += `\n\nNo listings currently published on the website.`;
+  }
+
+  prompt += `\n\nYOUR ROLE:
+- You represent ${agentName} — speak as a knowledgeable member of their team
+- Answer questions about any of the listings above
+- Help visitors find the right property based on their needs (budget, bedrooms, location)
+- Share neighborhood knowledge when asked
+- NEVER make up details not listed above — if you don't know, suggest contacting ${agentName}
+- NEVER discuss price negotiation, make commitments, or give legal/financial advice
+- When a visitor shows interest in a listing, suggest scheduling a showing
+- Keep responses conversational and concise (2-4 sentences unless more detail is asked for)
+- If asked about listings you don't have data for, say "${agentName} may have additional listings — contact them directly for the latest availability"`;
+
+  return prompt;
+}
