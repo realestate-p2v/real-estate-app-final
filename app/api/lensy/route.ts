@@ -7,6 +7,7 @@ import {
   buildBuyerFacingPrompt,
   buildToolSupportPrompt,
   buildSalesPrompt,
+  buildAgentPersonaContext,
   type LensyMode,
 } from "@/lib/lensy/build-context";
 
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     let systemPrompt = "";
 
     if (propertyId && (mode === "buyer_facing" || mode === "tool_support")) {
-      // Property-specific chat
+      // Property-specific chat (property website or support viewing a property)
       const context = await buildLensyContext(propertyId, mode, effectiveUserId!);
 
       if (mode === "buyer_facing") {
@@ -68,10 +69,14 @@ export async function POST(request: NextRequest) {
         systemPrompt = buildToolSupportPrompt(generalCtx.user_info);
         systemPrompt += `\n\nCURRENTLY VIEWING PROPERTY:\n${buildBuyerFacingPrompt(context).split("YOUR ROLE:")[0]}`;
       }
+    } else if (mode === "buyer_facing" && agentUserId) {
+      // Agent website — no specific property, trained on ALL listings
+      systemPrompt = await buildAgentPersonaContext(agentUserId);
     } else if (mode === "tool_support") {
       const generalCtx = await buildGeneralLensyContext(mode, effectiveUserId!);
       systemPrompt = buildToolSupportPrompt(generalCtx.user_info);
     } else {
+      // Sales mode (P2V public pages)
       systemPrompt = buildSalesPrompt();
     }
 
