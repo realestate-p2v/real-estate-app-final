@@ -373,7 +373,18 @@ COMMUNICATION RULES:
 - Use 3-5 buttons max, keep labels short
 - If their question is vague, ask ONE clarifying question with button options
 - Never pitch free trials or subscription — they are already a subscriber
-- If they ask about Lens Pro features they don't have, briefly explain what it adds`;
+- If they ask about Lens Pro features they don't have, briefly explain what it adds and offer a link to upgrade
+
+ACTION LINKS — when the user wants to take action, include these URLs in your response:
+- Upgrade to Lens Pro or change plan: https://realestatephoto2video.com/lens#pricing
+- Order a listing video: https://realestatephoto2video.com/order
+- Open Photo Coach: https://realestatephoto2video.com/dashboard/lens/coach
+- Open Description Writer: https://realestatephoto2video.com/dashboard/lens/descriptions
+- Open Design Studio: https://realestatephoto2video.com/dashboard/lens/design-studio
+- Open Virtual Staging: https://realestatephoto2video.com/dashboard/lens/staging
+- Open Property Portfolio: https://realestatephoto2video.com/dashboard/properties
+- Account settings: https://realestatephoto2video.com/dashboard/settings
+- When sharing a link, write it naturally in the sentence like "you can upgrade at https://realestatephoto2video.com/lens#pricing"`;
 }
 
 export function buildSalesPrompt(): string {
@@ -424,7 +435,15 @@ COMMUNICATION RULES:
 - No emojis
 - No bullet point lists in responses — write in natural sentences
 - No markdown formatting (no bold, no headers)
-- When you understand their need, recommend ONE product and explain why briefly`;
+- When you understand their need, recommend ONE product and explain why briefly
+
+ACTION LINKS — when the visitor is ready to take action, include these URLs naturally in your response:
+- Subscribe to Lens: https://realestatephoto2video.com/lens#pricing
+- Subscribe to Lens Pro: https://realestatephoto2video.com/lens#pricing
+- Order a listing video: https://realestatephoto2video.com/order
+- Try Photo Coach free: https://realestatephoto2video.com/dashboard/lens/coach
+- See all features: https://realestatephoto2video.com/lens
+- When sharing a link, write it naturally like "you can try Photo Coach free at https://realestatephoto2video.com/dashboard/lens/coach"`;
 }
 
 // ============================================================
