@@ -27,11 +27,11 @@ export interface ChatMessage {
   buttons?: string[]; // Parsed from [BUTTONS: a | b | c] in AI response
 }
 
-// Parse [BUTTONS: opt1 | opt2 | opt3] from the end of an AI message
+// Parse [BUTTONS: opt1 | opt2 | opt3] from AI response (anywhere in the text, usually at the end)
 function parseButtons(text: string): { clean: string; buttons: string[] } {
-  const match = text.match(/\[BUTTONS:\s*(.+?)\]\s*$/);
+  const match = text.match(/\[BUTTONS:\s*(.+?)\]\s*$/s);
   if (!match) return { clean: text, buttons: [] };
-  const clean = text.replace(/\[BUTTONS:\s*(.+?)\]\s*$/, "").trim();
+  const clean = text.replace(/\s*\[BUTTONS:\s*(.+?)\]\s*$/s, "").trim();
   const buttons = match[1].split("|").map((b) => b.trim()).filter(Boolean);
   return { clean, buttons };
 }
