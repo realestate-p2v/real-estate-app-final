@@ -24,6 +24,16 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  buttons?: string[]; // Parsed from [BUTTONS: a | b | c] in AI response
+}
+
+// Parse [BUTTONS: opt1 | opt2 | opt3] from the end of an AI message
+function parseButtons(text: string): { clean: string; buttons: string[] } {
+  const match = text.match(/\[BUTTONS:\s*(.+?)\]\s*$/);
+  if (!match) return { clean: text, buttons: [] };
+  const clean = text.replace(/\[BUTTONS:\s*(.+?)\]\s*$/, "").trim();
+  const buttons = match[1].split("|").map((b) => b.trim()).filter(Boolean);
+  return { clean, buttons };
 }
 
 export interface LensyChatBaseConfig {
@@ -163,6 +173,18 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
           return updated;
         });
       } finally {
+        // Parse buttons from the final response
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last && last.role === "assistant" && last.content) {
+            const { clean, buttons } = parseButtons(last.content);
+            if (buttons.length > 0) {
+              updated[updated.length - 1] = { ...last, content: clean, buttons };
+            }
+          }
+          return updated;
+        });
         setIsStreaming(false);
         abortRef.current = null;
       }
@@ -189,7 +211,7 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
       {/* ═══ CHAT WINDOW ═══ */}
       {isOpen && (
         <div
-          className={`fixed bottom-20 sm:bottom-24 ${positionClass} z-50 w-[calc(100vw-2rem)] sm:w-[400px] max-h-[70vh] sm:max-h-[600px] flex flex-col bg-card rounded-2xl border border-border shadow-2xl overflow-hidden`}
+          className={`fixed bottom-20 sm:bottom-24 ${positionClass} z-50 w-[calc(100vw-2rem)] sm:w-[400px] max-h-[85vh] sm:max-h-[840px] flex flex-col bg-card rounded-2xl border border-border shadow-2xl overflow-hidden`}
           style={{ animation: "lensySlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}
         >
           {/* Header */}
@@ -227,32 +249,51 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
 
             {/* Chat messages */}
             {messages.map((msg, i) => (
-              <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
-                {msg.role === "assistant" && (
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="h-3.5 w-3.5 text-white" />
-                  </div>
-                )}
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-tr-sm"
-                      : "bg-card border border-border rounded-tl-sm"
-                  }`}
-                >
-                  {msg.role === "assistant" && !msg.content && isStreaming ? (
-                    <div className="flex items-center gap-1.5 py-1">
-                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div key={i}>
+                <div className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
+                  {msg.role === "assistant" && (
+                    <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="h-3.5 w-3.5 text-white" />
                     </div>
-                  ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  )}
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                        : "bg-card border border-border rounded-tl-sm"
+                    }`}
+                  >
+                    {msg.role === "assistant" && !msg.content && isStreaming ? (
+                      <div className="flex items-center gap-1.5 py-1">
+                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    ) : (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    )}
+                  </div>
+                  {msg.role === "user" && (
+                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
                   )}
                 </div>
-                {msg.role === "user" && (
-                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                {/* Tappable buttons parsed from AI response */}
+                {msg.buttons && msg.buttons.length > 0 && !isStreaming && (
+                  <div className="flex gap-2.5 mt-2">
+                    <div className="w-7 shrink-0" />
+                    <div className="flex flex-wrap gap-1.5">
+                      {msg.buttons.map((btn, j) => (
+                        <button
+                          key={j}
+                          onClick={() => sendMessage(btn)}
+                          className={`text-xs px-3.5 py-2 rounded-xl border font-medium transition-all hover:scale-[1.02] active:scale-[0.98] ${config.accentLight} hover:opacity-80`}
+                        >
+                          {btn}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
