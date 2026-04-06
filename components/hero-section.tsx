@@ -1,280 +1,305 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  ShieldCheck,
+  Play,
+  Pause,
   Clock,
+  ShieldCheck,
   Lock,
-  ChevronDown,
   Sparkles,
   Camera,
   PenTool,
   FileText,
   Sofa,
-  Globe,
-  Search,
   Video,
-  Play,
-  CheckCircle2,
+  ArrowRight,
+  Repeat,
+  Film,
 } from "lucide-react";
 
 export function HeroSection() {
-  return (
-    <section className="relative min-h-[85vh] flex flex-col overflow-hidden bg-white">
-      {/* Background video — lowest layer */}
-      <div className="absolute inset-0 z-0">
-        <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-[0.16]">
-          <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
-        </video>
-      </div>
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [isSubscriber, setIsSubscriber] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-      {/* Animated mesh gradient background — on top of video */}
+  useEffect(() => {
+    const init = async () => {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUser({ id: user.id, email: user.email || "" });
+        const { data: usage } = await supabase
+          .from("lens_usage")
+          .select("is_subscriber")
+          .eq("user_id", user.id)
+          .single();
+        if (usage?.is_subscriber) setIsSubscriber(true);
+      }
+    };
+    init();
+  }, []);
+
+  const handleVideoToggle = () => {
+    if (!videoRef.current) return;
+    if (isVideoPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+    setIsVideoPlaying(!isVideoPlaying);
+  };
+
+  return (
+    <section className="relative overflow-hidden bg-background">
+      {/* Subtle dot pattern — clean texture, no gradient blobs */}
       <div
-        className="absolute inset-0 z-[1]"
+        className="pointer-events-none absolute inset-0 opacity-[0.035]"
         style={{
-          background: `
-            radial-gradient(ellipse 80% 60% at 10% 20%, rgba(167, 243, 208, 0.35) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 80% at 90% 15%, rgba(165, 220, 255, 0.3) 0%, transparent 50%),
-            radial-gradient(ellipse 70% 50% at 50% 90%, rgba(253, 224, 138, 0.2) 0%, transparent 50%),
-            radial-gradient(ellipse 50% 60% at 80% 70%, rgba(196, 181, 253, 0.2) 0%, transparent 50%),
-            radial-gradient(ellipse 40% 40% at 20% 70%, rgba(110, 231, 183, 0.25) 0%, transparent 50%),
-            linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f0fdfa 100%)
-          `,
+          backgroundImage:
+            "radial-gradient(circle, currentColor 0.8px, transparent 0.8px)",
+          backgroundSize: "24px 24px",
         }}
       />
 
-      {/* Floating geometric shapes */}
-      <div className="absolute inset-0 z-[2] overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full border-[3px] border-green-200/40 opacity-60" />
-        <div className="absolute -top-10 -right-10 w-60 h-60 rounded-full border-[2px] border-cyan-200/30 opacity-50" />
-        <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full border-[3px] border-emerald-200/40 opacity-50" />
-        <div className="absolute top-[15%] left-[8%] w-3 h-3 rounded-full bg-green-300/50" />
-        <div className="absolute top-[25%] right-[12%] w-2 h-2 rounded-full bg-cyan-300/60" />
-        <div className="absolute top-[60%] left-[15%] w-2.5 h-2.5 rounded-full bg-emerald-300/40" />
-        <div className="absolute top-[45%] right-[8%] w-2 h-2 rounded-full bg-teal-300/50" />
-        <div className="absolute bottom-[20%] left-[40%] w-3 h-3 rounded-full bg-green-200/50" />
-        <div className="absolute top-[35%] left-[48%] w-1.5 h-1.5 rounded-full bg-cyan-400/40" />
-        <div className="absolute top-0 left-[45%] w-px h-[30%] bg-gradient-to-b from-transparent via-green-200/30 to-transparent rotate-12 origin-top" />
-        <div className="absolute bottom-0 right-[40%] w-px h-[25%] bg-gradient-to-t from-transparent via-cyan-200/30 to-transparent -rotate-12 origin-bottom" />
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-40 h-px bg-gradient-to-r from-transparent via-gray-200/50 to-transparent" />
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 h-40 w-px bg-gradient-to-b from-transparent via-gray-200/50 to-transparent" />
-      </div>
+      {/* Main content */}
+      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
+        {/* Stat ribbon */}
+        <div className="mb-6 flex justify-center lg:justify-start">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm sm:text-sm">
+            <Sparkles className="h-3.5 w-3.5 text-accent-foreground" />
+            Listings with video get 403% more inquiries
+            <span className="text-muted-foreground/50">— NAR</span>
+          </span>
+        </div>
 
-      {/* Split Container */}
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-start flex-1 min-h-[85vh] gap-3 lg:gap-4 px-2 lg:px-4 py-4 lg:py-6">
+        {/* Asymmetric grid: ~60 / 40 */}
+        <div className="grid items-start gap-8 lg:grid-cols-[1fr_400px] lg:gap-10 xl:grid-cols-[1fr_440px]">
+          {/* ──────────────────────────────────────────
+              LEFT — Headline, CTA, trust, remix callout
+              ────────────────────────────────────────── */}
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            {/* Headline */}
+            <h1 className="max-w-2xl text-[2rem] font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-[3.25rem]">
+              Turn Your Listing Photos
+              <br className="hidden sm:block" /> Into{" "}
+              <span className="text-accent-foreground">
+                Videos That Sell
+              </span>
+            </h1>
 
-        {/* ═══════════════════════════════════════════
-            LEFT — Photo 2 Video
-            ═══════════════════════════════════════════ */}
-        <div className="relative flex-1 flex items-center justify-center px-2 lg:px-6 py-10 lg:py-16">
-          <div className="relative z-10 max-w-[680px] w-full">
-            <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-8 lg:p-10 shadow-2xl shadow-gray-300/40">
-              <div className="flex flex-col items-center text-center">
-                {/* Label pill */}
-                <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-bold px-3.5 py-1.5 rounded-full mb-6 border border-green-200">
-                  <Video className="w-3.5 h-3.5" />
-                  LISTING VIDEOS
+            {/* Subheadline */}
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Upload your photos, add your branding, get a cinematic walkthrough
+              video delivered in hours&nbsp;— not days.
+            </p>
+
+            {/* Primary CTA cluster */}
+            <div className="mt-7 flex flex-col items-center gap-2.5 sm:mt-8 lg:items-start">
+              <Link href="/order" passHref>
+                <Button
+                  size="lg"
+                  className="group relative h-auto rounded-xl bg-accent px-7 py-3.5 text-base font-extrabold text-accent-foreground shadow-lg shadow-accent/20 transition-all hover:shadow-xl hover:shadow-accent/30 hover:brightness-110 sm:px-9 sm:py-4 sm:text-lg"
+                >
+                  Create My Listing Video
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5 sm:h-5 sm:w-5" />
+                  {/* Save badge */}
+                  <span className="absolute -right-2.5 -top-2.5 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-black tracking-wide text-background shadow-md sm:text-xs">
+                    SAVE $40
+                  </span>
+                </Button>
+              </Link>
+
+              {/* Price line */}
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span className="text-muted-foreground/50 line-through">
+                  $119
+                </span>
+                <span className="font-bold text-foreground">$79</span>
+                <span className="mx-0.5 text-muted-foreground/40">·</span>
+                <span className="text-xs">limited time</span>
+              </div>
+            </div>
+
+            {/* Trust row */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:text-sm lg:justify-start">
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 text-accent-foreground/70" />
+                Under 12h delivery
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5 text-accent-foreground/70" />
+                Satisfaction guarantee
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Lock className="h-3.5 w-3.5 text-accent-foreground/70" />
+                Secure checkout
+              </span>
+            </div>
+
+            {/* ── Unlimited Remixes bridge ── */}
+            <div className="mt-6 w-full max-w-lg rounded-xl border border-border bg-card/70 p-3.5 shadow-sm backdrop-blur-sm sm:mt-7 sm:p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                  <Repeat className="h-4 w-4 text-accent-foreground" />
                 </div>
-
-                {/* Headline */}
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-gray-900 leading-tight">
-                  Listing Photos to
-                  <br />
-                  <span className="text-green-600">Cinematic Video</span>
-                </h2>
-
-                <p className="text-gray-600 text-lg lg:text-xl mb-6 leading-relaxed max-w-lg">
-                  Upload your photos, pick your music, add your branding — professional walkthrough video delivered in under 12 hours. No videographer needed.
-                </p>
-
-                {/* Mini video preview */}
-                <div className="relative aspect-video w-full max-w-md rounded-2xl overflow-hidden mb-6 border border-gray-200 shadow-lg">
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  >
-                    <source src="/p2v-website-her-vid.mp4" type="video/mp4" />
-                  </video>
-                  <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                    <div className="h-12 w-12 rounded-full bg-white/90 shadow-lg flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
-                      <Play className="h-5 w-5 text-gray-900 ml-0.5" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stat callout */}
-                <div className="bg-green-50 border border-green-100 rounded-xl px-5 py-3 max-w-md w-full mb-8">
-                  <p className="text-sm font-bold text-gray-900">
-                    Listings with video get{" "}
-                    <span className="text-green-600">400% more inquiries</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground sm:text-[0.925rem]">
+                    Buy the clips once. Remix them forever.
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    — National Association of Realtors
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                    Lens subscribers recut clips into Just Listed, Open House,
+                    Just Sold, social teasers — unlimited times, no extra cost.
                   </p>
-                </div>
-
-                {/* CTA */}
-                <Link href="/order" passHref>
-                  <Button
-                    size="lg"
-                    className="group text-xl px-10 py-9 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
-                  >
-                    <span className="text-[10px] uppercase tracking-widest opacity-90 mb-1 font-black">
-                      Limited Time Offer
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span>Create My Listing Video</span>
-                      <span className="flex items-center">
-                        <span className="line-through text-white/50 text-base mr-2 font-medium">
-                          $119
-                        </span>
-                        <span className="text-2xl">$79</span>
-                      </span>
-                    </div>
-                  </Button>
-                </Link>
-
-                {/* Trust badges */}
-                <div className="flex flex-wrap justify-center items-center gap-5 text-gray-500 mt-5">
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <ShieldCheck className="w-4 h-4 text-green-500" />
-                    <span>Satisfaction Guarantee</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Clock className="w-4 h-4 text-green-500" />
-                    <span>Under 12h Delivery</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Lock className="w-4 h-4 text-green-500" />
-                    <span>Secure Checkout</span>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ═══════════════════════════════════════════
-            RIGHT — P2V Lens
-            ═══════════════════════════════════════════ */}
-        <div className="relative flex-1 flex items-center justify-center px-2 lg:px-6 py-10 lg:py-16">
-          <div className="relative z-10 max-w-[680px] w-full">
-            <div className="bg-white/90 backdrop-blur-md border border-gray-200 rounded-3xl p-8 lg:p-10 shadow-2xl shadow-gray-300/40">
-              <div className="flex flex-col items-center text-center">
-                {/* Label pill */}
-                <div className="inline-flex items-center gap-2 bg-cyan-50 text-cyan-700 text-xs font-bold px-3.5 py-1.5 rounded-full mb-6 border border-cyan-200">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  AI MARKETING SUITE
-                </div>
-
-                {/* Headline */}
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4 text-gray-900 leading-tight">
-                  P2V Lens
-                  <br />
-                  <span className="text-cyan-600">Your Entire Marketing Team</span>
-                </h2>
-
-                <p className="text-gray-600 text-lg lg:text-xl mb-6 leading-relaxed max-w-lg">
-                  Replace expensive design services, copywriting fees, staging costs, and web development bills. One subscription, every marketing tool an agent needs.
-                </p>
-
-                {/* Tool grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-6 w-full max-w-md">
-                  {[
-                    { icon: Camera, label: "AI Photo Coach" },
-                    { icon: PenTool, label: "Design Studio" },
-                    { icon: FileText, label: "Description Writer" },
-                    { icon: Sofa, label: "Virtual Staging" },
-                    { icon: Globe, label: "Website Builder" },
-                    { icon: Search, label: "Lead Finder" },
-                  ].map((tool) => (
-                    <div
-                      key={tool.label}
-                      className="flex items-center gap-2 text-gray-700 text-sm font-medium bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 hover:border-cyan-200 hover:bg-cyan-50/50 transition-colors justify-center"
-                    >
-                      <tool.icon className="w-4 h-4 text-cyan-600 flex-shrink-0" />
-                      {tool.label}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Stat callout — matches video card height */}
-                <div className="bg-cyan-50 border border-cyan-100 rounded-xl px-5 py-3 max-w-md w-full mb-6">
-                  <p className="text-sm font-bold text-gray-900">
-                    Professional photos sell homes{" "}
-                    <span className="text-cyan-600">32% faster</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    — Real Estate Staging Association
-                  </p>
-                </div>
-
-                {/* Benefits list */}
-                <div className="flex flex-col gap-1.5 mb-8 items-center">
-                  {[
-                    "10% off every video order",
-                    "Priority processing — first in queue",
-                    "Per-clip Quick Videos from $4.95",
-                  ].map((benefit) => (
-                    <div key={benefit} className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      {benefit}
-                    </div>
-                  ))}
-                </div>
-
-                {/* CTA */}
-                <Link href="/lens" passHref>
-                  <Button
-                    size="lg"
-                    className="group text-xl px-10 py-9 bg-[#22c55e] hover:bg-[#16a34a] text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] transition-all hover:scale-105 rounded-full font-bold flex flex-col items-center justify-center border-none"
-                  >
-                    <span className="text-[10px] uppercase tracking-widest opacity-90 mb-1 font-black">
-                      Built for Real Estate Agents
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span>Explore P2V Lens</span>
-                      <span className="text-2xl">$27.95/mo</span>
-                    </div>
-                  </Button>
-                </Link>
-
-                {/* Trust badges */}
-                <div className="flex flex-wrap justify-center items-center gap-5 text-gray-500 mt-5">
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Sparkles className="w-4 h-4 text-cyan-500" />
-                    <span>AI-Powered</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Camera className="w-4 h-4 text-cyan-500" />
-                    <span>200 Analyses/Month</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <ShieldCheck className="w-4 h-4 text-cyan-500" />
-                    <span>Cancel Anytime</span>
+          {/* ──────────────────────────────────────────
+              RIGHT — Video preview + Lens card
+              ────────────────────────────────────────── */}
+          <div className="flex flex-col gap-3 sm:gap-4">
+            {/* Video preview */}
+            <div
+              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card shadow-xl transition-shadow hover:shadow-2xl"
+              onClick={handleVideoToggle}
+              role="button"
+              tabIndex={0}
+              aria-label={isVideoPlaying ? "Pause video" : "Play video"}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleVideoToggle();
+                }
+              }}
+            >
+              <div className="relative aspect-[16/10] bg-foreground/5">
+                <video
+                  ref={videoRef}
+                  src="/p2v-website-her-vid.mp4"
+                  className="h-full w-full object-cover"
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+                {/* Play / Pause overlay */}
+                <div
+                  className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                    isVideoPlaying
+                      ? "bg-transparent opacity-0 group-hover:opacity-100"
+                      : "bg-black/20"
+                  }`}
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur transition-transform group-hover:scale-110">
+                    {isVideoPlaying ? (
+                      <Pause className="h-5 w-5 text-gray-900" />
+                    ) : (
+                      <Play className="ml-0.5 h-5 w-5 text-gray-900" />
+                    )}
                   </div>
                 </div>
               </div>
+              {/* Caption bar */}
+              <div className="flex items-center justify-between px-4 py-2.5 text-xs text-muted-foreground sm:text-sm">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Video className="h-3.5 w-3.5 text-accent-foreground" />
+                  Sample listing walkthrough
+                </span>
+                <span className="text-muted-foreground/60">0:42</span>
+              </div>
             </div>
+
+            {/* Lens subscription card — compact */}
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+              <div className="mb-2.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
+                  <Sparkles className="h-3.5 w-3.5 text-accent-foreground" />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-extrabold text-foreground">
+                    P2V Lens
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    $27.95/mo
+                  </span>
+                </div>
+              </div>
+
+              {/* Compact tool list */}
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {[
+                  { icon: Camera, label: "Photo Coach" },
+                  { icon: PenTool, label: "Design Studio" },
+                  { icon: FileText, label: "Descriptions" },
+                  { icon: Sofa, label: "Virtual Staging" },
+                  { icon: Film, label: "Quick Videos" },
+                ].map((tool) => (
+                  <span
+                    key={tool.label}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-foreground/70 sm:text-xs"
+                  >
+                    <tool.icon className="h-3 w-3 text-accent-foreground/60" />
+                    {tool.label}
+                  </span>
+                ))}
+                <span className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground sm:text-xs">
+                  +10 more
+                </span>
+              </div>
+
+              {/* Lens CTA — adapts to auth state */}
+              {isSubscriber ? (
+                <Link href="/dashboard/lens" passHref>
+                  <Button
+                    variant="outline"
+                    className="h-9 w-full rounded-lg text-sm font-bold"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/lens" passHref>
+                  <Button
+                    variant="outline"
+                    className="h-9 w-full rounded-lg text-sm font-bold"
+                  >
+                    Explore P2V Lens — $27.95/mo
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              )}
+
+              <p className="mt-2 text-center text-[11px] text-muted-foreground sm:text-xs">
+                15+ AI marketing tools · Cancel anytime
+              </p>
+            </div>
+
+            {/* Stat callout */}
+            <p className="text-center text-xs text-muted-foreground">
+              Professional photos sell homes{" "}
+              <span className="font-semibold text-foreground">32% faster</span>{" "}
+              — RESA
+            </p>
           </div>
         </div>
       </div>
 
       {/* Bottom credibility bar */}
-      <div className="relative z-10 bg-blue-900 px-6 py-3">
-        <p className="text-center text-md text-gray-300 font-medium">
+      <div className="relative bg-blue-900 px-6 py-3">
+        <p className="text-center text-sm font-medium text-gray-300 sm:text-base">
           Built by real estate marketers with{" "}
-          <span className="text-white font-bold">20+ years of experience</span>
+          <span className="font-bold text-white">
+            20+ years of experience
+          </span>
         </p>
-      </div>
-
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 opacity-40 animate-bounce">
-        <ChevronDown className="w-6 h-6 text-gray-400" />
       </div>
     </section>
   );
