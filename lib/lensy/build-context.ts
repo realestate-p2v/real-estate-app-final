@@ -390,14 +390,16 @@ IMPORTANT: The user HAS the content listed above. Never say they haven't created
 
 PHOTO 2 VIDEO (standalone product):
 - Upload listing photos, get a cinematic walkthrough video in under 12 hours. Starting at $79.
-- Agent goes to Order page, uploads photos, picks music, branding, and orientation. Video is delivered via email.
+- Available in 15, 25, or 35 clip packages, or Quick Videos at $4.95/clip.
+- Every order produces individual clips that the agent owns permanently.
+- ALL clips from ANY video order (15/25/35 clip packages AND Quick Videos) are remixable in Design Studio forever at no extra cost.
 
 P2V LENS TOOLS ($27.95/mo):
 - Photo Coach: upload listing photos, get AI scoring per photo with specific improvement tips on lighting, composition, staging. Go to Dashboard > Photo Coach, upload photos, select property address.
 - Description Writer: generates listing descriptions. Choose a style (luxury, professional, casual, etc.), enter property details, get polished copy. Dashboard > Description Writer.
 - Virtual Staging: upload empty room photo, pick a style (modern, coastal, farmhouse, etc.), get AI-staged version with furniture. Dashboard > Virtual Staging.
 - Design Studio has 4 sub-tools:
-    * Video Remixing — remix P2V walkthrough clips with music and overlays for social
+    * Video Remixing — remix ANY clips from ANY video order (15/25/35 clip packages or Quick Videos) with new music, text overlays, branding, or edits for different social platforms. Agents can also mix and match clips from different properties to create self-promo reels, year-in-review videos, or market update content.
     * Social Media Content Creator — create branded Just Listed, Open House, social posts
     * Property PDF Builder — generate property brochures and one-pagers
     * Branding Card Builder — create branded intro/outro cards for videos
@@ -445,20 +447,20 @@ PRODUCTS — ONLY share details about the specific product asked about:
 
 PHOTO 2 VIDEO (standalone, no subscription):
 - Upload listing photos, get a cinematic walkthrough video in under 12 hours
-- Starting at $79
-- Choose music, voiceover, branding card overlay
-- Delivered as downloadable MP4
+- Available in 15, 25, or 35 clip packages starting at $79, or Quick Videos at $4.95/clip
+- Every order produces individual clips the agent owns permanently
+- ALL clips are remixable in Design Studio forever at no extra cost
 
 P2V LENS ($27.95/mo) includes these tools:
 - Photo Coach: upload listing photos, get AI scoring with specific improvement tips per photo
 - Description Writer: generate professional listing descriptions in multiple styles (luxury, professional, casual, etc.)
 - Virtual Staging: upload an empty room photo, get AI-staged versions with furniture and decor in different styles
 - Design Studio: has 4 sub-tools:
-    * Video Remixing — take your P2V walkthrough video clips and remix them with music and overlays for social media
+    * Video Remixing — remix ANY clips from any video order with new music, overlays, branding for social media. Can mix clips from different properties for self-promo reels
     * Social Media Content Creator — create branded social posts, Just Listed graphics, Open House flyers
     * Property PDF Builder — generate professional property brochures and one-pagers
     * Branding Card Builder — create branded intro/outro cards for your videos
-- Quick Videos: order individual video clips at $4.95/clip for short-form content
+- Quick Videos: order individual video clips at $4.95/clip for short-form content (clips are also remixable in Design Studio)
 - Property Portfolio: central dashboard that collects all materials created for each property address
 
 P2V LENS PRO ($49.95/mo) — everything in Lens plus:
