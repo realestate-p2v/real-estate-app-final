@@ -1,6 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import LensySmart from "@/components/lensy/lensy-smart";
 import { Analytics } from "@vercel/analytics/next";
 import { TrackingScripts } from "@/components/tracking-scripts";
 import { CookieConsent } from "@/components/cookie-consent";
@@ -71,6 +72,7 @@ export default function RootLayout({
         <GoogleOneTap />
         {/* Vercel Analytics (first-party, no consent needed) */}
         <Analytics />
+        <LensySmart />
       </body>
     </html>
   );
