@@ -3,6 +3,7 @@ import { HeroSection } from "@/components/hero-section";
 import { Testimonials } from "@/components/testimonials";
 import { DemoSection } from "@/components/demo-section";
 import { ProcessSection } from "@/components/process-section";
+import LensySales from "@/components/lensy/lensy-sales";
 import { SaleBanner } from "@/components/sale-banner";
 import { CTASection } from "@/components/cta-section";
 import { PricingSection } from "@/components/pricing-section";
@@ -29,6 +30,7 @@ export default function HomePage() {
       <CTASection />
       <FAQ />
       <ContactSection />
+      <LensySales />
       <Footer />
     </main>
   );
