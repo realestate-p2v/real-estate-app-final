@@ -120,7 +120,7 @@ export function HeroSection() {
             muted
             playsInline
             preload="auto"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover opacity-[0.55] sm:opacity-100"
           >
             <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
           </video>
@@ -277,11 +277,11 @@ export function HeroSection() {
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5 text-green-400/80" />
-                      Priority processing
+                      Quick Videos starting at $24
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <ShieldCheck className="h-3.5 w-3.5 text-green-400/80" />
-                      Cancel anytime
+                      <Sparkles className="h-3.5 w-3.5 text-green-400/80" />
+                      Access to 14 AI powered tools
                     </span>
                   </div>
                 </div>
