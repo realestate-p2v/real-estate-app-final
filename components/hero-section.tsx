@@ -184,9 +184,10 @@ export function HeroSection() {
                     className="hero-animate mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg sm:leading-relaxed"
                     style={{ animationDelay: "0.4s" }}
                   >
-                    Cinematic walkthrough videos, AI photo coaching, marketing
-                    design, listing descriptions, virtual staging — everything
-                    you need to market your listings, in one subscription.
+                    With P2V Lens access, 10% off cinematic walkthrough videos,
+                    AI photo coaching, marketing design, listing descriptions,
+                    virtual staging — everything you need to market your
+                    listings, in one subscription.
                   </p>
 
                   {/* Tool chips */}
