@@ -159,7 +159,7 @@ export function HeroSection() {
                     className="hero-animate mb-5"
                     style={{ animationDelay: "0.1s" }}
                   >
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white/70 backdrop-blur-md sm:text-sm">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white/85 backdrop-blur-md sm:text-sm">
                       <Sparkles className="h-3.5 w-3.5 text-green-400" />
                       AI-Powered Real Estate Marketing
                     </span>
@@ -181,7 +181,7 @@ export function HeroSection() {
 
                   {/* Subheadline */}
                   <p
-                    className="hero-animate mt-5 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg sm:leading-relaxed"
+                    className="hero-animate mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg sm:leading-relaxed"
                     style={{ animationDelay: "0.4s" }}
                   >
                     Cinematic walkthrough videos, AI photo coaching, marketing
@@ -199,20 +199,20 @@ export function HeroSection() {
                         className={`hero-chip-animate inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold backdrop-blur-sm sm:text-sm ${
                           tool.featured
                             ? "border-green-400/30 bg-green-400/10 text-green-300"
-                            : "border-white/10 bg-white/[0.05] text-white/60"
+                            : "border-white/15 bg-white/[0.07] text-white/80"
                         }`}
                         style={{ animationDelay: `${0.5 + i * 0.07}s` }}
                       >
                         <tool.icon
                           className={`h-3.5 w-3.5 ${
-                            tool.featured ? "text-green-400" : "text-white/40"
+                            tool.featured ? "text-green-400" : "text-white/60"
                           }`}
                         />
                         {tool.label}
                       </span>
                     ))}
                     <span
-                      className="hero-chip-animate inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-white/40 backdrop-blur-sm sm:text-sm"
+                      className="hero-chip-animate inline-flex items-center rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/60 backdrop-blur-sm sm:text-sm"
                       style={{ animationDelay: `${0.5 + tools.length * 0.07}s` }}
                     >
                       +10 more
@@ -263,23 +263,23 @@ export function HeroSection() {
 
                   {/* Subscriber perks */}
                   <div
-                    className="hero-animate-fade mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-white/40 sm:text-sm lg:justify-start"
+                    className="hero-animate-fade mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-white/60 sm:text-sm lg:justify-start"
                     style={{ animationDelay: "1.15s" }}
                   >
                     <span className="inline-flex items-center gap-1">
-                      <Percent className="h-3.5 w-3.5 text-green-400/60" />
+                      <Percent className="h-3.5 w-3.5 text-green-400/80" />
                       10% off every video
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <ImageIcon className="h-3.5 w-3.5 text-green-400/60" />
+                      <ImageIcon className="h-3.5 w-3.5 text-green-400/80" />
                       Free photo enhancement
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-green-400/60" />
+                      <Clock className="h-3.5 w-3.5 text-green-400/80" />
                       Priority processing
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <ShieldCheck className="h-3.5 w-3.5 text-green-400/60" />
+                      <ShieldCheck className="h-3.5 w-3.5 text-green-400/80" />
                       Cancel anytime
                     </span>
                   </div>
@@ -296,7 +296,7 @@ export function HeroSection() {
                   >
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="h-4 w-4 text-green-400" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                      <span className="text-xs font-bold uppercase tracking-wider text-white/70">
                         Why Video Works
                       </span>
                     </div>
@@ -305,7 +305,7 @@ export function HeroSection() {
                         <p className="text-2xl font-extrabold text-green-400 sm:text-3xl">
                           403%
                         </p>
-                        <p className="mt-0.5 text-[11px] leading-tight text-white/40 sm:text-xs">
+                        <p className="mt-0.5 text-[11px] leading-tight text-white/60 sm:text-xs">
                           more inquiries
                           <br />
                           with video — NAR
@@ -315,7 +315,7 @@ export function HeroSection() {
                         <p className="text-2xl font-extrabold text-green-400 sm:text-3xl">
                           32%
                         </p>
-                        <p className="mt-0.5 text-[11px] leading-tight text-white/40 sm:text-xs">
+                        <p className="mt-0.5 text-[11px] leading-tight text-white/60 sm:text-xs">
                           faster sales with
                           <br />
                           pro photos — RESA
@@ -337,7 +337,7 @@ export function HeroSection() {
                         <p className="text-sm font-bold text-white sm:text-[0.95rem]">
                           Buy the clips once. Remix them forever.
                         </p>
-                        <p className="mt-1 text-xs leading-relaxed text-white/40 sm:text-sm sm:leading-relaxed">
+                        <p className="mt-1 text-xs leading-relaxed text-white/60 sm:text-sm sm:leading-relaxed">
                           Recut clips into Just Listed, Open House, Just Sold,
                           social teasers — unlimited times in Design Studio, no
                           extra cost.
@@ -353,12 +353,12 @@ export function HeroSection() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-white/50 sm:text-sm">
-                          <Clock className="h-3.5 w-3.5 text-green-400/70" />
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:text-sm">
+                          <Clock className="h-3.5 w-3.5 text-green-400/90" />
                           Under 12h delivery
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-white/50 sm:text-sm">
-                          <ShieldCheck className="h-3.5 w-3.5 text-green-400/70" />
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:text-sm">
+                          <ShieldCheck className="h-3.5 w-3.5 text-green-400/90" />
                           Satisfaction guarantee
                         </div>
                       </div>
@@ -377,9 +377,9 @@ export function HeroSection() {
 
         {/* ── Bottom credibility bar ── */}
         <div className="relative z-10 border-t border-white/[0.06] bg-gray-950/80 px-6 py-3 backdrop-blur-sm">
-          <p className="text-center text-sm font-medium text-white/40 sm:text-base">
+          <p className="text-center text-sm font-medium text-white/60 sm:text-base">
             Built by real estate marketers with{" "}
-            <span className="font-bold text-white/70">
+            <span className="font-bold text-white/90">
               20+ years of experience
             </span>
           </p>
