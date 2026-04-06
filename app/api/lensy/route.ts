@@ -35,21 +35,31 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Determine auth context ──────────────────────────────
-    // For tool_support and sales: user must be authenticated
-    // For buyer_facing: no auth required (public visitors), but agentUserId must be provided
+    // tool_support: user must be authenticated (subscriber)
+    // sales: works for anyone (logged in or not)
+    // buyer_facing: no auth required, but agentUserId must be provided
     let userId: string | null = null;
 
     if (mode === "buyer_facing") {
       if (!agentUserId) {
         return NextResponse.json({ error: "agentUserId is required for buyer_facing mode" }, { status: 400 });
       }
-    } else {
+    } else if (mode === "tool_support") {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       userId = user.id;
+    } else {
+      // Sales mode — try to get user but don't require it
+      try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) userId = user.id;
+      } catch {
+        // Anonymous visitor — that's fine
+      }
     }
 
     const effectiveUserId = mode === "buyer_facing" ? agentUserId : userId;
