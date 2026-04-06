@@ -239,9 +239,33 @@ export async function buildGeneralLensyContext(
       .eq("user_id", userId)
       .single();
 
-    // Get property count
-    const { count: propertyCount } = await supabase
+    // Get properties with addresses (up to 20 for context)
+    const { data: properties } = await supabase
       .from("agent_properties")
+      .select("address, city, state, status, bedrooms, bathrooms")
+      .eq("user_id", userId)
+      .is("merged_into_id", null)
+      .order("updated_at", { ascending: false })
+      .limit(20);
+
+    // Get content counts
+    const { count: descriptionCount } = await supabase
+      .from("lens_descriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: stagingCount } = await supabase
+      .from("lens_staging")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: exportCount } = await supabase
+      .from("design_exports")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: orderCount } = await supabase
+      .from("orders")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId);
 
@@ -252,7 +276,12 @@ export async function buildGeneralLensyContext(
       total_analyses: lensUsage?.total_analyses || 0,
       free_analyses_used: lensUsage?.free_analyses_used || 0,
       free_design_exports_used: lensUsage?.free_design_exports_used || 0,
-      property_count: propertyCount || 0,
+      property_count: properties?.length || 0,
+      properties: properties || [],
+      description_count: descriptionCount || 0,
+      staging_count: stagingCount || 0,
+      export_count: exportCount || 0,
+      order_count: orderCount || 0,
     };
   }
 
@@ -329,13 +358,35 @@ PROPERTY DETAILS:
 }
 
 export function buildToolSupportPrompt(userInfo: any): string {
+  // Build property list for context
+  let propertyList = "None yet";
+  if (userInfo?.properties && userInfo.properties.length > 0) {
+    propertyList = userInfo.properties.map((p: any) => {
+      let line = p.address;
+      if (p.city) line += `, ${p.city}`;
+      if (p.state) line += `, ${p.state}`;
+      if (p.bedrooms || p.bathrooms) line += ` (${p.bedrooms || "?"}bd/${p.bathrooms || "?"}ba)`;
+      if (p.status) line += ` — ${p.status}`;
+      return line;
+    }).join("\n    ");
+  }
+
   return `You are Lensy, the AI support assistant for P2V Lens subscribers. You help agents use their tools effectively.
 
 THIS USER'S ACCOUNT:
 - Subscription: ${userInfo?.is_subscriber ? `Active (${userInfo.plan_type || "Lens"})` : "Not subscribed"}${userInfo?.is_admin ? " — Admin account with unlimited access" : ""}
-- Properties in portfolio: ${userInfo?.property_count || 0}
-- Total Photo Coach analyses: ${userInfo?.total_analyses || 0}
 - All tools: unlimited access
+
+THIS USER'S CONTENT:
+- Properties in portfolio: ${userInfo?.property_count || 0}
+    ${propertyList}
+- Video orders: ${userInfo?.order_count || 0}
+- Photo Coach analyses: ${userInfo?.total_analyses || 0}
+- Descriptions written: ${userInfo?.description_count || 0}
+- Rooms staged: ${userInfo?.staging_count || 0}
+- Design exports: ${userInfo?.export_count || 0}
+
+IMPORTANT: The user HAS the content listed above. Never say they haven't created content if the counts above show otherwise. Reference their actual properties by address when relevant.
 
 PHOTO 2 VIDEO (standalone product):
 - Upload listing photos, get a cinematic walkthrough video in under 12 hours. Starting at $79.
