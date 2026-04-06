@@ -656,4 +656,386 @@ export default function SinglePropertyPage() {
         )}
 
         {/* ═══ VIDEO CLIPS — selectable, send to design studio ═══ */}
-        {orderCli
+        {orderClips.length > 0 && (
+          <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2"><Play className="h-5 w-5 text-violet-600" /><h2 className="text-lg font-bold text-foreground">Video Clips</h2><span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{orderClips.length}</span></div>
+              {selectedClips.length > 0 && <button onClick={sendClipsToDesignStudio} className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-3 py-2 rounded-lg"><PenTool className="h-3.5 w-3.5" />Design Studio ({selectedClips.length})</button>}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {orderClips.map((clip: any, i: number) => {
+                const sel = selectedClips.includes(i);
+                const selOrder = sel ? selectedClips.indexOf(i) + 1 : 0;
+                const pTh = clip.photoUrl?.includes("/upload/") ? clip.photoUrl.replace("/upload/", "/upload/w_400,h_225,c_fill/") : null;
+                const vTh = clip.clipUrl.includes("cloudinary.com") && clip.clipUrl.includes("/video/upload/") ? clip.clipUrl.replace("/video/upload/", "/video/upload/so_1,w_400,h_225,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg") : null;
+                const th = pTh || vTh;
+                return (
+                  <button key={`clip-${clip.orderId}-${clip.index}`} onClick={() => setSelectedClips(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} className={`relative rounded-xl overflow-hidden border-2 transition-all text-left ${sel ? "border-violet-500 ring-2 ring-violet-500/30" : "border-border hover:border-violet-500/40"}`}>
+                    <div className="aspect-video bg-black">{th ? <img src={th} alt={clip.description || `Clip ${i+1}`} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><Play className="h-8 w-8 text-muted-foreground/30" /></div>}</div>
+                    {sel && <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-violet-500 flex items-center justify-center text-[10px] font-bold text-white">{selOrder}</div>}
+                    {clip.camera_direction && <span className="absolute top-2 left-2 text-[8px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">{clip.camera_direction.replace(/_/g, " ")}</span>}
+                    <div className="p-2"><p className="text-[10px] font-semibold text-foreground truncate">{clip.description || `Clip ${(clip.position || i) + 1}`}</p></div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ═══ VIRTUAL STAGING — click for before/after modal ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><Sofa className="h-5 w-5 text-indigo-600" /><h2 className="text-lg font-bold text-foreground">Virtual Staging</h2>{stagings.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{stagings.length}</span>}</div>
+          </div>
+          {stagings.length === 0 ? (
+            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">Stage a room to see it here.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/staging?${qs}`}>Stage a Room</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {stagings.map((s: any) => (
+                  <button key={s.id} onClick={() => setStagingModal(s)} className="rounded-xl border border-border overflow-hidden bg-muted/30 hover:border-indigo-500/40 hover:shadow-md transition-all text-left group">
+                    <div className="grid grid-cols-2 aspect-[8/3]">
+                      <div className="relative overflow-hidden"><img src={s.original_url} alt="Before" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span></div>
+                      <div className="relative overflow-hidden"><img src={s.staged_url} alt="After" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">After</span></div>
+                    </div>
+                    <div className="p-2.5"><p className="text-xs font-semibold text-foreground">{s.room_type ? s.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Room"}</p><p className="text-[10px] text-muted-foreground">{s.style} · Click to compare</p></div>
+                  </button>
+                ))}
+              </div>
+              {isSubscriber && <div className="text-center"><Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/staging?${qs}`}>Stage Another Room</Link></Button></div>}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ DESCRIPTIONS — collapsible ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-teal-600" /><h2 className="text-lg font-bold text-foreground">Descriptions</h2>{descriptions.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{descriptions.length}</span>}</div>
+          </div>
+          {descriptions.length === 0 ? (
+            <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">Descriptions will appear here when generated.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/descriptions?${qs}`}>Write a Description</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
+          ) : (
+            <div className="space-y-3">
+              {descriptions.slice(0, 5).map((desc: any) => {
+                const isExp = expandedDesc === desc.id;
+                return (
+                  <div key={desc.id} className="p-4 rounded-xl bg-muted/30 border border-border">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-muted-foreground capitalize mb-1">{desc.style || "Professional"} style · {new Date(desc.created_at).toLocaleDateString()}</p>
+                        <p className={`text-sm text-foreground whitespace-pre-wrap ${isExp ? "" : "line-clamp-2"}`}>{desc.description}</p>
+                        {desc.description?.length > 150 && (
+                          <button onClick={() => setExpandedDesc(isExp ? null : desc.id)} className="text-xs font-semibold text-accent hover:text-accent/80 mt-1.5 flex items-center gap-1">
+                            <ChevronDown className={`h-3 w-3 transition-transform ${isExp ? "rotate-180" : ""}`} />{isExp ? "Show less" : "Read full description"}
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={() => copyToClipboard(desc.description || "", desc.id)} className="flex-shrink-0 p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground" title="Copy">
+                        {copiedId === desc.id ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ SECTION 9: PUBLISH TO WEBSITE ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Globe className="h-5 w-5 text-accent" />
+              <div>
+                <h2 className="text-xl font-extrabold text-foreground">Publish to Website</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Create a beautiful property page and choose what to show.</p>
+              </div>
+            </div>
+            {pubPublished && (
+              <a href={pubUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700">
+                <Eye className="h-3.5 w-3.5" />View Live Page
+              </a>
+            )}
+          </div>
+
+          {/* Publish toggle */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border mb-6">
+            <div>
+              <p className="text-sm font-bold text-foreground">{pubPublished ? "Website is Live" : "Website is Off"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{pubPublished ? "Visitors can see your property page." : "Toggle on to publish your property page."}</p>
+            </div>
+            <button
+              onClick={togglePublish}
+              disabled={pubSaving}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${pubPublished ? "bg-green-500" : "bg-gray-300"}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${pubPublished ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          {/* Slug */}
+          <div className="mb-6">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Page URL</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground flex-shrink-0">realestatephoto2video.com/p/</span>
+              <input
+                type="text"
+                value={pubSlug}
+                onChange={(e) => setPubSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 80))}
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
+                placeholder="123-main-st-austin-tx"
+              />
+              <button
+                onClick={() => { navigator.clipboard.writeText(`https://realestatephoto2video.com${pubUrl}`); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                title="Copy URL"
+              >
+                {slugCopied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Link2 className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Template picker */}
+          <div className="mb-6">
+            <label className="block text-xs font-semibold text-muted-foreground mb-3">Template</label>
+            <div className="grid grid-cols-3 gap-3">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setPubTemplate(t.id)}
+                  className={`rounded-xl border-2 p-4 text-left transition-all ${
+                    pubTemplate === t.id
+                      ? "border-accent ring-2 ring-accent/30"
+                      : "border-border hover:border-accent/40"
+                  }`}
+                >
+                  <div className={`h-12 rounded-lg mb-2 border ${t.colors} flex items-center justify-center`}>
+                    <span className="text-xs font-bold">Aa</span>
+                  </div>
+                  <p className="text-sm font-bold text-foreground">{t.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Module toggles */}
+          <div className="mb-6">
+            <label className="block text-xs font-semibold text-muted-foreground mb-3">Sections to Show</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Object.entries(MODULE_LABELS).map(([key, label]) => {
+                const isOn = key === "lead_capture" ? true : (pubModules[key] ?? false);
+                const isLocked = key === "lead_capture";
+                const hasContent = key === "photos" ? orderPhotos.length > 0 :
+                  key === "videos" ? videos.some((v: any) => v.delivery_url || v.unbranded_delivery_url) :
+                  key === "description" ? descriptions.length > 0 :
+                  key === "staging" ? stagings.length > 0 :
+                  key === "exports" ? exports.length > 0 :
+                  true;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (isLocked) return;
+                      setPubModules(prev => ({ ...prev, [key]: !prev[key] }));
+                    }}
+                    disabled={isLocked}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left ${
+                      isOn
+                        ? "border-accent/40 bg-accent/5"
+                        : "border-border hover:border-accent/20"
+                    } ${isLocked ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                      isOn ? "bg-accent border-accent" : "border-border"
+                    }`}>
+                      {isOn && <Check className="h-2.5 w-2.5 text-white" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground">{label}</p>
+                      {!hasContent && key !== "booking" && key !== "lead_capture" && key !== "lensy" && (
+                        <p className="text-[9px] text-muted-foreground">No content yet</p>
+                      )}
+                      {isLocked && <p className="text-[9px] text-muted-foreground">Always on</p>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Per-asset curation panels */}
+          {pubModules.photos && orderPhotos.length > 0 && (
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-foreground">Curate Photos ({(pubCurated.photos || []).length} of {curatedPhotoUrls.length} selected)</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => selectAllCurated("photos", curatedPhotoUrls)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
+                  <button onClick={() => deselectAllCurated("photos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                {orderPhotos.map((photo: any, i: number) => {
+                  const url = photo.secure_url;
+                  const isSel = (pubCurated.photos || []).includes(url);
+                  const th = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_150,h_112,c_fill/") : url;
+                  return (
+                    <button key={i} onClick={() => toggleCuratedItem("photos", url)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}>
+                      <div className="aspect-[4/3] bg-muted"><img src={th} alt="" className="w-full h-full object-cover" /></div>
+                      {isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {pubModules.videos && curatedVideoUrls.length > 0 && (
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-foreground">Curate Videos ({(pubCurated.videos || []).length} of {curatedVideoUrls.length} selected)</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => selectAllCurated("videos", curatedVideoUrls)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
+                  <button onClick={() => deselectAllCurated("videos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {videos.filter((v: any) => v.delivery_url || v.unbranded_delivery_url).map((order: any) => {
+                  const url = order.delivery_url || order.unbranded_delivery_url;
+                  const isSel = (pubCurated.videos || []).includes(url);
+                  return (
+                    <button key={order.id} onClick={() => toggleCuratedItem("videos", url)} className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? "bg-accent border-accent" : "border-border"}`}>
+                        {isSel && <Check className="h-2.5 w-2.5 text-white" />}
+                      </div>
+                      <Film className="h-4 w-4 text-cyan-600 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {pubModules.description && descriptions.length > 0 && (
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-foreground">Curate Descriptions ({(pubCurated.descriptions || []).length} of {curatedDescIds.length} selected)</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => selectAllCurated("descriptions", curatedDescIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
+                  <button onClick={() => deselectAllCurated("descriptions")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {descriptions.map((desc: any) => {
+                  const isSel = (pubCurated.descriptions || []).includes(desc.id);
+                  return (
+                    <button key={desc.id} onClick={() => toggleCuratedItem("descriptions", desc.id)} className={`flex items-start gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 ${isSel ? "bg-accent border-accent" : "border-border"}`}>
+                        {isSel && <Check className="h-2.5 w-2.5 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-foreground capitalize">{desc.style || "Professional"} style</p>
+                        <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{desc.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {pubModules.staging && stagings.length > 0 && (
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-foreground">Curate Staging ({(pubCurated.staging || []).length} of {curatedStagingIds.length} selected)</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => selectAllCurated("staging", curatedStagingIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
+                  <button onClick={() => deselectAllCurated("staging")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {stagings.map((s: any) => {
+                  const isSel = (pubCurated.staging || []).includes(s.id);
+                  return (
+                    <button key={s.id} onClick={() => toggleCuratedItem("staging", s.id)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}>
+                      <div className="aspect-[4/3] bg-muted"><img src={s.staged_url} alt="" className="w-full h-full object-cover" /></div>
+                      {isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}
+                      <div className="px-1.5 py-1 bg-card"><p className="text-[9px] font-semibold truncate">{s.room_type?.replace(/_/g, " ") || "Room"}</p></div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {pubModules.exports && exports.length > 0 && (
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-foreground">Curate Marketing Materials ({(pubCurated.exports || []).length} of {curatedExportIds.length} selected)</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => selectAllCurated("exports", curatedExportIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
+                  <button onClick={() => deselectAllCurated("exports")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {exports.map((exp: any) => {
+                  const isSel = (pubCurated.exports || []).includes(exp.id);
+                  const dl = exp.export_url || exp.overlay_video_url;
+                  let thumb: string | null = null;
+                  if (dl?.includes("cloudinary.com")) {
+                    if (exp.export_format === "mp4" || dl.match(/\.(mp4|mov|webm)$/i)) thumb = dl.replace("/video/upload/", "/video/upload/so_1,w_200,h_150,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg");
+                    else thumb = dl.includes("/upload/") ? dl.replace("/upload/", "/upload/w_200,h_150,c_fill/") : dl;
+                  }
+                  const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
+                  return (
+                    <button key={exp.id} onClick={() => toggleCuratedItem("exports", exp.id)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}>
+                      <div className="aspect-[4/3] bg-muted">
+                        {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><PenTool className="h-6 w-6 text-muted-foreground/30" /></div>}
+                      </div>
+                      {isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}
+                      <div className="px-1.5 py-1 bg-card"><p className="text-[9px] font-semibold truncate">{tl[exp.template_type] || exp.template_type}</p></div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Save + Preview */}
+          <div className="flex items-center gap-3 pt-4 border-t border-border">
+            <Button onClick={handlePublishSave} disabled={pubSaving} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
+              {pubSaving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : "Save Settings"}
+            </Button>
+            {pubSlug && (
+              <Button asChild variant="outline" className="font-bold">
+                <a href={pubUrl} target="_blank" rel="noopener noreferrer">
+                  <Eye className="h-4 w-4 mr-2" />Preview
+                </a>
+              </Button>
+            )}
+            {pubPublished && (
+              <button onClick={togglePublish} disabled={pubSaving} className="text-xs font-semibold text-red-500 hover:text-red-600 ml-auto">
+                Unpublish
+              </button>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <footer className="bg-muted/50 border-t py-8 mt-12">
+        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
+          <div className="flex justify-center gap-6 mt-2">
+            <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+            <Link href="/dashboard/properties" className="hover:text-foreground transition-colors">Properties</Link>
+            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
