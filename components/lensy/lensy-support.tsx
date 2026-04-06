@@ -4,10 +4,11 @@ import { LensyChatBase } from "./lensy-chat-base";
 
 // ============================================================
 // LENSY SUPPORT
-// Lives on: Lens dashboard (authenticated, subscribers only)
+// Lives on: Lens dashboard + any page for authenticated subscribers
 // Audience: Lens and Lens Pro subscribers
 // Purpose: Help agents use P2V tools, troubleshoot, guide
 //          workflows, assist with website builds, integrations
+// Premium feel — subscribers should feel like VIPs
 // ============================================================
 
 interface LensySupportProps {
@@ -47,18 +48,19 @@ export default function LensySupport({
     <LensyChatBase
       config={{
         variant: "support",
-        headerLabel: "Lensy — Support",
+        headerLabel: "Lensy — P2V Lens Support",
         greeting,
         suggestions,
         placeholder: "Ask me anything about P2V tools...",
-        bubbleGradient: "from-cyan-600 to-blue-600",
-        headerBg: "bg-gradient-to-r from-cyan-600 to-blue-600",
-        accentLight: "bg-cyan-50 text-cyan-700 border-cyan-200",
-        accentButton: "bg-cyan-600 hover:bg-cyan-700",
+        bubbleGradient: "from-sky-400 to-blue-500",
+        headerBg: "bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400",
+        accentLight: "bg-sky-50 text-sky-600 border-sky-200",
+        accentButton: "bg-sky-500 hover:bg-sky-600",
         apiPayload: {
           mode: "tool_support",
           propertyId: currentPropertyId,
         },
+        footerText: "P2V Lens Member Support",
         position,
         initialOpen,
       }}
