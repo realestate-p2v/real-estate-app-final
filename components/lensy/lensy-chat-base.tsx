@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageCircle,
   X,
@@ -34,6 +34,49 @@ function parseButtons(text: string): { clean: string; buttons: string[] } {
   const clean = text.replace(/\s*\[BUTTONS:\s*(.+?)\]\s*$/s, "").trim();
   const buttons = match[1].split("|").map((b) => b.trim()).filter(Boolean);
   return { clean, buttons };
+}
+
+// Render message content with clickable links
+function renderMessageContent(text: string): React.ReactNode {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) => {
+    if (urlRegex.test(part)) {
+      // Clean trailing punctuation from URL
+      const cleanUrl = part.replace(/[.,;:!?)]+$/, "");
+      const trailing = part.slice(cleanUrl.length);
+      // Show a friendly label instead of the full URL
+      let label = "here";
+      if (cleanUrl.includes("/order")) label = "Order a Video";
+      else if (cleanUrl.includes("/lens#pricing")) label = "View Pricing";
+      else if (cleanUrl.includes("/lens/coach") || cleanUrl.includes("lens/coach")) label = "Open Photo Coach";
+      else if (cleanUrl.includes("/lens/descriptions") || cleanUrl.includes("lens/descriptions")) label = "Open Description Writer";
+      else if (cleanUrl.includes("/lens/design-studio") || cleanUrl.includes("lens/design-studio")) label = "Open Design Studio";
+      else if (cleanUrl.includes("/lens/staging") || cleanUrl.includes("lens/staging")) label = "Open Virtual Staging";
+      else if (cleanUrl.includes("/properties")) label = "Open Property Portfolio";
+      else if (cleanUrl.includes("/settings")) label = "Account Settings";
+      else if (cleanUrl.includes("/lens")) label = "View P2V Lens";
+      else label = "Visit Link";
+
+      return (
+        <span key={i}>
+          <a
+            href={cleanUrl}
+            target={cleanUrl.startsWith("https://realestatephoto2video.com") ? "_self" : "_blank"}
+            rel="noopener noreferrer"
+            className="text-sky-600 hover:text-sky-700 underline underline-offset-2 font-medium"
+          >
+            {label}
+          </a>
+          {trailing}
+        </span>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
 export interface LensyChatBaseConfig {
@@ -270,7 +313,9 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
                         <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                     ) : (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {renderMessageContent(msg.content)}
+                      </p>
                     )}
                   </div>
                   {msg.role === "user" && (
