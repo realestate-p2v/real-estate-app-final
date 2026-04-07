@@ -1,4 +1,5 @@
-"use client";
+
+    "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -163,7 +164,7 @@ export default function PropertyWebsiteClient({
   curated,
   descriptions,
   stagings,
-  exports: designExports,
+  designExports,
   template,
 }: {
   property: any;
@@ -172,7 +173,7 @@ export default function PropertyWebsiteClient({
   curated: Record<string, string[]>;
   descriptions: any[];
   stagings: any[];
-  exports: any[];
+  designExports: any[];
   template: string;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -383,7 +384,7 @@ export default function PropertyWebsiteClient({
               {designExports.map((exp: any) => {
                 const dl = exp.export_url || exp.overlay_video_url;
                 const isVideo =
-                  exp.export_format === "mp4" || dl?.match(/\.(mp4|mov|webm)$/i);
+                  exp.export_format === "mp4" || (dl && /\.(mp4|mov|webm)$/i.test(dl));
                 let thumb: string | null = null;
                 if (dl?.includes("cloudinary.com")) {
                   if (isVideo) {
