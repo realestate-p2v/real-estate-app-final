@@ -265,6 +265,51 @@ export default function PropertyWebsiteClient({
               </div>
             </section>
 
+            {/* Amenities */}
+            {property.amenities && property.amenities.length > 0 && (
+              <section className="mb-12">
+                <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Amenities</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {property.amenities.map((id: string) => {
+                    const amenityMap: Record<string, { label: string; icon: string }> = {
+                      ac: { label: "A/C", icon: "❄️" },
+                      heating: { label: "Heating", icon: "🔥" },
+                      pool: { label: "Pool", icon: "🏊" },
+                      garage: { label: "Garage", icon: "🚗" },
+                      parking: { label: "Parking", icon: "🅿️" },
+                      security: { label: "Security System", icon: "🔒" },
+                      gated: { label: "Gated Community", icon: "🚧" },
+                      laundry: { label: "Laundry", icon: "👕" },
+                      dishwasher: { label: "Dishwasher", icon: "🍽️" },
+                      fireplace: { label: "Fireplace", icon: "🪵" },
+                      furnished: { label: "Furnished", icon: "🛋️" },
+                      pet_friendly: { label: "Pet Friendly", icon: "🐾" },
+                      gym: { label: "Gym", icon: "💪" },
+                      elevator: { label: "Elevator", icon: "🛗" },
+                      balcony: { label: "Balcony", icon: "🌅" },
+                      garden: { label: "Garden", icon: "🌿" },
+                      rooftop: { label: "Rooftop", icon: "🏙️" },
+                      storage: { label: "Storage", icon: "📦" },
+                      wheelchair: { label: "Wheelchair Access", icon: "♿" },
+                      solar: { label: "Solar Panels", icon: "☀️" },
+                      ev_charging: { label: "EV Charging", icon: "🔌" },
+                      smart_home: { label: "Smart Home", icon: "📱" },
+                      water_heater: { label: "Water Heater", icon: "🚿" },
+                      ceiling_fans: { label: "Ceiling Fans", icon: "🌀" },
+                    };
+                    const a = amenityMap[id];
+                    if (!a) return null;
+                    return (
+                      <div key={id} className={`flex items-center gap-2.5 px-4 py-3 rounded-xl ${t.cardBg} border ${t.border}`}>
+                        <span className="text-lg">{a.icon}</span>
+                        <span className={`text-sm font-medium ${t.text}`}>{a.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            
             {/* Description */}
             {modules.description && descriptions.length > 0 && (
               <section className="mb-12">
