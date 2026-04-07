@@ -304,10 +304,15 @@ function DesignStudioPageInner() {
       setUser(authUser);
       const admin = authUser.email === "realestatephoto2video@gmail.com";
       setIsAdmin(admin);
-      const { data } = await supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used").eq("user_id", authUser.id).single();
+      const { data } = await supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, is_subscriber, free_design_exports_used, saved_agent_name, saved_phone, saved_email, saved_company, saved_website").eq("user_id", authUser.id).single();
       if (data) {
         if (data.saved_headshot_url) { setSavedHeadshot(data.saved_headshot_url); setHeadshot(data.saved_headshot_url); setBrandHeadshot(data.saved_headshot_url); }
         if (data.saved_logo_url) { setSavedLogo(data.saved_logo_url); setLogo(data.saved_logo_url); setBrandLogo(data.saved_logo_url); }
+        if (data.saved_agent_name) { setAgentName(data.saved_agent_name); setBrandAgentName(data.saved_agent_name); }
+        if (data.saved_phone) { setPhone(data.saved_phone); setBrandPhone(data.saved_phone); }
+        if (data.saved_email) { setAgentEmail(data.saved_email); setBrandEmail(data.saved_email); }
+        if (data.saved_company) { setBrokerage(data.saved_company); setBrandBrokerage(data.saved_company); }
+        if (data.saved_website) { setBrandWebsite(data.saved_website); }
         if (admin || data.is_subscriber) setIsSubscriber(true);
         setFreeExportsUsed(data.free_design_exports_used || 0);
       }
