@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════
-// TYPES — PhotoItem interface is UNCHANGED
+// TYPES
 // ═══════════════════════════════════════════════════
 
 export interface PhotoItem {
@@ -53,6 +53,8 @@ interface PhotoUploaderProps {
   onPhotosChange: (photos: PhotoItem[] | ((prev: PhotoItem[]) => PhotoItem[])) => void;
   orientation?: string;
   onReviewConfirmed?: (confirmed: boolean) => void;
+  initialBedrooms?: number;
+  initialBathrooms?: number;
 }
 
 // ═══════════════════════════════════════════════════
@@ -111,7 +113,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
 
   const steps: UploadStep[] = [];
 
-  // Step 1 — Exterior (always)
   steps.push({
     id: "exterior",
     title: "Exterior",
@@ -121,7 +122,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     icon: Home,
   });
 
-  // Step 2 — Front Door & Entryway (always)
   steps.push({
     id: "entryway",
     title: "Front Door & Entryway",
@@ -131,7 +131,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     icon: DoorOpen,
   });
 
-  // Step 3 — Common Areas (always)
   steps.push({
     id: "common",
     title: "Common Areas",
@@ -142,7 +141,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     viewNote: viewNote,
   });
 
-  // Step 4 — Bedrooms (dynamic count)
   const bedroomLabels: string[] = [];
   for (let i = 1; i <= answers.bedrooms; i++) {
     bedroomLabels.push(i === 1 ? "Master Bedroom" : `Bedroom ${i}`);
@@ -157,7 +155,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     viewNote: viewNote,
   });
 
-  // Step 5 — Bathrooms (dynamic count)
   const bathroomLabels: string[] = [];
   for (let i = 1; i <= answers.bathrooms; i++) {
     bathroomLabels.push(i === 1 ? "Master Bath" : `Bathroom ${i}`);
@@ -171,7 +168,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     icon: Bath,
   });
 
-  // Step 6 — Special Features (only if any selected)
   const allFeatures = [
     ...answers.features,
     ...(answers.featureOther.trim() ? [answers.featureOther.trim()] : []),
@@ -187,7 +183,6 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     });
   }
 
-  // Step 7 — Backyard & Outdoor (always)
   steps.push({
     id: "backyard",
     title: "Backyard & Outdoor",
@@ -206,19 +201,13 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
 
 function getNextLabel(step: UploadStep, existingPhotosInStep: PhotoItem[]): string {
   const count = existingPhotosInStep.length;
-
-  // If we have predefined labels and haven't exceeded them, use the next one
   if (count < step.defaultLabels.length) {
     return step.defaultLabels[count];
   }
-
-  // Beyond predefined labels: use step title + number
-  // e.g., "Common Areas 5", "Exterior 4"
   const baseLabel = step.defaultLabels.length > 0 ? step.defaultLabels[0] : step.title;
   return `${baseLabel} ${count + 1}`;
 }
 
-// When multiple photos are added at once, generate labels for all of them
 function getLabelsForBatch(step: UploadStep, existingPhotosInStep: PhotoItem[], batchSize: number): string[] {
   const labels: string[] = [];
   const existingCount = existingPhotosInStep.length;
@@ -228,8 +217,6 @@ function getLabelsForBatch(step: UploadStep, existingPhotosInStep: PhotoItem[], 
     if (totalIndex < step.defaultLabels.length) {
       labels.push(step.defaultLabels[totalIndex]);
     } else {
-      // Auto-number: "Kitchen 1", "Kitchen 2" etc.
-      // But only number if there will be more than one with that base label
       const baseLabel = step.defaultLabels.length > 0 ? step.defaultLabels[0] : step.title;
       labels.push(`${baseLabel} ${totalIndex + 1}`);
     }
@@ -238,9 +225,8 @@ function getLabelsForBatch(step: UploadStep, existingPhotosInStep: PhotoItem[], 
   return labels;
 }
 
-
 // ═══════════════════════════════════════════════════
-// CROP PREVIEW — PRESERVED EXACTLY FROM ORIGINAL
+// CROP PREVIEW
 // ═══════════════════════════════════════════════════
 
 function CropPreview({
@@ -368,49 +354,37 @@ function CropPreview({
   );
 }
 
-
 // ═══════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════
 
-export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape", onReviewConfirmed }: PhotoUploaderProps) {
-  // ── Flow state (no review phase — order form's Sequence step handles that) ──
+export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape", onReviewConfirmed, initialBedrooms, initialBathrooms }: PhotoUploaderProps) {
   const [phase, setPhase] = useState<'questionnaire' | 'guided'>(
     photos.length > 0 ? 'guided' : 'questionnaire'
   );
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
-  // ── Questionnaire state ──
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({
-    bedrooms: 3,
-    bathrooms: 2,
+    bedrooms: initialBedrooms || 3,
+    bathrooms: initialBathrooms || 2,
     features: [],
     featureOther: "",
     views: [],
     viewOther: "",
   });
 
-  // ── Upload steps (built from questionnaire) ──
   const [uploadSteps, setUploadSteps] = useState<UploadStep[]>([]);
-
-  // ── Track which photos belong to which step ──
-  // Maps step.id → array of photo IDs in that step
   const [stepPhotoIds, setStepPhotoIds] = useState<Record<string, string[]>>({});
-
-  // ── UI state ──
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
 
-  // ── Current step ──
   const currentStep = uploadSteps[currentStepIndex] || null;
 
-  // ── Photos for current step ──
   const currentStepPhotos = useMemo(() => {
     if (!currentStep) return [];
     const ids = stepPhotoIds[currentStep.id] || [];
     return ids.map(id => photos.find(p => p.id === id)).filter(Boolean) as PhotoItem[];
   }, [currentStep, stepPhotoIds, photos]);
 
-  // ── Resize image to max 1920px — PRESERVED EXACTLY ──
   const resizeForUpload = (file: File): Promise<Blob> => {
     return new Promise((resolve) => {
       const img = document.createElement('img');
@@ -456,7 +430,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     });
   };
 
-  // ── File validation + upload — adapted for guided flow ──
   const handleFilesForStep = useCallback(
     async (files: File[], step: UploadStep) => {
       const validFiles: { file: File; width: number; height: number }[] = [];
@@ -486,7 +459,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
 
       if (validFiles.length === 0) return;
 
-      // Get current photos in this step for label generation
       const currentIds = stepPhotoIds[step.id] || [];
       const currentStepPhotosList = currentIds.map(id => photos.find(p => p.id === id)).filter(Boolean) as PhotoItem[];
       const labels = getLabelsForBatch(step, currentStepPhotosList, validFiles.length);
@@ -503,18 +475,15 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
         original_height: height,
       }));
 
-      // Update step tracking
       const newIds = newPhotos.map(p => p.id);
       setStepPhotoIds(prev => ({
         ...prev,
         [step.id]: [...(prev[step.id] || []), ...newIds],
       }));
 
-      // Update flat photos array
       const allPhotos = [...photos, ...newPhotos];
       onPhotosChange(allPhotos);
 
-      // Upload each to Cloudinary
       newPhotos.forEach(async (photo) => {
         try {
           const sigResponse = await fetch("/api/cloudinary-signature", {
@@ -565,27 +534,23 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange, stepPhotoIds]
   );
 
-  // ── File input handler for current step ──
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!currentStep) return;
       const files = Array.from(e.target.files || []);
       if (files.length === 0) return;
       await handleFilesForStep(files, currentStep);
-      // Reset input so the same file can be re-selected
       e.target.value = "";
     },
     [currentStep, handleFilesForStep]
   );
 
-  // ── Remove photo ──
   const handleRemove = useCallback(
     (id: string) => {
       const photo = photos.find((p) => p.id === id);
       if (photo?.preview && photo.preview.startsWith('blob:')) URL.revokeObjectURL(photo.preview);
       onPhotosChange(photos.filter((p) => p.id !== id));
 
-      // Remove from step tracking
       setStepPhotoIds(prev => {
         const updated = { ...prev };
         for (const stepId of Object.keys(updated)) {
@@ -597,7 +562,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange]
   );
 
-  // ── Description change ──
   const handleDescriptionChange = useCallback(
     (id: string, description: string) => {
       if (description.length <= 30) {
@@ -607,7 +571,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange]
   );
 
-  // ── Crop offset change ──
   const handleCropOffsetChange = useCallback(
     (id: string, aspect: 'landscape' | 'vertical', value: number) => {
       const key = aspect === 'landscape' ? 'crop_offset_landscape' : 'crop_offset_vertical';
@@ -616,7 +579,6 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     [photos, onPhotosChange]
   );
 
-  // ── Crop orientation check — PRESERVED EXACTLY ──
   const needsCropForOrientation = (photo: PhotoItem, orient: string) => {
     if (!photo.original_width || !photo.original_height) return false;
     const ratio = photo.original_width / photo.original_height;
@@ -629,18 +591,13 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     return false;
   };
 
-  // ── Notify parent when photos are ready (all uploaded) ──
-  // The order form uses this to show/hide its Continue button
   const allUploadsComplete = photos.length > 0 && photos.every((p) => p.uploadStatus === 'complete');
   const isOnLastStep = uploadSteps.length > 0 && currentStepIndex === uploadSteps.length - 1;
   const isDraftRestore = photos.length > 0 && uploadSteps.length === 0;
   React.useEffect(() => {
-    // Draft restore: photos exist but no guided steps built — signal ready immediately
-    // Normal flow: only signal ready when agent has reached the last upload step
     onReviewConfirmed?.(allUploadsComplete && (isOnLastStep || isDraftRestore));
   }, [allUploadsComplete, isOnLastStep, isDraftRestore, onReviewConfirmed]);
 
-  // ── Start guided flow from questionnaire ──
   const handleStartGuided = () => {
     const steps = buildUploadSteps(answers);
     setUploadSteps(steps);
@@ -648,13 +605,11 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     setPhase('guided');
   };
 
-  // ── Navigate steps ──
   const goToNextStep = () => {
     if (currentStepIndex < uploadSteps.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
       setOpenCropIndex(null);
     }
-    // Last step: do nothing — agent uses order form's Continue button
   };
 
   const goToPrevStep = () => {
@@ -664,14 +619,11 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     }
   };
 
-  // ── Warning ──
   const showTooManyPhotosWarning = photos.length > 35;
-
-  // ── Total photo count ──
   const totalPhotoCount = photos.length;
 
   // ═══════════════════════════════════════════════════
-  // RENDER — PHASE 1: QUESTIONNAIRE
+  // RENDER — QUESTIONNAIRE
   // ═══════════════════════════════════════════════════
 
   if (phase === 'questionnaire') {
@@ -818,7 +770,7 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   }
 
   // ═══════════════════════════════════════════════════
-  // RENDER — PHASE 2: GUIDED UPLOAD STEPS
+  // RENDER — GUIDED UPLOAD STEPS
   // ═══════════════════════════════════════════════════
 
   if (phase === 'guided' && currentStep) {
@@ -1093,7 +1045,5 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     );
   }
 
-  // If we somehow get here (e.g., restored draft with photos but no steps built),
-  // show the questionnaire so the agent can set up their steps
   return null;
 }
