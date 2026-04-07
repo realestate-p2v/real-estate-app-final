@@ -13,13 +13,13 @@ const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 /* Avatar ring-pulse animation — fires every 15s */
 const navStyles = `
   @keyframes avatar-ring-pulse {
-    0%, 90%  { box-shadow: 0 0 0 0 transparent; }
-    93%      { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.6); }
-    96%      { box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.3); }
+    0%, 80%  { box-shadow: 0 0 0 0 transparent; }
+    87%      { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.6); }
+    93%      { box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.3); }
     100%     { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0); }
   }
   .avatar-ring-hint {
-    animation: avatar-ring-pulse 15s ease-in-out infinite;
+    animation: avatar-ring-pulse 7s ease-in-out infinite;
   }
 `;
 
