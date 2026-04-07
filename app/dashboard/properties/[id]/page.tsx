@@ -189,6 +189,9 @@ export default function SinglePropertyPage() {
 
   const supabase = createClient();
 
+  // Ref for scrolling to publish section
+  const publishSectionRef = useRef<HTMLDivElement>(null);
+
   const buildPropertyParams = (prop: Property) => {
     const p = new URLSearchParams();
     p.set("propertyId", prop.id);
@@ -384,6 +387,13 @@ export default function SinglePropertyPage() {
 
   const pubUrl = `/p/${pubSlug}`;
 
+  // Hero thumbnail for the website preview banner
+  const heroThumb = orderPhotos[0]?.secure_url
+    ? (orderPhotos[0].secure_url.includes("/upload/")
+        ? orderPhotos[0].secure_url.replace("/upload/", "/upload/w_800,h_450,c_fill,q_auto/")
+        : orderPhotos[0].secure_url)
+    : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -459,8 +469,84 @@ export default function SinglePropertyPage() {
           </div>
         </div>
 
+        {/* ═══ PROPERTY WEBSITE PREVIEW BANNER ═══ */}
+        {pubPublished ? (
+          <div className="mt-6 mb-8 rounded-2xl border border-border overflow-hidden bg-card hover:border-accent/40 hover:shadow-lg transition-all">
+            <a href={pubUrl} target="_blank" rel="noopener noreferrer" className="block">
+              <div className="relative h-48 sm:h-56 bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
+                {heroThumb ? (
+                  <img src={heroThumb} alt={property.address} className="w-full h-full object-cover opacity-90" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Globe className="h-16 w-16 text-white/10" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute top-4 left-4">
+                  <span className="text-green-400 bg-green-400/20 backdrop-blur-sm text-xs font-bold px-3 py-1 rounded-full border border-green-400/30">
+                    ● Live
+                  </span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+                  <p className="text-white/70 text-xs font-medium mb-1">Your Property Website</p>
+                  <p className="text-white text-xl sm:text-2xl font-extrabold">{property.address}</p>
+                  <p className="text-white/60 text-sm mt-1 truncate">realestatephoto2video.com{pubUrl}</p>
+                </div>
+              </div>
+            </a>
+            <div className="px-5 py-3 flex items-center justify-between border-t border-border">
+              <div className="flex items-center gap-3">
+                <a
+                  href={pubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2 rounded-full transition-colors"
+                >
+                  <Eye className="h-4 w-4" />
+                  View Live Page
+                </a>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(`https://realestatephoto2video.com${pubUrl}`); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {slugCopied ? <><CheckCircle className="h-3.5 w-3.5 text-green-500" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy Link</>}
+                </button>
+              </div>
+              <button
+                onClick={() => publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Edit Settings →
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="w-full mt-6 mb-8 rounded-2xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all p-6 sm:p-8 text-left group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
+                <Globe className="h-7 w-7 text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg font-extrabold text-foreground">Create Your Property Website</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Build a beautiful listing page with photos, videos, staging, and lead capture — ready to share in minutes.
+                </p>
+              </div>
+              <div className="hidden sm:block flex-shrink-0">
+                <span className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2.5 rounded-full">
+                  Get Started
+                  <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                </span>
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2 mt-6 mb-8">
+        <div className="flex flex-wrap gap-2 mb-8">
           <QuickAction href={`/order?${qs}`} icon={Film} label="Order Video" />
           <QuickAction href={`/dashboard/lens/coach?${qs}`} icon={Camera} label="Photo Coach" requiresSub />
           <QuickAction href={`/dashboard/lens/descriptions?${qs}`} icon={FileText} label="Write Description" requiresSub />
@@ -742,7 +828,7 @@ export default function SinglePropertyPage() {
         </section>
 
         {/* ═══ SECTION 9: PUBLISH TO WEBSITE ═══ */}
-        <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
+        <section ref={publishSectionRef} className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Globe className="h-5 w-5 text-accent" />
