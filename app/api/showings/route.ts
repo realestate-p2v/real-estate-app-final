@@ -67,11 +67,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Create in-app notification for the agent
+    // Create in-app notification for the agent
+    const fallbackMsg = "I'd like to learn more about this property.";
     await createNotification({
       userId: agentId,
       type: "showing_request",
-      title: "New Inquiry",
-      message: `${visitorName} sent a message about ${propertyAddress || "your property"}`,
+      title: `New Inquiry — ${propertyAddress || "Your Property"}`,
+      message: `From: ${visitorName}\nEmail: ${visitorEmail}${visitorPhone ? `\nPhone: ${visitorPhone}` : ""}\n\n${message || fallbackMsg}`,
       link: `/dashboard/properties`,
       metadata: {
         propertyId,
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
         visitorEmail,
         visitorPhone,
         propertyAddress,
+        message: message || null,
       },
     });
 
