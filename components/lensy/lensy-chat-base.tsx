@@ -6,7 +6,6 @@ import {
   X,
   Send,
   Sparkles,
-  Calendar,
   ChevronDown,
   Loader2,
   User,
@@ -27,29 +26,49 @@ export interface ChatMessage {
   buttons?: string[]; // Parsed from [BUTTONS: a | b | c] in AI response
 }
 
-// Parse [BUTTONS: opt1 | opt2 | opt3] from AI response (anywhere in the text, usually at the end)
+// Parse [BUTTONS: opt1 | opt2 | opt3] from AI response
+// Handles: case variations, extra whitespace, newlines, trailing text after tag
 function parseButtons(text: string): { clean: string; buttons: string[] } {
-  const match = text.match(/\[BUTTONS:\s*(.+?)\]\s*$/s);
-  if (!match) return { clean: text, buttons: [] };
-  const clean = text.replace(/\s*\[BUTTONS:\s*(.+?)\]\s*$/s, "").trim();
-  const buttons = match[1].split("|").map((b) => b.trim()).filter(Boolean);
-  return { clean, buttons };
+  const patterns = [
+    /\[BUTTONS:\s*(.+?)\]\s*$/si,   // Standard — end of message (case-insensitive)
+    /\[BUTTONS:\s*(.+?)\]/si,       // Anywhere in message
+  ];
+
+  for (const pattern of patterns) {
+    // Find the LAST match in case there are multiple
+    const allMatches = [...text.matchAll(new RegExp(pattern.source, pattern.flags + "g"))];
+    const match = allMatches[allMatches.length - 1];
+    if (match) {
+      const clean = text.replace(match[0], "").trim();
+      const buttons = match[1]
+        .split("|")
+        .map((b) => b.trim())
+        .filter((b) => b.length > 0 && b.length < 60);
+      if (buttons.length >= 2 && buttons.length <= 6) {
+        return { clean, buttons };
+      }
+    }
+  }
+
+  return { clean: text, buttons: [] };
 }
 
 // Render message content with clickable links
+// NOTE: We avoid using regex.test() with a global regex to prevent lastIndex bugs.
 function renderMessageContent(text: string): React.ReactNode {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
+  // Split on URLs — non-global split avoids the lastIndex gotcha
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
 
   if (parts.length === 1) return text;
 
   return parts.map((part, i) => {
-    if (urlRegex.test(part)) {
+    // Check if this part looks like a URL (starts with http)
+    if (/^https?:\/\//.test(part)) {
       // Clean trailing punctuation from URL
       const cleanUrl = part.replace(/[.,;:!?)]+$/, "");
       const trailing = part.slice(cleanUrl.length);
       // Show a friendly label instead of the full URL
-      let label = "here";
+      let label = "Visit Link";
       if (cleanUrl.includes("/order")) label = "Order a Video";
       else if (cleanUrl.includes("/lens#pricing")) label = "View Pricing";
       else if (cleanUrl.includes("/lens/coach") || cleanUrl.includes("lens/coach")) label = "Open Photo Coach";
@@ -59,17 +78,21 @@ function renderMessageContent(text: string): React.ReactNode {
       else if (cleanUrl.includes("/properties")) label = "Open Property Portfolio";
       else if (cleanUrl.includes("/settings")) label = "Account Settings";
       else if (cleanUrl.includes("/lens")) label = "View P2V Lens";
-      else label = "Visit Link";
 
       return (
         <span key={i}>
           <a
             href={cleanUrl}
-            target={cleanUrl.startsWith("https://realestatephoto2video.com") ? "_self" : "_blank"}
+            target={cleanUrl.includes("realestatephoto2video.com") ? "_self" : "_blank"}
             rel="noopener noreferrer"
-            className="text-sky-600 hover:text-sky-700 underline underline-offset-2 font-medium"
+            className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-500 underline underline-offset-2 decoration-sky-400/40 hover:decoration-sky-500/60 font-medium transition-colors"
           >
             {label}
+            {!cleanUrl.includes("realestatephoto2video.com") && (
+              <svg className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            )}
           </a>
           {trailing}
         </span>
@@ -265,7 +288,18 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
               </div>
               <div>
                 <p className="text-white font-semibold text-sm leading-tight">{config.headerLabel}</p>
-                <p className="text-white/70 text-[11px]">{isStreaming ? "Typing..." : "Online"}</p>
+                <p className="text-white/70 text-[11px]">
+                  {isStreaming ? (
+                    <span className="inline-flex items-center gap-1">
+                      Typing
+                      <span className="inline-flex gap-0.5">
+                        <span className="animate-bounce inline-block" style={{ animationDelay: "0ms", animationDuration: "1s" }}>.</span>
+                        <span className="animate-bounce inline-block" style={{ animationDelay: "200ms", animationDuration: "1s" }}>.</span>
+                        <span className="animate-bounce inline-block" style={{ animationDelay: "400ms", animationDuration: "1s" }}>.</span>
+                      </span>
+                    </span>
+                  ) : "Online"}
+                </p>
               </div>
             </div>
             <button
@@ -280,7 +314,7 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
           <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-background/50">
             {/* Greeting */}
             {messages.length === 0 && (
-              <div className="flex gap-2.5">
+              <div className="flex gap-2.5" style={{ animation: "lensyFadeIn 0.4s ease-out" }}>
                 <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 mt-0.5">
                   <Bot className="h-3.5 w-3.5 text-white" />
                 </div>
@@ -324,16 +358,19 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
                     </div>
                   )}
                 </div>
-                {/* Tappable buttons parsed from AI response */}
+                {/* Tappable buttons parsed from AI response — staggered fade-in */}
                 {msg.buttons && msg.buttons.length > 0 && !isStreaming && (
-                  <div className="flex gap-2.5 mt-2">
+                  <div className="flex gap-2.5 mt-2.5">
                     <div className="w-7 shrink-0" />
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {msg.buttons.map((btn, j) => (
                         <button
                           key={j}
                           onClick={() => sendMessage(btn)}
-                          className={`text-xs px-3.5 py-2 rounded-xl border font-medium transition-all hover:scale-[1.02] active:scale-[0.98] ${config.accentLight} hover:opacity-80`}
+                          className={`text-sm px-4 py-2.5 rounded-xl border font-medium shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.03] active:scale-[0.97] ${config.accentLight} hover:opacity-90`}
+                          style={{
+                            animation: `lensyButtonIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${j * 80}ms both`,
+                          }}
                         >
                           {btn}
                         </button>
@@ -362,7 +399,10 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
                 <button
                   key={i}
                   onClick={() => sendMessage(s)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${config.accentLight} hover:opacity-80`}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-all duration-200 hover:shadow-sm ${config.accentLight} hover:opacity-80`}
+                  style={{
+                    animation: `lensyButtonIn 0.3s ease-out ${i * 50 + 200}ms both`,
+                  }}
                 >
                   {s}
                 </button>
@@ -380,7 +420,7 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
                 onKeyDown={handleKeyDown}
                 placeholder={config.placeholder}
                 rows={1}
-                className="flex-1 resize-none bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent max-h-24"
+                className="flex-1 resize-none bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent max-h-24 transition-shadow"
                 style={{ minHeight: "36px" }}
                 onInput={(e) => {
                   const el = e.target as HTMLTextAreaElement;
@@ -391,9 +431,9 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isStreaming}
-                className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-200 shrink-0 ${
                   input.trim() && !isStreaming
-                    ? `${config.accentButton} text-white shadow-md`
+                    ? `${config.accentButton} text-white shadow-md hover:shadow-lg hover:scale-105`
                     : "bg-muted text-muted-foreground"
                 }`}
               >
@@ -413,7 +453,7 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
         className={`fixed bottom-4 sm:bottom-6 ${positionClass} z-50 h-14 w-14 rounded-full bg-gradient-to-br ${config.bubbleGradient} text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center group`}
       >
         {isOpen ? (
-          <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
+          <X className="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
         ) : (
           <>
             <MessageCircle className="h-5 w-5" />
@@ -427,6 +467,14 @@ export function LensyChatBase({ config }: { config: LensyChatBaseConfig }) {
       <style jsx global>{`
         @keyframes lensySlideUp {
           from { opacity: 0; transform: translateY(16px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes lensyFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lensyButtonIn {
+          from { opacity: 0; transform: translateY(8px) scale(0.92); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
