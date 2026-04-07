@@ -122,8 +122,7 @@ export default function AgentProfilePage() {
     setSaving(true);
     setSaved(false);
 
-    const { error } = await supabase.from("lens_usage").upsert({
-      user_id: userId,
+    const updates = {
       saved_agent_name: agentName.trim() || null,
       saved_phone: phone.trim() || null,
       saved_email: email.trim() || null,
@@ -132,7 +131,28 @@ export default function AgentProfilePage() {
       saved_location: location.trim() || null,
       saved_headshot_url: headshot,
       saved_logo_url: logo,
-    }, { onConflict: "user_id" });
+    };
+
+    // Try update first (row already exists from initial load or other tools)
+    const { data: existing } = await supabase
+      .from("lens_usage")
+      .select("user_id")
+      .eq("user_id", userId)
+      .single();
+
+    let error;
+    if (existing) {
+      const result = await supabase
+        .from("lens_usage")
+        .update(updates)
+        .eq("user_id", userId);
+      error = result.error;
+    } else {
+      const result = await supabase
+        .from("lens_usage")
+        .insert({ user_id: userId, ...updates });
+      error = result.error;
+    }
 
     if (error) {
       alert("Failed to save: " + error.message);
@@ -150,10 +170,9 @@ export default function AgentProfilePage() {
       setHeadshot(url);
       // Save immediately
       if (userId) {
-        await supabase.from("lens_usage").upsert(
-          { user_id: userId, saved_headshot_url: url },
-          { onConflict: "user_id" }
-        );
+        await supabase.from("lens_usage")
+          .update({ saved_headshot_url: url })
+          .eq("user_id", userId);
       }
     }
     setUploadingHeadshot(false);
@@ -165,10 +184,9 @@ export default function AgentProfilePage() {
     if (url) {
       setLogo(url);
       if (userId) {
-        await supabase.from("lens_usage").upsert(
-          { user_id: userId, saved_logo_url: url },
-          { onConflict: "user_id" }
-        );
+        await supabase.from("lens_usage")
+          .update({ saved_logo_url: url })
+          .eq("user_id", userId);
       }
     }
     setUploadingLogo(false);
@@ -178,10 +196,9 @@ export default function AgentProfilePage() {
     if (!userId) return;
     setDeletingCard(index);
     const updated = brandingCards.filter((_, i) => i !== index);
-    const { error } = await supabase.from("lens_usage").upsert(
-      { user_id: userId, saved_branding_cards: updated },
-      { onConflict: "user_id" }
-    );
+    const { error } = await supabase.from("lens_usage")
+      .update({ saved_branding_cards: updated })
+      .eq("user_id", userId);
     if (!error) setBrandingCards(updated);
     setDeletingCard(null);
   };
