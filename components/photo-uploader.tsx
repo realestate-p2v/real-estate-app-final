@@ -373,6 +373,19 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
     viewOther: "",
   });
 
+  // Update answers if initial values arrive after first render
+  useEffect(() => {
+    if (initialBedrooms && initialBedrooms !== answers.bedrooms) {
+      setAnswers(prev => ({ ...prev, bedrooms: initialBedrooms }));
+    }
+  }, [initialBedrooms]);
+
+  useEffect(() => {
+    if (initialBathrooms && initialBathrooms !== answers.bathrooms) {
+      setAnswers(prev => ({ ...prev, bathrooms: initialBathrooms }));
+    }
+  }, [initialBathrooms]);
+  
   const [uploadSteps, setUploadSteps] = useState<UploadStep[]>([]);
   const [stepPhotoIds, setStepPhotoIds] = useState<Record<string, string[]>>({});
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
