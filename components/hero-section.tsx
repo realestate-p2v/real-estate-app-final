@@ -100,6 +100,8 @@ export function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+
     const init = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
       const {
@@ -116,13 +118,21 @@ export function HeroSection() {
             "",
         });
 
-        const { data: usage } = await supabase
-          .from("lens_usage")
-          .select("is_subscriber")
-          .eq("user_id", user.id)
-          .single();
+        const isAdmin = user.email && ADMIN_EMAILS.includes(user.email);
+        let isSub = false;
 
-        if (usage?.is_subscriber) {
+        if (isAdmin) {
+          isSub = true;
+        } else {
+          const { data: usage } = await supabase
+            .from("lens_usage")
+            .select("is_subscriber")
+            .eq("user_id", user.id)
+            .single();
+          if (usage?.is_subscriber) isSub = true;
+        }
+
+        if (isSub) {
           setIsSubscriber(true);
 
           // Fetch recent properties for Mission Control
