@@ -151,7 +151,7 @@ export default function PropertyWebsiteClient({
         <div className="absolute top-0 left-0 right-0 p-4 sm:p-6 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             {agent?.saved_logo_url ? (
-              <img src={agent.saved_logo_url} alt={agentName} className="h-8 object-contain brightness-0 invert" />
+             <img src={agent.saved_logo_url} alt={agentName} className="h-8 object-contain drop-shadow-md" />
             ) : agentName ? (
               <span className="text-white/90 text-sm font-semibold">{agentName}</span>
             ) : null}
