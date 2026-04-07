@@ -23,7 +23,7 @@ async function getPropertyData(slug: string) {
   const { data: agent } = await supabase
     .from("lens_usage")
     .select(
-      "saved_agent_name, saved_phone, saved_email, saved_company, saved_logo_url, saved_headshot_url"
+      "saved_agent_name, saved_phone, saved_email, saved_company, saved_logo_url, saved_headshot_url, saved_branding_cards"
     )
     .eq("user_id", property.user_id)
     .single();
