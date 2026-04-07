@@ -234,11 +234,26 @@ export function OrderForm() {
     notes: "",
   });
 
-  const [propertyAddress, setPropertyAddress] = useState("");
-  const [propertyCity, setPropertyCity] = useState("");
-  const [propertyState, setPropertyState] = useState("");
-  const [propertyBedrooms, setPropertyBedrooms] = useState("");
-  const [propertyBathrooms, setPropertyBathrooms] = useState("");
+  const [propertyAddress, setPropertyAddress] = useState(() => {
+  if (typeof window !== "undefined") return new URLSearchParams(window.location.search).get("address")?.replace(/\+/g, " ") || "";
+  return "";
+});
+  const [propertyCity, setPropertyCity] = useState(() => {
+  if (typeof window !== "undefined") return new URLSearchParams(window.location.search).get("city")?.replace(/\+/g, " ") || "";
+  return "";
+});
+  const [propertyState, setPropertyState] = useState(() => {
+  if (typeof window !== "undefined") return new URLSearchParams(window.location.search).get("state")?.replace(/\+/g, " ") || "";
+  return "";
+});
+  const [propertyBedrooms, setPropertyBedrooms] = useState(() => {
+  if (typeof window !== "undefined") return new URLSearchParams(window.location.search).get("beds") || "";
+  return "";
+});
+  const [propertyBathrooms, setPropertyBathrooms] = useState(() => {
+  if (typeof window !== "undefined") return new URLSearchParams(window.location.search).get("baths") || "";
+  return "";
+});
   const [includeAddressOnCard, setIncludeAddressOnCard] = useState(true);
 
   // ── Subscriber check ──
@@ -276,23 +291,6 @@ export function OrderForm() {
       }
     };
     checkSub();
-  }, []);
- 
-  // Read property details from URL query params
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const addr = params.get("address");
-      const city = params.get("city");
-      const state = params.get("state");
-      const beds = params.get("beds");
-      const baths = params.get("baths");
-      if (addr && !propertyAddress) setPropertyAddress(addr);
-      if (city && !propertyCity) setPropertyCity(city);
-      if (state && !propertyState) setPropertyState(state);
-      if (beds && !propertyBedrooms) setPropertyBedrooms(beds);
-      if (baths && !propertyBathrooms) setPropertyBathrooms(baths);
-    } catch {}
   }, []);
 
   // Read property details from URL query params
