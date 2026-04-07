@@ -547,7 +547,9 @@ export default function SinglePropertyPage() {
 
         {/* Quick Actions */}
         <div className="flex flex-wrap gap-2 mb-8">
-          <QuickAction href={`/order?${qs}`} icon={Film} label="Order Video" />
+          <a href={`/order?${qs}`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-sm font-semibold text-accent hover:bg-accent/20 transition-all">
+  <Film className="h-3.5 w-3.5" />Order Video
+</a>
           <QuickAction href={`/dashboard/lens/coach?${qs}`} icon={Camera} label="Photo Coach" requiresSub />
           <QuickAction href={`/dashboard/lens/descriptions?${qs}`} icon={FileText} label="Write Description" requiresSub />
           <QuickAction href={`/dashboard/lens/staging?${qs}`} icon={Sofa} label="Stage Room" requiresSub />
