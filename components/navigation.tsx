@@ -269,7 +269,8 @@ export function Navigation() {
                         </Link>
                       )}
                       <Link href="/dashboard" onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <LayoutDashboard className="h-3.5 w-3.5 text-muted-foreground" />
                         My Dashboard
                       </Link>
                       <Link href="/dashboard/profile" onClick={() => setShowDropdown(false)}
@@ -283,19 +284,23 @@ export function Navigation() {
                         My Properties
                       </Link>
                       <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <Video className="h-3.5 w-3.5 text-muted-foreground" />
                         My Videos
                       </Link>
                       <Link href="/dashboard/drafts" onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                         Saved Drafts
                       </Link>
                       <Link href="/directory/edit" onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <Camera className="h-3.5 w-3.5 text-muted-foreground" />
                         My Directory Listing
                       </Link>
                       <Link href="/dashboard/settings" onClick={() => setShowDropdown(false)}
-                        className="block px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <Settings className="h-3.5 w-3.5 text-muted-foreground" />
                         Account Settings
                       </Link>
                       <button onClick={handleSignOut}
