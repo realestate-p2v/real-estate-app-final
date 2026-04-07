@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MapPin } from "lucide-react";
 import { BookingCalendar } from "@/components/booking-calendar";
+import { ShowingRequestForm } from "@/components/showing-request-form";
 
 export default function PropertyWebsiteClient({
   property, agent, modules, curated, descriptions, stagings, exports: designExports, template,
@@ -55,6 +56,23 @@ export default function PropertyWebsiteClient({
         <div className="mt-12">
           <h2 className="text-2xl font-extrabold text-gray-900 mb-4">Schedule a Showing</h2>
           <BookingCalendar propertyId={property.id} mode="book" agentName={agentName} />
+        </div>
+
+        <div className="mt-12">
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-4">Request a Showing</h2>
+          <ShowingRequestForm
+            propertyId={property.id}
+            propertyInfo={{
+              address: property.address,
+              bedrooms: property.bedrooms,
+              bathrooms: property.bathrooms,
+              price: property.price,
+              status: property.status,
+            }}
+            agentUserId={property.user_id}
+            agentName={agentName}
+            source="property_website"
+          />
         </div>
 
         {agentName && <p className="mt-8 text-sm text-gray-500">Listed by {agentName}</p>}
