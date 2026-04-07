@@ -325,8 +325,8 @@ export default function PropertyWebsiteClient({
             )}
           </div>
 
-          {/* ═══ RIGHT COLUMN (30%) — Sticky sidebar ═══ */}
-          <div className="lg:w-[340px] flex-shrink-0">
+          {/* ═══ RIGHT COLUMN (35%) — Sticky sidebar ═══ */}
+          <div className="lg:w-[380px] flex-shrink-0">
             <div className="lg:sticky lg:top-20 space-y-5">
 
               {/* Branding Card */}
@@ -340,7 +340,8 @@ export default function PropertyWebsiteClient({
                 </div>
               )}
 
-              {/* Agent Card */}
+              {/* Agent Card — hidden when branding card is shown */}
+              {!(agent?.saved_branding_cards && Array.isArray(agent.saved_branding_cards) && agent.saved_branding_cards.length > 0) && (
               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-5`}>
                 <div className="flex items-start gap-3.5 mb-4">
                   {agent?.saved_headshot_url ? (
@@ -368,6 +369,7 @@ export default function PropertyWebsiteClient({
                   )}
                 </div>
               </div>
+              )}
 
               {/* Booking Calendar */}
               {hasBooking && (
