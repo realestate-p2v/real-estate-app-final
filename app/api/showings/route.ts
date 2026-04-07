@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       .from("showing_requests")
       .insert({
         property_id: propertyId,
-        agent_id: agentId,
+        agent_user_id: agentId,
         visitor_name: visitorName,
         visitor_email: visitorEmail,
         visitor_phone: visitorPhone || null,
