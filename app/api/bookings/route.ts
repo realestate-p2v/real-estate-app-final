@@ -262,13 +262,41 @@ export async function PATCH(req: NextRequest) {
         );
       }
 
+      // Get property address for notification context
+      const { data: propData } = await admin
+        .from("agent_properties")
+        .select("address, id")
+        .eq("id", slot.property_id)
+        .single();
+
+      // Format time for display
+      const [h, m] = slot.slot_time.split(":").map(Number);
+      const ampm = h < 12 ? "AM" : "PM";
+      const displayTime = `${h % 12 || 12}:${m.toString().padStart(2, "0")} ${ampm}`;
+      const displayDate = new Date(slot.slot_date + "T12:00:00").toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+
+      // Build structured message with contact info
+      const messageParts = [
+        `From: ${visitorName}`,
+        visitorEmail ? `Email: ${visitorEmail}` : null,
+        visitorPhone ? `Phone: ${visitorPhone}` : null,
+        ``,
+        `Showing: ${displayDate} at ${displayTime}`,
+        propData?.address ? `Property: ${propData.address}` : null,
+        notes ? `\n${notes}` : null,
+      ].filter((line) => line !== null);
+
       // Notify the agent
       await createNotification({
         userId: slot.user_id,
         type: "booking",
         title: "New Booking",
-        message: `${visitorName} booked a showing on ${slot.slot_date} at ${slot.slot_time}`,
-        link: `/dashboard/properties`,
+        message: messageParts.join("\n"),
+        link: `/dashboard/properties/${slot.property_id}`,
         metadata: {
           slotId,
           propertyId: slot.property_id,
@@ -298,13 +326,6 @@ export async function PATCH(req: NextRequest) {
             agentData?.saved_email || authData?.user?.email;
 
           if (agentEmail) {
-            // Get property address for context
-            const { data: propData } = await admin
-              .from("agent_properties")
-              .select("address")
-              .eq("id", slot.property_id)
-              .single();
-
             await fetch("https://api.sendgrid.com/v3/mail/send", {
               method: "POST",
               headers: {
@@ -317,7 +338,7 @@ export async function PATCH(req: NextRequest) {
                   email: "notifications@realestatephoto2video.com",
                   name: "P2V Notifications",
                 },
-                subject: `New Booking: ${propData?.address || "Your Property"} — ${slot.slot_date} at ${slot.slot_time}`,
+                subject: `New Booking: ${propData?.address || "Your Property"} — ${displayDate} at ${displayTime}`,
                 content: [
                   {
                     type: "text/html",
@@ -325,11 +346,12 @@ export async function PATCH(req: NextRequest) {
                       <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
                         <h2 style="color: #111;">New Showing Booked</h2>
                         <p><strong>Property:</strong> ${propData?.address || "—"}</p>
-                        <p><strong>Date:</strong> ${slot.slot_date}</p>
-                        <p><strong>Time:</strong> ${slot.slot_time}</p>
+                        <p><strong>Date:</strong> ${displayDate}</p>
+                        <p><strong>Time:</strong> ${displayTime}</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />
                         <p><strong>Name:</strong> ${visitorName}</p>
-                        ${visitorEmail ? `<p><strong>Email:</strong> ${visitorEmail}</p>` : ""}
-                        ${visitorPhone ? `<p><strong>Phone:</strong> ${visitorPhone}</p>` : ""}
+                        ${visitorEmail ? `<p><strong>Email:</strong> <a href="mailto:${visitorEmail}">${visitorEmail}</a></p>` : ""}
+                        ${visitorPhone ? `<p><strong>Phone:</strong> <a href="tel:${visitorPhone}">${visitorPhone}</a></p>` : ""}
                         ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ""}
                         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
                         <p style="color: #888; font-size: 12px;">Real Estate Photo 2 Video</p>
