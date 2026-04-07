@@ -1010,23 +1010,21 @@ export default function SinglePropertyPage() {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-foreground">Curate Videos ({(pubCurated.videos || []).length} of {curatedVideoUrls.length} selected)</p>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => selectAllCurated("videos", curatedVideoUrls)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
+                  <button onClick={() => selectAllCurated("videos", curatedVideoUrls.map(v => v.url))} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
                   <button onClick={() => deselectAllCurated("videos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
                 </div>
               </div>
               <div className="space-y-2">
-                {videos.filter((v: any) => v.delivery_url || v.unbranded_delivery_url).map((order: any) => {
-                  const url = order.delivery_url || order.unbranded_delivery_url;
-                  const isSel = (pubCurated.videos || []).includes(url);
+                {curatedVideoUrls.map((v) => {
+                  const isSel = (pubCurated.videos || []).includes(v.url);
                   return (
-                    <button key={order.id} onClick={() => toggleCuratedItem("videos", url)} className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
+                    <button key={v.url} onClick={() => toggleCuratedItem("videos", v.url)} className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
                       <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? "bg-accent border-accent" : "border-border"}`}>
                         {isSel && <Check className="h-2.5 w-2.5 text-white" />}
                       </div>
                       <Film className="h-4 w-4 text-cyan-600 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p>
-                        <p className="text-[10px] text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
+                        <p className="text-xs font-semibold text-foreground">{v.label}</p>
                       </div>
                     </button>
                   );
