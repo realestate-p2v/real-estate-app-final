@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   Bell, ArrowLeft, Loader2, CheckCircle, Video, DollarSign,
   Users, Mail, ShoppingCart, Star, RefreshCw, ExternalLink,
-  MessageSquare, X, Phone, User,
+  MessageSquare, X, Phone, User, CalendarDays,
 } from "lucide-react";
 
 const TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
@@ -20,10 +20,18 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   referral_payout: { icon: DollarSign, color: "bg-green-100 text-green-600" },
   directory_inquiry: { icon: Mail, color: "bg-blue-100 text-blue-600" },
   showing_request: { icon: MessageSquare, color: "bg-emerald-100 text-emerald-600" },
-  booking: { icon: Bell, color: "bg-green-100 text-green-600" },
+  booking: { icon: CalendarDays, color: "bg-blue-100 text-blue-600" },
   review_approved: { icon: Star, color: "bg-amber-100 text-amber-600" },
   welcome: { icon: Bell, color: "bg-primary/10 text-primary" },
   payment_success: { icon: ShoppingCart, color: "bg-green-100 text-green-600" },
+};
+
+type FilterTab = "all" | "bookings" | "inquiries";
+
+const FILTER_TYPES: Record<FilterTab, string[] | null> = {
+  all: null,
+  bookings: ["booking"],
+  inquiries: ["showing_request", "directory_inquiry"],
 };
 
 interface Notification {
@@ -41,7 +49,8 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
   const [modalNotification, setModalNotification] = useState<Notification | null>(null);
-  
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+
   useEffect(() => {
     fetchNotifications();
   }, []);
@@ -85,7 +94,17 @@ export default function NotificationsPage() {
     }
   };
 
+  // Filter notifications
+  const filterTypes = FILTER_TYPES[activeFilter];
+  const filteredNotifications = filterTypes
+    ? notifications.filter((n) => filterTypes.includes(n.type))
+    : notifications;
+
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Counts for filter badges
+  const bookingCount = notifications.filter((n) => n.type === "booking" && !n.read).length;
+  const inquiryCount = notifications.filter((n) => (n.type === "showing_request" || n.type === "directory_inquiry") && !n.read).length;
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -117,14 +136,17 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      {/* Inquiry Detail Modal */}
+      {/* Inquiry/Booking Detail Modal */}
       {modalNotification && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4" onClick={() => setModalNotification(null)}>
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-emerald-600" />
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${TYPE_CONFIG[modalNotification.type]?.color || "bg-muted text-muted-foreground"}`}>
+                  {(() => {
+                    const Icon = TYPE_CONFIG[modalNotification.type]?.icon || Bell;
+                    return <Icon className="h-5 w-5" />;
+                  })()}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-foreground">{modalNotification.title}</h3>
@@ -138,7 +160,11 @@ export default function NotificationsPage() {
             {modalNotification.message && (() => {
               const lines = modalNotification.message.split("\n");
               const contactLines = lines.filter(l => l.startsWith("From:") || l.startsWith("Email:") || l.startsWith("Phone:"));
-              const messageLines = lines.filter(l => !l.startsWith("From:") && !l.startsWith("Email:") && !l.startsWith("Phone:") && l.trim() !== "");
+              const infoLines = lines.filter(l => l.startsWith("Showing:") || l.startsWith("Property:"));
+              const messageLines = lines.filter(l =>
+                !l.startsWith("From:") && !l.startsWith("Email:") && !l.startsWith("Phone:") &&
+                !l.startsWith("Showing:") && !l.startsWith("Property:") && l.trim() !== ""
+              );
               return (
                 <div className="space-y-4">
                   {contactLines.length > 0 && (
@@ -163,6 +189,22 @@ export default function NotificationsPage() {
                       })}
                     </div>
                   )}
+                  {infoLines.length > 0 && (
+                    <div className="bg-blue-50 rounded-xl p-4 space-y-2">
+                      {infoLines.map((line, i) => {
+                        const [label, ...rest] = line.split(":");
+                        const value = rest.join(":").trim();
+                        const IconEl = label === "Showing" ? CalendarDays : MessageSquare;
+                        return (
+                          <div key={i} className="flex items-center gap-2.5">
+                            <IconEl className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                            <span className="text-xs font-semibold text-blue-700 w-16">{label}</span>
+                            <span className="text-sm font-medium text-blue-900">{value}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   {messageLines.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground mb-2">Message</p>
@@ -174,8 +216,16 @@ export default function NotificationsPage() {
                 </div>
               );
             })()}
-            <div className="flex justify-end mt-5">
-              <Button onClick={() => setModalNotification(null)} variant="outline" className="font-bold">
+            <div className="flex items-center justify-between mt-5">
+              {modalNotification.link && (
+                <Link
+                  href={modalNotification.link}
+                  className="text-sm font-semibold text-accent hover:text-accent/80 inline-flex items-center gap-1"
+                >
+                  View Property <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
+              <Button onClick={() => setModalNotification(null)} variant="outline" className="font-bold ml-auto">
                 Close
               </Button>
             </div>
@@ -185,7 +235,7 @@ export default function NotificationsPage() {
 
       <div className="mx-auto max-w-3xl px-4 py-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="h-5 w-5" />
@@ -208,16 +258,51 @@ export default function NotificationsPage() {
           )}
         </div>
 
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 mb-6">
+          {([
+            { key: "all" as FilterTab, label: "All", count: unreadCount },
+            { key: "bookings" as FilterTab, label: "Bookings", count: bookingCount },
+            { key: "inquiries" as FilterTab, label: "Inquiries", count: inquiryCount },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveFilter(tab.key)}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                activeFilter === tab.key
+                  ? "bg-accent text-accent-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  activeFilter === tab.key
+                    ? "bg-white/20 text-accent-foreground"
+                    : "bg-primary/10 text-primary"
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Notification List */}
         {notifications.length === 0 ? (
           <div className="bg-card rounded-2xl border border-border p-12 text-center">
             <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-bold text-foreground mb-2">No Notifications Yet</h3>
-            <p className="text-muted-foreground">You'll see updates here when your videos are ready, referrals come in, and more.</p>
+            <p className="text-muted-foreground">You&apos;ll see updates here when your videos are ready, referrals come in, and more.</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="bg-card rounded-2xl border border-border p-12 text-center">
+            <Bell className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No {activeFilter === "bookings" ? "booking" : "inquiry"} notifications yet.</p>
           </div>
         ) : (
          <div className="space-y-2">
-            {notifications.map((n) => {
+            {filteredNotifications.map((n) => {
               const config = TYPE_CONFIG[n.type] || { icon: Bell, color: "bg-muted text-muted-foreground" };
               const Icon = config.icon;
               const isInquiry = n.type === "showing_request" || n.type === "booking";
