@@ -53,6 +53,7 @@ interface Property {
   property_type: string;
   unit_count: number | null;
   special_features: string[] | null;
+  amenities: string[] | null;
   website_published: boolean;
   website_slug: string | null;
   website_template: string | null;
@@ -623,6 +624,66 @@ export default function SinglePropertyPage() {
               )}
             </>
           )}
+          {/* Amenities */}
+              <div className="mt-5 pt-5 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground mb-3">Amenities</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "ac", label: "A/C", icon: "❄️" },
+                    { id: "heating", label: "Heating", icon: "🔥" },
+                    { id: "pool", label: "Pool", icon: "🏊" },
+                    { id: "garage", label: "Garage", icon: "🚗" },
+                    { id: "parking", label: "Parking", icon: "🅿️" },
+                    { id: "security", label: "Security System", icon: "🔒" },
+                    { id: "gated", label: "Gated Community", icon: "🚧" },
+                    { id: "laundry", label: "Laundry", icon: "👕" },
+                    { id: "dishwasher", label: "Dishwasher", icon: "🍽️" },
+                    { id: "fireplace", label: "Fireplace", icon: "🪵" },
+                    { id: "furnished", label: "Furnished", icon: "🛋️" },
+                    { id: "pet_friendly", label: "Pet Friendly", icon: "🐾" },
+                    { id: "gym", label: "Gym", icon: "💪" },
+                    { id: "elevator", label: "Elevator", icon: "🛗" },
+                    { id: "balcony", label: "Balcony", icon: "🌅" },
+                    { id: "garden", label: "Garden", icon: "🌿" },
+                    { id: "rooftop", label: "Rooftop", icon: "🏙️" },
+                    { id: "storage", label: "Storage", icon: "📦" },
+                    { id: "wheelchair", label: "Wheelchair Access", icon: "♿" },
+                    { id: "solar", label: "Solar Panels", icon: "☀️" },
+                    { id: "ev_charging", label: "EV Charging", icon: "🔌" },
+                    { id: "smart_home", label: "Smart Home", icon: "📱" },
+                    { id: "water_heater", label: "Water Heater", icon: "🚿" },
+                    { id: "ceiling_fans", label: "Ceiling Fans", icon: "🌀" },
+                  ].map((amenity) => {
+                    const selected = (property.amenities || []).includes(amenity.id);
+                    return (
+                      <button
+                        key={amenity.id}
+                        onClick={async () => {
+                          const current = property.amenities || [];
+                          const updated = selected
+                            ? current.filter((a: string) => a !== amenity.id)
+                            : [...current, amenity.id];
+                          const { error } = await supabase
+                            .from("agent_properties")
+                            .update({ amenities: updated, updated_at: new Date().toISOString() })
+                            .eq("id", property.id);
+                          if (!error) {
+                            setProperty({ ...property, amenities: updated, updated_at: new Date().toISOString() } as Property);
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          selected
+                            ? "border-accent bg-accent/10 text-accent"
+                            : "border-border text-muted-foreground hover:border-accent/30"
+                        }`}
+                      >
+                        <span>{amenity.icon}</span>
+                        {amenity.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
         </section>
 
         {/* ═══ VIDEOS — playable ═══ */}
