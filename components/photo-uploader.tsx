@@ -364,13 +364,24 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   );
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
-  const [answers, setAnswers] = useState<QuestionnaireAnswers>({
-    bedrooms: initialBedrooms || 3,
-    bathrooms: initialBathrooms || 2,
-    features: [],
-    featureOther: "",
-    views: [],
-    viewOther: "",
+const [answers, setAnswers] = useState<QuestionnaireAnswers>(() => {
+    let beds = initialBedrooms || 3;
+    let baths = initialBathrooms || 2;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlBeds = parseInt(params.get("beds") || "");
+      const urlBaths = parseInt(params.get("baths") || "");
+      if (!isNaN(urlBeds) && urlBeds >= 1) beds = urlBeds;
+      if (!isNaN(urlBaths) && urlBaths >= 1) baths = urlBaths;
+    }
+    return {
+      bedrooms: beds,
+      bathrooms: baths,
+      features: [],
+      featureOther: "",
+      views: [],
+      viewOther: "",
+    };
   });
 
   // Update answers if initial values arrive after first render
