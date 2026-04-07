@@ -236,32 +236,37 @@ export default function PropertiesPage() {
   const inp = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navigation />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+        {/* Header — responsive button sizing */}
+        <div className="flex items-center justify-between mb-8 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">My Properties</h1>
-              <p className="text-muted-foreground mt-1">All your listing materials organized by property</p>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground truncate">My Properties</h1>
+              <p className="text-muted-foreground mt-1 text-sm hidden sm:block">All your listing materials organized by property</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {!selectMode && properties.length >= 2 && (
-              <Button onClick={() => setSelectMode(true)} variant="outline" className="font-bold">
-                <Merge className="h-4 w-4 mr-2" />Merge
+              <Button onClick={() => setSelectMode(true)} variant="outline" className="font-bold text-xs px-3 sm:text-sm sm:px-4">
+                <Merge className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Merge</span>
               </Button>
             )}
             {selectMode && (
-              <Button onClick={exitSelectMode} variant="outline" className="font-bold">
-                <X className="h-4 w-4 mr-2" />Cancel
+              <Button onClick={exitSelectMode} variant="outline" className="font-bold text-xs px-3 sm:text-sm sm:px-4">
+                <X className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Cancel</span>
               </Button>
             )}
-            <Button onClick={() => setShowAdd(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-              <Plus className="h-4 w-4 mr-2" />Add Property
+            <Button onClick={() => setShowAdd(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-3 sm:text-sm sm:px-4">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Property</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
@@ -302,7 +307,7 @@ export default function PropertiesPage() {
         )}
 
         {!loading && properties.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden">
             {properties.map((p: any) => {
               const isSelected = selected.has(p.id);
               const isDuplicate = duplicateGroups.has(p.id);
@@ -353,8 +358,8 @@ export default function PropertiesPage() {
                     </div>
                     <div className="p-5">
                       <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors truncate">{p.address}</h3>
-                      <p className="text-sm text-muted-foreground mt-0.5">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
-                      <div className="flex items-center gap-3 mt-3">
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
+                      <div className="flex items-center gap-3 mt-3 flex-wrap">
                         {p.bedrooms && <span className="text-xs text-muted-foreground">{p.bedrooms} bd</span>}
                         {p.bathrooms && <span className="text-xs text-muted-foreground">{p.bathrooms} ba</span>}
                         {p.sqft && <span className="text-xs text-muted-foreground">{p.sqft.toLocaleString()} sqft</span>}
@@ -370,22 +375,28 @@ export default function PropertiesPage() {
         )}
       </div>
 
-      {/* Floating merge bar */}
+      {/* Floating merge bar — responsive, constrained to viewport */}
       {selectMode && selected.size >= 2 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card border border-border rounded-2xl shadow-2xl px-6 py-3 flex items-center gap-4">
-          <span className="text-sm font-semibold text-foreground">{selected.size} properties selected</span>
-          <Button onClick={openMergeModal} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-            <Merge className="h-4 w-4 mr-2" />Merge Selected
-          </Button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[calc(100vw-2rem)]">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
+            <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+              {selected.size} selected
+            </span>
+            <Button onClick={openMergeModal} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs sm:text-sm px-3 sm:px-4">
+              <Merge className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Merge {selected.size} Properties</span>
+              <span className="sm:hidden">Merge</span>
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* Merge modal */}
+      {/* Merge modal — constrained to viewport on mobile */}
       {showMerge && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+          <div className="bg-card rounded-2xl border border-border p-5 sm:p-8 w-full max-w-lg max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-foreground">Merge Properties</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">Merge Properties</h2>
               <button onClick={() => { setShowMerge(false); setMergeResult(null); }} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
@@ -402,10 +413,10 @@ export default function PropertiesPage() {
                   </p>
                 </div>
                 {mergeResult.merged?.map((m: any) => (
-                  <div key={m.mergedId} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <div>
-                      <p className="text-sm font-medium">{m.address}</p>
-                      <p className="text-xs text-muted-foreground">
+                  <div key={m.mergedId} className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{m.address}</p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {Object.entries(m.assetsMoved)
                           .filter(([, v]) => (v as number) > 0)
                           .map(([k, v]) => `${v} ${k}`)
@@ -417,7 +428,7 @@ export default function PropertiesPage() {
                       variant="outline"
                       onClick={() => handleUndo(m.mergedId)}
                       disabled={undoing === m.mergedId}
-                      className="text-xs"
+                      className="text-xs flex-shrink-0"
                     >
                       {undoing === m.mergedId ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Undo2 className="h-3 w-3 mr-1" />Undo</>}
                     </Button>
@@ -447,11 +458,11 @@ export default function PropertiesPage() {
                         name="primary"
                         checked={primaryId === p.id}
                         onChange={() => setPrimaryId(p.id)}
-                        className="mt-1 accent-[hsl(var(--accent))]"
+                        className="mt-1 accent-[hsl(var(--accent))] flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{p.address}</p>
-                        <p className="text-xs text-muted-foreground">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{[p.city, p.state].filter(Boolean).join(", ") || "—"}</p>
                         {primaryId === p.id && (
                           <span className="inline-block mt-1 bg-accent/10 text-accent text-xs font-bold px-2 py-0.5 rounded-full">
                             Primary — keeps this listing
@@ -463,8 +474,8 @@ export default function PropertiesPage() {
                 </div>
                 <div className="flex gap-3">
                   <Button onClick={() => setShowMerge(false)} variant="outline" className="flex-1 font-bold">Cancel</Button>
-                  <Button onClick={handleMerge} disabled={!primaryId || merging} className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-                    {merging ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Merging...</> : `Merge ${selected.size} Properties`}
+                  <Button onClick={handleMerge} disabled={!primaryId || merging} className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs sm:text-sm">
+                    {merging ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Merging...</> : <>Merge {selected.size}<span className="hidden sm:inline">&nbsp;Properties</span></>}
                   </Button>
                 </div>
               </div>
@@ -476,7 +487,7 @@ export default function PropertiesPage() {
       {/* Add property modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 w-full max-w-lg max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-foreground">Add Property</h2>
               <button onClick={() => setShowAdd(false)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
