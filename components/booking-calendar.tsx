@@ -1,10 +1,22 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  ChevronLeft, ChevronRight, Plus, X, Loader2, Check, Clock, User, Trash2, Repeat,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  Loader2,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  Check,
+  Trash2,
+  CalendarDays,
+  Repeat,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface BookingSlot {
   id: string;
@@ -13,79 +25,98 @@ interface BookingSlot {
   slot_time: string;
   duration_min: number;
   status: string;
-  booked_by_name?: string;
-  booked_by_email?: string;
-  booked_by_phone?: string;
-  notes?: string;
+  booked_by_name?: string | null;
+  booked_by_email?: string | null;
+  booked_by_phone?: string | null;
+  notes?: string | null;
 }
 
 interface BookingCalendarProps {
-  propertyId: string;
   mode: "manage" | "book";
-  agentName?: string;
+  propertyId: string;
+  propertyAddress?: string;
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 const HOURS = Array.from({ length: 24 }, (_, i) => {
   const h = i % 12 || 12;
   const ampm = i < 12 ? "AM" : "PM";
-  return { value: `${i.toString().padStart(2, "0")}:00`, label: `${h}:00 ${ampm}` };
-}).filter((_, i) => i >= 8 && i <= 20); // 8 AM to 8 PM
+  return { label: `${h}:00 ${ampm}`, value: `${i.toString().padStart(2, "0")}:00` };
+}).filter((_, i) => i >= 7 && i <= 20); // 7 AM to 8 PM
 
-const HALF_HOURS = HOURS.flatMap(h => {
-  const base = parseInt(h.value.split(":")[0]);
-  const bH = base % 12 || 12;
-  const ampm = base < 12 ? "AM" : "PM";
-  return [
-    { value: `${base.toString().padStart(2, "0")}:00`, label: `${bH}:00 ${ampm}` },
-    { value: `${base.toString().padStart(2, "0")}:30`, label: `${bH}:30 ${ampm}` },
-  ];
-});
+const HALF_HOURS = HOURS.flatMap((h) => [
+  h,
+  {
+    label: h.label.replace(":00", ":30"),
+    value: h.value.replace(":00", ":30"),
+  },
+]);
 
 function formatTime(time: string): string {
   const [h, m] = time.split(":").map(Number);
-  const hr = h % 12 || 12;
   const ampm = h < 12 ? "AM" : "PM";
-  return `${hr}:${m.toString().padStart(2, "0")} ${ampm}`;
+  const hour = h % 12 || 12;
+  return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
-function getWeekDates(baseDate: Date): Date[] {
-  const start = new Date(baseDate);
-  start.setDate(start.getDate() - start.getDay());
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    return d;
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatFullDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
   });
 }
 
-function dateStr(d: Date): string {
-  return d.toISOString().split("T")[0];
+function getWeekDates(baseDate: Date): string[] {
+  const dates: string[] = [];
+  const start = new Date(baseDate);
+  start.setDate(start.getDate() - start.getDay());
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+  return dates;
 }
 
-export function BookingCalendar({ propertyId, mode, agentName }: BookingCalendarProps) {
+export default function BookingCalendar({
+  mode,
+  propertyId,
+  propertyAddress,
+}: BookingCalendarProps) {
   const [slots, setSlots] = useState<BookingSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [showAddSlot, setShowAddSlot] = useState(false);
-  const [showBooking, setShowBooking] = useState<BookingSlot | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [addingSlot, setAddingSlot] = useState(false);
+  const [deletingSlot, setDeletingSlot] = useState<string | null>(null);
 
   // Add slot form
-  const [addDate, setAddDate] = useState("");
-  const [addTime, setAddTime] = useState("10:00");
-  const [addDuration, setAddDuration] = useState(30);
-  const [addRecurring, setAddRecurring] = useState(false);
-  const [addRecurringDay, setAddRecurringDay] = useState(1); // Monday
-  const [addRecurringWeeks, setAddRecurringWeeks] = useState(4);
+  const [newSlotDate, setNewSlotDate] = useState("");
+  const [newSlotTime, setNewSlotTime] = useState("10:00");
+  const [newSlotDuration, setNewSlotDuration] = useState(30);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringDay, setRecurringDay] = useState("1"); // Monday
+  const [recurringWeeks, setRecurringWeeks] = useState(4);
 
-  // Book form
-  const [bookName, setBookName] = useState("");
-  const [bookEmail, setBookEmail] = useState("");
-  const [bookPhone, setBookPhone] = useState("");
-  const [bookNotes, setBookNotes] = useState("");
+  // Booking form (public mode)
+  const [bookingSlot, setBookingSlot] = useState<BookingSlot | null>(null);
+  const [bookingForm, setBookingForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+  });
+  const [booking, setBooking] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const baseDate = useMemo(() => {
     const d = new Date();
@@ -94,76 +125,126 @@ export function BookingCalendar({ propertyId, mode, agentName }: BookingCalendar
   }, [weekOffset]);
 
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate]);
+  const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    fetchSlots();
-  }, [propertyId]);
-
-  async function fetchSlots() {
+  const fetchSlots = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/bookings?propertyId=${propertyId}`);
       const data = await res.json();
       setSlots(data.slots || []);
-    } catch (e) {
-      console.error("Failed to fetch slots:", e);
+    } catch (err) {
+      console.error("Failed to fetch slots:", err);
     }
     setLoading(false);
-  }
+  }, [propertyId]);
 
-  async function handleAddSlots() {
-    setSaving(true);
-    const newSlots: { date: string; time: string; duration: number }[] = [];
+  useEffect(() => {
+    fetchSlots();
+  }, [fetchSlots]);
 
-    if (addRecurring) {
-      for (let w = 0; w < addRecurringWeeks; w++) {
-        const d = new Date();
-        d.setDate(d.getDate() + ((addRecurringDay - d.getDay() + 7) % 7) + w * 7);
-        if (d >= new Date()) {
-          newSlots.push({ date: dateStr(d), time: addTime, duration: addDuration });
-        }
-      }
-    } else if (addDate) {
-      newSlots.push({ date: addDate, time: addTime, duration: addDuration });
+  // Group slots by date
+  const slotsByDate = useMemo(() => {
+    const map: Record<string, BookingSlot[]> = {};
+    for (const slot of slots) {
+      if (!map[slot.slot_date]) map[slot.slot_date] = [];
+      map[slot.slot_date].push(slot);
     }
+    // Sort each day's slots by time
+    for (const date in map) {
+      map[date].sort((a, b) => a.slot_time.localeCompare(b.slot_time));
+    }
+    return map;
+  }, [slots]);
 
-    if (newSlots.length === 0) { setSaving(false); return; }
-
+  async function handleAddSlot() {
+    setAddingSlot(true);
     try {
+      const body: any = { propertyId };
+
+      if (isRecurring) {
+        body.recurring = {
+          dayOfWeek: parseInt(recurringDay),
+          time: newSlotTime,
+          durationMin: newSlotDuration,
+          weeks: recurringWeeks,
+        };
+      } else {
+        if (!newSlotDate) {
+          setAddingSlot(false);
+          return;
+        }
+        body.slots = [
+          { date: newSlotDate, time: newSlotTime, durationMin: newSlotDuration },
+        ];
+      }
+
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId, slots: newSlots }),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert("Failed: " + (data.error || "Unknown error"));
+      } else {
+        setShowAddSlot(false);
+        setNewSlotDate("");
+        setIsRecurring(false);
+        await fetchSlots();
+      }
+    } catch (err: any) {
+      alert("Failed: " + err.message);
+    }
+    setAddingSlot(false);
+  }
+
+  async function handleDeleteSlot(slotId: string) {
+    setDeletingSlot(slotId);
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId }),
+      });
+      if (res.ok) {
+        setSlots((prev) => prev.filter((s) => s.id !== slotId));
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+    setDeletingSlot(null);
+  }
+
+  async function handleCancelBooking(slotId: string) {
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId, action: "cancel" }),
       });
       if (res.ok) {
         await fetchSlots();
-        setShowAddSlot(false);
-        setAddDate("");
-        setAddRecurring(false);
-      } else {
-        const data = await res.json();
-        alert("Failed: " + (data.error || "Unknown error"));
       }
-    } catch (e: any) {
-      alert("Failed: " + e.message);
+    } catch (err) {
+      console.error("Cancel failed:", err);
     }
-    setSaving(false);
   }
 
   async function handleBook() {
-    if (!showBooking || !bookName || !bookEmail) return;
-    setSaving(true);
+    if (!bookingSlot || !bookingForm.name.trim()) return;
+    setBooking(true);
     try {
       const res = await fetch("/api/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slotId: showBooking.id,
+          slotId: bookingSlot.id,
           action: "book",
-          visitorName: bookName,
-          visitorEmail: bookEmail,
-          visitorPhone: bookPhone || undefined,
-          notes: bookNotes || undefined,
+          visitorName: bookingForm.name.trim(),
+          visitorEmail: bookingForm.email.trim() || undefined,
+          visitorPhone: bookingForm.phone.trim() || undefined,
+          notes: bookingForm.notes.trim() || undefined,
         }),
       });
       if (res.ok) {
@@ -171,185 +252,266 @@ export function BookingCalendar({ propertyId, mode, agentName }: BookingCalendar
         await fetchSlots();
       } else {
         const data = await res.json();
-        alert("Booking failed: " + (data.error || "This slot may no longer be available"));
+        alert("Booking failed: " + (data.error || "Unknown error"));
       }
-    } catch (e: any) {
-      alert("Booking failed: " + e.message);
+    } catch (err: any) {
+      alert("Booking failed: " + err.message);
     }
-    setSaving(false);
+    setBooking(false);
   }
 
-  async function handleCancel(slotId: string) {
-    try {
-      await fetch("/api/bookings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId, action: "cancel" }),
-      });
-      await fetchSlots();
-    } catch (e) {
-      console.error("Cancel failed:", e);
-    }
-  }
-
-  async function handleDelete(slotId: string) {
-    try {
-      await fetch(`/api/bookings?slotId=${slotId}`, { method: "DELETE" });
-      await fetchSlots();
-    } catch (e) {
-      console.error("Delete failed:", e);
-    }
-  }
-
-  // Group slots by date for the current week
-  const slotsByDate = useMemo(() => {
-    const map: Record<string, BookingSlot[]> = {};
-    slots.forEach(s => {
-      if (!map[s.slot_date]) map[s.slot_date] = [];
-      map[s.slot_date].push(s);
-    });
-    Object.values(map).forEach(arr => arr.sort((a, b) => a.slot_time.localeCompare(b.slot_time)));
-    return map;
-  }, [slots]);
-
-  const inp = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50";
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const inp =
+    "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50";
 
   // ─── MANAGE MODE (Agent) ───
   if (mode === "manage") {
     return (
       <div>
-        {/* Week navigation */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setWeekOffset(w => w - 1)} className="p-1.5 rounded-lg hover:bg-muted">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setWeekOffset((w) => w - 1)}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold text-foreground">
-              {weekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} — {weekDates[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            </span>
-            <button onClick={() => setWeekOffset(w => w + 1)} className="p-1.5 rounded-lg hover:bg-muted">
+            <h3 className="text-sm font-bold text-foreground min-w-[180px] text-center">
+              {formatDate(weekDates[0])} — {formatDate(weekDates[6])}
+            </h3>
+            <button
+              onClick={() => setWeekOffset((w) => w + 1)}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
               <ChevronRight className="h-4 w-4" />
             </button>
             {weekOffset !== 0 && (
-              <button onClick={() => setWeekOffset(0)} className="text-xs font-semibold text-accent hover:text-accent/80 ml-2">Today</button>
+              <button
+                onClick={() => setWeekOffset(0)}
+                className="text-xs font-semibold text-accent hover:text-accent/80"
+              >
+                Today
+              </button>
             )}
           </div>
-          <Button onClick={() => { setShowAddSlot(true); setAddDate(dateStr(new Date())); }} size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-            <Plus className="h-3.5 w-3.5 mr-1.5" />Add Slots
+          <Button
+            onClick={() => setShowAddSlot(true)}
+            size="sm"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Add Slot
           </Button>
         </div>
 
-        {/* Week grid */}
-        <div className="grid grid-cols-7 gap-2">
-          {weekDates.map((d, i) => {
-            const ds = dateStr(d);
-            const daySlots = slotsByDate[ds] || [];
-            const isToday = ds === dateStr(new Date());
-            const isPast = d < new Date(new Date().setHours(0, 0, 0, 0));
-            return (
-              <div key={ds} className={`rounded-xl border p-2 min-h-[120px] ${isToday ? "border-accent/50 bg-accent/5" : "border-border"} ${isPast ? "opacity-50" : ""}`}>
-                <p className={`text-[10px] font-bold text-center mb-1.5 ${isToday ? "text-accent" : "text-muted-foreground"}`}>
-                  {DAYS[i]} {d.getDate()}
-                </p>
-                <div className="space-y-1">
-                  {daySlots.map(slot => (
-                    <div key={slot.id} className={`rounded-lg px-1.5 py-1 text-[10px] ${
-                      slot.status === "booked"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-blue-50 text-blue-700"
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">{formatTime(slot.slot_time)}</span>
-                        <div className="flex items-center gap-0.5">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-7 gap-2">
+            {weekDates.map((date) => {
+              const daySlots = slotsByDate[date] || [];
+              const isToday = date === today;
+              const isPast = date < today;
+              return (
+                <div key={date} className={`min-h-[120px] rounded-xl border p-2 ${isToday ? "border-accent/50 bg-accent/5" : "border-border"} ${isPast ? "opacity-50" : ""}`}>
+                  <p className={`text-[10px] font-bold mb-1.5 ${isToday ? "text-accent" : "text-muted-foreground"}`}>
+                    {DAYS[new Date(date + "T12:00:00").getDay()]} {new Date(date + "T12:00:00").getDate()}
+                  </p>
+                  <div className="space-y-1">
+                    {daySlots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className={`rounded-lg px-2 py-1.5 text-[10px] font-semibold group relative ${
+                          slot.status === "booked"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-blue-50 text-blue-700"
+                        }`}
+                      >
+                        <p>{formatTime(slot.slot_time)}</p>
+                        <p className="text-[9px] font-normal opacity-70">
+                          {slot.duration_min}min
+                        </p>
+                        {slot.status === "booked" && slot.booked_by_name && (
+                          <p className="text-[9px] font-semibold truncate mt-0.5">
+                            {slot.booked_by_name}
+                          </p>
+                        )}
+                        {/* Actions on hover */}
+                        <div className="absolute top-1 right-1 hidden group-hover:flex items-center gap-0.5">
                           {slot.status === "booked" && (
-                            <button onClick={() => handleCancel(slot.id)} className="p-0.5 hover:bg-green-200 rounded" title="Cancel booking">
-                              <X className="h-2.5 w-2.5" />
+                            <button
+                              onClick={() => handleCancelBooking(slot.id)}
+                              className="p-0.5 rounded bg-white/80 hover:bg-white text-orange-600"
+                              title="Cancel booking"
+                            >
+                              <X className="h-3 w-3" />
                             </button>
                           )}
-                          <button onClick={() => handleDelete(slot.id)} className="p-0.5 hover:bg-red-100 rounded text-red-500" title="Remove slot">
-                            <Trash2 className="h-2.5 w-2.5" />
+                          <button
+                            onClick={() => handleDeleteSlot(slot.id)}
+                            disabled={deletingSlot === slot.id}
+                            className="p-0.5 rounded bg-white/80 hover:bg-white text-red-500"
+                            title="Delete slot"
+                          >
+                            {deletingSlot === slot.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
                           </button>
                         </div>
                       </div>
-                      {slot.status === "booked" && slot.booked_by_name && (
-                        <p className="truncate font-medium">{slot.booked_by_name}</p>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Add slot modal */}
         {showAddSlot && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
             <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-xl">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold text-foreground">Add Availability</h3>
-                <button onClick={() => setShowAddSlot(false)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+                <button onClick={() => setShowAddSlot(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <div className="space-y-4">
-                {/* Recurring toggle */}
-                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border cursor-pointer hover:border-accent/40 transition-all">
-                  <input type="checkbox" checked={addRecurring} onChange={e => setAddRecurring(e.target.checked)} className="accent-[hsl(var(--accent))]" />
-                  <Repeat className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-foreground">Recurring weekly</span>
-                </label>
+              {/* Toggle: single vs recurring */}
+              <div className="flex items-center gap-3 mb-5 p-1 bg-muted/50 rounded-xl">
+                <button
+                  onClick={() => setIsRecurring(false)}
+                  className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${
+                    !isRecurring ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <CalendarDays className="h-3.5 w-3.5 inline mr-1.5" />
+                  Single
+                </button>
+                <button
+                  onClick={() => setIsRecurring(true)}
+                  className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${
+                    isRecurring ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <Repeat className="h-3.5 w-3.5 inline mr-1.5" />
+                  Recurring
+                </button>
+              </div>
 
-                {addRecurring ? (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Day of week</label>
-                      <select value={addRecurringDay} onChange={e => setAddRecurringDay(parseInt(e.target.value))} className={inp}>
-                        {FULL_DAYS.map((day, i) => <option key={i} value={i}>{day}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-muted-foreground mb-1">For how many weeks</label>
-                      <select value={addRecurringWeeks} onChange={e => setAddRecurringWeeks(parseInt(e.target.value))} className={inp}>
-                        {[2, 4, 6, 8, 12].map(w => <option key={w} value={w}>{w} weeks</option>)}
-                      </select>
-                    </div>
-                  </>
-                ) : (
+              {!isRecurring ? (
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Date</label>
-                    <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)} min={dateStr(new Date())} className={inp} />
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Date</label>
+                    <input
+                      type="date"
+                      value={newSlotDate}
+                      onChange={(e) => setNewSlotDate(e.target.value)}
+                      min={today}
+                      className={inp}
+                    />
                   </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Time</label>
-                    <select value={addTime} onChange={e => setAddTime(e.target.value)} className={inp}>
-                      {HALF_HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Time</label>
+                    <select
+                      value={newSlotTime}
+                      onChange={(e) => setNewSlotTime(e.target.value)}
+                      className={inp}
+                    >
+                      {HALF_HOURS.map((h) => (
+                        <option key={h.value} value={h.value}>{h.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Day of Week</label>
+                    <select
+                      value={recurringDay}
+                      onChange={(e) => setRecurringDay(e.target.value)}
+                      className={inp}
+                    >
+                      {FULL_DAYS.map((d, i) => (
+                        <option key={i} value={i.toString()}>{d}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Duration</label>
-                    <select value={addDuration} onChange={e => setAddDuration(parseInt(e.target.value))} className={inp}>
-                      <option value={30}>30 minutes</option>
-                      <option value={60}>1 hour</option>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Time</label>
+                    <select
+                      value={newSlotTime}
+                      onChange={(e) => setNewSlotTime(e.target.value)}
+                      className={inp}
+                    >
+                      {HALF_HOURS.map((h) => (
+                        <option key={h.value} value={h.value}>{h.label}</option>
+                      ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Repeat for</label>
+                    <select
+                      value={recurringWeeks}
+                      onChange={(e) => setRecurringWeeks(parseInt(e.target.value))}
+                      className={inp}
+                    >
+                      {[2, 4, 6, 8, 12].map((w) => (
+                        <option key={w} value={w}>{w} weeks</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Duration</label>
+                <div className="flex gap-2">
+                  {[30, 60].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setNewSlotDuration(d)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                        newSlotDuration === d
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-border text-muted-foreground hover:border-accent/40"
+                      }`}
+                    >
+                      {d} min
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="flex gap-3 mt-6">
-                <Button onClick={() => setShowAddSlot(false)} variant="outline" className="flex-1 font-bold">Cancel</Button>
-                <Button onClick={handleAddSlots} disabled={saving || (!addRecurring && !addDate)} className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : addRecurring ? `Add ${addRecurringWeeks} Slots` : "Add Slot"}
+                <Button
+                  onClick={() => setShowAddSlot(false)}
+                  variant="outline"
+                  className="flex-1 font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddSlot}
+                  disabled={addingSlot || (!isRecurring && !newSlotDate)}
+                  className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
+                >
+                  {addingSlot ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Adding...
+                    </>
+                  ) : isRecurring ? (
+                    `Add ${recurringWeeks} Slots`
+                  ) : (
+                    "Add Slot"
+                  )}
                 </Button>
               </div>
             </div>
@@ -360,102 +522,176 @@ export function BookingCalendar({ propertyId, mode, agentName }: BookingCalendar
   }
 
   // ─── BOOK MODE (Public Visitor) ───
-  const availableSlots = slots.filter(s => s.status === "available");
-  const groupedByDate: Record<string, BookingSlot[]> = {};
-  availableSlots.forEach(s => {
-    if (!groupedByDate[s.slot_date]) groupedByDate[s.slot_date] = [];
-    groupedByDate[s.slot_date].push(s);
-  });
-  const sortedDates = Object.keys(groupedByDate).sort();
+  const availableSlots = slots.filter((s) => s.status === "available");
+
+  // Group available slots by date
+  const availableByDate = useMemo(() => {
+    const map: Record<string, BookingSlot[]> = {};
+    for (const slot of availableSlots) {
+      if (!map[slot.slot_date]) map[slot.slot_date] = [];
+      map[slot.slot_date].push(slot);
+    }
+    const sortedDates = Object.keys(map).sort();
+    return sortedDates.map((date) => ({
+      date,
+      slots: map[date].sort((a, b) => a.slot_time.localeCompare(b.slot_time)),
+    }));
+  }, [availableSlots]);
+
+  if (bookingSuccess) {
+    return (
+      <div className="text-center py-10">
+        <div className="mx-auto h-14 w-14 rounded-full bg-green-100 flex items-center justify-center mb-4">
+          <Check className="h-7 w-7 text-green-600" />
+        </div>
+        <h3 className="text-lg font-bold text-foreground mb-2">Showing Booked!</h3>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          You&apos;re confirmed for{" "}
+          <span className="font-semibold text-foreground">
+            {bookingSlot && formatFullDate(bookingSlot.slot_date)} at{" "}
+            {bookingSlot && formatTime(bookingSlot.slot_time)}
+          </span>
+          . The agent will be in touch.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {availableSlots.length === 0 ? (
-        <div className="text-center py-8">
-          <Clock className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No available times right now. Check back soon.</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : (
-        <div className="space-y-4">
-          {sortedDates.map(date => {
-            const d = new Date(date + "T12:00:00");
-            return (
-              <div key={date}>
-                <p className="text-xs font-bold text-muted-foreground mb-2">
-                  {d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {groupedByDate[date].map(slot => (
-                    <button
-                      key={slot.id}
-                      onClick={() => { setShowBooking(slot); setBookingSuccess(false); setBookName(""); setBookEmail(""); setBookPhone(""); setBookNotes(""); }}
-                      className="px-4 py-2 rounded-lg border border-border bg-background text-sm font-semibold text-foreground hover:border-accent/50 hover:bg-accent/5 transition-all"
-                    >
-                      {formatTime(slot.slot_time)}
-                      <span className="text-[10px] text-muted-foreground ml-1.5">{slot.duration_min}min</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+      ) : availableByDate.length === 0 ? (
+        <div className="text-center py-10">
+          <CalendarDays className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">
+            No available time slots right now. Check back later.
+          </p>
         </div>
-      )}
-
-      {/* Booking form modal */}
-      {showBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-xl">
-            {bookingSuccess ? (
-              <div className="text-center py-4">
-                <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                  <Check className="h-7 w-7 text-green-600" />
-                </div>
-                <h3 className="text-lg font-bold text-foreground mb-2">Booking Confirmed!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Your showing is scheduled for {new Date(showBooking.slot_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} at {formatTime(showBooking.slot_time)}.
-                </p>
-                {agentName && <p className="text-sm text-muted-foreground mt-1">{agentName} will be in touch.</p>}
-                <Button onClick={() => { setShowBooking(null); setBookingSuccess(false); }} className="mt-6 bg-accent hover:bg-accent/90 text-accent-foreground font-bold">Done</Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">Book a Showing</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(showBooking.slot_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} at {formatTime(showBooking.slot_time)} ({showBooking.duration_min} min)
-                    </p>
-                  </div>
-                  <button onClick={() => setShowBooking(null)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Your Name *</label>
-                    <input type="text" value={bookName} onChange={e => setBookName(e.target.value)} placeholder="Jane Smith" className={inp} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Email *</label>
-                    <input type="email" value={bookEmail} onChange={e => setBookEmail(e.target.value)} placeholder="jane@example.com" className={inp} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Phone</label>
-                    <input type="tel" value={bookPhone} onChange={e => setBookPhone(e.target.value)} placeholder="(555) 123-4567" className={inp} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
-                    <textarea value={bookNotes} onChange={e => setBookNotes(e.target.value)} placeholder="Any questions or preferences..." rows={2} className={inp} />
-                  </div>
-                </div>
-                <div className="flex gap-3 mt-5">
-                  <Button onClick={() => setShowBooking(null)} variant="outline" className="flex-1 font-bold">Cancel</Button>
-                  <Button onClick={handleBook} disabled={!bookName.trim() || !bookEmail.trim() || saving} className="flex-1 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold">
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Booking"}
-                  </Button>
-                </div>
-              </>
+      ) : bookingSlot ? (
+        /* Booking form */
+        <div>
+          <button
+            onClick={() => setBookingSlot(null)}
+            className="text-sm font-semibold text-accent hover:text-accent/80 mb-4 flex items-center gap-1"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Back to times
+          </button>
+          <div className="bg-muted/30 rounded-xl border border-border p-4 mb-5">
+            <p className="text-sm font-bold text-foreground">
+              {formatFullDate(bookingSlot.slot_date)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {formatTime(bookingSlot.slot_time)} · {bookingSlot.duration_min} minutes
+            </p>
+            {propertyAddress && (
+              <p className="text-xs text-muted-foreground mt-1">{propertyAddress}</p>
             )}
           </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                <User className="h-3 w-3 inline mr-1" />
+                Your Name *
+              </label>
+              <input
+                type="text"
+                value={bookingForm.name}
+                onChange={(e) =>
+                  setBookingForm({ ...bookingForm, name: e.target.value })
+                }
+                placeholder="Jane Smith"
+                className={inp}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                <Mail className="h-3 w-3 inline mr-1" />
+                Email
+              </label>
+              <input
+                type="email"
+                value={bookingForm.email}
+                onChange={(e) =>
+                  setBookingForm({ ...bookingForm, email: e.target.value })
+                }
+                placeholder="jane@example.com"
+                className={inp}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                <Phone className="h-3 w-3 inline mr-1" />
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={bookingForm.phone}
+                onChange={(e) =>
+                  setBookingForm({ ...bookingForm, phone: e.target.value })
+                }
+                placeholder="(512) 555-1234"
+                className={inp}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                Notes (optional)
+              </label>
+              <textarea
+                value={bookingForm.notes}
+                onChange={(e) =>
+                  setBookingForm({ ...bookingForm, notes: e.target.value })
+                }
+                placeholder="Anything the agent should know?"
+                rows={2}
+                className={inp}
+              />
+            </div>
+          </div>
+          <Button
+            onClick={handleBook}
+            disabled={!bookingForm.name.trim() || booking}
+            className="w-full mt-5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold rounded-full"
+          >
+            {booking ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Booking...
+              </>
+            ) : (
+              "Confirm Booking"
+            )}
+          </Button>
+        </div>
+      ) : (
+        /* Time slot selector */
+        <div className="space-y-4">
+          {availableByDate.map(({ date, slots: daySlots }) => (
+            <div key={date}>
+              <p className="text-sm font-bold text-foreground mb-2">
+                {formatFullDate(date)}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {daySlots.map((slot) => (
+                  <button
+                    key={slot.id}
+                    onClick={() => setBookingSlot(slot)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-semibold text-foreground hover:border-accent/50 hover:bg-accent/5 transition-all"
+                  >
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {formatTime(slot.slot_time)}
+                    <span className="text-[10px] text-muted-foreground">
+                      {slot.duration_min}m
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
