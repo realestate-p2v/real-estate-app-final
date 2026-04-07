@@ -53,6 +53,11 @@ const heroStyles = `
     50%      { border-color: rgba(56, 189, 248, 0.35); background-color: rgba(56, 189, 248, 0.08); }
   }
 
+  @keyframes mc-tool-glow {
+    /* intentionally empty — hover handled by Tailwind */
+    from, to {}
+  }
+
   .hero-animate {
     opacity: 0;
     animation: hero-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -70,9 +75,6 @@ const heroStyles = `
   }
   .hero-scroll-hint {
     animation: hero-scroll-hint 2.2s ease-in-out infinite;
-  }
-  .mc-tool-hover:hover {
-    animation: mc-tool-glow 1.5s ease-in-out infinite;
   }
 `;
 
@@ -304,6 +306,16 @@ function MissionControl({
         }}
       />
 
+      {/* Large watermark logo */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <img
+          src="/p2v-logo.png"
+          alt=""
+          className="h-[420px] w-auto max-w-[80%] object-contain opacity-[0.03] sm:h-[500px] lg:h-[560px]"
+          draggable={false}
+        />
+      </div>
+
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         {/* Greeting */}
         <div className="hero-animate mb-8" style={{ animationDelay: "0.05s" }}>
@@ -344,7 +356,7 @@ function MissionControl({
               <Link
                 key={tool.label}
                 href={tool.href}
-                className={`mc-tool-hover hero-chip-animate group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-center backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-400/[0.12] sm:p-5`}
+                className="hero-chip-animate group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-center backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] hover:border-cyan-400/50 hover:bg-gradient-to-b hover:from-cyan-400/15 hover:to-cyan-400/5 sm:p-5"
                 style={{ animationDelay: `${0.25 + i * 0.06}s` }}
               >
                 <div
