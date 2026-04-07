@@ -227,22 +227,29 @@ export default function PropertyWebsiteClient({
         )}
         <div className={`absolute inset-0 bg-gradient-to-t ${t.heroOverlay}`} />
 
-        {/* Agent logo / name bar */}
-        {(agent?.saved_logo_url || agentName) && (
-          <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between z-10">
-            <div className="flex items-center gap-3">
-              {agent?.saved_logo_url && (
-                <img src={agent.saved_logo_url} alt={agentName} className="h-8 object-contain brightness-0 invert" />
-              )}
-              {!agent?.saved_logo_url && agentName && (
-                <span className="text-white/90 text-sm font-semibold">{agentName}</span>
-              )}
-            </div>
+        {/* Top nav bar */}
+        <div className="absolute top-0 left-0 right-0 p-4 sm:p-6 flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            {agent?.saved_logo_url ? (
+              <img src={agent.saved_logo_url} alt={agentName} className="h-8 object-contain brightness-0 invert" />
+            ) : agentName ? (
+              <span className="text-white/90 text-sm font-semibold">{agentName}</span>
+            ) : null}
             {agent?.saved_company && (
-              <span className="text-white/60 text-xs">{agent.saved_company}</span>
+              <span className="text-white/50 text-xs hidden sm:inline">·</span>
+            )}
+            {agent?.saved_company && (
+              <span className="text-white/50 text-xs hidden sm:inline">{agent.saved_company}</span>
             )}
           </div>
-        )}
+          <a
+            href="https://realestatephoto2video.com"
+            className="text-white/50 hover:text-white/80 text-xs font-medium transition-colors flex items-center gap-1.5"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span className="hidden sm:inline">P2V Home</span>
+          </a>
+        </div>
 
         {/* Hero content */}
         <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12 z-10">
@@ -352,22 +359,6 @@ export default function PropertyWebsiteClient({
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* ═══ DESCRIPTION ═══ */}
-        {modules.description && descriptions.length > 0 && (
-          <section className="py-16">
-            <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>
-              About This Property
-            </h2>
-            {descriptions.map((desc: any) => (
-              <div key={desc.id} className="mb-6 last:mb-0">
-                <p className={`text-base leading-relaxed ${t.text} whitespace-pre-wrap`}>
-                  {desc.description}
-                </p>
-              </div>
-            ))}
-          </section>
-        )}
-
         {/* ═══ PROPERTY DETAILS ═══ */}
         <section className="py-16">
           <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>
@@ -444,6 +435,22 @@ export default function PropertyWebsiteClient({
                 );
               })}
             </div>
+          </section>
+        )}
+
+        {/* ═══ DESCRIPTION ═══ */}
+        {modules.description && descriptions.length > 0 && (
+          <section className="py-16">
+            <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>
+              About This Property
+            </h2>
+            {descriptions.map((desc: any) => (
+              <div key={desc.id} className="mb-6 last:mb-0">
+                <p className={`text-base leading-relaxed ${t.text} whitespace-pre-wrap`}>
+                  {desc.description}
+                </p>
+              </div>
+            ))}
           </section>
         )}
 
