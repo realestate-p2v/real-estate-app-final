@@ -2,12 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PropertyWebsiteClient from "./client";
 
-export default async function PropertyWebsitePage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const slug = params.slug;
+export default async function PropertyWebsitePage(
+  props: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await props.params;
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -63,9 +61,3 @@ export default async function PropertyWebsitePage({
       modules={modules}
       curated={curated}
       descriptions={descriptions}
-      stagings={stagings}
-      exports={designExports}
-      template={property.website_template || "modern_clean"}
-    />
-  );
-}
