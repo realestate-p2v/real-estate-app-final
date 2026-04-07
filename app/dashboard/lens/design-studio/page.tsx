@@ -458,16 +458,36 @@ function DesignStudioPageInner() {
       setPdfFeatures(features);
       setBrandFeatures(features);
     }
-    if (prop.description) { setPdfDescription(prop.description); }
-    if (!prop.description) {
-      (async () => {
-        try {
-          const supabase = (await import("@/lib/supabase/client")).createClient();
-          const { data: descData } = await supabase.from("agent_properties").select("description").eq("id", prop.id).single();
-          if (descData?.description) setPdfDescription(descData.description);
-        } catch { /* description column may not exist */ }
-      })();
-    }
+    // Fetch latest description from lens_descriptions, matched by address
+    (async () => {
+      try {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const norm = (prop.address_normalized || prop.address || "").trim().toLowerCase()
+          .replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+          .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+          .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+          .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (!u || !norm) return;
+        const { data: descs } = await supabase
+          .from("lens_descriptions")
+          .select("description, property_data")
+          .eq("user_id", u.id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (descs && descs.length > 0) {
+          const match = descs.find((d: any) => {
+            const addr = (d.property_data?.address || d.property_data?.property_address || "").trim().toLowerCase()
+              .replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+              .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+              .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+              .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+            return addr.startsWith(norm) || norm.startsWith(addr);
+          });
+          if (match?.description) setPdfDescription(match.description);
+        }
+      } catch { /* lens_descriptions may not match */ }
+    })();
   };
 
   const prepareForExport = (el: HTMLElement): { restore: () => void } => { const parent = el.parentElement as HTMLElement; const savedTransform = el.style.transform; const savedOverflow = parent?.style.overflow; const savedWidth = parent?.style.width; const savedHeight = parent?.style.height; el.style.transform = "none"; if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; } return { restore: () => { el.style.transform = savedTransform; if (parent) { parent.style.overflow = savedOverflow || ""; parent.style.width = savedWidth || ""; parent.style.height = savedHeight || ""; } } }; };
