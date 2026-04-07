@@ -7,8 +7,8 @@ import {
   Phone, Mail, Building2, ChevronLeft, ChevronRight, X,
   Play, GripVertical, ExternalLink,
 } from "lucide-react";
-import { BookingCalendar } from "@/components/booking-calendar";
-import { ShowingRequestForm } from "@/components/showing-request-form";
+import  BookingCalendar  from "@/components/booking-calendar";
+import  ShowingRequestForm  from "@/components/showing-request-form";
 
 const TEMPLATES: Record<string, {
   bg: string; cardBg: string; text: string; textMuted: string; heading: string;
