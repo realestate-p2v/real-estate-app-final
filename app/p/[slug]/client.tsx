@@ -271,7 +271,7 @@ export default function PropertyWebsiteClient({
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>About This Property</h2>
                 {descriptions.map((desc: any) => (
                   <div key={desc.id} className="mb-6 last:mb-0">
-                    <p className={`text-base leading-relaxed ${t.text} whitespace-pre-wrap`}>{desc.description}</p>
+                   <p className={`text-base leading-relaxed ${t.text} whitespace-pre-wrap`} dangerouslySetInnerHTML={{ __html: desc.description.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
                   </div>
                 ))}
               </section>
