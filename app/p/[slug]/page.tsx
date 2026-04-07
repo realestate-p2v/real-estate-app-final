@@ -71,12 +71,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { property, agent, descriptions, curated } = data;
   const agentName = agent?.saved_agent_name || "";
   const location = [property.city, property.state].filter(Boolean).join(", ");
-  const title = `${property.address}${location ? ` — ${location}` : ""}${agentName ? ` | ${agentName}` : ""}`;
 
-  // Build description from listing description or property details
+  // Page <title> includes agent name, OG title does not (cleaner social previews)
+  const pageTitle = `${property.address}${location ? ` — ${location}` : ""}${agentName ? ` | ${agentName}` : ""}`;
+  const ogTitle = `${property.address}${location ? ` — ${location}` : ""}`;
+
+  // Build description: clean excerpt from listing description, or fallback to property stats
   let metaDescription = "";
   if (descriptions.length > 0 && descriptions[0].description) {
-    metaDescription = descriptions[0].description.slice(0, 160);
+    // Strip markdown bold, collapse newlines/whitespace, truncate at word boundary
+    const raw = descriptions[0].description
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/\n+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const cutoff = 155;
+    if (raw.length <= cutoff) {
+      metaDescription = raw;
+    } else {
+      const truncated = raw.slice(0, cutoff);
+      const lastSpace = truncated.lastIndexOf(" ");
+      metaDescription = (lastSpace > 100 ? truncated.slice(0, lastSpace) : truncated) + "…";
+    }
   } else {
     const parts: string[] = [];
     if (property.bedrooms) parts.push(`${property.bedrooms} bed`);
@@ -96,10 +112,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : ogImage;
 
   return {
-    title,
+    title: pageTitle,
     description: metaDescription,
     openGraph: {
-      title,
+      title: ogTitle,
       description: metaDescription,
       type: "website",
       url: `https://realestatephoto2video.com/p/${slug}`,
@@ -118,7 +134,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: ogImageUrl ? "summary_large_image" : "summary",
-      title,
+      title: ogTitle,
       description: metaDescription,
       ...(ogImageUrl ? { images: [ogImageUrl] } : {}),
     },
