@@ -364,33 +364,26 @@ export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape
   );
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
-const [answers, setAnswers] = useState<QuestionnaireAnswers>(() => {
-    let beds = initialBedrooms || 3;
-    let baths = initialBathrooms || 2;
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlBeds = parseInt(params.get("beds") || "");
-      const urlBaths = parseInt(params.get("baths") || "");
-      if (!isNaN(urlBeds) && urlBeds >= 1) beds = urlBeds;
-      if (!isNaN(urlBaths) && urlBaths >= 1) baths = urlBaths;
-    }
-    return {
-      bedrooms: beds,
-      bathrooms: baths,
-      features: [],
-      featureOther: "",
-      views: [],
-      viewOther: "",
-    };
+const [answers, setAnswers] = useState<QuestionnaireAnswers>({
+    bedrooms: 3,
+    bathrooms: 2,
+    features: [],
+    featureOther: "",
+    views: [],
+    viewOther: "",
   });
 
-  // Update answers if initial values arrive after first render
+  // Hydration-safe: read URL params after mount
   useEffect(() => {
-    if (initialBedrooms && initialBedrooms !== answers.bedrooms) {
-      setAnswers(prev => ({ ...prev, bedrooms: initialBedrooms }));
-    }
-  }, [initialBedrooms]);
-
+    const params = new URLSearchParams(window.location.search);
+    const urlBeds = parseInt(params.get("beds") || "");
+    const urlBaths = parseInt(params.get("baths") || "");
+    setAnswers(prev => ({
+      ...prev,
+      bedrooms: (!isNaN(urlBeds) && urlBeds >= 1) ? urlBeds : (initialBedrooms || prev.bedrooms),
+      bathrooms: (!isNaN(urlBaths) && urlBaths >= 1) ? urlBaths : (initialBathrooms || prev.bathrooms),
+    }));
+  }, []);
   useEffect(() => {
     if (initialBathrooms && initialBathrooms !== answers.bathrooms) {
       setAnswers(prev => ({ ...prev, bathrooms: initialBathrooms }));
