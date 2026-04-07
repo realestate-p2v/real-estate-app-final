@@ -632,19 +632,42 @@ export default function SinglePropertyPage() {
             <div className="space-y-6">
               {videos.map((order: any) => {
                 const sc: Record<string, string> = { delivered: "bg-green-100 text-green-700", complete: "bg-green-100 text-green-700", processing: "bg-amber-100 text-amber-700", new: "bg-blue-100 text-blue-700", pending_payment: "bg-gray-100 text-gray-600" };
-                const videoUrl = order.delivery_url || order.unbranded_delivery_url;
+                const brandedUrl = order.delivery_url;
+                const unbrandedUrl = order.unbranded_delivery_url;
+                const videoVersions: { url: string; label: string; isBranded: boolean }[] = [];
+                if (brandedUrl) videoVersions.push({ url: brandedUrl, label: "Branded", isBranded: true });
+                if (unbrandedUrl) videoVersions.push({ url: unbrandedUrl, label: "Unbranded", isBranded: false });
+                if (videoVersions.length === 0) videoVersions.push({ url: "", label: "", isBranded: false });
+
                 return (
                   <div key={order.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
-                    {videoUrl && <div className="aspect-video bg-black"><video src={videoUrl} controls playsInline preload="metadata" className="w-full h-full" /></div>}
-                    <div className="p-4 flex items-center justify-between">
+                    <div className="p-4 pb-2 flex items-center justify-between">
                       <div>
-                        <div className="flex items-center gap-2"><p className="text-sm font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${sc[order.status] || "bg-gray-100 text-gray-600"}`}>{order.status?.replace(/_/g, " ")}</span></div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${sc[order.status] || "bg-gray-100 text-gray-600"}`}>{order.status?.replace(/_/g, " ")}</span>
+                          {videoVersions.length > 1 && <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{videoVersions.length} versions</span>}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {videoUrl && <a href={videoUrl.includes("/upload/") ? videoUrl.replace("/upload/", "/upload/fl_attachment/") : videoUrl} download className="text-xs font-semibold text-muted-foreground hover:text-foreground"><Download className="h-3.5 w-3.5 inline mr-1" />Download</a>}
-                        {order.delivery_url && <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/video/${order.order_id}`}><ExternalLink className="h-3 w-3 mr-1.5" />Share</Link></Button>}
-                      </div>
+                      {order.delivery_url && <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/video/${order.order_id}`}><ExternalLink className="h-3 w-3 mr-1.5" />Share</Link></Button>}
+                    </div>
+                    <div className={`${videoVersions.length > 1 ? "grid grid-cols-2 gap-3 px-4 pb-4" : "px-4 pb-4"}`}>
+                      {videoVersions.map((v) => v.url && (
+                        <div key={v.label} className="space-y-2">
+                          {videoVersions.length > 1 && (
+                            <p className={`text-xs font-semibold ${v.isBranded ? "text-cyan-700" : "text-muted-foreground"}`}>
+                              {v.isBranded ? "🎨 Branded" : "📎 Unbranded"}
+                            </p>
+                          )}
+                          <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                            <video src={v.url} controls playsInline preload="metadata" className="w-full h-full" />
+                          </div>
+                          <a href={v.url.includes("/upload/") ? v.url.replace("/upload/", "/upload/fl_attachment/") : v.url} download className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                            <Download className="h-3 w-3" />Download {v.label}
+                          </a>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
