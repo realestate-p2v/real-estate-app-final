@@ -673,6 +673,10 @@ export default function SinglePropertyPage() {
           </div>
           {editing ? (
             <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Address / Property Name</label>
+                <input type="text" value={editForm.address || ""} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} placeholder="123 Main Street" className={inp} />
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Status</label><select value={editForm.status || "active"} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className={inp}><option value="active">Active</option><option value="pending">Pending</option><option value="sold">Sold</option><option value="withdrawn">Withdrawn</option><option value="rental">Rental</option></select></div>
                 <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Listing Type</label><select value={editForm.listing_type || "sale"} onChange={(e) => setEditForm({ ...editForm, listing_type: e.target.value })} className={inp}><option value="sale">Sale</option><option value="rental">Rental</option><option value="commercial">Commercial</option></select></div>
