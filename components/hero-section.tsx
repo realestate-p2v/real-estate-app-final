@@ -255,7 +255,7 @@ export function HeroSection() {
                         size="lg"
                         className="h-auto rounded-xl border-white/15 bg-white/[0.05] px-6 py-4 text-base font-bold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 sm:text-lg"
                       >
-                        Just a Video —{" "}
+                        Create a Listing Video —{" "}
                         <span className="ml-1 text-white/40 line-through">$119</span>
                         <span className="ml-1.5 text-green-400">$79</span>
                       </Button>
