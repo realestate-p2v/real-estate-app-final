@@ -154,14 +154,42 @@ export function BrandingSelector({
       const supabase = (await import("@/lib/supabase/client")).createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoadingSaved(false); return; }
-      const { data } = await supabase
+
+      // Try saved_branding_cards from profile first (most reliable)
+      const { data: profile } = await supabase
+        .from("lens_usage")
+        .select("saved_branding_cards")
+        .eq("user_id", user.id)
+        .single();
+
+      const profileCards = Array.isArray(profile?.saved_branding_cards)
+        ? profile.saved_branding_cards.map((url: string, i: number) => ({
+            id: `profile-${i}`,
+            export_url: url,
+            template_type: "branding_card",
+            created_at: new Date().toISOString(),
+          }))
+        : [];
+
+      // Also check design_exports (both naming conventions)
+      const { data: exportCards } = await supabase
         .from("design_exports")
         .select("id, export_url, template_type, created_at")
         .eq("user_id", user.id)
-        .in("template_type", ["branding-card"])
+        .in("template_type", ["branding_card", "branding-card"])
         .order("created_at", { ascending: false })
         .limit(20);
-      setSavedCards(data || []);
+
+      // Merge and deduplicate by URL
+      const allCards = [...profileCards, ...(exportCards || [])];
+      const seen = new Set<string>();
+      const unique = allCards.filter((card) => {
+        if (!card.export_url || seen.has(card.export_url)) return false;
+        seen.add(card.export_url);
+        return true;
+      });
+
+      setSavedCards(unique);
     } catch (err) {
       console.error("Failed to load saved cards:", err);
     } finally {
