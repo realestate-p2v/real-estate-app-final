@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import {
-  Bed, Bath, Maximize, MapPin,
-  Phone, Mail, Building2, ChevronLeft, ChevronRight, X,
-  Play, GripVertical, ExternalLink,
-} from "lucide-react";
+import { useState } from "react";
+import { MapPin } from "lucide-react";
+import { BookingCalendar } from "@/components/booking-calendar";
 
 export default function PropertyWebsiteClient({
   property, agent, modules, curated, descriptions, stagings, exports: designExports, template,
@@ -19,26 +16,19 @@ export default function PropertyWebsiteClient({
   exports: any[];
   template: string;
 }) {
-  const t = {
-    bg: "bg-white", cardBg: "bg-gray-50", text: "text-gray-900", textMuted: "text-gray-500",
-    heading: "text-gray-900", accent: "bg-gray-900", accentText: "text-white",
-    border: "border-gray-200", heroOverlay: "from-black/60 via-black/30 to-transparent",
-    font: "font-sans", heroFont: "font-sans",
-  };
-
   const photos = curated.photos || [];
   const agentName = agent?.saved_agent_name || "";
   const location = [property.city, property.state, property.zip].filter(Boolean).join(", ");
 
   return (
-    <div className={`min-h-screen ${t.bg}`}>
+    <div className="min-h-screen bg-white">
       <section className="relative h-[70vh] min-h-[500px] max-h-[800px] w-full overflow-hidden">
         {photos[0] ? (
           <img src={photos[0]} alt={property.address} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
         )}
-        <div className={`absolute inset-0 bg-gradient-to-t ${t.heroOverlay}`} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12 z-10">
           <div className="max-w-5xl mx-auto">
             {property.price && (
@@ -61,6 +51,12 @@ export default function PropertyWebsiteClient({
           {property.bathrooms && `${property.bathrooms} baths · `}
           {property.sqft && `${property.sqft.toLocaleString()} sqft`}
         </p>
+
+        <div className="mt-12">
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-4">Schedule a Showing</h2>
+          <BookingCalendar propertyId={property.id} mode="book" agentName={agentName} />
+        </div>
+
         {agentName && <p className="mt-8 text-sm text-gray-500">Listed by {agentName}</p>}
       </div>
 
