@@ -2,14 +2,13 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
-  Bed, Bath, Maximize, Calendar as CalendarIcon, MapPin,
+  Bed, Bath, Maximize, MapPin,
   Phone, Mail, Building2, ChevronLeft, ChevronRight, X,
-  Play, GripVertical, ExternalLink, Download,
+  Play, GripVertical, ExternalLink,
 } from "lucide-react";
 import { BookingCalendar } from "@/components/booking-calendar";
 import { ShowingRequestForm } from "@/components/showing-request-form";
 
-// ─── Template Definitions ───
 const TEMPLATES: Record<string, {
   bg: string; cardBg: string; text: string; textMuted: string; heading: string;
   accent: string; accentText: string; border: string; heroOverlay: string;
@@ -35,7 +34,6 @@ const TEMPLATES: Record<string, {
   },
 };
 
-// ─── Before/After Slider ───
 function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
   const [position, setPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +70,6 @@ function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUr
   );
 }
 
-// ─── Photo Lightbox ───
 function Lightbox({ photos, startIndex, onClose }: { photos: string[]; startIndex: number; onClose: () => void }) {
   const [idx, setIdx] = useState(startIndex);
   useEffect(() => {
@@ -84,7 +81,6 @@ function Lightbox({ photos, startIndex, onClose }: { photos: string[]; startInde
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [photos.length, onClose]);
-
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={onClose}>
       <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-10"><X className="h-7 w-7" /></button>
@@ -113,7 +109,7 @@ interface PropertyWebsiteClientProps {
 }
 
 export default function PropertyWebsiteClient({
-  property, agent, modules, curated, descriptions, stagings, exports, template,
+  property, agent, modules, curated, descriptions, stagings, exports: designExports, template,
 }: PropertyWebsiteClientProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeStagingIdx, setActiveStagingIdx] = useState(0);
@@ -128,7 +124,7 @@ export default function PropertyWebsiteClient({
 
   return (
     <div className={`min-h-screen ${t.bg} ${t.font}`}>
-      {/* ═══ HERO ═══ */}
+      {/* HERO */}
       <section className="relative h-[70vh] min-h-[500px] max-h-[800px] w-full overflow-hidden">
         {heroVideo ? (
           <video src={heroVideo} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
@@ -143,7 +139,6 @@ export default function PropertyWebsiteClient({
         )}
         <div className={`absolute inset-0 bg-gradient-to-t ${t.heroOverlay}`} />
 
-        {/* Agent branding top bar */}
         {(agent?.saved_logo_url || agentName) && (
           <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between z-10">
             <div className="flex items-center gap-3">
@@ -160,7 +155,6 @@ export default function PropertyWebsiteClient({
           </div>
         )}
 
-        {/* Hero content */}
         <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12 z-10">
           <div className="max-w-5xl mx-auto">
             {property.price && (
@@ -206,9 +200,8 @@ export default function PropertyWebsiteClient({
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* ═══ DESCRIPTION ═══ */}
         {modules.description && descriptions.length > 0 && (
-          <section className="py-16 border-b border-dashed" style={{ borderColor: "currentColor", opacity: 0.1 }}>
+          <section className="py-16">
             <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>About This Property</h2>
             {descriptions.map((desc: any) => (
               <div key={desc.id} className="mb-6 last:mb-0">
@@ -218,21 +211,19 @@ export default function PropertyWebsiteClient({
           </section>
         )}
 
-        {/* ═══ PHOTO GALLERY ═══ */}
         {modules.photos && photos.length > 0 && (
           <section className="py-16">
             <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Photos</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {photos.map((url: string, i: number) => {
                 const thumb = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_600,h_450,c_fill,q_auto/") : url;
-                const isFirst = i === 0;
                 return (
                   <button
                     key={i}
                     onClick={() => setLightboxIndex(i)}
-                    className={`relative rounded-xl overflow-hidden group ${isFirst ? "col-span-2 row-span-2" : ""}`}
+                    className={`relative rounded-xl overflow-hidden group ${i === 0 ? "col-span-2 row-span-2" : ""}`}
                   >
-                    <div className={`${isFirst ? "aspect-[4/3]" : "aspect-[4/3]"} bg-gray-200`}>
+                    <div className="aspect-[4/3] bg-gray-200">
                       <img src={thumb} alt={`Photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -243,7 +234,6 @@ export default function PropertyWebsiteClient({
           </section>
         )}
 
-        {/* ═══ VIDEO ═══ */}
         {modules.videos && videos.length > 0 && (
           <section className="py-16">
             <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Video Tour</h2>
@@ -255,7 +245,6 @@ export default function PropertyWebsiteClient({
           </section>
         )}
 
-        {/* ═══ VIRTUAL STAGING ═══ */}
         {modules.staging && stagings.length > 0 && (
           <section className="py-16">
             <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Virtual Staging</h2>
@@ -283,12 +272,11 @@ export default function PropertyWebsiteClient({
           </section>
         )}
 
-        {/* ═══ MARKETING MATERIALS ═══ */}
-        {modules.exports && exports.length > 0 && (
+        {modules.exports && designExports.length > 0 && (
           <section className="py-16">
             <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Marketing Materials</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {exports.map((exp: any) => {
+              {designExports.map((exp: any) => {
                 const dl = exp.export_url || exp.overlay_video_url;
                 const isVideo = exp.export_format === "mp4" || dl?.match(/\.(mp4|mov|webm)$/i);
                 let thumb: string | null = null;
@@ -325,7 +313,6 @@ export default function PropertyWebsiteClient({
           </section>
         )}
 
-        {/* ═══ BOOKING CALENDAR ═══ */}
         {modules.booking && property.booking_enabled && (
           <section className="py-16">
             <h2 className={`text-2xl font-extrabold ${t.heading} mb-2 ${t.heroFont}`}>Schedule a Showing</h2>
@@ -336,7 +323,6 @@ export default function PropertyWebsiteClient({
           </section>
         )}
 
-        {/* ═══ LEAD CAPTURE (always shown) ═══ */}
         <section className="py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
@@ -358,8 +344,6 @@ export default function PropertyWebsiteClient({
                 />
               </div>
             </div>
-
-            {/* ═══ AGENT CARD ═══ */}
             <div>
               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-6 sticky top-8`}>
                 <div className="flex items-start gap-4 mb-5">
@@ -380,20 +364,17 @@ export default function PropertyWebsiteClient({
                 <div className="space-y-3">
                   {agent?.saved_phone && (
                     <a href={`tel:${agent.saved_phone}`} className={`flex items-center gap-3 text-sm ${t.text} hover:opacity-80`}>
-                      <Phone className="h-4 w-4 flex-shrink-0" />
-                      {agent.saved_phone}
+                      <Phone className="h-4 w-4 flex-shrink-0" />{agent.saved_phone}
                     </a>
                   )}
                   {agent?.saved_email && (
                     <a href={`mailto:${agent.saved_email}`} className={`flex items-center gap-3 text-sm ${t.text} hover:opacity-80`}>
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      {agent.saved_email}
+                      <Mail className="h-4 w-4 flex-shrink-0" />{agent.saved_email}
                     </a>
                   )}
                   {agent?.saved_company && (
                     <div className={`flex items-center gap-3 text-sm ${t.textMuted}`}>
-                      <Building2 className="h-4 w-4 flex-shrink-0" />
-                      {agent.saved_company}
+                      <Building2 className="h-4 w-4 flex-shrink-0" />{agent.saved_company}
                     </div>
                   )}
                 </div>
@@ -402,7 +383,6 @@ export default function PropertyWebsiteClient({
           </div>
         </section>
 
-        {/* ═══ PROPERTY DETAILS ═══ */}
         <section className="py-16">
           <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Property Details</h2>
           <div className={`${t.cardBg} rounded-2xl border ${t.border} p-6`}>
@@ -423,4 +403,36 @@ export default function PropertyWebsiteClient({
                 </div>
               ))}
             </div>
-            {property.special_features && property.special_featu
+            {property.special_features && property.special_features.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className={`text-xs font-semibold ${t.textMuted} uppercase tracking-wide mb-3`}>Features</p>
+                <div className="flex flex-wrap gap-2">
+                  {property.special_features.map((f: string, i: number) => (
+                    <span key={i} className={`text-xs font-medium px-3 py-1.5 rounded-full border ${t.border} ${t.text}`}>{f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <footer className={`border-t ${t.border} py-10 mt-8`}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          {agentName && (
+            <p className={`text-sm ${t.textMuted} mb-2`}>
+              Listed by {agentName}{agent?.saved_company ? ` \u00B7 ${agent.saved_company}` : ""}
+            </p>
+          )}
+          <p className={`text-xs ${t.textMuted} opacity-60`}>
+            Powered by <a href="https://realestatephoto2video.com" className="hover:opacity-80 underline">P2V</a>
+          </p>
+        </div>
+      </footer>
+
+      {lightboxIndex !== null && (
+        <Lightbox photos={photos} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+      )}
+    </div>
+  );
+}
