@@ -329,6 +329,17 @@ export default function PropertyWebsiteClient({
           <div className="lg:w-[340px] flex-shrink-0">
             <div className="lg:sticky lg:top-20 space-y-5">
 
+              {/* Branding Card */}
+              {agent?.saved_branding_cards && Array.isArray(agent.saved_branding_cards) && agent.saved_branding_cards.length > 0 && (
+                <div className="rounded-2xl overflow-hidden shadow-md">
+                  <img
+                    src={agent.saved_branding_cards[0]}
+                    alt={`${agentName} — Branding Card`}
+                    className="w-full h-auto"
+                  />
+                </div>
+              )}
+
               {/* Agent Card */}
               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-5`}>
                 <div className="flex items-start gap-3.5 mb-4">
