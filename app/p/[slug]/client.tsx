@@ -3,8 +3,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Bed, Bath, Maximize, MapPin,
-  Phone, Mail, Building2, ChevronLeft, ChevronRight, X,
-  Play, GripVertical, Calendar, MessageSquare,
+  Phone, Mail, ChevronLeft, ChevronRight, X,
+  GripVertical, Calendar, MessageSquare,
+  Copy, CheckCircle, Download, Share2,
 } from "lucide-react";
 import BookingCalendar from "@/components/booking-calendar";
 import ShowingRequestForm from "@/components/showing-request-form";
@@ -34,6 +35,14 @@ const TEMPLATES: Record<string, {
     font: "font-serif", heroFont: "font-serif",
   },
 };
+
+/* ─── Sanitize + render description HTML ─── */
+function renderDescription(text: string): string {
+  let safe = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  safe = safe.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  safe = safe.replace(/\n/g, "<br />");
+  return safe;
+}
 
 /* ─── Before/After Slider ─── */
 function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
@@ -95,6 +104,75 @@ function Lightbox({ photos, startIndex, onClose }: { photos: string[]; startInde
   );
 }
 
+/* ─── QR Code Share Section ─── */
+function ShareSection({ url, theme }: { url: string; theme: typeof TEMPLATES.modern_clean }) {
+  const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    import("qrcode").then((QRCode) => {
+      QRCode.toDataURL(url, { width: 200, margin: 1, color: { dark: "#000000", light: "#ffffff" } })
+        .then(setQrDataUrl)
+        .catch(() => {});
+    }).catch(() => {});
+  }, [url]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = "property-qr-code.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  return (
+    <div className={`${theme.cardBg} rounded-2xl border ${theme.border} p-6 sm:p-8`}>
+      <div className="flex items-center gap-3 mb-5">
+        <Share2 className={`h-5 w-5 ${theme.textMuted}`} />
+        <h3 className={`text-lg font-extrabold ${theme.heading}`}>Share This Listing</h3>
+      </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        {qrDataUrl && (
+          <div className="flex-shrink-0">
+            <div className={`rounded-xl border ${theme.border} p-2 bg-white`}>
+              <img src={qrDataUrl} alt="QR Code" className="h-32 w-32" />
+            </div>
+          </div>
+        )}
+        <div className="flex-1 min-w-0 space-y-3">
+          <div className={`flex items-center gap-2 rounded-xl border ${theme.border} px-3 py-2.5`}>
+            <p className={`text-sm ${theme.textMuted} truncate flex-1`}>{url}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className={`inline-flex items-center gap-1.5 ${theme.accent} ${theme.accentText} text-xs font-bold px-4 py-2 rounded-full transition-all`}
+            >
+              {copied ? <><CheckCircle className="h-3.5 w-3.5" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy Link</>}
+            </button>
+            {qrDataUrl && (
+              <button
+                onClick={handleDownloadQR}
+                className={`inline-flex items-center gap-1.5 border ${theme.border} ${theme.text} text-xs font-bold px-4 py-2 rounded-full hover:opacity-80 transition-all`}
+              >
+                <Download className="h-3.5 w-3.5" />Download QR
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Client Component ─── */
 export default function PropertyWebsiteClient({
   property, agent, modules, curated, descriptions, stagings, designExports, template,
@@ -104,6 +182,7 @@ export default function PropertyWebsiteClient({
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeStagingIdx, setActiveStagingIdx] = useState(0);
+  const [brandingModalOpen, setBrandingModalOpen] = useState(false);
 
   const t = TEMPLATES[template] || TEMPLATES.modern_clean;
   const photos = curated.photos || [];
@@ -133,6 +212,17 @@ export default function PropertyWebsiteClient({
   };
 
   const hasBooking = modules.booking && property.booking_enabled;
+
+  const hasBrandingCard = agent?.saved_branding_cards && Array.isArray(agent.saved_branding_cards) && agent.saved_branding_cards.length > 0;
+
+  // Check if there's any real content
+  const hasContent = photos.length > 0 || videos.length > 0 || descriptions.length > 0 || stagings.length > 0;
+
+  // Build the page URL for sharing
+  const [pageUrl, setPageUrl] = useState("");
+  useEffect(() => {
+    setPageUrl(window.location.href);
+  }, []);
 
   return (
     <div className={`min-h-screen ${t.bg} ${t.font}`}>
@@ -231,7 +321,23 @@ export default function PropertyWebsiteClient({
           {/* ═══ LEFT COLUMN (70%) ═══ */}
           <div className="flex-1 min-w-0">
 
+            {/* Empty state — no curated content */}
+            {!hasContent && (
+              <section className="mb-12">
+                <div className={`${t.cardBg} rounded-2xl border ${t.border} p-10 sm:p-14 text-center`}>
+                  <div className={`mx-auto h-16 w-16 rounded-2xl ${t.accent}/10 flex items-center justify-center mb-5`}>
+                    <MapPin className={`h-8 w-8 ${t.textMuted}`} />
+                  </div>
+                  <h2 className={`text-xl font-bold ${t.heading} mb-3`}>This listing is being prepared.</h2>
+                  <p className={`${t.textMuted} max-w-md mx-auto leading-relaxed`}>
+                    Photos, videos, and property details are on the way. Check back soon!
+                  </p>
+                </div>
+              </section>
+            )}
+
             {/* Property Details */}
+            {hasContent && (
             <section className="mb-12">
               <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Property Details</h2>
               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-6`}>
@@ -264,6 +370,7 @@ export default function PropertyWebsiteClient({
                 )}
               </div>
             </section>
+            )}
 
             {/* Amenities */}
             {property.amenities && property.amenities.length > 0 && (
@@ -309,28 +416,28 @@ export default function PropertyWebsiteClient({
                 </div>
               </section>
             )}
-            
-            {/* Description */}
+
+            {/* Description — with line breaks + sanitization */}
             {modules.description && descriptions.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>About This Property</h2>
                 {descriptions.map((desc: any) => (
                   <div key={desc.id} className="mb-6 last:mb-0">
-                   <p className={`text-base leading-relaxed ${t.text} whitespace-pre-wrap`} dangerouslySetInnerHTML={{ __html: desc.description.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                   <p className={`text-base leading-relaxed ${t.text}`} dangerouslySetInnerHTML={{ __html: renderDescription(desc.description) }} />
                   </div>
                 ))}
               </section>
             )}
 
-            {/* Photos */}
+            {/* Photos — responsive grid, span only on sm+ */}
             {modules.photos && photos.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Photos</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {photos.map((url: string, i: number) => {
                     const thumb = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_600,h_450,c_fill,q_auto/") : url;
                     return (
-                      <button key={i} onClick={() => setLightboxIndex(i)} className={`relative rounded-xl overflow-hidden group ${i === 0 ? "col-span-2 row-span-2" : ""}`}>
+                      <button key={i} onClick={() => setLightboxIndex(i)} className={`relative rounded-xl overflow-hidden group ${i === 0 ? "sm:col-span-2 sm:row-span-2" : ""}`}>
                         <div className="aspect-[4/3] bg-gray-200">
                           <img src={thumb} alt={`Photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         </div>
@@ -370,25 +477,34 @@ export default function PropertyWebsiteClient({
                 )}
               </section>
             )}
+
+            {/* Share section with QR code */}
+            {pageUrl && (
+              <section className="mb-12">
+                <ShareSection url={pageUrl} theme={t} />
+              </section>
+            )}
           </div>
 
           {/* ═══ RIGHT COLUMN (35%) — Sticky sidebar ═══ */}
           <div className="lg:w-[380px] flex-shrink-0">
             <div className="lg:sticky lg:top-20 space-y-5">
 
-              {/* Branding Card */}
-              {agent?.saved_branding_cards && Array.isArray(agent.saved_branding_cards) && agent.saved_branding_cards.length > 0 && (
-                <div className="rounded-2xl overflow-hidden shadow-md">
+              {/* Branding Card — clickable, opens modal */}
+              {hasBrandingCard && (
+                <button
+                  onClick={() => setBrandingModalOpen(true)}
+                  className="rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow w-full text-left"
+                >
                   <img
                     src={agent.saved_branding_cards[0]}
                     alt={`${agentName} — Branding Card`}
                     className="w-full h-auto"
                   />
-                </div>
+                </button>
               )}
 
-              {/* Agent Card — hidden when branding card is shown */}
-              {!(agent?.saved_branding_cards && Array.isArray(agent.saved_branding_cards) && agent.saved_branding_cards.length > 0) && (
+              {/* Agent Card — always visible */}
               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-5`}>
                 <div className="flex items-start gap-3.5 mb-4">
                   {agent?.saved_headshot_url ? (
@@ -416,7 +532,6 @@ export default function PropertyWebsiteClient({
                   )}
                 </div>
               </div>
-              )}
 
               {/* Booking Calendar */}
               {hasBooking && (
@@ -467,6 +582,21 @@ export default function PropertyWebsiteClient({
           </p>
         </div>
       </footer>
+
+      {/* ═══ BRANDING CARD MODAL ═══ */}
+      {brandingModalOpen && hasBrandingCard && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4" onClick={() => setBrandingModalOpen(false)}>
+          <button onClick={() => setBrandingModalOpen(false)} className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
+            <X className="h-7 w-7" />
+          </button>
+          <img
+            src={agent.saved_branding_cards[0]}
+            alt={`${agentName} — Branding Card`}
+            className="max-h-[85vh] max-w-[95vw] sm:max-w-[600px] object-contain rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* ═══ LENSY CHAT WIDGET ═══ */}
       {modules.lensy && (
