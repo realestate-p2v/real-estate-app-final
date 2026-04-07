@@ -49,8 +49,8 @@ const heroStyles = `
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
   @keyframes mc-tool-glow {
-    0%, 100% { box-shadow: 0 0 0 0 transparent; }
-    50%      { box-shadow: 0 0 24px rgba(56, 189, 248, 0.2); }
+    0%, 100% { border-color: rgba(56, 189, 248, 0.15); background-color: rgba(56, 189, 248, 0.04); }
+    50%      { border-color: rgba(56, 189, 248, 0.35); background-color: rgba(56, 189, 248, 0.08); }
   }
 
   .hero-animate {
@@ -344,7 +344,7 @@ function MissionControl({
               <Link
                 key={tool.label}
                 href={tool.href}
-                className={`mc-tool-hover hero-chip-animate group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-center backdrop-blur-sm transition-all hover:border-cyan-400/30 hover:bg-cyan-400/[0.08] sm:p-5`}
+                className={`mc-tool-hover hero-chip-animate group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-center backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-400/[0.12] sm:p-5`}
                 style={{ animationDelay: `${0.25 + i * 0.06}s` }}
               >
                 <div
