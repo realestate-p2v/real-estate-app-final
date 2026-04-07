@@ -50,7 +50,7 @@ const heroStyles = `
   }
   @keyframes mc-tool-glow {
     0%, 100% { box-shadow: 0 0 0 0 transparent; }
-    50%      { box-shadow: 0 0 20px rgba(56, 189, 248, 0.15); }
+    50%      { box-shadow: 0 0 24px rgba(56, 189, 248, 0.2); }
   }
 
   .hero-animate {
@@ -97,6 +97,7 @@ export function HeroSection() {
   const [isSubscriber, setIsSubscriber] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [recentProperties, setRecentProperties] = useState<RecentProperty[]>([]);
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -144,7 +145,25 @@ export function HeroSection() {
             .order("updated_at", { ascending: false })
             .limit(4);
 
-          if (properties) setRecentProperties(properties);
+          if (properties) {
+            setRecentProperties(properties);
+
+            // Fetch thumbnails from order photos
+            const thumbMap: Record<string, string> = {};
+            for (const prop of properties) {
+              const { data: orders } = await supabase
+                .from("orders")
+                .select("photos")
+                .eq("user_id", user.id)
+                .ilike("property_address", `${prop.address.toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd").replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim()}%`)
+                .order("created_at", { ascending: false })
+                .limit(1);
+              if (orders?.[0]?.photos?.[0]?.secure_url) {
+                thumbMap[prop.id] = orders[0].photos[0].secure_url;
+              }
+            }
+            setThumbnails(thumbMap);
+          }
         }
       }
       setIsLoading(false);
@@ -167,7 +186,7 @@ export function HeroSection() {
     return (
       <>
         <style dangerouslySetInnerHTML={{ __html: heroStyles }} />
-        <MissionControl user={user} recentProperties={recentProperties} />
+        <MissionControl user={user} recentProperties={recentProperties} thumbnails={thumbnails} />
       </>
     );
   }
@@ -187,9 +206,11 @@ export function HeroSection() {
 function MissionControl({
   user,
   recentProperties,
+  thumbnails,
 }: {
   user: { id: string; email: string; name?: string };
   recentProperties: RecentProperty[];
+  thumbnails: Record<string, string>;
 }) {
   const firstName = user.name?.split(" ")[0] || "there";
 
@@ -323,7 +344,7 @@ function MissionControl({
               <Link
                 key={tool.label}
                 href={tool.href}
-                className={`mc-tool-hover hero-chip-animate group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 text-center backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] sm:p-5`}
+                className={`mc-tool-hover hero-chip-animate group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-center backdrop-blur-sm transition-all hover:border-cyan-400/30 hover:bg-cyan-400/[0.08] sm:p-5`}
                 style={{ animationDelay: `${0.25 + i * 0.06}s` }}
               >
                 <div
@@ -373,9 +394,30 @@ function MissionControl({
                   <Link
                     key={property.id}
                     href={`/dashboard/properties/${property.id}`}
-                    className="group flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]"
+                    className="group flex items-center gap-3 rounded-xl border border-white/[0.04] bg-white/[0.02] px-3 py-2.5 transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]"
                   >
-                    <div className="min-w-0">
+                    {/* Thumbnail */}
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-white/[0.04]">
+                      {thumbnails[property.id] ? (
+                        <img
+                          src={
+                            thumbnails[property.id].includes("/upload/")
+                              ? thumbnails[property.id].replace(
+                                  "/upload/",
+                                  "/upload/w_80,h_80,c_fill/"
+                                )
+                              : thumbnails[property.id]
+                          }
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Home className="h-4 w-4 text-white/15" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-white/80 group-hover:text-cyan-300 transition-colors">
                         {property.address}
                       </p>
@@ -423,11 +465,11 @@ function MissionControl({
 
             {/* Add property */}
             <Link
-              href="/dashboard/lens/coach"
+              href="/dashboard/properties?add=true"
               className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/10 py-2.5 text-xs font-semibold text-white/40 transition-all hover:border-cyan-400/20 hover:bg-cyan-400/[0.03] hover:text-cyan-400"
             >
               <Plus className="h-3.5 w-3.5" />
-              New Property Session
+              Add New Property
             </Link>
           </div>
 
@@ -446,9 +488,9 @@ function MissionControl({
                   Order a Listing Video
                 </p>
                 <p className="mt-0.5 text-xs text-white/40">
-                  <span className="text-white/30 line-through">$119</span>{" "}
-                  <span className="font-bold text-cyan-400">$71.10</span>
-                  <span className="text-white/30"> · your 10% discount</span>
+                  Starting at{" "}
+                  <span className="font-bold text-cyan-400">$4.95/clip</span>
+                  <span className="text-white/30"> · 5 clip minimum</span>
                 </p>
               </div>
               <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-white/20 transition-all group-hover:translate-x-0.5 group-hover:text-cyan-400" />
