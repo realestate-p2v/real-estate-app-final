@@ -31,8 +31,14 @@ import {
   Globe,
   Eye,
   Link2,
+  CalendarDays,
+  Mail,
+  Phone,
+  User,
+  MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import BookingCalendar from "@/components/booking-calendar";
 
 interface Property {
   id: string;
@@ -63,6 +69,20 @@ interface Property {
   lensy_enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface ShowingRequest {
+  id: string;
+  property_id: string;
+  agent_user_id: string;
+  visitor_name: string;
+  visitor_email: string | null;
+  visitor_phone: string | null;
+  message: string | null;
+  property_info: any;
+  source: string | null;
+  read: boolean;
+  created_at: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -108,6 +128,18 @@ function generateSlug(address: string, city?: string | null, state?: string | nu
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  return `${Math.floor(day / 30)}mo ago`;
 }
 
 /* ─── Before/After Slider ─── */
@@ -188,6 +220,13 @@ export default function SinglePropertyPage() {
   const [pubSaving, setPubSaving] = useState(false);
   const [slugCopied, setSlugCopied] = useState(false);
 
+  // Booking section state
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [bookingToggling, setBookingToggling] = useState(false);
+  const [showingRequests, setShowingRequests] = useState<ShowingRequest[]>([]);
+  const [showingsLoading, setShowingsLoading] = useState(false);
+  const [markingRead, setMarkingRead] = useState<string | null>(null);
+
   const supabase = createClient();
 
   // Ref for scrolling to publish section
@@ -222,6 +261,21 @@ export default function SinglePropertyPage() {
     setPubPublished(prop.website_published || false);
   }
 
+  // Fetch showing requests
+  const fetchShowingRequests = useCallback(async () => {
+    setShowingsLoading(true);
+    try {
+      const res = await fetch(`/api/showings?propertyId=${propertyId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setShowingRequests(data.requests || data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch showing requests:", err);
+    }
+    setShowingsLoading(false);
+  }, [propertyId]);
+
   const loadProperty = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
@@ -234,6 +288,7 @@ export default function SinglePropertyPage() {
     const { data: prop, error } = await supabase.from("agent_properties").select("*").eq("id", propertyId).eq("user_id", user.id).single();
     if (error || !prop) { router.push("/dashboard/properties"); return; }
     setProperty(prop); setEditForm(prop);
+    setBookingEnabled(prop.booking_enabled || false);
     initPublishState(prop);
     const norm = prop.address_normalized;
     const { data: sessionData } = await supabase.from("lens_sessions").select("*").eq("user_id", user.id).ilike("property_address", `${norm}%`).order("created_at", { ascending: false });
@@ -257,6 +312,13 @@ export default function SinglePropertyPage() {
   }, [supabase, propertyId, router]);
 
   useEffect(() => { loadProperty(); }, [loadProperty]);
+
+  // Fetch showing requests after property loads
+  useEffect(() => {
+    if (property) {
+      fetchShowingRequests();
+    }
+  }, [property, fetchShowingRequests]);
 
   const handleSave = async () => {
     if (!property) return; setSaving(true);
@@ -319,6 +381,40 @@ export default function SinglePropertyPage() {
       updated_at: new Date().toISOString(),
     } as Property);
     setPubSaving(false);
+  };
+
+  const toggleBookingEnabled = async () => {
+    if (!property) return;
+    setBookingToggling(true);
+    const next = !bookingEnabled;
+    const { error } = await supabase.from("agent_properties").update({
+      booking_enabled: next,
+      updated_at: new Date().toISOString(),
+    }).eq("id", property.id);
+    if (!error) {
+      setBookingEnabled(next);
+      setProperty({ ...property, booking_enabled: next, updated_at: new Date().toISOString() } as Property);
+    }
+    setBookingToggling(false);
+  };
+
+  const handleMarkRead = async (requestId: string) => {
+    setMarkingRead(requestId);
+    try {
+      const res = await fetch("/api/showings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: requestId, read: true }),
+      });
+      if (res.ok) {
+        setShowingRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? { ...r, read: true } : r))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to mark read:", err);
+    }
+    setMarkingRead(null);
   };
 
   function toggleCuratedItem(category: string, itemId: string) {
@@ -398,6 +494,9 @@ export default function SinglePropertyPage() {
         ? orderPhotos[0].secure_url.replace("/upload/", "/upload/w_800,h_450,c_fill,q_auto/")
         : orderPhotos[0].secure_url)
     : null;
+
+  // Showing requests counts
+  const unreadShowings = showingRequests.filter((r) => !r.read).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -1197,6 +1296,147 @@ export default function SinglePropertyPage() {
               </button>
             )}
           </div>
+        </section>
+
+        {/* ═══ SECTION 10: BOOKING CALENDAR MANAGEMENT ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <CalendarDays className="h-5 w-5 text-blue-600" />
+              <div>
+                <h2 className="text-xl font-extrabold text-foreground">Booking Calendar</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Let buyers schedule showings directly from your property website.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border mb-6">
+            <div>
+              <p className="text-sm font-bold text-foreground">{bookingEnabled ? "Booking Calendar is On" : "Booking Calendar is Off"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {bookingEnabled
+                  ? "Visitors can book showings from your property website."
+                  : "Enable to let visitors book showings on your property page."}
+              </p>
+            </div>
+            <button
+              onClick={toggleBookingEnabled}
+              disabled={bookingToggling}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${bookingEnabled ? "bg-green-500" : "bg-gray-300"}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${bookingEnabled ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          {bookingEnabled && (
+            <>
+              {/* Manage calendar */}
+              <div className="mb-8">
+                <BookingCalendar
+                  propertyId={property.id}
+                  mode="manage"
+                  propertyAddress={property.address}
+                />
+              </div>
+
+              {/* Showing Requests */}
+              <div className="border-t border-border pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <MessageSquare className="h-5 w-5 text-teal-600" />
+                  <h3 className="text-lg font-bold text-foreground">Showing Requests</h3>
+                  {unreadShowings > 0 && (
+                    <span className="text-xs font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full">
+                      {unreadShowings} new
+                    </span>
+                  )}
+                </div>
+
+                {showingsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : showingRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      No showing requests yet. They&apos;ll appear here when visitors inquire from your property page.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {showingRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        className={`p-4 rounded-xl border transition-all ${
+                          !req.read
+                            ? "border-blue-200 bg-blue-50/50"
+                            : "border-border bg-muted/20"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            {/* Unread dot */}
+                            {!req.read && (
+                              <div className="h-2.5 w-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-foreground">{req.visitor_name}</p>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                {req.visitor_email && (
+                                  <a
+                                    href={`mailto:${req.visitor_email}`}
+                                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium"
+                                  >
+                                    <Mail className="h-3 w-3" />
+                                    {req.visitor_email}
+                                  </a>
+                                )}
+                                {req.visitor_phone && (
+                                  <a
+                                    href={`tel:${req.visitor_phone}`}
+                                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium"
+                                  >
+                                    <Phone className="h-3 w-3" />
+                                    {req.visitor_phone}
+                                  </a>
+                                )}
+                              </div>
+                              {req.message && (
+                                <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                                  {req.message}
+                                </p>
+                              )}
+                              <p className="text-[10px] text-muted-foreground mt-2">
+                                {timeAgo(req.created_at)}
+                                {req.source && ` · via ${req.source}`}
+                              </p>
+                            </div>
+                          </div>
+                          {!req.read && (
+                            <button
+                              onClick={() => handleMarkRead(req.id)}
+                              disabled={markingRead === req.id}
+                              className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground bg-white border border-border rounded-lg px-3 py-1.5 transition-colors"
+                            >
+                              {markingRead === req.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Check className="h-3 w-3" />
+                                  Mark Read
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </section>
       </div>
 
