@@ -251,22 +251,48 @@ export function OrderForm() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Admin always counts as subscriber for testing
         const isAdmin = user.email === "realestatephoto2video@gmail.com";
-        if (isAdmin) { setIsSubscriber(true); return; }
+        if (isAdmin) { setIsSubscriber(true); }
 
         const { data } = await supabase
           .from("lens_usage")
-          .select("is_subscriber")
+          .select("is_subscriber, saved_agent_name, saved_phone, saved_email")
           .eq("user_id", user.id)
           .single();
 
-        if (data?.is_subscriber) setIsSubscriber(true);
+        if (data) {
+          if (isAdmin || data.is_subscriber) setIsSubscriber(true);
+          // Auto-fill agent details if not already filled
+          if (data.saved_agent_name && !formData.name) {
+            setFormData(prev => ({
+              ...prev,
+              name: prev.name || data.saved_agent_name || "",
+              email: prev.email || data.saved_email || user.email || "",
+              phone: prev.phone || data.saved_phone || "",
+            }));
+          }
+        }
       } catch {
-        // Not logged in or query failed — not a subscriber
       }
     };
     checkSub();
+  }, []);
+
+  // Read property details from URL query params
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const addr = params.get("address");
+      const city = params.get("city");
+      const state = params.get("state");
+      const beds = params.get("beds");
+      const baths = params.get("baths");
+      if (addr && !propertyAddress) setPropertyAddress(addr);
+      if (city && !propertyCity) setPropertyCity(city);
+      if (state && !propertyState) setPropertyState(state);
+      if (beds && !propertyBedrooms) setPropertyBedrooms(beds);
+      if (baths && !propertyBathrooms) setPropertyBathrooms(baths);
+    } catch {}
   }, []);
 
   // ── Derived ──
