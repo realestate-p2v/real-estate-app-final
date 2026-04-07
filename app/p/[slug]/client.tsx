@@ -149,14 +149,16 @@ export default function PropertyWebsiteClient({
 
         {/* Top nav bar */}
         <div className="absolute top-0 left-0 right-0 p-4 sm:p-6 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            {agent?.saved_logo_url ? (
-             <img src={agent.saved_logo_url} alt={agentName} className="h-8 object-contain drop-shadow-md" />
-            ) : agentName ? (
-              <span className="text-white/90 text-sm font-semibold">{agentName}</span>
-            ) : null}
-            {agent?.saved_company && <span className="text-white/50 text-xs hidden sm:inline">·</span>}
-            {agent?.saved_company && <span className="text-white/50 text-xs hidden sm:inline">{agent.saved_company}</span>}
+         <div className="flex items-center gap-3">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 flex items-center gap-2.5">
+              {agent?.saved_logo_url ? (
+               <img src={agent.saved_logo_url} alt={agentName} className="h-6 object-contain drop-shadow-md" />
+              ) : agentName ? (
+                <span className="text-white/90 text-sm font-semibold">{agentName}</span>
+              ) : null}
+              {agent?.saved_company && <span className="text-white/50 text-xs hidden sm:inline">·</span>}
+              {agent?.saved_company && <span className="text-white/70 text-xs hidden sm:inline font-medium">{agent.saved_company}</span>}
+            </div>
           </div>
          <a href="https://realestatephoto2video.com" className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 text-white/70 hover:text-white hover:bg-white/20 text-xs font-medium transition-all flex items-center gap-1.5">
             <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
