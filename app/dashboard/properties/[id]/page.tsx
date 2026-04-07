@@ -380,7 +380,11 @@ export default function SinglePropertyPage() {
 
   // Build lists for curation
   const curatedPhotoUrls = orderPhotos.map(p => p.secure_url).filter(Boolean);
-  const curatedVideoUrls = videos.map(v => v.delivery_url || v.unbranded_delivery_url).filter(Boolean);
+  const curatedVideoUrls: { url: string; label: string; orderId: string }[] = [];
+  videos.forEach((v: any) => {
+    if (v.unbranded_delivery_url) curatedVideoUrls.push({ url: v.unbranded_delivery_url, label: `${v.is_quick_video ? "Quick Video" : v.listing_package_label || "Listing Video"} — Unbranded`, orderId: v.id });
+    if (v.delivery_url) curatedVideoUrls.push({ url: v.delivery_url, label: `${v.is_quick_video ? "Quick Video" : v.listing_package_label || "Listing Video"} — Branded`, orderId: v.id });
+  });
   const curatedDescIds = descriptions.map(d => d.id);
   const curatedStagingIds = stagings.map(s => s.id);
   const curatedExportIds = exports.map(e => e.id);
