@@ -5,9 +5,9 @@ import PropertyWebsiteClient from "./client";
 export default async function PropertyWebsitePage({
   params,
 }: {
-  params: any;
+  params: Promise<{ slug: string }>;
 }) {
-  const slug = params.slug;
+  const { slug } = await params;
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -64,7 +64,7 @@ export default async function PropertyWebsitePage({
       curated={curated}
       descriptions={descriptions}
       stagings={stagings}
-      exports={designExports}
+      designExports={designExports}
       template={property.website_template || "modern_clean"}
     />
   );
