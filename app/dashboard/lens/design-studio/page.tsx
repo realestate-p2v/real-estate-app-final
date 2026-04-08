@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   ChevronDown, Download, Upload, Image as ImageIcon, PenTool, Home, DollarSign,
   CheckCircle, X, Loader2, Palette, CreditCard, Phone, Mail, User, MapPin,
   Calendar, Play, FileText, Sparkles, Film, Music, Check, Type, Eye, Layers,
   ZoomIn, ZoomOut, LayoutTemplate, Settings, RotateCcw, Undo2, Redo2,
-  ChevronLeft, ChevronRight, Paintbrush, LogIn, Lock, Share2,
+  ChevronLeft, ChevronRight, Paintbrush, LogIn, Lock, Share2, ArrowLeft, Save,
 } from "lucide-react";
 import {
   InfoBarTemplate,
@@ -471,10 +471,101 @@ function DesignStudioInner() {
   const [videoExportProgress, setVideoExportProgress] = useState(0);
   const [videoExportStatus, setVideoExportStatus] = useState("");
   const [showMusicReminder, setShowMusicReminder] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
 
   /* ─── Refs ─── */
   const previewRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const router = useRouter();
+
+  /* ─── Save draft to sessionStorage ─── */
+  const saveDraft = useCallback(() => {
+    try {
+      const draft = {
+        activeTab, selectedTemplate, selectedSize, selectedPropertyId,
+        listingPhoto, address, beds, baths, sqft, price, date, time,
+        agentName, phone: phone, agentEmail, brokerage,
+        listingFont, listingBarColor, listingAccentColor,
+        yardDesign, yardSignSize, yardHeaderText, yardTopColor, yardBottomColor,
+        yardSidebarColor, yardMainBgColor, yardWebsite, yardOfficeName, yardOfficePhone,
+        yardBullet1, yardBullet2, yardBullet3,
+        pdfAddress, pdfCityStateZip, pdfPrice, pdfBeds, pdfBaths, pdfSqft,
+        pdfDescription, pdfFeatures, pdfAccentColor,
+        brandAgentName, brandPhone, brandEmail, brandBrokerage, brandTagline, brandWebsite,
+        brandAddress, brandCityState, brandPrice, brandFeatures,
+        brandBgColor, brandAccentColor, brandOrientation, brandFont,
+      };
+      sessionStorage.setItem("design_studio_draft", JSON.stringify(draft));
+      setHasSavedDraft(true);
+      notify("Draft saved");
+      setTimeout(() => setHasSavedDraft(false), 2000);
+    } catch { /* sessionStorage may be full */ }
+  }, [activeTab, selectedTemplate, selectedSize, selectedPropertyId, listingPhoto, address, beds, baths, sqft, price, date, time, agentName, phone, agentEmail, brokerage, listingFont, listingBarColor, listingAccentColor, yardDesign, yardSignSize, yardHeaderText, yardTopColor, yardBottomColor, yardSidebarColor, yardMainBgColor, yardWebsite, yardOfficeName, yardOfficePhone, yardBullet1, yardBullet2, yardBullet3, pdfAddress, pdfCityStateZip, pdfPrice, pdfBeds, pdfBaths, pdfSqft, pdfDescription, pdfFeatures, pdfAccentColor, brandAgentName, brandPhone, brandEmail, brandBrokerage, brandTagline, brandWebsite, brandAddress, brandCityState, brandPrice, brandFeatures, brandBgColor, brandAccentColor, brandOrientation, brandFont]);
+
+  /* ─── Restore draft from sessionStorage ─── */
+  const restoreDraft = useCallback(() => {
+    try {
+      const raw = sessionStorage.getItem("design_studio_draft");
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.activeTab) setActiveTab(d.activeTab);
+      if (d.selectedTemplate) setSelectedTemplate(d.selectedTemplate);
+      if (d.selectedSize) setSelectedSize(d.selectedSize);
+      if (d.listingPhoto) setListingPhoto(d.listingPhoto);
+      if (d.address) setAddress(d.address);
+      if (d.beds) setBeds(d.beds);
+      if (d.baths) setBaths(d.baths);
+      if (d.sqft) setSqft(d.sqft);
+      if (d.price) setPrice(d.price);
+      if (d.date) setDate(d.date);
+      if (d.time) setTime(d.time);
+      if (d.listingFont) setListingFont(d.listingFont);
+      if (d.listingBarColor) setListingBarColor(d.listingBarColor);
+      if (d.listingAccentColor) setListingAccentColor(d.listingAccentColor);
+      if (d.yardDesign) setYardDesign(d.yardDesign);
+      if (d.yardSignSize) setYardSignSize(d.yardSignSize);
+      if (d.yardHeaderText) setYardHeaderText(d.yardHeaderText);
+      if (d.yardTopColor) setYardTopColor(d.yardTopColor);
+      if (d.yardBottomColor) setYardBottomColor(d.yardBottomColor);
+      if (d.yardSidebarColor) setYardSidebarColor(d.yardSidebarColor);
+      if (d.yardMainBgColor) setYardMainBgColor(d.yardMainBgColor);
+      if (d.yardWebsite) setYardWebsite(d.yardWebsite);
+      if (d.yardOfficeName) setYardOfficeName(d.yardOfficeName);
+      if (d.yardOfficePhone) setYardOfficePhone(d.yardOfficePhone);
+      if (d.yardBullet1) setYardBullet1(d.yardBullet1);
+      if (d.yardBullet2) setYardBullet2(d.yardBullet2);
+      if (d.yardBullet3) setYardBullet3(d.yardBullet3);
+      if (d.pdfAddress) setPdfAddress(d.pdfAddress);
+      if (d.pdfCityStateZip) setPdfCityStateZip(d.pdfCityStateZip);
+      if (d.pdfPrice) setPdfPrice(d.pdfPrice);
+      if (d.pdfBeds) setPdfBeds(d.pdfBeds);
+      if (d.pdfBaths) setPdfBaths(d.pdfBaths);
+      if (d.pdfSqft) setPdfSqft(d.pdfSqft);
+      if (d.pdfDescription) setPdfDescription(d.pdfDescription);
+      if (d.pdfFeatures) setPdfFeatures(d.pdfFeatures);
+      if (d.pdfAccentColor) setPdfAccentColor(d.pdfAccentColor);
+      if (d.brandAgentName) setBrandAgentName(d.brandAgentName);
+      if (d.brandPhone) setBrandPhone(d.brandPhone);
+      if (d.brandEmail) setBrandEmail(d.brandEmail);
+      if (d.brandBrokerage) setBrandBrokerage(d.brandBrokerage);
+      if (d.brandTagline) setBrandTagline(d.brandTagline);
+      if (d.brandWebsite) setBrandWebsite(d.brandWebsite);
+      if (d.brandAddress) setBrandAddress(d.brandAddress);
+      if (d.brandCityState) setBrandCityState(d.brandCityState);
+      if (d.brandPrice) setBrandPrice(d.brandPrice);
+      if (d.brandFeatures) setBrandFeatures(d.brandFeatures);
+      if (d.brandBgColor) setBrandBgColor(d.brandBgColor);
+      if (d.brandAccentColor) setBrandAccentColor(d.brandAccentColor);
+      if (d.brandOrientation) setBrandOrientation(d.brandOrientation);
+      if (d.brandFont) setBrandFont(d.brandFont);
+      sessionStorage.removeItem("design_studio_draft");
+    } catch { /* ok */ }
+  }, []);
+
+  const handleExit = () => { setShowExitDialog(true); };
+  const handleExitWithSave = () => { saveDraft(); setShowExitDialog(false); router.push("/dashboard/lens"); };
+  const handleExitWithoutSave = () => { sessionStorage.removeItem("design_studio_draft"); setShowExitDialog(false); router.push("/dashboard/lens"); };
 
   /* ─── Derived values ─── */
   const currentSize = SIZES.find(s => s.id === selectedSize)!;
@@ -523,6 +614,10 @@ function DesignStudioInner() {
       if (admin) setIsSubscriber(true);
       const { data: props } = await supabase.from("agent_properties").select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features").eq("user_id", authUser.id).is("merged_into_id", null).order("updated_at", { ascending: false });
       if (props) setUserProperties(props);
+      // Restore saved draft if exists (only if no deep link params)
+      if (!searchParams.get("propertyId") && !searchParams.get("address")) {
+        restoreDraft();
+      }
     };
     init();
   }, []);
@@ -871,9 +966,44 @@ function DesignStudioInner() {
   return (
     <><style>{STUDIO_CSS}</style>
     {videoExporting && <VideoExportModal progress={videoExportProgress} status={videoExportStatus} onCancel={() => setVideoExporting(false)} />}
+
+    {/* Exit confirmation dialog */}
+    {showExitDialog && (
+      <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}>
+        <div style={{ background: "var(--ss)", borderRadius: 20, border: "1px solid var(--sbr)", padding: 28, maxWidth: 380, width: "calc(100% - 32px)", fontFamily: "var(--sf)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--sag)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Save size={22} color="var(--sa)" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--st)", margin: 0 }}>Save before leaving?</h3>
+              <p style={{ fontSize: 12, color: "var(--std)", margin: 0, marginTop: 2 }}>Your current design will be saved as a draft.</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={handleExitWithSave}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg, var(--sa), #7c3aed)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--sf)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Save size={14} /> Save & Exit
+            </button>
+            <button onClick={handleExitWithoutSave}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid var(--sbr)", background: "none", color: "var(--std)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--sf)" }}>
+              Don&apos;t Save
+            </button>
+          </div>
+          <button onClick={() => setShowExitDialog(false)}
+            style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 8, border: "none", background: "none", color: "var(--std)", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "var(--sf)" }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
     <div className="sr">
       {/* ─── TOP BAR ─── */}
       <div className="st">
+        {/* Exit button */}
+        <button onClick={handleExit} className="bi" title="Exit Studio" style={{ marginRight: 4 }}>
+          <ArrowLeft size={16} />
+        </button>
         <div className="slg">
           <div className="slm"><Sparkles size={14} color="#fff" /></div>
           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-0.02em", background: "linear-gradient(135deg,#e0f2fe,#c7d2fe)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>P2V Design Studio</span>
@@ -894,6 +1024,10 @@ function DesignStudioInner() {
           {isAdmin ? <span style={{ fontSize: 9, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.15)", padding: "3px 8px", borderRadius: 6, marginRight: 4 }}>ADMIN</span>
             : isSubscriber ? <span style={{ fontSize: 9, fontWeight: 700, color: "#0ea5e9", background: "rgba(14,165,233,0.15)", padding: "3px 8px", borderRadius: 6, marginRight: 4 }}>PRO</span>
             : <span style={{ fontSize: 9, fontWeight: 700, color: "var(--std)", background: "rgba(255,255,255,0.05)", padding: "3px 8px", borderRadius: 6, marginRight: 4 }}>{FREE_EXPORT_LIMIT - freeExportsUsed} free</span>}
+          {/* Save draft button */}
+          <button className="bi" onClick={saveDraft} title="Save Draft" style={{ position: "relative" }}>
+            {hasSavedDraft ? <Check size={15} color="var(--suc)" /> : <Save size={15} />}
+          </button>
           <button className="bx" onClick={activeTab === "property-pdf" ? handlePdfExport : (activeTab === "video-remix" || (activeTab === "templates" && mediaMode === "video" && selectedVideo)) ? handleVideoExport : handleExport} disabled={exporting || videoExporting}>
             {exporting ? <><Loader2 size={14} className="animate-spin" /> Exporting...</> : <><Download size={14} /> Export</>}
           </button>
