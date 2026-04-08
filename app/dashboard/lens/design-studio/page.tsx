@@ -1010,12 +1010,12 @@ function DesignStudioInner() {
         </div>
         <div className="stb">{TABS.map(t => <button key={t.id} className={`stbi ${activeTab === t.id ? "ac" : ""}`} onClick={() => setActiveTab(t.id)}><t.icon size={13} />{t.label}</button>)}</div>
         {/* Property selector in top bar */}
-        <div style={{ marginLeft: 8, display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          <Home size={13} color="var(--sa)" />
-          <select className="ps" value={selectedPropertyId || ""} onChange={e => handleSelectProperty(e.target.value)} style={{ width: 180, fontSize: 11 }}>
-            <option value="">Select property...</option>
-            {userProperties.map((p: any) => <option key={p.id} value={p.id}>{p.address}{p.city ? `, ${p.city}` : ""}</option>)}
-            <option value="__new__">＋ Enter manually</option>
+        <div style={{ marginLeft: 10, display: "flex", alignItems: "center", gap: 8, flexShrink: 0, padding: "4px 12px 4px 10px", borderRadius: 10, border: selectedPropertyId ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(99,102,241,0.2)", background: selectedPropertyId ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.04)", transition: "all 0.2s" }}>
+          <Home size={14} color="#818cf8" style={{ flexShrink: 0 }} />
+          <select className="ps" value={selectedPropertyId || ""} onChange={e => handleSelectProperty(e.target.value)} style={{ width: 200, fontSize: 12, fontWeight: 600, color: selectedPropertyId ? "#e0e7ff" : "rgba(255,255,255,0.5)", background: "transparent", border: "none", padding: "6px 0", cursor: "pointer" }}>
+            <option value="" style={{ background: "#1a1a2e", color: "rgba(255,255,255,0.5)" }}>⌂ Select property...</option>
+            {userProperties.map((p: any) => <option key={p.id} value={p.id} style={{ background: "#1a1a2e", color: "#e0e7ff" }}>{p.address}{p.city ? `, ${p.city}` : ""}</option>)}
+            <option value="__new__" style={{ background: "#1a1a2e", color: "#818cf8" }}>＋ Enter manually</option>
           </select>
         </div>
         <div className="ssp" />
