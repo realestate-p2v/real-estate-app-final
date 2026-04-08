@@ -321,6 +321,7 @@ function DesignStudioPageInner() {
         .from("agent_properties")
         .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features")
         .eq("user_id", authUser.id)
+        .is("merged_into_id", null)
         .order("updated_at", { ascending: false });
       if (props) setUserProperties(props);
     };
