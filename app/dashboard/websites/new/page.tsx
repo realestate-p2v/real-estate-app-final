@@ -27,6 +27,18 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+import { Suspense } from "react";
+
+// ... existing component code ...
+
+export default function NewWebsitePage() {
+  return (
+    <Suspense>
+      <NewWebsitePageInner />
+    </Suspense>
+  );
+}
+
 /* ─── Types ─── */
 interface Property {
   id: string;
