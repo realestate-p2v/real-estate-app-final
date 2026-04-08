@@ -470,6 +470,7 @@ function DesignStudioInner() {
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoExportProgress, setVideoExportProgress] = useState(0);
   const [videoExportStatus, setVideoExportStatus] = useState("");
+  const [showMusicReminder, setShowMusicReminder] = useState(false);
 
   /* ─── Refs ─── */
   const previewRef = useRef<HTMLDivElement>(null);
@@ -741,6 +742,12 @@ function DesignStudioInner() {
   const handleVideoExport = async () => {
     if (checkPaywall()) return;
     if (!selectedVideo?.url || !previewRef.current) { alert("Please select a video first."); return; }
+    // Remind user about music if none selected
+    if (!overlayMusic && !showMusicReminder) {
+      setShowMusicReminder(true);
+      return;
+    }
+    setShowMusicReminder(false);
     setVideoExporting(true); setVideoExportProgress(0); setVideoExportStatus("Loading video encoder...");
     try {
       const { FFmpeg } = await import("@ffmpeg/ffmpeg"); const { toBlobURL, fetchFile } = await import("@ffmpeg/util");
@@ -1064,7 +1071,7 @@ function DesignStudioInner() {
             <Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={listingAccentColor || "#ffffff"} onChange={setListingAccentColor} />{listingAccentColor && <button onClick={() => setListingAccentColor("")} style={{ marginTop: 6, background: "none", border: "none", color: "var(--std)", fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: "var(--sf)" }}>Clear</button>}<div style={{ marginTop: 10 }}><SwatchGrid colors={ACCENT_COLORS} current={listingAccentColor} onSelect={setListingAccentColor} /></div></Section>
           </>}
 
-          {activeTab === "video-remix" && leftPanel === "music" && <CompactMusicPanel selectedTrack={overlayMusic} onSelect={setOverlayMusic} customAudioFile={customAudioFile} onCustomAudioChange={setCustomAudioFile} />}
+          {activeTab === "video-remix" && leftPanel === "music" && <CompactMusicPanel selectedTrack={overlayMusic} onSelect={(v) => { setOverlayMusic(v); if (v) setShowMusicReminder(false); }} customAudioFile={customAudioFile} onCustomAudioChange={setCustomAudioFile} />}
 
           {/* ═══ YARD SIGN PANELS ═══ */}
           {activeTab === "yard-sign" && leftPanel === "design" && <><div className="ph"><LayoutTemplate size={15} color="var(--sa)" /> Yard Sign Design</div><div style={{ padding: 14 }}><div className="tg" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>{YARD_SIGN_DESIGNS.map(d => <button key={d.id} className={`tc ${yardDesign === d.id ? "ac" : ""}`} onClick={() => setYardDesign(d.id)}><div style={{ fontSize: 11, fontWeight: 700, color: "var(--st)" }}>{d.label}</div><div style={{ fontSize: 9, color: "var(--std)", marginTop: 2 }}>{d.desc}</div></button>)}</div><div style={{ marginTop: 14 }}><span className="fl">Sign Size</span><div className="fr" style={{ marginTop: 4 }}>{YARD_SIGN_SIZES.map(s => <button key={s.id} className={`sp ${yardSignSize === s.id ? "ac" : ""}`} style={{ flex: 1, padding: "8px 0", textAlign: "center" }} onClick={() => setYardSignSize(s.id)}>{s.label}</button>)}</div></div></div></>}
@@ -1155,8 +1162,41 @@ function DesignStudioInner() {
           <Section title="Export" icon={Download}>
             {activeTab === "video-remix" || (activeTab === "templates" && mediaMode === "video" && selectedVideo) ? (
               <>
-                {overlayMusic && <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 8, background: "var(--sag)", border: "1px solid rgba(99,102,241,0.2)", marginBottom: 8 }}><Music size={12} color="var(--sa)" /><span style={{ fontSize: 10, color: "var(--sa)", fontWeight: 600 }}>Music will be mixed in</span></div>}
-                <button className="bx" style={{ width: "100%", justifyContent: "center", padding: "11px 0" }} onClick={handleVideoExport} disabled={exporting || videoExporting}>{videoExporting ? <><Loader2 size={14} className="animate-spin" /> Exporting Video...</> : <><Film size={14} /> Export Video (MP4)</>}</button>
+                {overlayMusic ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 8, background: "var(--sag)", border: "1px solid rgba(99,102,241,0.2)", marginBottom: 8 }}><Music size={12} color="var(--sa)" /><span style={{ fontSize: 10, color: "var(--sa)", fontWeight: 600 }}>Music will be mixed in</span></div>
+                ) : !showMusicReminder ? (
+                  <button onClick={() => { if (activeTab === "video-remix") setLeftPanel("music"); else { setActiveTab("video-remix"); setTimeout(() => setLeftPanel("music"), 100); } }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", marginBottom: 8, cursor: "pointer", fontFamily: "var(--sf)" }}>
+                    <Music size={13} color="#f59e0b" />
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", margin: 0 }}>Add background music?</p>
+                      <p style={{ fontSize: 9, color: "rgba(245,158,11,0.7)", margin: 0, marginTop: 1 }}>Music makes your video stand out</p>
+                    </div>
+                    <ChevronRight size={13} color="#f59e0b" />
+                  </button>
+                ) : null}
+                {showMusicReminder && (
+                  <div style={{ padding: "12px", borderRadius: 10, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <Music size={16} color="#f59e0b" />
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b", margin: 0 }}>No music selected</p>
+                    </div>
+                    <p style={{ fontSize: 11, color: "rgba(245,158,11,0.85)", margin: 0, marginBottom: 10, lineHeight: 1.4 }}>Background music makes listing videos more engaging and professional. Add a track before exporting?</p>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { if (activeTab === "video-remix") setLeftPanel("music"); else { setActiveTab("video-remix"); setTimeout(() => setLeftPanel("music"), 100); } setShowMusicReminder(false); }}
+                        style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "none", background: "#f59e0b", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "var(--sf)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                        <Music size={12} /> Add Music
+                      </button>
+                      <button onClick={handleVideoExport}
+                        style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "1px solid var(--sbr)", background: "none", color: "var(--std)", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--sf)" }}>
+                        Export Without
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!showMusicReminder && (
+                  <button className="bx" style={{ width: "100%", justifyContent: "center", padding: "11px 0" }} onClick={handleVideoExport} disabled={exporting || videoExporting}>{videoExporting ? <><Loader2 size={14} className="animate-spin" /> Exporting Video...</> : <><Film size={14} /> Export Video (MP4)</>}</button>
+                )}
                 <button className="bi" style={{ width: "100%", marginTop: 6, fontSize: 11, gap: 4, fontWeight: 600 }} onClick={handleExport} disabled={exporting}><Download size={13} /> Download Thumbnail</button>
               </>
             ) : activeTab === "property-pdf" ? (
