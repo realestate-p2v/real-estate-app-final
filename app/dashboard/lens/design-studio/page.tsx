@@ -404,6 +404,9 @@ function DesignStudioInner() {
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [clipUrls, setClipUrls] = useState<string[]>([]);
   const [currentClipIndex, setCurrentClipIndex] = useState(0);
+  const [orderClips, setOrderClips] = useState<{ clipUrl: string; photoUrl: string; description: string; cameraDirection: string; orderId: string; orderDate: string; index: number }[]>([]);
+  const [selectedClipIndices, setSelectedClipIndices] = useState<Set<number>>(new Set());
+  const [loadingClips, setLoadingClips] = useState(false);
   const [overlayMusic, setOverlayMusic] = useState("");
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
 
@@ -587,6 +590,47 @@ function DesignStudioInner() {
     if (userVideos.length > 0) return;
     setLoadingVideos(true);
     try { const supabase = (await import("@/lib/supabase/client")).createClient(); const { data: { user: u } } = await supabase.auth.getUser(); if (!u) return; const { data: orders } = await supabase.from("orders").select("order_id, delivery_url, unbranded_delivery_url, photos, created_at").eq("user_id", u.id).in("status", ["complete", "delivered", "closed"]).order("created_at", { ascending: false }); setUserVideos((orders || []).filter((o: any) => o.unbranded_delivery_url || o.delivery_url).map((o: any) => ({ orderId: o.order_id, url: o.unbranded_delivery_url || o.delivery_url, thumbnail: o.photos?.[0]?.secure_url || null, hasUnbranded: !!o.unbranded_delivery_url, date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) }))); } catch (err) { console.error(err); } finally { setLoadingVideos(false); }
+  };
+
+  /* ─── Load order clips ─── */
+  const loadOrderClips = async () => {
+    if (orderClips.length > 0) return;
+    setLoadingClips(true);
+    try {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) return;
+      const { data: orders } = await supabase.from("orders").select("order_id, clip_urls, photos, created_at, property_address").eq("user_id", u.id).in("status", ["complete", "delivered", "closed"]).order("created_at", { ascending: false });
+      const allClips: typeof orderClips = [];
+      (orders || []).forEach((order: any) => {
+        if (Array.isArray(order.clip_urls)) {
+          order.clip_urls.forEach((clip: any, idx: number) => {
+            const clipUrl = clip.url || clip.clip_file || clip.drive_url || "";
+            if (clipUrl) allClips.push({ clipUrl, photoUrl: clip.photo_url || "", description: clip.description || order.property_address || `Clip ${idx + 1}`, cameraDirection: clip.camera_direction || "", orderId: order.order_id, orderDate: new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }), index: idx });
+          });
+        }
+      });
+      setOrderClips(allClips);
+    } catch (err) { console.error(err); } finally { setLoadingClips(false); }
+  };
+
+  const handleSelectClip = (idx: number) => {
+    setSelectedClipIndices(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  const applySelectedClips = () => {
+    const selected = Array.from(selectedClipIndices).sort((a, b) => a - b).map(i => orderClips[i]).filter(Boolean);
+    if (selected.length === 0) return;
+    const urls = selected.map(c => c.clipUrl);
+    setClipUrls(urls);
+    setCurrentClipIndex(0);
+    setMediaMode("video");
+    setSelectedVideo({ url: urls[0], thumbnail: selected[0].photoUrl || "", orderId: "clips" });
+    setListingPhoto(null);
   };
 
   /* ─── Property selector ─── */
@@ -916,24 +960,90 @@ function DesignStudioInner() {
             <div className="ph"><Film size={15} color="var(--sa)" /> Video Source</div>
             <div style={{ padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", marginBottom: 10 }}><Film size={13} color="#f59e0b" /><span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>Video exports limited to 119s</span></div>
-              {clipUrls.length > 0 && <div style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", marginBottom: 10 }}><span style={{ fontSize: 11, color: "#8b5cf6", fontWeight: 600 }}>{clipUrls.length} clip{clipUrls.length !== 1 ? "s" : ""} loaded from property</span></div>}
-              <p style={{ fontSize: 11, color: "var(--std)", marginBottom: 8 }}>Select a video from your orders:</p>
-              <button onClick={loadUserVideos} style={{ width: "100%", padding: "8px 0", borderRadius: 8, border: "1px solid var(--sbr)", background: "none", color: "var(--sa)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--sf)", marginBottom: 8 }}>Load My Videos</button>
-              {loadingVideos ? <div style={{ display: "flex", justifyContent: "center", padding: 24 }}><Loader2 size={18} className="animate-spin" color="var(--std)" /></div> : (
-                <div style={{ maxHeight: 200, overflowY: "auto" }}>
-                  {userVideos.map(v => (
-                    <button key={v.orderId} onClick={() => { setSelectedVideo(v); setMediaMode("video"); }}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, border: selectedVideo?.orderId === v.orderId ? "1px solid var(--sa)" : "1px solid transparent", background: selectedVideo?.orderId === v.orderId ? "var(--sag)" : "none", cursor: "pointer", marginBottom: 3, fontFamily: "var(--sf)" }}>
-                      <div style={{ width: 40, height: 30, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.04)" }}>
-                        {v.thumbnail ? <img src={v.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Play size={14} color="var(--std)" style={{ margin: "8px auto", display: "block" }} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}><p style={{ fontSize: 11, fontWeight: 600, color: "var(--st)", margin: 0 }}>Order {v.orderId?.slice(0, 8)}</p><p style={{ fontSize: 10, color: "var(--std)", margin: 0 }}>{v.date}</p></div>
-                      {selectedVideo?.orderId === v.orderId && <Check size={14} color="var(--sa)" />}
-                    </button>
-                  ))}
+
+              {/* Currently loaded clips indicator */}
+              {clipUrls.length > 0 && (
+                <div style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 11, color: "#8b5cf6", fontWeight: 600 }}>▶ {clipUrls.length} clip{clipUrls.length !== 1 ? "s" : ""} active</span>
+                  <button onClick={() => { setClipUrls([]); setSelectedVideo(null); setCurrentClipIndex(0); }} style={{ fontSize: 10, color: "rgba(139,92,246,0.7)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--sf)", fontWeight: 600 }}>Clear</button>
                 </div>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+
+              {/* ─── CLIPS SECTION ─── */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--st)" }}>Individual Clips</span>
+                  <button onClick={loadOrderClips} style={{ fontSize: 10, color: "var(--sa)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--sf)", fontWeight: 600 }}>
+                    {orderClips.length > 0 ? "Refresh" : "Load Clips"}
+                  </button>
+                </div>
+
+                {loadingClips ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: 20 }}><Loader2 size={18} className="animate-spin" color="var(--std)" /></div>
+                ) : orderClips.length > 0 ? (
+                  <>
+                    <div style={{ maxHeight: 240, overflowY: "auto", marginBottom: 8 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                        {orderClips.map((clip, i) => {
+                          const sel = selectedClipIndices.has(i);
+                          const selOrder = sel ? Array.from(selectedClipIndices).sort((a, b) => a - b).indexOf(i) + 1 : 0;
+                          const pTh = clip.photoUrl?.includes("/upload/") ? clip.photoUrl.replace("/upload/", "/upload/w_200,h_112,c_fill/") : null;
+                          const vTh = clip.clipUrl.includes("cloudinary.com") && clip.clipUrl.includes("/video/upload/") ? clip.clipUrl.replace("/video/upload/", "/video/upload/so_1,w_200,h_112,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg") : null;
+                          const th = pTh || vTh;
+                          return (
+                            <button key={`clip-${clip.orderId}-${clip.index}`} onClick={() => handleSelectClip(i)}
+                              style={{ position: "relative", borderRadius: 8, overflow: "hidden", border: sel ? "2px solid #8b5cf6" : "2px solid var(--sbr)", background: "rgba(255,255,255,0.02)", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}>
+                              <div style={{ aspectRatio: "16/9", background: "#000" }}>
+                                {th ? <img src={th} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={16} color="rgba(255,255,255,0.2)" /></div>}
+                              </div>
+                              {sel && <div style={{ position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: "50%", background: "#8b5cf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff" }}>{selOrder}</div>}
+                              {clip.cameraDirection && <span style={{ position: "absolute", top: 4, left: 4, fontSize: 8, fontWeight: 700, background: "rgba(0,0,0,0.6)", color: "#fff", padding: "1px 5px", borderRadius: 4 }}>{clip.cameraDirection.replace(/_/g, " ")}</span>}
+                              <div style={{ padding: "4px 6px" }}>
+                                <p style={{ fontSize: 10, fontWeight: 600, color: "var(--st)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clip.description}</p>
+                                <p style={{ fontSize: 9, color: "var(--std)", margin: 0 }}>{clip.orderDate}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {selectedClipIndices.size > 0 && (
+                      <button onClick={applySelectedClips}
+                        style={{ width: "100%", padding: "9px 0", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #8b5cf6, #6366f1)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--sf)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        <Play size={14} /> Use {selectedClipIndices.size} Clip{selectedClipIndices.size !== 1 ? "s" : ""}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p style={{ fontSize: 10, color: "var(--std)", textAlign: "center", padding: "10px 0" }}>Click "Load Clips" to browse your video clips</p>
+                )}
+              </div>
+
+              {/* ─── FULL VIDEOS SECTION ─── */}
+              <div style={{ borderTop: "1px solid var(--sbr)", paddingTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--st)" }}>Full Videos</span>
+                  <button onClick={loadUserVideos} style={{ fontSize: 10, color: "var(--sa)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--sf)", fontWeight: 600 }}>
+                    {userVideos.length > 0 ? "Refresh" : "Load Videos"}
+                  </button>
+                </div>
+                {loadingVideos ? <div style={{ display: "flex", justifyContent: "center", padding: 16 }}><Loader2 size={18} className="animate-spin" color="var(--std)" /></div> : (
+                  <div style={{ maxHeight: 180, overflowY: "auto" }}>
+                    {userVideos.map(v => (
+                      <button key={v.orderId} onClick={() => { setSelectedVideo(v); setMediaMode("video"); setClipUrls([]); setSelectedClipIndices(new Set()); }}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, border: selectedVideo?.orderId === v.orderId && clipUrls.length === 0 ? "1px solid var(--sa)" : "1px solid transparent", background: selectedVideo?.orderId === v.orderId && clipUrls.length === 0 ? "var(--sag)" : "none", cursor: "pointer", marginBottom: 3, fontFamily: "var(--sf)" }}>
+                        <div style={{ width: 40, height: 30, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.04)" }}>
+                          {v.thumbnail ? <img src={v.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Play size={14} color="var(--std)" style={{ margin: "8px auto", display: "block" }} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}><p style={{ fontSize: 11, fontWeight: 600, color: "var(--st)", margin: 0 }}>Order {v.orderId?.slice(0, 8)}</p><p style={{ fontSize: 10, color: "var(--std)", margin: 0 }}>{v.date}</p></div>
+                        {selectedVideo?.orderId === v.orderId && clipUrls.length === 0 && <Check size={14} color="var(--sa)" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14, borderTop: "1px solid var(--sbr)", paddingTop: 12 }}>
                 <UploadZone label="Headshot" imageUrl={headshot} onUpload={f => handleHeadshotUpload(f, setHeadshot, setUploadingHeadshot)} onClear={() => setHeadshot(null)} uploading={uploadingHeadshot} compact savedUrl={savedHeadshot} onUseSaved={() => { setHeadshot(savedHeadshot); setBrandHeadshot(savedHeadshot); }} />
                 <UploadZone label="Logo" imageUrl={logo} onUpload={f => handleLogoUpload(f, setLogo, setUploadingLogo)} onClear={() => setLogo(null)} uploading={uploadingLogo} compact savedUrl={savedLogo} onUseSaved={() => { setLogo(savedLogo); setBrandLogo(savedLogo); }} />
               </div>
