@@ -27,11 +27,6 @@ export function isLightColor(hex: string): boolean {
   return (r * 299 + g * 587 + b * 114) / 1000 > 160;
 }
 
-function lighten(hex: string, pct: number) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return `rgb(${Math.min(255, (n >> 16) + Math.round(2.55 * pct))},${Math.min(255, ((n >> 8) & 0xff) + Math.round(2.55 * pct))},${Math.min(255, (n & 0xff) + Math.round(2.55 * pct))})`;
-}
-
 function darken(hex: string, pct: number) {
   const n = parseInt(hex.replace("#", ""), 16);
   return `rgb(${Math.max(0, (n >> 16) - Math.round(2.55 * pct))},${Math.max(0, ((n >> 8) & 0xff) - Math.round(2.55 * pct))},${Math.max(0, (n & 0xff) - Math.round(2.55 * pct))})`;
@@ -128,7 +123,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
     </div>
   );
 
-  const renderBarChrome = (bH: number) => (
+  const renderBarChrome = () => (
     <>
       <div className="absolute inset-x-0 top-0" style={{ height: Math.round(3 * unit), backgroundColor: accent, opacity: accentColor ? 0.8 : 0.15 }} />
       <div className="absolute inset-0" style={{
@@ -156,6 +151,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
     );
   };
 
+  /* ─── STORY VARIANT ─── */
   if (isStory) {
     const photoPercent = 58;
     const barH = h * (1 - photoPercent / 100);
@@ -180,9 +176,10 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
         {renderPhoto(`${photoPercent}%`)}
         {renderBadge(photoPercent, badgeH, badgeFontSz, barPadRight)}
         <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
-          {renderBarChrome(barH)}
+          {renderBarChrome()}
           <div className="absolute inset-0" style={{ display: "flex", padding: `${barPadY}px ${barPadRight}px ${barPadY}px ${barPadLeft}px`, gap: Math.round(28 * unit) }}>
-            <div style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: "44%", gap: Math.round(12 * unit) }}>
+            {/* LEFT — agent info */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: "50%", gap: Math.round(12 * unit) }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ textAlign: "center", minWidth: 0 }}>
                 <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, whiteSpace: "nowrap" }}>{agentNameText}</p>
@@ -193,7 +190,9 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
                 <img src={logo} alt="Logo" style={{ maxWidth: Math.round(headshotSize * 1.3), maxHeight: Math.round(barH * 0.14), objectFit: "contain" as const, opacity: 1, marginTop: Math.round(6 * unit) }} />
               )}
             </div>
+            {/* DIVIDER */}
             <div style={{ width: Math.round(1.5 * unit), alignSelf: "stretch", margin: `${Math.round(barH * 0.08)}px 0`, backgroundColor: dividerColor, flexShrink: 0 }} />
+            {/* RIGHT — property info */}
             <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, overflowWrap: "break-word" }}>{addressText}</p>
               <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(8 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
@@ -206,6 +205,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
     );
   }
 
+  /* ─── POSTCARD VARIANT ─── */
   if (isPostcard) {
     const photoPercent = 55;
     const barH = h * (1 - photoPercent / 100);
@@ -229,9 +229,10 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
         {renderPhoto(`${photoPercent}%`)}
         {renderBadge(photoPercent, badgeH, badgeFontSz, barPadX)}
         <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
-          {renderBarChrome(barH)}
+          {renderBarChrome()}
           <div className="absolute inset-0 flex items-center" style={{ padding: `${barPadY}px ${barPadX}px`, gap: Math.round(28 * unit) }}>
-            <div style={{ display: "flex", alignItems: "center", gap: Math.round(22 * unit), flex: "0 0 auto", maxWidth: "44%" }}>
+            {/* LEFT — agent info */}
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: Math.round(22 * unit), maxWidth: "50%" }}>
               {renderHeadshot(headshotSize, headshotBorder)}
               <div style={{ minWidth: 0 }}>
                 <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, whiteSpace: "nowrap" }}>{agentNameText}</p>
@@ -239,7 +240,9 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
                 <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(3 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
               </div>
             </div>
+            {/* DIVIDER */}
             <div style={{ width: Math.round(1.5 * unit), alignSelf: "stretch", margin: `${Math.round(barH * 0.12)}px 0`, backgroundColor: dividerColor, flexShrink: 0 }} />
+            {/* RIGHT — property info */}
             <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, overflowWrap: "break-word" }}>{addressText}</p>
               <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
@@ -255,6 +258,7 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
     );
   }
 
+  /* ─── SQUARE VARIANT (default) ─── */
   const photoPercent = 58;
   const barH = h * (1 - photoPercent / 100);
   const barPadX = Math.round(36 * unit);
@@ -277,9 +281,10 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
       {renderPhoto(`${photoPercent}%`)}
       {renderBadge(photoPercent, badgeH, badgeFontSz, barPadX)}
       <div className="absolute inset-x-0 bottom-0" style={{ height: `${100 - photoPercent}%`, backgroundColor: barColor }}>
-        {renderBarChrome(barH)}
+        {renderBarChrome()}
         <div className="absolute inset-0 flex items-center" style={{ padding: `${barPadY}px ${barPadX}px`, gap: Math.round(24 * unit) }}>
-          <div style={{ display: "flex", alignItems: "center", gap: Math.round(18 * unit), flex: "0 0 auto", maxWidth: "44%" }}>
+          {/* LEFT — agent info */}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: Math.round(18 * unit), maxWidth: "50%" }}>
             {renderHeadshot(headshotSize, headshotBorder)}
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: agentNameFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.15, margin: 0, whiteSpace: "nowrap" }}>{agentNameText}</p>
@@ -287,7 +292,9 @@ export function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, lo
               <p style={{ fontSize: phoneFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(2 * unit), letterSpacing: "0.02em" }}>{phoneText}</p>
             </div>
           </div>
+          {/* DIVIDER */}
           <div style={{ width: Math.round(1.5 * unit), alignSelf: "stretch", margin: `${Math.round(barH * 0.12)}px 0`, backgroundColor: dividerColor, flexShrink: 0 }} />
+          {/* RIGHT — property info */}
           <div style={{ flex: 1, textAlign: "right", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <p style={{ fontSize: addressFontSize, fontWeight: 700, color: barTextPrimary, lineHeight: 1.25, margin: 0, overflowWrap: "break-word" }}>{addressText}</p>
             <p style={{ fontSize: detailsFontSize, fontWeight: 500, color: barTextSecondary, lineHeight: 1.3, margin: 0, marginTop: Math.round(6 * unit), letterSpacing: "0.04em" }}>{detailsText}</p>
@@ -397,7 +404,7 @@ export function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, 
 }
 
 /* ═══════════════════════════════════════════════════════
-   YARD SIGN — SPLIT BAR (unchanged)
+   YARD SIGN — SPLIT BAR
    ═══════════════════════════════════════════════════════ */
 
 export function YardSignSplitBar({ width, height, headshot, logo, agentName, phone, email, brokerage, officeName, officePhone, headerText, topColor, bottomColor, fontFamily, qrDataUrl, bulletPoints }: {
@@ -493,7 +500,7 @@ export function YardSignSplitBar({ width, height, headshot, logo, agentName, pho
 }
 
 /* ═══════════════════════════════════════════════════════
-   YARD SIGN — SIDEBAR (unchanged)
+   YARD SIGN — SIDEBAR
    ═══════════════════════════════════════════════════════ */
 
 export function YardSignSidebar({ width, height, headshot, logo, agentName, phone, email, brokerage, website, headerText, sidebarColor, mainBgColor, fontFamily, qrDataUrl, bulletPoints }: {
@@ -567,7 +574,7 @@ export function YardSignSidebar({ width, height, headshot, logo, agentName, phon
 }
 
 /* ═══════════════════════════════════════════════════════
-   YARD SIGN — TOP HEAVY (unchanged)
+   YARD SIGN — TOP HEAVY
    ═══════════════════════════════════════════════════════ */
 
 export function YardSignTopHeavy({ width, height, headshot, logo, agentName, phone, email, brokerage, headerText, topColor, bottomColor, fontFamily, qrDataUrl, bulletPoints }: {
@@ -624,7 +631,7 @@ export function YardSignTopHeavy({ width, height, headshot, logo, agentName, pho
 }
 
 /* ═══════════════════════════════════════════════════════
-   PROPERTY PDF PAGE — ALL FONTS BUMPED UP ONE STEP
+   PROPERTY PDF PAGE
    ═══════════════════════════════════════════════════════ */
 
 export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds, baths, sqft, description, features, photos, accentColor, fontFamily }: {
@@ -725,6 +732,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
     );
   }
 
+  // Grid pages
   const isFirstGridPage = pageNumber === 1;
   const showOverflow = isFirstGridPage && hasOverflow;
   let startIdx: number;
@@ -787,7 +795,7 @@ export function PropertyPdfPage({ pageNumber, address, cityStateZip, price, beds
 }
 
 /* ═══════════════════════════════════════════════════════
-   BRANDING CARD TEMPLATE (unchanged)
+   BRANDING CARD TEMPLATE
    ═══════════════════════════════════════════════════════ */
 
 export function BrandingCardTemplate({ orientation, logo, headshot, agentName, phone, email, brokerage, tagline, website, address, cityState, price, features, bgColor, accentColor, bgPhoto, fontFamily }: {
@@ -868,6 +876,7 @@ export function BrandingCardTemplate({ orientation, logo, headshot, agentName, p
     );
   }
 
+  // Landscape
   const u = w / 1920, uh = h / 1080;
   const inset = Math.round(36 * u), radius = Math.round(20 * u), borderW = Math.round(3 * u);
   const padX = Math.round(80 * u), padY = Math.round(60 * uh);
