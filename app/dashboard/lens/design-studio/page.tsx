@@ -1109,9 +1109,11 @@ function DesignStudioInner() {
       const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
       await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm") });
       setVideoExportStatus("Downloading source video..."); setVideoExportProgress(5);
-      const videoData = await fetchFile(selectedVideo.url); await ffmpeg.writeFile("input.mp4", videoData);
+      const videoData = await fetchFile(selectedVideo.url);
+      if (!videoData || (videoData as Uint8Array).length === 0) throw new Error("Failed to download video — check if the video URL is accessible");
+      await ffmpeg.writeFile("input.mp4", videoData);
       const musicSource = getMusicSource(); let hasMusic = false;
-      if (musicSource) { setVideoExportStatus("Loading music track..."); setVideoExportProgress(8); if (musicSource.type === "url") { await ffmpeg.writeFile("music.mp3", await fetchFile(musicSource.url)); hasMusic = true; } else { await ffmpeg.writeFile("music.mp3", new Uint8Array(await musicSource.file.arrayBuffer())); hasMusic = true; } }
+      if (musicSource) { setVideoExportStatus("Loading music track..."); setVideoExportProgress(8); if (musicSource.type === "url") { const musicData = await fetchFile(musicSource.url); if (musicData && (musicData as Uint8Array).length > 0) { await ffmpeg.writeFile("music.mp3", musicData); hasMusic = true; } } else { const buf = new Uint8Array(await musicSource.file.arrayBuffer()); if (buf.length > 0) { await ffmpeg.writeFile("music.mp3", buf); hasMusic = true; } } }
       setVideoExportStatus("Rendering overlay..."); setVideoExportProgress(10);
       const html2canvas = (await import("html2canvas-pro")).default;
       const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement; if (!el) throw new Error("Export target not found");
@@ -1120,7 +1122,8 @@ function DesignStudioInner() {
       const { restore } = prepareForExport(el);
       const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
       restore(); videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; }); placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; });
-      const overlayBlob = await new Promise<Blob>(resolve => overlayCanvas.toBlob(b => resolve(b!), "image/png"));
+      const overlayBlob = await new Promise<Blob | null>(resolve => overlayCanvas.toBlob(b => resolve(b), "image/png"));
+      if (!overlayBlob || overlayBlob.size === 0) throw new Error("Failed to render overlay — canvas may be empty");
       await ffmpeg.writeFile("overlay.png", new Uint8Array(await overlayBlob.arrayBuffer()));
       setVideoExportStatus(hasMusic ? "Compositing video with overlay & music..." : "Compositing video with overlay..."); setVideoExportProgress(15);
       const outW = currentSize.width, outH = currentSize.height;
@@ -1567,9 +1570,11 @@ function DesignStudioInner() {
         <div className="sc">
           <div className="scb" />
           <div className="scc">
-            <div className="spf" ref={previewRef} style={{ width: pW, height: pH }}>
-              <div data-export-target="true" style={{ width: rawW, height: rawH, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-                {renderPreview()}
+            <div className="spf" style={{ width: pW, height: pH }}>
+              <div ref={previewRef} style={{ width: pW, height: pH, overflow: "hidden" }}>
+                <div data-export-target="true" style={{ width: rawW, height: rawH, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+                  {renderPreview()}
+                </div>
               </div>
             </div>
           </div>
