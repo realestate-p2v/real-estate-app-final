@@ -223,8 +223,9 @@ export default function PropertyWebsiteClient({
   const [brandingModalOpen, setBrandingModalOpen] = useState(false);
 
   const t = TEMPLATES[template] || TEMPLATES.modern_clean;
-  const photos = curated.photos || [];
-  const videos = curated.videos || [];
+  const safeCurated = curated || {};
+  const photos = safeCurated.photos || [];
+  const videos = safeCurated.videos || [];
   const heroPhoto = photos[0];
   const heroVideo = videos[0];
   const location = [property.city, property.state, property.zip].filter(Boolean).join(", ");
