@@ -31,7 +31,7 @@ import { Suspense } from "react";
 
 // ... existing component code ...
 
-export default function NewWebsitePage() {
+function NewWebsitePageInner() {
   return (
     <Suspense>
       <NewWebsitePageInner />
