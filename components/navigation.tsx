@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, Wrench, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, MessageSquare, PenTool, Sofa, Settings, Home } from "lucide-react";
+import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, Settings, Home } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -96,20 +96,8 @@ export function Navigation() {
   const initial = (displayName.charAt(0) || "U").toUpperCase();
   const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
 
-  // Smart Lens links: logged in → dashboard, logged out → landing page
-  const lensLinks = user ? {
-    lens: "/dashboard/lens",
-    coach: "/dashboard/lens/coach",
-    descriptions: "/dashboard/lens/descriptions",
-    designStudio: "/dashboard/lens/design-studio",
-    staging: "/dashboard/lens/staging",
-  } : {
-    lens: "/lens",
-    coach: "/lens",
-    descriptions: "/lens",
-    designStudio: "/lens",
-    staging: "/lens",
-  };
+  // Lens link: logged in → dashboard, logged out → landing page
+  const lensLink = user ? "/dashboard/lens" : "/lens";
 
   return (
     <>
@@ -152,35 +140,15 @@ export function Navigation() {
                   <div className="absolute left-0 top-full mt-2 w-60 bg-card rounded-xl border border-border shadow-lg py-2 z-50">
                     {/* AI Tools section */}
                     <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Tools</p>
-                    <Link href={lensLinks.lens} onClick={() => setShowTools(false)}
+                    <Link href={lensLink} onClick={() => setShowTools(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       <Sparkles className="h-4 w-4 text-cyan-500" />
-                      P2V Lens
+                      P2V Lens Tools
                       {isLensSubscriber ? (
                         <span className="ml-auto bg-cyan-100 text-cyan-700 text-xs font-bold px-1.5 py-0.5 rounded-full">SUBSCRIBED</span>
                       ) : (
                         <span className="ml-auto bg-accent/10 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
                       )}
-                    </Link>
-                    <Link href={lensLinks.coach} onClick={() => setShowTools(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                      <Sparkles className="h-4 w-4 text-cyan-500" />
-                      AI Photo Coach
-                    </Link>
-                    <Link href={lensLinks.descriptions} onClick={() => setShowTools(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                      <Sparkles className="h-4 w-4 text-cyan-500" />
-                      Description Writer
-                    </Link>
-                    <Link href={lensLinks.designStudio} onClick={() => setShowTools(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                      <Sparkles className="h-4 w-4 text-cyan-500" />
-                      Design Studio
-                    </Link>
-                    <Link href={lensLinks.staging} onClick={() => setShowTools(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                      <Sparkles className="h-4 w-4 text-cyan-500" />
-                      Virtual Staging
                     </Link>
 
                     {/* Separator */}
@@ -283,20 +251,15 @@ export function Navigation() {
                         <Home className="h-3.5 w-3.5 text-muted-foreground" />
                         My Properties
                       </Link>
+                      <Link href="/dashboard/lens" onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <Sparkles className="h-3.5 w-3.5 text-cyan-500" />
+                        P2V Lens Tools
+                      </Link>
                       <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                         <Video className="h-3.5 w-3.5 text-muted-foreground" />
                         My Videos
-                      </Link>
-                      <Link href="/dashboard/drafts" onClick={() => setShowDropdown(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                        Saved Drafts
-                      </Link>
-                      <Link href="/directory/edit" onClick={() => setShowDropdown(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-                        My Directory Listing
                       </Link>
                       <Link href="/dashboard/settings" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
@@ -378,38 +341,18 @@ export function Navigation() {
                   Blog
                 </Link>
 
-                {/* AI Tools section */}
+                {/* AI Tools section — single link */}
                 <div className="h-[1px] bg-white/10 my-2" />
                 <p className="text-primary-foreground/40 text-xs font-semibold uppercase tracking-wider px-2 mb-1">AI Tools</p>
-                <Link href={lensLinks.lens} onClick={() => setIsOpen(false)}
+                <Link href={lensLink} onClick={() => setIsOpen(false)}
                   className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                   <Sparkles className="h-4 w-4 text-cyan-400" />
-                  P2V Lens
+                  P2V Lens Tools
                   {isLensSubscriber ? (
                     <span className="ml-auto bg-cyan-500/20 text-cyan-300 text-xs font-bold px-1.5 py-0.5 rounded-full">SUBSCRIBED</span>
                   ) : (
                     <span className="ml-auto bg-accent/20 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
                   )}
-                </Link>
-                <Link href={lensLinks.coach} onClick={() => setIsOpen(false)}
-                  className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-cyan-400" />
-                  AI Photo Coach
-                </Link>
-                <Link href={lensLinks.descriptions} onClick={() => setIsOpen(false)}
-                  className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-cyan-400" />
-                  Description Writer
-                </Link>
-                <Link href={lensLinks.designStudio} onClick={() => setIsOpen(false)}
-                  className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-cyan-400" />
-                  Design Studio
-                </Link>
-                <Link href={lensLinks.staging} onClick={() => setIsOpen(false)}
-                  className="text-primary-foreground font-semibold py-2.5 px-2 pl-4 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-cyan-400" />
-                  Virtual Staging
                 </Link>
 
                 {/* More Tools section */}
@@ -468,20 +411,15 @@ export function Navigation() {
                       <Home className="h-4 w-4 text-primary-foreground/60" />
                       My Properties
                     </Link>
+                    <Link href="/dashboard/lens" onClick={() => setIsOpen(false)}
+                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                      <Sparkles className="h-4 w-4 text-cyan-400" />
+                      P2V Lens Tools
+                    </Link>
                     <Link href="/dashboard/videos" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                       <Video className="h-4 w-4 text-primary-foreground/60" />
                       My Videos
-                    </Link>
-                    <Link href="/dashboard/drafts" onClick={() => setIsOpen(false)}
-                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                      <FileText className="h-4 w-4 text-primary-foreground/60" />
-                      Saved Drafts
-                    </Link>
-                    <Link href="/directory/edit" onClick={() => setIsOpen(false)}
-                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                      <Camera className="h-4 w-4 text-primary-foreground/60" />
-                      My Directory Listing
                     </Link>
                     <Link href="/dashboard/settings" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
