@@ -464,8 +464,7 @@ function DesignStudioPageInner() {
         const supabase = (await import("@/lib/supabase/client")).createClient();
        const { data: { user: u } } = await supabase.auth.getUser();
         if (!u) return;
-        const propAddr = (prop.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (!propAddr) return;
+        
         const { data: descs } = await supabase
           .from("lens_descriptions")
           .select("description, property_data")
