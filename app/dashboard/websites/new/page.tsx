@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
@@ -26,18 +26,6 @@ import {
   Lock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-
-import { Suspense } from "react";
-
-// ... existing component code ...
-
-function NewWebsitePageInner() {
-  return (
-    <Suspense>
-      <NewWebsitePageInner />
-    </Suspense>
-  );
-}
 
 /* ─── Types ─── */
 interface Property {
@@ -109,9 +97,20 @@ function generateSlug(text: string): string {
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
 /* ═══════════════════════════════════════════════
-   WIZARD PAGE
+   DEFAULT EXPORT — Suspense wrapper
    ═══════════════════════════════════════════════ */
 export default function NewWebsitePage() {
+  return (
+    <Suspense>
+      <NewWebsitePageInner />
+    </Suspense>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   WIZARD PAGE (inner component)
+   ═══════════════════════════════════════════════ */
+function NewWebsitePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
