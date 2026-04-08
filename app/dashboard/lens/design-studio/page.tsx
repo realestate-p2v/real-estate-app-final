@@ -12,7 +12,7 @@ import {
   CheckCircle, X, Loader2, Palette, CreditCard, Phone, Mail, User, MapPin,
   Calendar, Play, FileText, Sparkles, Film, Music, Check, Type, Eye, Layers,
   ZoomIn, ZoomOut, LayoutTemplate, Settings, RotateCcw, Undo2, Redo2,
-  ChevronLeft, ChevronRight, Paintbrush, LogIn, Lock, Share2, ArrowLeft, Save,
+  ChevronLeft, ChevronRight, Paintbrush, LogIn, Lock, Share2, ArrowLeft, Save, Printer, Globe,
 } from "lucide-react";
 import {
   InfoBarTemplate,
@@ -32,8 +32,12 @@ import {
    TYPES
    ═══════════════════════════════════════════════════════ */
 type SizeOption = "square" | "story" | "postcard";
-type StudioTab = "templates" | "branding-card" | "yard-sign" | "property-pdf" | "video-remix";
+type StudioTab = "templates" | "branding-card" | "yard-sign" | "property-pdf" | "video-remix" | "listing-flyer";
 type YardSignDesign = "split-bar" | "sidebar" | "top-heavy";
+
+// Listing flyer uses US Letter: 2550x3300 (same as property PDF at 300dpi)
+const FLYER_W = 2550;
+const FLYER_H = 3300;
 
 /* ═══════════════════════════════════════════════════════
    CONSTANTS
@@ -83,6 +87,7 @@ const FONT_OPTIONS = [
 const TABS: { id: StudioTab; label: string; icon: any }[] = [
   { id: "templates", label: "Listing Graphics", icon: PenTool },
   { id: "video-remix", label: "Video Remix", icon: Film },
+  { id: "listing-flyer", label: "Listing Flyer", icon: Printer },
   { id: "branding-card", label: "Branding", icon: CreditCard },
   { id: "yard-sign", label: "Yard Sign", icon: MapPin },
   { id: "property-pdf", label: "Property Sheet", icon: FileText },
@@ -91,6 +96,7 @@ const TABS: { id: StudioTab; label: string; icon: any }[] = [
 const LEFT_PANELS: Record<string, { id: string; label: string; icon: any }[]> = {
   templates: [{ id: "templates", label: "Templates", icon: LayoutTemplate },{ id: "uploads", label: "Uploads", icon: Upload },{ id: "text", label: "Details", icon: Type },{ id: "styles", label: "Styles", icon: Palette }],
   "video-remix": [{ id: "uploads", label: "Media", icon: Upload },{ id: "text", label: "Details", icon: Type },{ id: "styles", label: "Styles", icon: Palette },{ id: "music", label: "Music", icon: Music }],
+  "listing-flyer": [{ id: "photos", label: "Photos", icon: ImageIcon },{ id: "text", label: "Details", icon: Type },{ id: "links", label: "Links", icon: Globe },{ id: "styles", label: "Styles", icon: Palette }],
   "yard-sign": [{ id: "design", label: "Design", icon: LayoutTemplate },{ id: "uploads", label: "Uploads", icon: Upload },{ id: "text", label: "Details", icon: Type },{ id: "styles", label: "Colors", icon: Palette }],
   "branding-card": [{ id: "uploads", label: "Uploads", icon: Upload },{ id: "text", label: "Details", icon: Type },{ id: "styles", label: "Styles", icon: Palette }],
   "property-pdf": [{ id: "text", label: "Details", icon: Type },{ id: "photos", label: "Photos", icon: ImageIcon },{ id: "styles", label: "Styles", icon: Palette }],
@@ -342,6 +348,201 @@ function CompactMusicPanel({ selectedTrack, onSelect, customAudioFile, onCustomA
 }
 
 /* ═══════════════════════════════════════════════════════
+   LISTING FLYER PAGE RENDERER
+   ═══════════════════════════════════════════════════════ */
+function ListingFlyerPage({ pageNumber, photos, address, cityStateZip, beds, baths, sqft, price, amenities, description, listingUrl, videoUrl, stagingUrl, accentColor, agentName, phone, email, brokerage, headshot, logo, fontFamily, brandingCardUrl }: {
+  pageNumber: number; photos: string[]; address: string; cityStateZip: string; beds: string; baths: string; sqft: string; price: string; amenities: string[]; description: string; listingUrl: string; videoUrl: string; stagingUrl: string; accentColor: string; agentName: string; phone: string; email: string; brokerage: string; headshot: string | null; logo: string | null; fontFamily: string; brandingCardUrl: string | null;
+}) {
+  const W = FLYER_W, H = FLYER_H, accent = accentColor || "#0e7490", m = 76;
+  const ad = address || "Property Address";
+  const pr = price ? `$${price}` : "";
+  const det = [beds && `${beds} BD`, baths && `${baths} BA`, sqft && `${sqft} SF`].filter(Boolean).join("  ·  ");
+  const hasUrls = !!(listingUrl || videoUrl || stagingUrl);
+  const descTruncated = description ? (description.length > 300 ? description.slice(0, 297) + "..." : description) : "";
+
+  const AMENITY_LABELS: Record<string, string> = {
+    ac: "A/C", heating: "Heating", pool: "Pool", garage: "Garage", parking: "Parking",
+    security: "Security", gated: "Gated", laundry: "Laundry", dishwasher: "Dishwasher",
+    fireplace: "Fireplace", furnished: "Furnished", pet_friendly: "Pet Friendly",
+    gym: "Gym", elevator: "Elevator", balcony: "Balcony", garden: "Garden",
+    rooftop: "Rooftop", storage: "Storage", solar: "Solar", ev_charging: "EV Charging",
+    smart_home: "Smart Home", water_heater: "Water Heater", ceiling_fans: "Ceiling Fans",
+  };
+
+  if (pageNumber === 0) {
+    // PAGE 1 — Photo grid + details + URLs
+    const photoCount = Math.min(photos.length, 7);
+    const heroH = Math.round(H * 0.38);
+    const gridGap = 12;
+
+    return (
+      <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, position: "relative", overflow: "hidden" }}>
+        {/* Accent bar top */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 10, backgroundColor: accent }} />
+
+        {/* Branding card or agent header */}
+        <div style={{ position: "absolute", top: 10, left: 0, right: 0, height: 200, backgroundColor: accent, display: "flex", alignItems: "center", padding: `0 ${m}px`, gap: 30 }}>
+          {logo && <img src={logo} alt="" style={{ maxHeight: 120, maxWidth: 200, objectFit: "contain" }} />}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 52, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: "0.02em" }}>{agentName || "Agent Name"}</p>
+            <p style={{ fontSize: 32, fontWeight: 500, color: "rgba(255,255,255,0.8)", margin: 0, marginTop: 6 }}>{brokerage || ""}</p>
+          </div>
+          {headshot && <img src={headshot} alt="" style={{ width: 130, height: 130, borderRadius: "50%", objectFit: "cover", border: "4px solid rgba(255,255,255,0.3)" }} />}
+        </div>
+
+        {/* Photo grid */}
+        <div style={{ position: "absolute", top: 230, left: m, right: m, height: heroH }}>
+          {photoCount === 0 ? (
+            <div style={{ width: "100%", height: "100%", backgroundColor: "#f0efea", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#ccc", fontSize: 48 }}>Select a property to load photos</span>
+            </div>
+          ) : photoCount <= 2 ? (
+            <div style={{ display: "flex", gap: gridGap, height: "100%" }}>
+              {photos.slice(0, 2).map((p, i) => <div key={i} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}><img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>)}
+            </div>
+          ) : photoCount <= 4 ? (
+            <div style={{ display: "flex", gap: gridGap, height: "100%" }}>
+              <div style={{ flex: 1.2, borderRadius: 12, overflow: "hidden" }}><img src={photos[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: gridGap }}>
+                {photos.slice(1, 4).map((p, i) => <div key={i} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}><img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>)}
+              </div>
+            </div>
+          ) : (
+            // 5-7 photos: hero left, 2 stacked right, 3-4 bottom row
+            <div style={{ display: "flex", flexDirection: "column", gap: gridGap, height: "100%" }}>
+              <div style={{ flex: 2, display: "flex", gap: gridGap }}>
+                <div style={{ flex: 1.2, borderRadius: 12, overflow: "hidden" }}><img src={photos[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: gridGap }}>
+                  <div style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}><img src={photos[1]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
+                  <div style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}><img src={photos[2]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
+                </div>
+              </div>
+              <div style={{ flex: 1, display: "flex", gap: gridGap }}>
+                {photos.slice(3, 7).map((p, i) => <div key={i} style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}><img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Property details bar */}
+        <div style={{ position: "absolute", top: 230 + heroH + 20, left: m, right: m }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              {pr && <p style={{ fontSize: 72, fontWeight: 800, color: accent, margin: 0, lineHeight: 1 }}>{pr}</p>}
+              <p style={{ fontSize: 48, fontWeight: 700, color: "#1a1a1a", margin: 0, marginTop: 8 }}>{ad}</p>
+              {cityStateZip && <p style={{ fontSize: 32, color: "#666", margin: 0, marginTop: 4 }}>{cityStateZip}</p>}
+            </div>
+            {det && <p style={{ fontSize: 36, fontWeight: 600, color: "#555", letterSpacing: "0.04em", margin: 0 }}>{det}</p>}
+          </div>
+          {/* Amenities */}
+          {amenities.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 24 }}>
+              {amenities.slice(0, 12).map(a => (
+                <span key={a} style={{ fontSize: 26, fontWeight: 600, color: accent, backgroundColor: `${accent}12`, padding: "6px 18px", borderRadius: 8, border: `1px solid ${accent}30` }}>
+                  {AMENITY_LABELS[a] || a.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Truncated description */}
+          {descTruncated && (
+            <p style={{ fontSize: 30, color: "#555", lineHeight: 1.6, margin: 0, marginTop: 24 }}>{descTruncated}</p>
+          )}
+        </div>
+
+        {/* URL / QR section */}
+        {hasUrls && (
+          <div style={{ position: "absolute", bottom: m, left: m, right: m, borderTop: `3px solid ${accent}20`, paddingTop: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 40, flexWrap: "wrap" }}>
+              {listingUrl && <div><p style={{ fontSize: 22, fontWeight: 700, color: accent, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>View Listing</p><p style={{ fontSize: 28, color: "#333", margin: 0, marginTop: 4 }}>{listingUrl}</p></div>}
+              {videoUrl && <div><p style={{ fontSize: 22, fontWeight: 700, color: accent, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Video Tour</p><p style={{ fontSize: 28, color: "#333", margin: 0, marginTop: 4 }}>{videoUrl}</p></div>}
+              {stagingUrl && <div><p style={{ fontSize: 22, fontWeight: 700, color: accent, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Virtual Staging</p><p style={{ fontSize: 28, color: "#333", margin: 0, marginTop: 4 }}>{stagingUrl}</p></div>}
+            </div>
+          </div>
+        )}
+
+        {/* Bottom accent bar */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 10, backgroundColor: accent }} />
+      </div>
+    );
+  }
+
+  // PAGE 2 — Description, details table, amenities grid, agent contact
+  return (
+    <div style={{ width: W, height: H, backgroundColor: "#ffffff", fontFamily, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 10, backgroundColor: accent }} />
+
+      <div style={{ padding: `${m + 10}px ${m}px ${m}px` }}>
+        {/* Full description */}
+        {description && (
+          <div style={{ marginBottom: 50 }}>
+            <p style={{ fontSize: 40, fontWeight: 700, color: "#222", letterSpacing: "0.08em", textTransform: "uppercase", margin: 0, marginBottom: 20 }}>About This Property</p>
+            <div style={{ width: 60, height: 4, backgroundColor: accent, borderRadius: 2, marginBottom: 24 }} />
+            <p style={{ fontSize: 34, color: "#444", lineHeight: 1.7, margin: 0, overflowWrap: "break-word" }}>{description}</p>
+          </div>
+        )}
+
+        {/* Property details table */}
+        <div style={{ marginBottom: 50 }}>
+          <p style={{ fontSize: 40, fontWeight: 700, color: "#222", letterSpacing: "0.08em", textTransform: "uppercase", margin: 0, marginBottom: 20 }}>Property Details</p>
+          <div style={{ width: 60, height: 4, backgroundColor: accent, borderRadius: 2, marginBottom: 24 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 40px" }}>
+            {[
+              { label: "Bedrooms", value: beds },
+              { label: "Bathrooms", value: baths },
+              { label: "Square Feet", value: sqft },
+              { label: "Price", value: pr },
+              { label: "Address", value: ad },
+              { label: "City / State", value: cityStateZip },
+            ].filter(d => d.value).map((d, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderBottom: "1px solid #eee" }}>
+                <span style={{ fontSize: 30, fontWeight: 600, color: "#888" }}>{d.label}</span>
+                <span style={{ fontSize: 30, fontWeight: 700, color: "#222" }}>{d.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Amenities grid */}
+        {amenities.length > 0 && (
+          <div style={{ marginBottom: 50 }}>
+            <p style={{ fontSize: 40, fontWeight: 700, color: "#222", letterSpacing: "0.08em", textTransform: "uppercase", margin: 0, marginBottom: 20 }}>Amenities</p>
+            <div style={{ width: 60, height: 4, backgroundColor: accent, borderRadius: 2, marginBottom: 24 }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              {amenities.map(a => (
+                <div key={a} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8, backgroundColor: "#f9fafb", border: "1px solid #eee" }}>
+                  <span style={{ fontSize: 28, color: accent, fontWeight: 700 }}>✓</span>
+                  <span style={{ fontSize: 28, fontWeight: 600, color: "#444" }}>{AMENITY_LABELS[a] || a.replace(/_/g, " ")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Agent contact card */}
+      <div style={{ position: "absolute", bottom: m + 10, left: m, right: m, display: "flex", alignItems: "center", gap: 30, padding: "30px 40px", backgroundColor: accent, borderRadius: 16 }}>
+        {headshot && <img src={headshot} alt="" style={{ width: 110, height: 110, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.3)", flexShrink: 0 }} />}
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 40, fontWeight: 800, color: "#fff", margin: 0 }}>{agentName || "Agent Name"}</p>
+          {brokerage && <p style={{ fontSize: 28, color: "rgba(255,255,255,0.8)", margin: 0, marginTop: 4 }}>{brokerage}</p>}
+          <div style={{ display: "flex", gap: 30, marginTop: 10, flexWrap: "wrap" }}>
+            {phone && <span style={{ fontSize: 26, color: "rgba(255,255,255,0.9)" }}>📞 {phone}</span>}
+            {email && <span style={{ fontSize: 26, color: "rgba(255,255,255,0.9)" }}>✉ {email}</span>}
+          </div>
+        </div>
+        {logo && <img src={logo} alt="" style={{ maxHeight: 80, maxWidth: 160, objectFit: "contain", flexShrink: 0 }} />}
+      </div>
+
+      {/* Footer */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 30, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ fontSize: 18, color: "rgba(255,255,255,0.6)", margin: 0 }}>Powered by Real Estate Photo 2 Video</p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
    MAIN PAGE EXPORT
    ═══════════════════════════════════════════════════════ */
 export default function DesignStudioPage() {
@@ -464,6 +665,17 @@ function DesignStudioInner() {
   const [uploadingBrandBg, setUploadingBrandBg] = useState(false);
   const [savingBrandCard, setSavingBrandCard] = useState(false);
   const [brandCardSaved, setBrandCardSaved] = useState(false);
+
+  /* ─── Listing flyer state ─── */
+  const [flyerPhotos, setFlyerPhotos] = useState<string[]>([]);
+  const [flyerDescription, setFlyerDescription] = useState("");
+  const [flyerAmenities, setFlyerAmenities] = useState<string[]>([]);
+  const [flyerListingUrl, setFlyerListingUrl] = useState("");
+  const [flyerVideoUrl, setFlyerVideoUrl] = useState("");
+  const [flyerStagingUrl, setFlyerStagingUrl] = useState("");
+  const [flyerAccentColor, setFlyerAccentColor] = useState("#0e7490");
+  const [flyerPreviewPage, setFlyerPreviewPage] = useState(0);
+  const [uploadingFlyerPhoto, setUploadingFlyerPhoto] = useState(false);
 
   /* ─── Export state ─── */
   const [exporting, setExporting] = useState(false);
@@ -639,6 +851,8 @@ function DesignStudioInner() {
     if (bd) { setBeds(bd); setPdfBeds(bd); } if (ba) { setBaths(ba); setPdfBaths(ba); }
     if (sf) { setSqft(sf); setPdfSqft(sf); } if (pr) { setPrice(pr); setPdfPrice(pr); setBrandPrice(pr); }
     if (features) { setPdfFeatures(features); setBrandFeatures(features); }
+    const tmpl = searchParams.get("template");
+    if (tmpl === "listing_flyer") setActiveTab("listing-flyer");
   }, [searchParams]);
 
   // Session storage clips
@@ -748,17 +962,38 @@ function DesignStudioInner() {
     if (prop.sqft) { const s = prop.sqft.toString(); setSqft(s); setPdfSqft(s); }
     if (prop.price) { const p = prop.price.toString(); setPrice(p); setPdfPrice(p); setBrandPrice(p); }
     if (prop.special_features?.length > 0) { const f = prop.special_features.join("\n"); setPdfFeatures(f); setBrandFeatures(f); }
-    // Description auto-fill
+    // Flyer auto-fill
+    if (prop.amenities?.length > 0) setFlyerAmenities(prop.amenities);
+    // Description + photos auto-fill (async)
     (async () => {
       try {
         const supabase = (await import("@/lib/supabase/client")).createClient();
         const { data: { user: u } } = await supabase.auth.getUser();
         if (!u) return;
+        // Description
         const { data: descs } = await supabase.from("lens_descriptions").select("description, property_data").eq("user_id", u.id).order("created_at", { ascending: false }).limit(10);
         const propAddr = (prop.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (!propAddr || !descs?.length) return;
-        const match = descs.find((d: any) => { const pd = d.property_data; if (!pd) return false; const dAddr = (pd.address || pd.property_address || "").toLowerCase().replace(/[^a-z0-9]/g, ""); return dAddr && (dAddr.includes(propAddr) || propAddr.includes(dAddr)); });
-        if (match?.description) setPdfDescription(match.description);
+        if (propAddr && descs?.length) {
+          const match = descs.find((d: any) => { const pd = d.property_data; if (!pd) return false; const dAddr = (pd.address || pd.property_address || "").toLowerCase().replace(/[^a-z0-9]/g, ""); return dAddr && (dAddr.includes(propAddr) || propAddr.includes(dAddr)); });
+          if (match?.description) { setPdfDescription(match.description); setFlyerDescription(match.description); }
+        }
+        // Flyer photos — try curated first, then order photos
+        const { data: fullProp } = await supabase.from("agent_properties").select("website_curated, website_slug, website_published").eq("id", prop.id).single();
+        const curated = fullProp?.website_curated as any;
+        let photos: string[] = [];
+        if (curated?.photos?.length > 0) {
+          photos = curated.photos.slice(0, 7);
+        }
+        if (photos.length < 7) {
+          const norm = (prop.address || "").toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd").replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+          const { data: orders } = await supabase.from("orders").select("photos").eq("user_id", u.id).ilike("property_address", `${norm}%`).order("created_at", { ascending: false }).limit(3);
+          (orders || []).forEach((o: any) => { if (Array.isArray(o.photos)) o.photos.forEach((p: any) => { if (p.secure_url && photos.length < 7 && !photos.includes(p.secure_url)) photos.push(p.secure_url); }); });
+        }
+        if (photos.length > 0) setFlyerPhotos(photos);
+        // Auto-fill URLs
+        if (fullProp?.website_published && fullProp?.website_slug) {
+          setFlyerListingUrl(`https://${fullProp.website_slug}.p2v.homes`);
+        }
       } catch { /* ok */ }
     })();
   };
@@ -808,6 +1043,29 @@ function DesignStudioInner() {
       const uploadedUrl = await uploadToCloudinary(new File([pdfBlob], "property_sheet.pdf", { type: "application/pdf" }), "design-studio/exports");
       await saveDesignExport(uploadedUrl, "pdf"); notify("PDF exported!");
     } catch (err) { console.error(err); alert("PDF export failed."); } finally { setExporting(false); }
+  };
+
+  const handleFlyerPhotoUpload = async (file: File) => { if (flyerPhotos.length >= 7) return; setUploadingFlyerPhoto(true); const url = await uploadToCloudinary(file, "design-studio"); if (url) setFlyerPhotos(prev => [...prev, url]); setUploadingFlyerPhoto(false); };
+
+  const handleFlyerPdfExport = async () => {
+    if (checkPaywall()) return; if (!previewRef.current) return; setExporting(true);
+    try {
+      const jsPDF = (await import("jspdf")).default; const html2canvas = (await import("html2canvas-pro")).default;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
+      for (let page = 0; page < 2; page++) {
+        setFlyerPreviewPage(page); await new Promise(r => setTimeout(r, 400));
+        const el = previewRef.current!.querySelector("[data-export-target]") as HTMLElement; if (!el) continue;
+        const { restore } = prepareForExport(el);
+        const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: FLYER_W, height: FLYER_H });
+        restore(); if (page > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11);
+      }
+      pdf.save(`${address.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30) || "listing"}_flyer.pdf`);
+      setFlyerPreviewPage(0); await incrementExportCounter();
+      const pdfBlob = pdf.output("blob");
+      const uploadedUrl = await uploadToCloudinary(new File([pdfBlob], "listing_flyer.pdf", { type: "application/pdf" }), "design-studio/exports");
+      await saveDesignExport(uploadedUrl, "pdf"); notify("Flyer exported!");
+    } catch (err) { console.error(err); alert("Flyer export failed."); } finally { setExporting(false); }
   };
 
   const handleSaveBrandingCard = async () => {
@@ -888,7 +1146,7 @@ function DesignStudioInner() {
   const getPreviewDims = useCallback(() => {
     let w: number, h: number;
     if (activeTab === "yard-sign") { w = currentYardSize.width; h = currentYardSize.height; }
-    else if (activeTab === "property-pdf") { w = 2550; h = 3300; }
+    else if (activeTab === "property-pdf" || activeTab === "listing-flyer") { w = FLYER_W; h = FLYER_H; }
     else if (activeTab === "branding-card") { w = currentBrandOrientation.width; h = currentBrandOrientation.height; }
     else { w = currentSize.width; h = currentSize.height; }
     const maxW = 580, maxH = 560;
@@ -923,6 +1181,7 @@ function DesignStudioInner() {
       return <YardSignSplitBar {...ys} officeName={yardOfficeName} officePhone={yardOfficePhone} topColor={yardTopColor} bottomColor={yardBottomColor} />;
     }
     if (activeTab === "property-pdf") return <PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={listingFontFamily} />;
+    if (activeTab === "listing-flyer") return <ListingFlyerPage pageNumber={flyerPreviewPage} photos={flyerPhotos} address={address} cityStateZip={[pdfCityStateZip || ""].filter(Boolean).join("")} beds={beds} baths={baths} sqft={sqft} price={price} amenities={flyerAmenities} description={flyerDescription} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} headshot={headshot} logo={logo} fontFamily={listingFontFamily} brandingCardUrl={null} />;
     if (activeTab === "branding-card") return <BrandingCardTemplate orientation={currentBrandOrientation} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} website={brandWebsite} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={brandFontFamily} />;
     return null;
   };
@@ -1028,7 +1287,7 @@ function DesignStudioInner() {
           <button className="bi" onClick={saveDraft} title="Save Draft" style={{ position: "relative" }}>
             {hasSavedDraft ? <Check size={15} color="var(--suc)" /> : <Save size={15} />}
           </button>
-          <button className="bx" onClick={activeTab === "property-pdf" ? handlePdfExport : (activeTab === "video-remix" || (activeTab === "templates" && mediaMode === "video" && selectedVideo)) ? handleVideoExport : handleExport} disabled={exporting || videoExporting}>
+          <button className="bx" onClick={activeTab === "property-pdf" ? handlePdfExport : activeTab === "listing-flyer" ? handleFlyerPdfExport : (activeTab === "video-remix" || (activeTab === "templates" && mediaMode === "video" && selectedVideo)) ? handleVideoExport : handleExport} disabled={exporting || videoExporting}>
             {exporting ? <><Loader2 size={14} className="animate-spin" /> Exporting...</> : <><Download size={14} /> Export</>}
           </button>
         </div>
@@ -1245,6 +1504,43 @@ function DesignStudioInner() {
             <Section title="Color" icon={Paintbrush}><ColorPicker value={pdfAccentColor} onChange={setPdfAccentColor} /><div style={{ marginTop: 8 }}><SwatchGrid colors={BROKERAGE_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} showLabels /></div><div style={{ marginTop: 10 }}><SwatchGrid colors={ACCENT_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} /></div></Section>
           </>}
 
+          {/* ═══ LISTING FLYER PANELS ═══ */}
+          {activeTab === "listing-flyer" && leftPanel === "photos" && <><div className="ph"><ImageIcon size={15} color="var(--sa)" /> Photos ({flyerPhotos.length}/7)</div><div style={{ padding: 14 }}>
+            <p style={{ fontSize: 11, color: "var(--std)", marginBottom: 10 }}>Up to 7 photos. First photo is the hero. Select a property to auto-load.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>{flyerPhotos.map((url, i) => <div key={i} className="group" style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: "1px solid var(--sbr)" }}><img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", top: 2, left: 2, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>{i === 0 ? "★ Hero" : i + 1}</div><button className="ghov" onClick={() => setFlyerPhotos(p => p.filter((_, idx) => idx !== i))} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s" }}><X size={10} /></button></div>)}
+              {flyerPhotos.length < 7 && <label style={{ aspectRatio: "1", borderRadius: 8, border: "2px dashed var(--sbr)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", color: "var(--std)" }}>{uploadingFlyerPhoto ? <Loader2 size={16} className="animate-spin" /> : <><Upload size={16} /><span style={{ fontSize: 9, fontWeight: 600 }}>Add</span></>}<input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={e => { Array.from(e.target.files || []).forEach(f => handleFlyerPhotoUpload(f)); e.target.value = ""; }} /></label>}
+            </div>
+          </div></>}
+
+          {activeTab === "listing-flyer" && leftPanel === "text" && <><div className="ph"><Type size={15} color="var(--sa)" /> Flyer Details</div>
+            <Section title="Property" icon={Home}>
+              <div className="fg"><label className="fl">Address</label><input className="fi" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" /></div>
+              <div className="fr"><div className="fg" style={{ flex: 1 }}><label className="fl">Beds</label><input className="fi" value={beds} onChange={e => setBeds(e.target.value)} /></div><div className="fg" style={{ flex: 1 }}><label className="fl">Baths</label><input className="fi" value={baths} onChange={e => setBaths(e.target.value)} /></div><div className="fg" style={{ flex: 1 }}><label className="fl">Sq Ft</label><input className="fi" value={sqft} onChange={e => setSqft(e.target.value)} /></div></div>
+              <div className="fg"><label className="fl">Price</label><input className="fi" value={price} onChange={e => setPrice(e.target.value)} /></div>
+            </Section>
+            <Section title="Description" icon={FileText} defaultOpen={false}>
+              <textarea className="ta" rows={6} value={flyerDescription} onChange={e => setFlyerDescription(e.target.value)} placeholder="Listing description (truncated to ~300 chars on page 1, full on page 2)..." />
+            </Section>
+            <Section title="Agent" icon={User}>
+              <div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e => setAgentName(e.target.value)} /></div>
+              <div className="fr"><div className="fg" style={{ flex: 1 }}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e => setPhone(e.target.value)} /></div><div className="fg" style={{ flex: 1 }}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e => setAgentEmail(e.target.value)} /></div></div>
+              <div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e => setBrokerage(e.target.value)} /></div>
+            </Section>
+          </>}
+
+          {activeTab === "listing-flyer" && leftPanel === "links" && <><div className="ph"><Globe size={15} color="var(--sa)" /> URLs & Links</div>
+            <div style={{ padding: 14 }}>
+              <p style={{ fontSize: 11, color: "var(--std)", marginBottom: 12 }}>Leave blank to hide that section on the flyer. Auto-fills from property data if available.</p>
+              <div className="fg"><label className="fl">Listing URL (QR + link)</label><input className="fi" value={flyerListingUrl} onChange={e => setFlyerListingUrl(e.target.value)} placeholder="https://123-main-st.p2v.homes" /></div>
+              <div className="fg"><label className="fl">Video Tour URL</label><input className="fi" value={flyerVideoUrl} onChange={e => setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/..." /></div>
+              <div className="fg"><label className="fl">Virtual Staging URL</label><input className="fi" value={flyerStagingUrl} onChange={e => setFlyerStagingUrl(e.target.value)} placeholder="https://..." /></div>
+            </div>
+          </>}
+
+          {activeTab === "listing-flyer" && leftPanel === "styles" && <><div className="ph"><Palette size={15} color="var(--sa)" /> Accent Color</div>
+            <Section title="Color" icon={Paintbrush}><ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor} /><div style={{ marginTop: 8 }}><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels /></div><div style={{ marginTop: 10 }}><SwatchGrid colors={ACCENT_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} /></div></Section>
+          </>}
+
           {/* ═══ BRANDING CARD PANELS ═══ */}
           {activeTab === "branding-card" && leftPanel === "uploads" && <><div className="ph"><Upload size={15} color="var(--sa)" /> Media</div><div style={{ padding: 14 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -1286,6 +1582,7 @@ function DesignStudioInner() {
             {(activeTab === "templates" || activeTab === "video-remix") && SIZES.map(s => <button key={s.id} className={`sp ${selectedSize === s.id ? "ac" : ""}`} onClick={() => setSelectedSize(s.id)}>{s.label}</button>)}
             {activeTab === "yard-sign" && YARD_SIGN_SIZES.map(s => <button key={s.id} className={`sp ${yardSignSize === s.id ? "ac" : ""}`} onClick={() => setYardSignSize(s.id)}>{s.label}</button>)}
             {activeTab === "property-pdf" && pdfTotalPages > 1 && <><button className="bi" style={{ width: 28, height: 28 }} onClick={() => setPdfPreviewPage(Math.max(0, pdfPreviewPage - 1))}><ChevronLeft size={13} /></button><span className="zd">Pg {pdfPreviewPage + 1}/{pdfTotalPages}</span><button className="bi" style={{ width: 28, height: 28 }} onClick={() => setPdfPreviewPage(Math.min(pdfTotalPages - 1, pdfPreviewPage + 1))}><ChevronRight size={13} /></button></>}
+            {activeTab === "listing-flyer" && <><button className="bi" style={{ width: 28, height: 28 }} onClick={() => setFlyerPreviewPage(flyerPreviewPage === 0 ? 1 : 0)}><ChevronLeft size={13} /></button><span className="zd">Pg {flyerPreviewPage + 1}/2</span><button className="bi" style={{ width: 28, height: 28 }} onClick={() => setFlyerPreviewPage(flyerPreviewPage === 0 ? 1 : 0)}><ChevronRight size={13} /></button></>}
             {activeTab === "branding-card" && BRANDING_ORIENTATIONS.map(o => <button key={o.id} className={`sp ${brandOrientation === o.id ? "ac" : ""}`} onClick={() => setBrandOrientation(o.id)}>{o.label}</button>)}
           </div>
         </div>
@@ -1336,6 +1633,11 @@ function DesignStudioInner() {
             ) : activeTab === "property-pdf" ? (
               <>
                 <button className="bx" style={{ width: "100%", justifyContent: "center", padding: "11px 0" }} onClick={handlePdfExport} disabled={exporting}>{exporting ? <><Loader2 size={14} className="animate-spin" /> Generating...</> : <><Download size={14} /> Download PDF</>}</button>
+                <button className="bi" style={{ width: "100%", marginTop: 6, fontSize: 11, gap: 4, fontWeight: 600 }} onClick={handleExport} disabled={exporting}><Download size={13} /> Download Page as PNG</button>
+              </>
+            ) : activeTab === "listing-flyer" ? (
+              <>
+                <button className="bx" style={{ width: "100%", justifyContent: "center", padding: "11px 0" }} onClick={handleFlyerPdfExport} disabled={exporting}>{exporting ? <><Loader2 size={14} className="animate-spin" /> Generating Flyer...</> : <><Printer size={14} /> Download Flyer PDF</>}</button>
                 <button className="bi" style={{ width: "100%", marginTop: 6, fontSize: 11, gap: 4, fontWeight: 600 }} onClick={handleExport} disabled={exporting}><Download size={13} /> Download Page as PNG</button>
               </>
             ) : (
