@@ -462,27 +462,25 @@ function DesignStudioPageInner() {
     (async () => {
       try {
         const supabase = (await import("@/lib/supabase/client")).createClient();
-        const norm = (prop.address_normalized || prop.address || "").trim().toLowerCase()
-          .replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
-          .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
-          .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
-          .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
-        const { data: { user: u } } = await supabase.auth.getUser();
-        if (!u || !norm) return;
+       const { data: { user: u } } = await supabase.auth.getUser();
+        if (!u) return;
+        const propAddr = (prop.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!propAddr) return;
         const { data: descs } = await supabase
           .from("lens_descriptions")
           .select("description, property_data")
           .eq("user_id", u.id)
           .order("created_at", { ascending: false })
           .limit(10);
+        const propAddr = (prop.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!propAddr) return;
         if (descs && descs.length > 0) {
           const match = descs.find((d: any) => {
-            const addr = (d.property_data?.address || d.property_data?.property_address || "").trim().toLowerCase()
-              .replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
-              .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
-              .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
-              .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
-            return addr.startsWith(norm) || norm.startsWith(addr);
+            const pd = d.property_data;
+            if (!pd) return false;
+            const dAddr = (pd.address || pd.property_address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (!dAddr) return false;
+            return dAddr.includes(propAddr) || propAddr.includes(dAddr);
           });
           if (match?.description) setPdfDescription(match.description);
         }
