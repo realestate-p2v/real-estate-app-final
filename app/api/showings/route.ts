@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Create in-app notification for the agent
-    // Create in-app notification for the agent
     const fallbackMsg = "I'd like to learn more about this property.";
     await createNotification({
       userId: agentId,
@@ -162,7 +161,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("showing_requests")
       .select("*")
-      .eq("agent_id", user.id)
+      .eq("agent_user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -197,19 +196,20 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { requestId } = await req.json();
+    const body = await req.json();
+    const requestId = body.requestId || body.id;
     if (!requestId) {
       return NextResponse.json(
-        { error: "requestId required" },
+        { error: "requestId or id required" },
         { status: 400 }
       );
     }
 
     const { error } = await supabase
       .from("showing_requests")
-      .update({ read: true })
+      .update({ read: body.read !== undefined ? body.read : true })
       .eq("id", requestId)
-      .eq("agent_id", user.id);
+      .eq("agent_user_id", user.id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
