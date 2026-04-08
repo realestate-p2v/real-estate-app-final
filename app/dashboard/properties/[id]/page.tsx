@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BookingCalendar from "@/components/booking-calendar";
+import UpgradeModal from "@/components/upgrade-modal";
 
 interface Property {
   id: string;
@@ -190,6 +191,9 @@ export default function SinglePropertyPage() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<"none" | "lens" | "pro">("none");
+  const [includedSiteUsed, setIncludedSiteUsed] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [photos, setPhotos] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
@@ -281,9 +285,22 @@ export default function SinglePropertyPage() {
     if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
     setUserId(user.id);
     const isAdmin = user.email === "realestatephoto2video@gmail.com";
-    if (isAdmin) { setIsSubscriber(true); } else {
-      const { data: usage } = await supabase.from("lens_usage").select("is_subscriber").eq("user_id", user.id).single();
+    if (isAdmin) {
+      setIsSubscriber(true);
+      setSubscriptionTier("pro");
+    } else {
+      const { data: usage } = await supabase
+        .from("lens_usage")
+        .select("is_subscriber, subscription_tier, included_website_used")
+        .eq("user_id", user.id)
+        .single();
       if (usage?.is_subscriber) setIsSubscriber(true);
+      if (usage?.subscription_tier === "pro") {
+        setSubscriptionTier("pro");
+      } else if (usage?.subscription_tier === "lens" || usage?.is_subscriber) {
+        setSubscriptionTier("lens");
+      }
+      if (usage?.included_website_used) setIncludedSiteUsed(true);
     }
     const { data: prop, error } = await supabase.from("agent_properties").select("*").eq("id", propertyId).eq("user_id", user.id).single();
     if (error || !prop) { router.push("/dashboard/properties"); return; }
@@ -486,7 +503,7 @@ export default function SinglePropertyPage() {
   const curatedStagingIds = stagings.map(s => s.id);
   const curatedExportIds = exports.map(e => e.id);
 
-  const pubUrl = `/p/${pubSlug}`;
+  const pubLiveUrl = `https://${pubSlug}.p2v.homes`;
 
   // Hero thumbnail for the website preview banner
   const heroThumb = orderPhotos[0]?.secure_url
@@ -501,6 +518,14 @@ export default function SinglePropertyPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={subscriptionTier}
+        includedSiteUsed={includedSiteUsed}
+      />
 
       {/* Staging Before/After Modal */}
       {stagingModal && (
@@ -576,7 +601,7 @@ export default function SinglePropertyPage() {
         {/* ═══ PROPERTY WEBSITE PREVIEW BANNER ═══ */}
         {pubPublished ? (
           <div className="mt-6 mb-8 rounded-2xl border border-border overflow-hidden bg-card hover:border-accent/40 hover:shadow-lg transition-all">
-            <a href={pubUrl} target="_blank" rel="noopener noreferrer" className="block">
+            <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer" className="block">
               <div className="relative h-48 sm:h-56 bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
                 {heroThumb ? (
                   <img src={heroThumb} alt={property.address} className="w-full h-full object-cover opacity-90" />
@@ -594,14 +619,14 @@ export default function SinglePropertyPage() {
                 <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
                   <p className="text-white/70 text-xs font-medium mb-1">Your Property Website</p>
                   <p className="text-white text-xl sm:text-2xl font-extrabold">{property.address}</p>
-                  <p className="text-white/60 text-sm mt-1 truncate">realestatephoto2video.com{pubUrl}</p>
+                  <p className="text-white/60 text-sm mt-1 truncate">{pubSlug}.p2v.homes</p>
                 </div>
               </div>
             </a>
             <div className="px-5 py-3 flex items-center justify-between border-t border-border">
               <div className="flex items-center gap-3">
                 <a
-                  href={pubUrl}
+                  href={pubLiveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2 rounded-full transition-colors"
@@ -610,7 +635,7 @@ export default function SinglePropertyPage() {
                   View Live Page
                 </a>
                 <button
-                  onClick={() => { navigator.clipboard.writeText(`https://realestatephoto2video.com${pubUrl}`); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
+                  onClick={() => { navigator.clipboard.writeText(pubLiveUrl); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {slugCopied ? <><CheckCircle className="h-3.5 w-3.5 text-green-500" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy Link</>}
@@ -626,7 +651,13 @@ export default function SinglePropertyPage() {
           </div>
         ) : (
           <button
-            onClick={() => publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            onClick={() => {
+              if (subscriptionTier !== "pro") {
+                setShowUpgradeModal(true);
+              } else {
+                publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
             className="w-full mt-6 mb-8 rounded-2xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all p-6 sm:p-8 text-left group"
           >
             <div className="flex items-center gap-4">
@@ -1022,6 +1053,27 @@ export default function SinglePropertyPage() {
 
         {/* ═══ SECTION 9: PUBLISH TO WEBSITE ═══ */}
         <section ref={publishSectionRef} className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
+          {subscriptionTier !== "pro" && !property.website_published ? (
+            /* ─── Gated: not a Pro subscriber and no existing published site ─── */
+            <div className="text-center py-8">
+              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                <Globe className="h-7 w-7 text-accent" />
+              </div>
+              <h2 className="text-xl font-extrabold text-foreground mb-2">Publish to Website</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                Create a beautiful property page with photos, videos, staging, and lead capture. Own it forever for $399 or subscribe to Lens Pro.
+              </p>
+              <Button
+                onClick={() => setShowUpgradeModal(true)}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                Get Your Website
+              </Button>
+            </div>
+          ) : (
+            /* ─── Full publish section ─── */
+            <>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Globe className="h-5 w-5 text-accent" />
@@ -1031,7 +1083,7 @@ export default function SinglePropertyPage() {
               </div>
             </div>
             {pubPublished && (
-              <a href={pubUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700">
+              <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700">
                 <Eye className="h-3.5 w-3.5" />View Live Page
               </a>
             )}
@@ -1056,7 +1108,6 @@ export default function SinglePropertyPage() {
           <div className="mb-6">
             <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Page URL</label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground flex-shrink-0">realestatephoto2video.com/p/</span>
               <input
                 type="text"
                 value={pubSlug}
@@ -1064,8 +1115,9 @@ export default function SinglePropertyPage() {
                 className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
                 placeholder="123-main-st-austin-tx"
               />
+              <span className="text-sm text-muted-foreground flex-shrink-0">.p2v.homes</span>
               <button
-                onClick={() => { navigator.clipboard.writeText(`https://realestatephoto2video.com${pubUrl}`); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
+                onClick={() => { navigator.clipboard.writeText(pubLiveUrl); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
                 className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
                 title="Copy URL"
               >
@@ -1289,7 +1341,7 @@ export default function SinglePropertyPage() {
             </Button>
             {pubSlug && (
               <Button asChild variant="outline" className="font-bold">
-                <a href={pubUrl} target="_blank" rel="noopener noreferrer">
+                <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer">
                   <Eye className="h-4 w-4 mr-2" />Preview
                 </a>
               </Button>
@@ -1300,6 +1352,8 @@ export default function SinglePropertyPage() {
               </button>
             )}
           </div>
+            </>
+          )}
         </section>
 
         {/* ═══ SECTION 10: BOOKING CALENDAR MANAGEMENT ═══ */}
