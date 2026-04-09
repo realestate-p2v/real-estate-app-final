@@ -687,6 +687,7 @@ export default function DesignStudioV2(){
     :root{--sb:#0c0c10;--ss:#151519;--ss2:#1c1c22;--sbr:rgba(255,255,255,0.06);--sa:#6366f1;--sag:rgba(99,102,241,0.15);--st:#e4e4ea;--std:rgba(255,255,255,0.4);--stm:rgba(255,255,255,0.2);--suc:#10b981;--sc:#09090d;--sf:'DM Sans',-apple-system,sans-serif;--si:rgba(255,255,255,0.03);--sih:rgba(255,255,255,0.05);--sdash:rgba(255,255,255,0.10);--schk:#fff;}
     .sr.light{--sb:#f0f1f5;--ss:#ffffff;--ss2:#f7f7f9;--sbr:rgba(0,0,0,0.08);--sa:#6366f1;--sag:rgba(99,102,241,0.10);--st:#1a1a2e;--std:rgba(0,0,0,0.45);--stm:rgba(0,0,0,0.25);--suc:#10b981;--sc:#e8e9ee;--si:rgba(0,0,0,0.03);--sih:rgba(0,0,0,0.05);--sdash:rgba(0,0,0,0.15);--schk:#ccc;}
     *{margin:0;padding:0;box-sizing:border-box;}.sr{font-family:var(--sf);background:var(--sb);color:var(--st);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background 0.3s,color 0.3s;}
+    .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
     .st{height:54px;background:var(--ss);border-bottom:1px solid var(--sbr);display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;z-index:20;transition:background 0.3s;}
     .slg{display:flex;align-items:center;gap:9px;padding-right:18px;border-right:1px solid var(--sbr);margin-right:6px;}
     .slm{width:30px;height:30px;background:linear-gradient(135deg,var(--sa),#a855f7);border-radius:8px;display:flex;align-items:center;justify-content:center;}
@@ -747,6 +748,9 @@ export default function DesignStudioV2(){
     <div className={`sr ${theme==="light"?"light":""}`}>
       {/* TOP BAR */}
       <div className="st">
+        <a href="/dashboard" className="back-btn" title="Back to Dashboard">
+          <ChevronLeft size={14}/>
+        </a>
         <div className="slg"><div className="slm"><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
         <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
