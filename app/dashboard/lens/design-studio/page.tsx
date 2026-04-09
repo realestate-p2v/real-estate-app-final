@@ -402,7 +402,7 @@ export default function DesignStudioV2(){
   const[flyerAccentColor,setFlyerAccentColor]=useState("#1e3a5f");
   const[flyerFont,setFlyerFont]=useState("sans");
   // UI
-  const[exporting,setExporting]=useState(false);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
+  const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
   const[mobilePanel,setMobilePanel]=useState<string|null>(null);
   const previewRef=useRef<HTMLDivElement>(null);
@@ -531,125 +531,174 @@ export default function DesignStudioV2(){
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
   // ─── Export helpers ───────────────────────────────────────────────────────
-  // ** FIX: Replaced html2canvas with html-to-image **
-  // html2canvas crashes on CSS lab()/oklch() color functions from Tailwind v4.
-  // html-to-image uses SVG foreignObject rendering and does NOT parse CSS
-  // color functions itself, completely bypassing the issue.
+  // html-to-image replaces html2canvas (which crashes on CSS lab()/oklch()).
+  // Key fix: temporarily remove CSS transform scale before capture so we get
+  // full-resolution output instead of the tiny scaled preview.
 
-  const exportImage=async()=>{
-    if(!previewRef.current)return;
-    const { toPng } = await import("html-to-image");
-    const dataUrl = await toPng(previewRef.current, {
-      width: rawW,
-      height: rawH,
-      pixelRatio: 1,
-      cacheBust: true,
-    });
-    const link=document.createElement("a");
-    link.download=`listing-${selectedTemplate}-${Date.now()}.png`;
-    link.href=dataUrl;
+  const captureAtFullRes = async (mode: "png" | "canvas") => {
+    if (!previewRef.current) return null;
+    const el = previewRef.current;
+    // Save and remove the display scale so capture is at native resolution
+    const origTransform = el.style.transform;
+    const origOrigin = el.style.transformOrigin;
+    el.style.transform = "none";
+    el.style.transformOrigin = "top left";
+    try {
+      if (mode === "png") {
+        const { toPng } = await import("html-to-image");
+        return await toPng(el, { width: rawW, height: rawH, pixelRatio: 1, cacheBust: true });
+      } else {
+        const { toCanvas } = await import("html-to-image");
+        return await toCanvas(el, { width: rawW, height: rawH, pixelRatio: 1, cacheBust: true });
+      }
+    } finally {
+      el.style.transform = origTransform;
+      el.style.transformOrigin = origOrigin;
+    }
+  };
+
+  const exportImage = async () => {
+    const dataUrl = await captureAtFullRes("png");
+    if (!dataUrl || typeof dataUrl !== "string") return;
+    const link = document.createElement("a");
+    link.download = `listing-${selectedTemplate}-${Date.now()}.png`;
+    link.href = dataUrl;
     link.click();
     notify("Image exported!");
   };
 
-  const exportVideo=async()=>{
-    if(!selectedVideo?.url){notify("No video selected.");return;}
+  const exportPdf = async () => {
+    const dataUrl = await captureAtFullRes("png");
+    if (!dataUrl || typeof dataUrl !== "string") return;
+    // Build a minimal PDF that embeds the PNG at US Letter size
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
+    // 8.5 × 11 inches, image fills the page
+    pdf.addImage(dataUrl, "PNG", 0, 0, 8.5, 11);
+    pdf.save(`listing-flyer-${Date.now()}.pdf`);
+    notify("PDF exported!");
+  };
+
+  const exportVideo = async () => {
+    if (!selectedVideo?.url) { notify("No video selected."); return; }
+    setExportProgress(0);
 
     // 1. Offscreen canvas at full template resolution
-    const canvas=document.createElement("canvas");
-    canvas.width=rawW;
-    canvas.height=rawH;
-    const ctx=canvas.getContext("2d")!;
+    const canvas = document.createElement("canvas");
+    canvas.width = rawW;
+    canvas.height = rawH;
+    const ctx = canvas.getContext("2d")!;
 
     // 2. Load the source video
-    const video=document.createElement("video");
-    video.src=selectedVideo.url;
-    video.crossOrigin="anonymous";
-    video.muted=true;
-    video.playsInline=true;
+    const video = document.createElement("video");
+    video.src = selectedVideo.url;
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.playsInline = true;
 
-    await new Promise<void>((resolve,reject)=>{
-      video.oncanplay=()=>resolve();
-      video.onerror=()=>reject(new Error("Video failed to load. Check CORS headers on the video URL."));
+    await new Promise<void>((resolve, reject) => {
+      video.oncanplay = () => resolve();
+      video.onerror = () => reject(new Error("Video failed to load. Check CORS headers on the video URL."));
       video.load();
     });
 
-    const durationMs=Math.min((isFinite(video.duration)?video.duration:30),119)*1000;
-    video.play().catch(()=>{});
+    const durationSec = Math.min((isFinite(video.duration) ? video.duration : 30), 119);
+    const durationMs = durationSec * 1000;
+    video.play().catch(() => {});
 
-    // 3. Capture the static overlay once using html-to-image (no lab() crash)
-    let overlayBitmap:ImageBitmap|null=null;
-    if(previewRef.current){
-      const videoArea=previewRef.current.querySelector("[data-video-area]") as HTMLElement|null;
-      if(videoArea)videoArea.style.visibility="hidden";
-      try{
-        const { toCanvas } = await import("html-to-image");
-        const overlayCanvas = await toCanvas(previewRef.current, {
-          width: rawW,
-          height: rawH,
-          pixelRatio: 1,
-          cacheBust: true,
-        });
-        overlayBitmap=await createImageBitmap(overlayCanvas);
-      }finally{
-        if(videoArea)videoArea.style.visibility="visible";
+    // 3. Capture the static overlay at full resolution (no transform scale)
+    let overlayBitmap: ImageBitmap | null = null;
+    if (previewRef.current) {
+      const videoArea = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
+      if (videoArea) videoArea.style.visibility = "hidden";
+      try {
+        const overlayCanvas = await captureAtFullRes("canvas");
+        if (overlayCanvas && overlayCanvas instanceof HTMLCanvasElement) {
+          overlayBitmap = await createImageBitmap(overlayCanvas);
+        }
+      } finally {
+        if (videoArea) videoArea.style.visibility = "visible";
       }
     }
 
-    // 4. Set up audio context for mixing if a music track is selected
-    let audioCtx:AudioContext|null=null;
-    let audioDest:MediaStreamAudioDestinationNode|null=null;
-    let musicSource:AudioBufferSourceNode|null=null;
+    // 4. Audio mixing — if a music track is selected
+    let audioCtx: AudioContext | null = null;
+    let audioDest: MediaStreamAudioDestinationNode | null = null;
+    let musicSource: AudioBufferSourceNode | null = null;
 
-    if(selectedMusicTrack?.url){
-      try{
-        audioCtx=new AudioContext();
-        audioDest=audioCtx.createMediaStreamDestination();
-        const resp=await fetch(selectedMusicTrack.url);
-        const buf=await resp.arrayBuffer();
-        const decoded=await audioCtx.decodeAudioData(buf);
-        musicSource=audioCtx.createBufferSource();
-        musicSource.buffer=decoded;
-        musicSource.loop=true;
-        // Fade out last 2 seconds
-        const gainNode=audioCtx.createGain();
-        gainNode.gain.setValueAtTime(1,audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0,audioCtx.currentTime+(durationMs/1000));
+    if (selectedMusicTrack?.url) {
+      try {
+        audioCtx = new AudioContext();
+        audioDest = audioCtx.createMediaStreamDestination();
+        const resp = await fetch(selectedMusicTrack.url);
+        const buf = await resp.arrayBuffer();
+        const decoded = await audioCtx.decodeAudioData(buf);
+        musicSource = audioCtx.createBufferSource();
+        musicSource.buffer = decoded;
+        musicSource.loop = true;
+        // Fade out over the last 2 seconds (not the entire duration)
+        const gainNode = audioCtx.createGain();
+        const fadeStart = Math.max(0, durationSec - 2);
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime + fadeStart);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + durationSec);
         musicSource.connect(gainNode);
         gainNode.connect(audioDest);
         musicSource.start();
-      }catch(e){
-        console.warn("Audio mix failed, exporting video only:",e);
-        audioCtx=null;audioDest=null;musicSource=null;
+      } catch (e) {
+        console.warn("Audio mix failed, exporting video only:", e);
+        audioCtx = null; audioDest = null; musicSource = null;
       }
     }
 
-    // 5. Set up MediaRecorder — combine canvas stream + audio if available
-    const videoStream=canvas.captureStream(30);
-    const combinedStream=new MediaStream([
+    // 5. MediaRecorder — combine canvas video + audio streams
+    const videoStream = canvas.captureStream(30);
+    const combinedStream = new MediaStream([
       ...videoStream.getVideoTracks(),
-      ...(audioDest?audioDest.stream.getAudioTracks():[]),
+      ...(audioDest ? audioDest.stream.getAudioTracks() : []),
     ]);
-    const mimeType=MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
-      ?"video/mp4;codecs=avc1"
-      :MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ?"video/webm;codecs=vp9,opus"
-      :"video/webm";
-    const recorder=new MediaRecorder(combinedStream,{mimeType,videoBitsPerSecond:8_000_000});
-    const chunks:Blob[]=[];
-    recorder.ondataavailable=(e)=>{if(e.data.size>0)chunks.push(e.data);};
+    const mimeType = MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
+      ? "video/mp4;codecs=avc1"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : "video/webm";
+    const recorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-    // 6. Frame loop
+    // 6. Frame loop — draw video with cover-fit, then overlay on top
     recorder.start(100);
-    const startTime=performance.now();
+    const startTime = performance.now();
 
-    const drawFrame=()=>{
-      ctx.clearRect(0,0,rawW,rawH);
-      ctx.drawImage(video,0,0,rawW,rawH);
-      if(overlayBitmap)ctx.drawImage(overlayBitmap,0,0);
-      if(performance.now()-startTime<durationMs){
+    const drawFrame = () => {
+      ctx.clearRect(0, 0, rawW, rawH);
+
+      // Cover-fit the source video into the canvas (center-crop, no stretch)
+      const vw = video.videoWidth || rawW;
+      const vh = video.videoHeight || rawH;
+      const canvasAR = rawW / rawH;
+      const videoAR = vw / vh;
+      let sx = 0, sy = 0, sw = vw, sh = vh;
+      if (videoAR > canvasAR) {
+        // video is wider — crop sides
+        sw = vh * canvasAR;
+        sx = (vw - sw) / 2;
+      } else {
+        // video is taller — crop top/bottom
+        sh = vw / canvasAR;
+        sy = (vh - sh) / 2;
+      }
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, rawW, rawH);
+
+      if (overlayBitmap) ctx.drawImage(overlayBitmap, 0, 0);
+
+      const elapsed = performance.now() - startTime;
+      const pct = Math.min(100, Math.round((elapsed / durationMs) * 100));
+      setExportProgress(pct);
+
+      if (elapsed < durationMs) {
         requestAnimationFrame(drawFrame);
-      }else{
+      } else {
         recorder.stop();
         video.pause();
         musicSource?.stop();
@@ -659,34 +708,47 @@ export default function DesignStudioV2(){
     requestAnimationFrame(drawFrame);
 
     // 7. On stop → download
-    await new Promise<void>((resolve)=>{
-      recorder.onstop=()=>{
-        const ext=mimeType.includes("mp4")?"mp4":"webm";
-        const blob=new Blob(chunks,{type:mimeType});
-        const url=URL.createObjectURL(blob);
-        const link=document.createElement("a");
-        link.download=`listing-video-${Date.now()}.${ext}`;
-        link.href=url;
+    await new Promise<void>((resolve) => {
+      recorder.onstop = () => {
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = `listing-video-${Date.now()}.${ext}`;
+        link.href = url;
         link.click();
-        setTimeout(()=>URL.revokeObjectURL(url),5000);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
         resolve();
       };
     });
 
+    setExportProgress(0);
     notify("Video exported!");
   };
 
-  const handleExport=async()=>{
+  const handleExport = async () => {
     setExporting(true);
-    try{
-      if(isVideoMode){
+    try {
+      if (isVideoMode) {
         await exportVideo();
-      }else{
+      } else {
         await exportImage();
       }
-    }catch(err:any){
-      console.error("Export error:",err);
-      notify(err?.message||"Export failed. Try again.");
+    } catch (err: any) {
+      console.error("Export error:", err);
+      notify(err?.message || "Export failed. Try again.");
+    }
+    setExporting(false);
+    setExportProgress(0);
+  };
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      await exportPdf();
+    } catch (err: any) {
+      console.error("PDF export error:", err);
+      notify(err?.message || "PDF export failed. Try again.");
     }
     setExporting(false);
   };
@@ -809,7 +871,7 @@ export default function DesignStudioV2(){
           <div className="td"/>
           <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
           <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
-            {exporting?<><Loader2 size={14} className="animate-spin"/>Exporting...</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
           </button>
         </div>
       </div>
@@ -1172,10 +1234,15 @@ export default function DesignStudioV2(){
             {activeTab==="listing-flyer"&&<>
               <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>Print-ready US Letter. PNG for digital, PDF for print.</p>
               <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}} onClick={handleExport} disabled={exporting}>{exporting?<><Loader2 size={14} className="animate-spin"/>Exporting...</>:<><Printer size={14}/>Download PNG</>}</button>
-              <button className="bi" style={{width:"100%",marginTop:6,fontSize:11,fontWeight:600,justifyContent:"center",gap:6,height:36}} onClick={handleExport}><FileText size={13}/>Download PDF (Print)</button>
+              <button className="bi" style={{width:"100%",marginTop:6,fontSize:11,fontWeight:600,justifyContent:"center",gap:6,height:36}} onClick={handleExportPdf} disabled={exporting}><FileText size={13}/>Download PDF (Print)</button>
             </>}
             {activeTab!=="listing-flyer"&&<>
-              <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:isVideoMode?"linear-gradient(135deg,#7c3aed,#6366f1)":undefined}} onClick={handleExport} disabled={exporting}>{exporting?<><Loader2 size={14} className="animate-spin"/>Exporting...</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}</button>
+              <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:isVideoMode?"linear-gradient(135deg,#7c3aed,#6366f1)":undefined,position:"relative",overflow:"hidden"}} onClick={handleExport} disabled={exporting}>
+                {exporting&&exportProgress>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${exportProgress}%`,background:"rgba(255,255,255,0.15)",transition:"width 0.3s ease"}}/>}
+                <span style={{position:"relative",display:"flex",alignItems:"center",gap:7}}>
+                  {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+                </span>
+              </button>
             </>}
           </Section>
           <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
