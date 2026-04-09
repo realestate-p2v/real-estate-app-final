@@ -7,24 +7,26 @@ const SELLER_SYSTEM_PROMPT = `You are a real estate market expert writing a prof
 
 Write in a warm, professional, encouraging tone. The seller should feel confident and well-prepared after reading this.
 
-Generate the following sections. Each section should be 150-300 words. Use natural paragraphs, not bullet lists. Write as if you are the agent's team — say "we" and "our team."
+Generate the following sections. Each section should be 300-600 words. Use natural paragraphs, not bullet lists. Write as if you are the agent's team — say "we" and "our team."
+
+If an existing listing description has been provided, use its language, details, and highlights throughout the report to make the content feel specific and personalized to this property. Reference specific features, neighborhood details, and selling points from the description naturally in relevant sections.
 
 SECTIONS TO GENERATE (in this order, each as a separate clearly labeled section):
 
 1. MARKET SNAPSHOT
-Current real estate market conditions in the property's area. Include context about whether it's a buyer's or seller's market. Mention typical days on market and price trends. Be realistic but optimistic — focus on opportunities. If you don't have exact data, speak in general terms about the market type (suburban, urban, etc.) and current national/regional trends.
+Current real estate market conditions in the property's area. Include context about whether it's a buyer's or seller's market. Mention typical days on market and price trends. Be realistic but optimistic — focus on opportunities. If you don't have exact data, speak in general terms about the market type (suburban, urban, etc.) and current national/regional trends. If a listing description was provided, reference the property's specific neighborhood and features to ground the analysis.
 
 2. PRE-LISTING PREPARATION
-Room-by-room guide for getting the home ready for listing photos and showings. Cover: decluttering, deep cleaning, minor repairs, curb appeal, staging tips, lighting, depersonalizing. Be specific to the property type and condition noted. Include a priority checklist at the end.
+Room-by-room guide for getting the home ready for listing photos and showings. Cover: decluttering, deep cleaning, minor repairs, curb appeal, staging tips, lighting, depersonalizing. Be specific to the property type and condition noted. If a listing description was provided, tailor advice to the specific rooms, features, and layout mentioned. Include a priority checklist at the end.
 
 3. PHOTO DAY GUIDE
-What the seller should do before the photographer arrives. Cover: final cleaning touches, hide personal items and pets, open blinds/curtains, turn on all lights, remove cars from driveway, mow lawn (if applicable), stage key rooms. Time of day recommendations. What to expect during the shoot.
+What the seller should do before the photographer arrives. Cover: final cleaning touches, hide personal items and pets, open blinds/curtains, turn on all lights, remove cars from driveway, mow lawn (if applicable), stage key rooms. Time of day recommendations. What to expect during the shoot. If a listing description mentions specific standout features (pool, view, kitchen, etc.), call those out as hero shots to prioritize.
 
 4. PRICING STRATEGY
-How the asking price should be determined. Discuss comp analysis, pricing psychology (pricing just below round numbers), the danger of overpricing, and how the first 2 weeks on market are critical. If an asking price was provided, frame the strategy around it. Be tactful — don't say "your price is wrong," say "here's how we position for maximum interest."
+How the asking price should be determined. Discuss comp analysis, pricing psychology (pricing just below round numbers), the danger of overpricing, and how the first 2 weeks on market are critical. If an asking price was provided, frame the strategy around it. Be tactful — don't say "your price is wrong," say "here's how we position for maximum interest." If a listing description was provided, reference the specific features and upgrades that support the pricing.
 
 5. YOUR MARKETING PLAN
-What the agent and their tools will do to market this listing. Include: professional photography, cinematic walkthrough video, virtual staging, property website with lead capture, social media marketing, MLS syndication, email campaigns, open house strategy. This section naturally showcases the agent's full marketing toolkit.
+What the agent and their tools will do to market this listing. Include: professional photography, cinematic walkthrough video, virtual staging, property website with lead capture, social media marketing, MLS syndication, email campaigns, open house strategy. This section naturally showcases the agent's full marketing toolkit. If a listing description was provided, reference how specific property highlights will be featured in marketing materials.
 
 6. TIMELINE TO CLOSE
 Week-by-week overview from listing to closing. Cover: pre-listing prep (week 1-2), active marketing (week 2-4), showings and offers (week 3-6), under contract (week 6-10), closing (week 10-12). Adjust based on the seller's stated timeline. Mention typical contingencies and what to expect at each stage.
@@ -37,7 +39,7 @@ const BUYER_SYSTEM_PROMPT = `You are a real estate market expert writing a profe
 
 Write in a warm, encouraging, confident tone. The buyer should feel excited and informed after reading this. Pros should always outweigh cons. Frame everything positively — even challenges should be presented as opportunities.
 
-Generate the following sections. Each section should be 150-300 words. Use natural paragraphs, not bullet lists. Write as if you are the agent's team — say "we" and "our team."
+Generate the following sections. Each section should be 300-600 words. Use natural paragraphs, not bullet lists. Write as if you are the agent's team — say "we" and "our team."
 
 SECTIONS TO GENERATE (in this order, each as a separate clearly labeled section):
 
@@ -95,6 +97,40 @@ export async function POST(req: NextRequest) {
     const isSeller = reportType === "Seller Guide";
     const systemPrompt = isSeller ? SELLER_SYSTEM_PROMPT : BUYER_SYSTEM_PROMPT;
 
+    // ── Fetch existing listing description if seller report ──
+    let listingDescription = "";
+    if (isSeller && formFields.address) {
+      // Try to find descriptions for this property by matching address
+      const addressSearch = formFields.address.trim().toLowerCase();
+
+      // Fetch all user descriptions and match by property_data.address
+      const { data: descriptions } = await supabase
+        .from("lens_descriptions")
+        .select("description, style, property_data")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (descriptions && descriptions.length > 0) {
+        // Find descriptions whose property_data.address matches
+        const matched = descriptions.find((d: any) => {
+          const propAddr = d.property_data?.address?.toLowerCase?.() || "";
+          // Check if addresses share meaningful overlap
+          return propAddr && (
+            addressSearch.includes(propAddr) ||
+            propAddr.includes(addressSearch.split(",")[0].trim().toLowerCase())
+          );
+        });
+
+        if (matched?.description) {
+          listingDescription = matched.description;
+        } else if (descriptions.length > 0 && descriptions[0]?.description) {
+          // If no address match but there's a recent description from this user,
+          // don't use it — only use matched descriptions
+        }
+      }
+    }
+
     // Build user prompt
     let userPrompt = "";
 
@@ -114,10 +150,15 @@ Client name: ${formFields.clientName || ""}
           userPrompt += `${label}: ${value}\n`;
         }
       });
+
+      if (listingDescription) {
+        userPrompt += `\n--- EXISTING LISTING DESCRIPTION (use this context to make the section specific and personalized) ---\n${listingDescription}\n--- END LISTING DESCRIPTION ---\n`;
+      }
+
       userPrompt += `\nAgent name: ${formFields.agentName || ""}
 Agent company: ${formFields.agentCompany || ""}
 
-Write ONLY the "${regenerateSection}" section. Start with the section header in ALL CAPS on its own line, then the content. 150-300 words.`;
+Write ONLY the "${regenerateSection}" section. Start with the section header in ALL CAPS on its own line, then the content. 300-600 words.`;
     } else {
       // Full generation
       userPrompt = `Generate the report based on these details:\n\nReport type: ${reportType}\nClient name: ${formFields.clientName || ""}\n`;
@@ -128,6 +169,10 @@ Write ONLY the "${regenerateSection}" section. Start with the section header in 
           userPrompt += `${label}: ${value}\n`;
         }
       });
+
+      if (listingDescription) {
+        userPrompt += `\n--- EXISTING LISTING DESCRIPTION (use the details, features, and highlights from this description throughout all sections to make the report feel specific and personalized to this property) ---\n${listingDescription}\n--- END LISTING DESCRIPTION ---\n`;
+      }
 
       userPrompt += `\nAgent name: ${formFields.agentName || ""}
 Agent company: ${formFields.agentCompany || ""}`;
@@ -148,7 +193,7 @@ Agent company: ${formFields.agentCompany || ""}`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
         stream: true,
