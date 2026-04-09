@@ -56,6 +56,7 @@
     "embla-carousel-react": "8.5.1",
     "exifr": "^7.1.3",
     "gcp-metadata": "latest",
+    "html-to-image": "^1.11.13",
     "html2canvas-pro": "^1.5.8",
     "input-otp": "1.4.1",
     "jspdf": "latest",
