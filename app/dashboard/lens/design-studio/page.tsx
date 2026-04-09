@@ -40,13 +40,14 @@ function getBadgeConfig(id: string) {
 /* ═══════════════════════════════════════════════════════
    INFOBAR TEMPLATE
    ═══════════════════════════════════════════════════════ */
-function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, address, beds, baths, sqft, price, agentName, phone, brokerage, badgeText, badgeColor, fontFamily, barColor, accentColor }: any) {
+function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, address, addressLine2, beds, baths, sqft, price, agentName, phone, brokerage, badgeText, badgeColor, fontFamily, barColor, accentColor }: any) {
   const w = size.width, h = size.height, isStory = size.id==="story", isPostcard = size.id==="postcard", unit = w/1080;
   const accent = accentColor||"#ffffff", usedBadge = accentColor||badgeColor, barLight = isLightColor(barColor);
   const tp = barLight?"#111827":"#ffffff", ts = barLight?"rgba(17,24,39,0.55)":"rgba(255,255,255,0.55)";
   const tm = barLight?"rgba(17,24,39,0.40)":"rgba(255,255,255,0.35)", dc = barLight?"rgba(0,0,0,0.10)":"rgba(255,255,255,0.12)";
   const an = agentName||"Agent Name", br = brokerage||"Brokerage", ph = phone||"(555) 000-0000";
   const ad = address||"123 Main Street";
+  const ad2 = addressLine2||"";
   const det = [beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  ·  ")||"3 BD  ·  2 BA  ·  1,800 SF";
   const pr = price?`$${price}`:"$000,000";
   const pp = isPostcard?55:58, barH = h*(1-pp/100);
@@ -79,9 +80,11 @@ function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, add
       </div>
     </div>
   );
+  const ad2F = Math.round(adF*0.75);
   const RightCol = () => (
     <div style={{flex:1,textAlign:"right" as const,minWidth:0,display:"flex",flexDirection:"column" as const,justifyContent:"center"}}>
-      <p style={{fontSize:adF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,wordBreak:"break-word" as const,overflowWrap:"anywhere" as const}}>{ad}</p>
+      <p style={{fontSize:adF,fontWeight:700,color:tp,lineHeight:1.15,margin:0}}>{ad}</p>
+      {ad2&&<p style={{fontSize:ad2F,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(2*unit)}}>{ad2}</p>}
       <p style={{fontSize:dtF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(6*unit),letterSpacing:"0.04em"}}>{det}</p>
       <div style={{width:Math.round(60*unit),height:Math.round(2*unit),backgroundColor:accentColor||dc,marginLeft:"auto",marginTop:Math.round(10*unit),marginBottom:Math.round(8*unit),borderRadius:1,opacity:accentColor?0.7:1}} />
       <p style={{fontSize:prF,fontWeight:800,color:accent,lineHeight:1.0,margin:0,letterSpacing:"-0.01em",textShadow:accentColor&&!barLight?`0 ${Math.round(2*unit)}px ${Math.round(12*unit)}px ${hexToRgba(accentColor,0.3)}`:"none"}}>{pr}</p>
@@ -442,7 +445,7 @@ const LEFT_PANELS: Record<string,{id:string;label:string;icon:any}[]> = {
   "branding-card":[{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],
   "property-pdf":[{id:"text",label:"Details",icon:Type},{id:"photos",label:"Photos",icon:ImageIcon},{id:"styles",label:"Styles",icon:Palette}],
 };
-const BROKERAGE_COLORS = [{hex:"#b40101",label:"KW Red"},{hex:"#666666",label:"KW Gray"},{hex:"#003399",label:"CB Blue"},{hex:"#012169",label:"CB Navy"},{hex:"#003da5",label:"RM Blue"},{hex:"#dc1c2e",label:"RM Red"},{hex:"#b5985a",label:"C21 Gold"},{hex:"#1c1c1c",label:"C21 Black"},{hex:"#000000",label:"CMP Black"},{hex:"#002349",label:"SIR Blue"},{hex:"#552448",label:"BH Purple"},{hex:"#1c3f6e",label:"EXP Blue"},{hex:"#006341",label:"HH Green"},{hex:"#d4272e",label:"EXT Red"},{hex:"#e31937",label:"ERA Red"},{hex:"#a02021",label:"RF Red"},{hex:"#ffffff",label:"White"}];
+const BROKERAGE_COLORS = [{hex:"#b40101",label:"KW Red"},{hex:"#666666",label:"KW Gray"},{hex:"#003399",label:"CB Blue"},{hex:"#012169",label:"CB Navy"},{hex:"#003da5",label:"RM Blue"},{hex:"#dc1c2e",label:"RM Red"},{hex:"#b5985a",label:"C21 Gold"},{hex:"#1c1c1c",label:"C21 Black"},{hex:"#000000",label:"CMP Black"},{hex:"#333333",label:"CMP Dark"},{hex:"#002349",label:"SIR Blue"},{hex:"#1a1a1a",label:"SIR Black"},{hex:"#552448",label:"BH Purple"},{hex:"#2d1a33",label:"BH Dark"},{hex:"#1c3f6e",label:"EXP Blue"},{hex:"#006341",label:"HH Green"},{hex:"#003d28",label:"HH Dk Green"},{hex:"#4c8c2b",label:"BHG Green"},{hex:"#d4272e",label:"EXT Red"},{hex:"#e31937",label:"ERA Red"},{hex:"#273691",label:"ERA Blue"},{hex:"#a02021",label:"RF Red"},{hex:"#ffffff",label:"White"}];
 const ACCENT_COLORS = ["#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185d","#0e7490","#c2410c","#71717a","#ffffff","#000000"];
 const FONT_OPTIONS = [{id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},{id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},{id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},{id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"}];
 const YARD_DESIGNS = [{id:"split-bar",label:"Split Bar",desc:"Top & bottom bars"},{id:"sidebar",label:"Sidebar",desc:"Vertical side accent"},{id:"top-heavy",label:"Top Heavy",desc:"Large header block"}];
@@ -506,6 +509,7 @@ export default function DesignStudioV2() {
   const [headshot,setHeadshot]=useState<string|null>(null);
   const [logo,setLogo]=useState<string|null>(null);
   const [address,setAddress]=useState("");
+  const [addressLine2,setAddressLine2]=useState("");
   const [beds,setBeds]=useState("");const [baths,setBaths]=useState("");const [sqft,setSqft]=useState("");const [price,setPrice]=useState("");
   const [date,setDate]=useState("");const [time,setTime]=useState("");
   const [agentName,setAgentName]=useState("");const [phone,setPhone]=useState("");
@@ -655,12 +659,14 @@ export default function DesignStudioV2() {
 
   // Property selector handler
   const handleSelectProperty=(id:string)=>{
-    if(id==="__new__"){setSelectedPropertyId(null);setAddress("");setBeds("");setBaths("");setSqft("");setPrice("");setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");setBrandAddress("");setBrandCityState("");setBrandPrice("");setBrandFeatures("");return;}
+    if(id==="__new__"){setSelectedPropertyId(null);setAddress("");setAddressLine2("");setBeds("");setBaths("");setSqft("");setPrice("");setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");setBrandAddress("");setBrandCityState("");setBrandPrice("");setBrandFeatures("");return;}
     const prop=userProperties.find((p:any)=>p.id===id);if(!prop)return;
     setSelectedPropertyId(prop.id);
-    const full=[prop.address,prop.city,prop.state].filter(Boolean).join(", ");
-    setAddress(full);setPdfAddress(prop.address||"");setBrandAddress(prop.address||"");
-    const cs=[prop.city,prop.state].filter(Boolean).join(", ");setPdfCityStateZip(cs);setBrandCityState(cs);
+    setAddress(prop.address||"");
+    const cs=[prop.city,prop.state].filter(Boolean).join(", ");
+    setAddressLine2(cs);
+    setPdfAddress(prop.address||"");setBrandAddress(prop.address||"");
+    setPdfCityStateZip(cs);setBrandCityState(cs);
     if(prop.bedrooms){const b=prop.bedrooms.toString();setBeds(b);setPdfBeds(b);}
     if(prop.bathrooms){const b=prop.bathrooms.toString();setBaths(b);setPdfBaths(b);}
     if(prop.sqft){const s=prop.sqft.toString();setSqft(s);setPdfSqft(s);}
@@ -706,8 +712,8 @@ export default function DesignStudioV2() {
     if(activeTab==="templates"){
       const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;
       const vidEl=mediaMode==="video"?videoPreviewEl:undefined;
-      if(selectedTemplate==="open-house") return <OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
-      return <InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
+      if(selectedTemplate==="open-house") return <OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
+      return <InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
     }
     if(activeTab==="yard-sign"){
       const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};
@@ -902,7 +908,7 @@ export default function DesignStudioV2() {
 
           {/* LISTING: Details */}
           {activeTab==="templates"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)" /> Details</div>
-            <Section title="Property" icon={Home}><div className="fg"><label className="fl">Address</label><input className="fi" value={address} onChange={e=>setAddress(e.target.value)} placeholder="123 Main St" /></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={beds} onChange={e=>setBeds(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={baths} onChange={e=>setBaths(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={sqft} onChange={e=>setSqft(e.target.value)} /></div></div><div className="fg"><label className="fl">Price</label><input className="fi" value={price} onChange={e=>setPrice(e.target.value)} /></div>{selectedTemplate==="open-house"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Date</label><input className="fi" value={date} onChange={e=>setDate(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Time</label><input className="fi" value={time} onChange={e=>setTime(e.target.value)} /></div></div>}</Section>
+            <Section title="Property" icon={Home}><div className="fg"><label className="fl">Street Address</label><input className="fi" value={address} onChange={e=>setAddress(e.target.value)} placeholder="8043 Villas la Colina" /></div><div className="fg"><label className="fl">City, State</label><input className="fi" value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} placeholder="Ocotal, Guanacaste" /></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={beds} onChange={e=>setBeds(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={baths} onChange={e=>setBaths(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={sqft} onChange={e=>setSqft(e.target.value)} /></div></div><div className="fg"><label className="fl">Price</label><input className="fi" value={price} onChange={e=>setPrice(e.target.value)} /></div>{selectedTemplate==="open-house"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Date</label><input className="fi" value={date} onChange={e=>setDate(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Time</label><input className="fi" value={time} onChange={e=>setTime(e.target.value)} /></div></div>}</Section>
             <Section title="Agent" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)} /></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)} /></div><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)} /></div></div></Section>
           </>}
 
