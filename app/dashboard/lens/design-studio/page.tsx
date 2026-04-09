@@ -362,6 +362,7 @@ export default function DesignStudioV2(){
   const[agentName,setAgentName]=useState("");const[phone,setPhone]=useState("");
   const[agentEmail,setAgentEmail]=useState("");const[brokerage,setBrokerage]=useState("");
   const[barColor,setBarColor]=useState("#111827");const[accentColor,setAccentColor]=useState("");const[fontId,setFontId]=useState("sans");
+  const[savedCompanyColors,setSavedCompanyColors]=useState<string[]>([]);
   // Media
   const[mediaMode,setMediaMode]=useState<"image"|"video">("image");
   const[selectedVideo,setSelectedVideo]=useState<any>(null);
@@ -440,7 +441,7 @@ export default function DesignStudioV2(){
       try{
         const supabase=(await import("@/lib/supabase/client")).createClient();
         const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-        const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website").eq("user_id",user.id).single();
+        const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
           if(data.saved_logo_url){setLogo(data.saved_logo_url);setBrandLogo(data.saved_logo_url);}
@@ -449,6 +450,20 @@ export default function DesignStudioV2(){
           if(data.saved_email){setAgentEmail(data.saved_email);setBrandEmail(data.saved_email);}
           if(data.saved_company){setBrokerage(data.saved_company);setBrandBrokerage(data.saved_company);}
           if(data.saved_website){setBrandWebsite(data.saved_website);}
+          // Apply saved company colors as defaults
+          const cc = Array.isArray(data.saved_company_colors) ? data.saved_company_colors : [];
+          setSavedCompanyColors(cc);
+          if(cc.length >= 1){
+            setBarColor(cc[0]); // listing info bar
+            setFlyerAccentColor(cc[0]); // flyer accent
+            setBrandBgColor(cc[0]); // branding card bg
+            setYardTopColor(cc[0]); // yard sign top
+          }
+          if(cc.length >= 2){
+            setAccentColor(cc[1]); // listing accent
+            setBrandAccentColor(cc[1]); // branding card accent
+            setYardBottomColor(cc[1]); // yard sign bottom
+          }
         }
         const{data:props}=await supabase.from("agent_properties").select("id,address,address_normalized,city,state,bedrooms,bathrooms,sqft,price,special_features,amenities,website_slug,website_published,website_curated").eq("user_id",user.id).is("merged_into_id",null).order("updated_at",{ascending:false});
         if(props)setUserProperties(props);
@@ -948,6 +963,7 @@ export default function DesignStudioV2(){
             <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
             <Section title="Accent Color" icon={Paintbrush}>
               <ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/>
+              {savedCompanyColors.length>0&&<div style={{marginTop:10}}><span className="fl">Your Colors</span><SwatchGrid colors={savedCompanyColors} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div>}
               <div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div>
               <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div>
             </Section>
@@ -1038,7 +1054,7 @@ export default function DesignStudioV2(){
 
           {activeTab==="templates"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div>
             <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
-            <Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/><div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section>
+            <Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/>{savedCompanyColors.length>0&&<div style={{marginTop:10}}><span className="fl">Your Colors</span><SwatchGrid colors={savedCompanyColors} current={barColor} onSelect={setBarColor}/></div>}<div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section>
             <Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section>
           </>}
 
