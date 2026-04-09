@@ -279,6 +279,8 @@ export default function DesignStudioV2(){
   const[overlayMusic,setOverlayMusic]=useState("");const[musicExpanded,setMusicExpanded]=useState(false);
   const[musicTracks,setMusicTracks]=useState<any[]>([]);const[loadingMusic,setLoadingMusic]=useState(false);
   const[vibeFilter,setVibeFilter]=useState("");const[playingTrackId,setPlayingTrackId]=useState<string|null>(null);
+  const[selectedMusicTrack,setSelectedMusicTrack]=useState<{id:string;url:string;name:string}|null>(null);
+  const[musicVibeFilter,setMusicVibeFilter]=useState("");
   const audioRef=useRef<HTMLAudioElement|null>(null);
   const[userVideos,setUserVideos]=useState<any[]>([]);const[loadingVideos,setLoadingVideos]=useState(false);
   // Yard sign
@@ -445,8 +447,35 @@ export default function DesignStudioV2(){
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
   // ─── Export helpers ───────────────────────────────────────────────────────
+  // Strip CSS lab()/oklch() colors that html2canvas can't parse
+  const sanitizeLabColors=(root:HTMLElement)=>{
+    const all=root.querySelectorAll("*");
+    const props=["color","background","backgroundColor","borderColor","boxShadow","textShadow","fill","stroke","outline"];
+    const labRe=/\b(lab|oklch|lch|oklab)\s*\(/gi;
+    all.forEach(el=>{
+      const s=(el as HTMLElement).style;
+      props.forEach(p=>{
+        const v=s.getPropertyValue(p);
+        if(v&&labRe.test(v)){
+          labRe.lastIndex=0;
+          s.setProperty(p,"transparent");
+        }
+      });
+      // also patch computed styles that leak through inline
+      const cs=getComputedStyle(el);
+      props.forEach(p=>{
+        const v=cs.getPropertyValue(p);
+        if(v&&labRe.test(v)){
+          labRe.lastIndex=0;
+          (el as HTMLElement).style.setProperty(p,"transparent");
+        }
+      });
+    });
+  };
+
   const exportImage=async()=>{
     if(!previewRef.current)return;
+    sanitizeLabColors(previewRef.current);
     const html2canvas=(await import("html2canvas")).default;
     const canvas=await html2canvas(previewRef.current,{
       scale:1,
@@ -455,6 +484,15 @@ export default function DesignStudioV2(){
       backgroundColor:null,
       width:rawW,
       height:rawH,
+      onclone:(doc)=>{
+        // Strip lab() from the cloned document used by html2canvas
+        doc.querySelectorAll("*").forEach(el=>{
+          const style=(el as HTMLElement).getAttribute("style")||"";
+          if(/\b(lab|oklch|lch|oklab)\s*\(/.test(style)){
+            (el as HTMLElement).setAttribute("style",style.replace(/\b(lab|oklch|lch|oklab)\s*\([^)]*\)/g,"transparent"));
+          }
+        });
+      },
     });
     const link=document.createElement("a");
     link.download=`listing-${selectedTemplate}-${Date.now()}.png`;
@@ -485,14 +523,12 @@ export default function DesignStudioV2(){
       video.load();
     });
 
-    // Clamp to 119 s per the existing UI warning
     const durationMs=Math.min((isFinite(video.duration)?video.duration:30),119)*1000;
     video.play().catch(()=>{});
 
     // 3. Capture the static overlay once (badge + info bar, no video area)
     let overlayBitmap:ImageBitmap|null=null;
     if(previewRef.current){
-      // Hide the live video element so html2canvas doesn't choke on it
       const videoArea=previewRef.current.querySelector("[data-video-area]") as HTMLElement|null;
       if(videoArea)videoArea.style.visibility="hidden";
       try{
@@ -504,6 +540,14 @@ export default function DesignStudioV2(){
           backgroundColor:null,
           width:rawW,
           height:rawH,
+          onclone:(doc)=>{
+            doc.querySelectorAll("*").forEach(el=>{
+              const style=(el as HTMLElement).getAttribute("style")||"";
+              if(/\b(lab|oklch|lch|oklab)\s*\(/.test(style)){
+                (el as HTMLElement).setAttribute("style",style.replace(/\b(lab|oklch|lch|oklab)\s*\([^)]*\)/g,"transparent"));
+              }
+            });
+          },
         });
         overlayBitmap=await createImageBitmap(overlayCanvas);
       }finally{
@@ -511,18 +555,50 @@ export default function DesignStudioV2(){
       }
     }
 
-    // 4. Set up MediaRecorder
-    const stream=canvas.captureStream(30);
+    // 4. Set up audio context for mixing if a music track is selected
+    let audioCtx:AudioContext|null=null;
+    let audioDest:MediaStreamAudioDestinationNode|null=null;
+    let musicSource:AudioBufferSourceNode|null=null;
+
+    if(selectedMusicTrack?.url){
+      try{
+        audioCtx=new AudioContext();
+        audioDest=audioCtx.createMediaStreamDestination();
+        const resp=await fetch(selectedMusicTrack.url);
+        const buf=await resp.arrayBuffer();
+        const decoded=await audioCtx.decodeAudioData(buf);
+        musicSource=audioCtx.createBufferSource();
+        musicSource.buffer=decoded;
+        musicSource.loop=true;
+        // Fade out last 2 seconds
+        const gainNode=audioCtx.createGain();
+        gainNode.gain.setValueAtTime(1,audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0,audioCtx.currentTime+(durationMs/1000));
+        musicSource.connect(gainNode);
+        gainNode.connect(audioDest);
+        musicSource.start();
+      }catch(e){
+        console.warn("Audio mix failed, exporting video only:",e);
+        audioCtx=null;audioDest=null;musicSource=null;
+      }
+    }
+
+    // 5. Set up MediaRecorder — combine canvas stream + audio if available
+    const videoStream=canvas.captureStream(30);
+    const combinedStream=new MediaStream([
+      ...videoStream.getVideoTracks(),
+      ...(audioDest?audioDest.stream.getAudioTracks():[]),
+    ]);
     const mimeType=MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
       ?"video/mp4;codecs=avc1"
-      :MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-      ?"video/webm;codecs=vp9"
+      :MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ?"video/webm;codecs=vp9,opus"
       :"video/webm";
-    const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8_000_000});
+    const recorder=new MediaRecorder(combinedStream,{mimeType,videoBitsPerSecond:8_000_000});
     const chunks:Blob[]=[];
     recorder.ondataavailable=(e)=>{if(e.data.size>0)chunks.push(e.data);};
 
-    // 5. Frame loop — video fills canvas, overlay composited on top
+    // 6. Frame loop
     recorder.start(100);
     const startTime=performance.now();
 
@@ -535,11 +611,13 @@ export default function DesignStudioV2(){
       }else{
         recorder.stop();
         video.pause();
+        musicSource?.stop();
+        audioCtx?.close();
       }
     };
     requestAnimationFrame(drawFrame);
 
-    // 6. On stop → download
+    // 7. On stop → download
     await new Promise<void>((resolve)=>{
       recorder.onstop=()=>{
         const ext=mimeType.includes("mp4")?"mp4":"webm";
@@ -803,7 +881,59 @@ export default function DesignStudioV2(){
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Film size={13} color="#f59e0b"/><span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Video exports limited to 119s</span></div>
                 <span className="fl">Your Videos</span>
                 {loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>:userVideos.length===0?<div style={{padding:"20px 0",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)"}}><p style={{fontSize:11,color:"var(--std)",margin:0}}>No completed videos found.</p></div>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6,maxHeight:220,overflowY:"auto" as const}}>{userVideos.map((v:any)=>(<button key={v.orderId} onClick={()=>{setSelectedVideo(v);if(v.thumbnail)setListingPhoto(v.thumbnail);}} style={{position:"relative",borderRadius:10,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",textAlign:"left" as const,transition:"all 0.2s",padding:0,boxShadow:selectedVideo?.orderId===v.orderId?"0 0 0 2px var(--sag)":"none",fontFamily:"var(--sf)"}}>{v.thumbnail?<img src={v.thumbnail} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover" as const,display:"block"}}/>:<div style={{width:"100%",aspectRatio:"16/9",background:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="rgba(255,255,255,0.2)"/></div>}<div style={{padding:"6px 8px"}}><p style={{fontSize:10,fontWeight:700,color:"var(--st)",margin:0}}>Order {v.orderId?.slice(0,8)}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{v.date}{v.hasUnbranded?" · Unbranded":""}</p></div>{selectedVideo?.orderId===v.orderId&&<div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={12} color="#fff"/></div>}</button>))}</div>}
-              </>}
+
+                {/* ── Music selector ── */}
+                <div style={{marginTop:16,borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:14}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                    <span className="fl" style={{margin:0}}>🎵 Music for Export</span>
+                    {selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}
+                  </div>
+                  {selectedMusicTrack&&(
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}>
+                      <Music size={12} color="var(--sa)"/>
+                      <span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span>
+                      <button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"■":"▶"}</span>
+                      </button>
+                    </div>
+                  )}
+                  {/* Vibe filter chips */}
+                  <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>
+                    {[{key:"",label:"All"},
+                      {key:"upbeat_modern",label:"Upbeat"},
+                      {key:"chill_tropical",label:"Chill"},
+                      {key:"energetic_pop",label:"Energy"},
+                      {key:"elegant_classical",label:"Elegant"},
+                      {key:"warm_acoustic",label:"Acoustic"},
+                      {key:"bold_cinematic",label:"Cinematic"},
+                      {key:"smooth_jazz",label:"Jazz"},
+                      {key:"ambient",label:"Ambient"},
+                    ].map(v=>(
+                      <button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)",transition:"all 0.15s"}}>{v.label}</button>
+                    ))}
+                  </div>
+                  {/* Track list */}
+                  {loadingMusic?(
+                    <div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>
+                  ):(
+                    <div style={{maxHeight:180,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>
+                      {musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}>
+                        <button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button>
+                      </p>}
+                      {musicTracks.map(t=>(
+                        <div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}>
+                          <button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            <span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"■":"▶"}</span>
+                          </button>
+                          <span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span>
+                          <span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>
+                          {selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </> }
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
                 <UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/>
                 <UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/>
