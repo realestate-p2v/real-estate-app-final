@@ -153,13 +153,13 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
   const an=agentName||"Agent Name";
   const am=Array.isArray(amenities)?amenities.filter(Boolean):(amenities?String(amenities).split(",").map((s:string)=>s.trim()).filter(Boolean):[]);
-  const desc=truncateText(description||"",320);
+  const desc=truncateText(description||"",640);
   const photoCount=(photos||[]).length;
   const p1=photos?.[0]||null,p2=photos?.[1]||null,p3=photos?.[2]||null;
   const bottomRow=photos?.slice(3,7)||[];
   const showBottomRow=photoCount>3&&bottomRow.length>0;
   const bottomPhotoH=showBottomRow?340:0;
-  const totalPhotoBlockH=PHOTO_H+(showBottomRow?8+bottomPhotoH:0);
+  const totalPhotoBlockH=PHOTO_H+(showBottomRow?20+bottomPhotoH:0);
   const heroW=Math.round(W*0.58);
   const hasUrls=!!(listingUrl||videoUrl||stagingUrl);
   const urlRows:{icon:string;label:string;url:string}[]=[];
@@ -168,12 +168,19 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   if(stagingUrl)urlRows.push({icon:"\ud83d\udecb\ufe0f",label:"See the staged rooms:",url:stagingUrl});
   const hsz=BRAND_H-40;
   const priceFs=responsiveSize(148,pr,10),addrFs=responsiveSize(64,ad,28),agFs=responsiveSize(52,an,20);
-  const DETAILS_TOP=ACCENT_BAR+BRAND_H+totalPhotoBlockH;
+  const M=60; // print-safe margin on all sides
   return(
     <div style={{width:W,height:H,backgroundColor:"#fff",fontFamily,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:ACCENT_BAR,backgroundColor:accent}}/>
-      <div style={{position:"absolute",top:ACCENT_BAR,left:0,right:0,height:BRAND_H,backgroundColor:accent,display:"flex",alignItems:"center",padding:`0 80px`,gap:28}}>
-        {headshot?<img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`4px solid ${hexToRgba("#ffffff",0.3)}`}}/>:<div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:hexToRgba("#ffffff",0.12),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hsz*0.4,height:hsz*0.4,color:hexToRgba("#ffffff",0.4)}}/></div>}
+      <div style={{position:"absolute",top:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"4px 4px 0 0"}}/>
+      <div style={{
+        position:"absolute",top:M+ACCENT_BAR,left:M,right:M,height:BRAND_H,
+        backgroundColor:accent,display:"flex",alignItems:"center",
+        padding:`0 60px`,gap:28,
+      }}>
+        {headshot
+          ? <img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`4px solid ${hexToRgba("#ffffff",0.3)}`}}/>
+          : <div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:hexToRgba("#ffffff",0.12),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hsz*0.4,height:hsz*0.4,color:hexToRgba("#ffffff",0.4)}}/></div>
+        }
         <div style={{flex:1,minWidth:0}}>
           <p style={{fontSize:agFs,fontWeight:800,color:accentText,margin:0,lineHeight:1.1}}>{an}</p>
           <p style={{fontSize:40,fontWeight:500,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.65),margin:0,marginTop:6}}>{brokerage||"Real Estate"}</p>
@@ -184,18 +191,42 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
         </div>
         {logo&&<img src={logo} alt="" style={{maxWidth:280,maxHeight:BRAND_H-60,objectFit:"contain",flexShrink:0}}/>}
       </div>
-      <div style={{position:"absolute",top:ACCENT_BAR+BRAND_H,left:0,right:0,height:totalPhotoBlockH,backgroundColor:"#111"}}>
-        <div style={{display:"flex",width:"100%",height:PHOTO_H,gap:8}}>
-          <div style={{width:heroW,height:PHOTO_H,overflow:"hidden",flexShrink:0}}>{p1?<img src={p1} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1e293b",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:80,height:80,color:"rgba(255,255,255,0.1)"}}/></div>}</div>
-          <div style={{flex:1,display:"flex",flexDirection:"column" as const,gap:8}}>
-            <div style={{flex:1,overflow:"hidden"}}>{p2?<img src={p2} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#263045"}}/>}</div>
-            <div style={{flex:1,overflow:"hidden"}}>{p3?<img src={p3} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}</div>
+      <div style={{position:"absolute",top:M+ACCENT_BAR+BRAND_H,left:M,right:M,height:totalPhotoBlockH}}>
+        <div style={{display:"flex",width:"100%",height:PHOTO_H,gap:20}}>
+          <div style={{width:`58%`,height:PHOTO_H,overflow:"hidden",flexShrink:0,borderRadius:4}}>
+            {p1 ? <img src={p1} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                 : <div style={{width:"100%",height:"100%",backgroundColor:"#1e293b",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:80,height:80,color:"rgba(255,255,255,0.1)"}}/></div>}
+          </div>
+          <div style={{flex:1,display:"flex",flexDirection:"column" as const,gap:20}}>
+            <div style={{flex:1,overflow:"hidden",borderRadius:4}}>
+              {p2 ? <img src={p2} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                   : <div style={{width:"100%",height:"100%",backgroundColor:"#263045"}}/>}
+            </div>
+            <div style={{flex:1,overflow:"hidden",borderRadius:4}}>
+              {p3 ? <img src={p3} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                   : <div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}
+            </div>
           </div>
         </div>
-        {showBottomRow&&(<div style={{display:"flex",gap:8,height:bottomPhotoH,marginTop:8}}>{Array.from({length:4},(_,i)=>{const photo=bottomRow[i]||null;return(<div key={i} style={{flex:1,overflow:"hidden"}}>{photo?<img src={photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}</div>);})}
-        </div>)}
+        {showBottomRow&&(
+          <div style={{display:"flex",gap:20,height:bottomPhotoH,marginTop:20}}>
+            {Array.from({length:4},(_,i)=>{
+              const photo=bottomRow[i]||null;
+              return(
+                <div key={i} style={{flex:1,overflow:"hidden",borderRadius:4}}>
+                  {photo ? <img src={photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                         : <div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-      <div style={{position:"absolute",top:DETAILS_TOP,left:0,right:0,backgroundColor:"#fff",padding:`40px 80px 28px`,borderBottom:`3px solid ${hexToRgba(accent,0.12)}`}}>
+      <div style={{
+        position:"absolute",top:M+ACCENT_BAR+BRAND_H+totalPhotoBlockH,left:M,right:M,
+        backgroundColor:"#fff",padding:`40px 60px 28px`,
+        borderBottom:`3px solid ${hexToRgba(accent,0.12)}`,
+      }}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:40}}>
           <div style={{flex:1,minWidth:0}}>
             <p style={{fontSize:addrFs,fontWeight:800,color:"#111",margin:0,lineHeight:1.1}}>{ad}</p>
@@ -207,9 +238,36 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
         {am.length>0&&<div style={{display:"flex",flexWrap:"wrap" as const,gap:12,marginTop:20}}>{am.map((a:string,i:number)=>(<div key={i} style={{padding:"8px 22px",borderRadius:40,border:`2px solid ${hexToRgba(accent,0.25)}`,backgroundColor:hexToRgba(accent,0.05)}}><span style={{fontSize:36,fontWeight:600,color:accent}}>{a}</span></div>))}</div>}
         {desc&&<p style={{fontSize:38,color:"#555",lineHeight:1.65,margin:0,marginTop:22}}>{desc}</p>}
       </div>
-      {hasUrls&&(<div style={{position:"absolute",bottom:ACCENT_BAR,left:0,right:0,padding:`24px 80px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,backgroundColor:hexToRgba(accent,0.03),display:"flex",flexDirection:"column" as const,gap:8}}>{urlRows.map((row,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:18}}><span style={{fontSize:40}}>{row.icon}</span><span style={{fontSize:36,fontWeight:700,color:"#444"}}>{row.label}</span><span style={{fontSize:36,fontWeight:500,color:accent,wordBreak:"break-all" as const}}>{row.url}</span></div>))}</div>)}
-      {!hasUrls&&(<div style={{position:"absolute",bottom:ACCENT_BAR,left:0,right:0,padding:`20px 80px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,backgroundColor:hexToRgba(accent,0.03),display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontSize:36,fontWeight:700,color:"#333"}}>{an}</span>{phone&&<span style={{fontSize:36,color:"#555"}}>{phone}</span>}{email&&<span style={{fontSize:36,color:"#555"}}>{email}</span>}{brokerage&&<span style={{fontSize:36,color:"#888"}}>{brokerage}</span>}</div>)}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,height:ACCENT_BAR,backgroundColor:accent}}/>
+      {hasUrls&&(
+        <div style={{
+          position:"absolute",bottom:M+ACCENT_BAR,left:M,right:M,
+          padding:`24px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,
+          backgroundColor:hexToRgba(accent,0.03),
+          display:"flex",flexDirection:"column" as const,gap:8,
+        }}>
+          {urlRows.map((row,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:18}}>
+              <span style={{fontSize:40}}>{row.icon}</span>
+              <span style={{fontSize:36,fontWeight:700,color:"#444"}}>{row.label}</span>
+              <span style={{fontSize:36,fontWeight:500,color:accent,wordBreak:"break-all" as const}}>{row.url}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {!hasUrls&&(
+        <div style={{
+          position:"absolute",bottom:M+ACCENT_BAR,left:M,right:M,
+          padding:`20px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,
+          backgroundColor:hexToRgba(accent,0.03),
+          display:"flex",alignItems:"center",justifyContent:"space-between",
+        }}>
+          <span style={{fontSize:36,fontWeight:700,color:"#333"}}>{an}</span>
+          {phone&&<span style={{fontSize:36,color:"#555"}}>{phone}</span>}
+          {email&&<span style={{fontSize:36,color:"#555"}}>{email}</span>}
+          {brokerage&&<span style={{fontSize:36,color:"#888"}}>{brokerage}</span>}
+        </div>
+      )}
+      <div style={{position:"absolute",bottom:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"0 0 4px 4px"}}/>
     </div>
   );
 }
