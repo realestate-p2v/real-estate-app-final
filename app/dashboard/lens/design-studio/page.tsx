@@ -515,6 +515,9 @@ export default function DesignStudioV2() {
   const [mediaMode,setMediaMode]=useState<"image"|"video">("image");
   const [selectedVideo,setSelectedVideo]=useState<any>(null);
   const [overlayMusic,setOverlayMusic]=useState("");const [musicExpanded,setMusicExpanded]=useState(false);
+  const [musicTracks,setMusicTracks]=useState<any[]>([]);const [loadingMusic,setLoadingMusic]=useState(false);
+  const [vibeFilter,setVibeFilter]=useState("");const [playingTrackId,setPlayingTrackId]=useState<string|null>(null);
+  const audioRef=useRef<HTMLAudioElement|null>(null);
   const [userVideos,setUserVideos]=useState<any[]>([]);
   const [loadingVideos,setLoadingVideos]=useState(false);
   // Yard sign
@@ -621,6 +624,32 @@ export default function DesignStudioV2() {
     finally { setLoadingVideos(false); }
   };
 
+  // Music library
+  const VIBES = [{key:"",label:"All"},{key:"upbeat_modern",label:"Upbeat"},{key:"chill_tropical",label:"Chill"},{key:"energetic_pop",label:"Energetic"},{key:"elegant_classical",label:"Elegant"},{key:"warm_acoustic",label:"Acoustic"},{key:"bold_cinematic",label:"Cinematic"},{key:"smooth_jazz",label:"Jazz"},{key:"ambient",label:"Ambient"}];
+
+  const fetchMusicTracks = async (vibe:string="") => {
+    setLoadingMusic(true);
+    try {
+      const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
+      const data = await resp.json();
+      setMusicTracks(data.tracks || []);
+    } catch (e) { console.error("Music library fetch error:", e); }
+    setLoadingMusic(false);
+  };
+
+  const handlePlayTrack = (trackId:string, url:string) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (playingTrackId === trackId) { setPlayingTrackId(null); return; }
+    const audio = new Audio(url);
+    audio.play().catch(()=>{});
+    audio.onended = () => setPlayingTrackId(null);
+    audioRef.current = audio;
+    setPlayingTrackId(trackId);
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
+
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
   const handleExport=async()=>{setExporting(true);await new Promise(r=>setTimeout(r,2000));notify("Design exported!");setExporting(false);};
 
@@ -667,11 +696,18 @@ export default function DesignStudioV2() {
   const {scale,pW,pH,rawW,rawH}=getPreviewDims();
 
   // Canvas content
+  const videoPreviewEl = (mediaMode==="video"&&selectedVideo?.url) ? (
+    <div style={{width:"100%",height:"100%",position:"relative"}} data-video-area>
+      <video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+    </div>
+  ) : undefined;
+
   const renderPreview=()=>{
     if(activeTab==="templates"){
       const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;
-      if(selectedTemplate==="open-house") return <OpenHouseTemplate size={currentSize} listingPhoto={photo} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
-      return <InfoBarTemplate size={currentSize} listingPhoto={photo} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
+      const vidEl=mediaMode==="video"?videoPreviewEl:undefined;
+      if(selectedTemplate==="open-house") return <OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
+      return <InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor} />;
     }
     if(activeTab==="yard-sign"){
       const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};
@@ -806,16 +842,42 @@ export default function DesignStudioV2() {
 
                   {/* Music selector */}
                   <div style={{marginTop:14,borderRadius:10,border:"1px solid var(--sbr)",overflow:"hidden"}}>
-                    <button onClick={()=>setMusicExpanded(!musicExpanded)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"none",border:"none",cursor:"pointer",color:"var(--st)",fontFamily:"var(--sf)"}}>
+                    <button onClick={()=>{setMusicExpanded(!musicExpanded);if(!musicExpanded&&musicTracks.length===0)fetchMusicTracks();}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"none",border:"none",cursor:"pointer",color:"var(--st)",fontFamily:"var(--sf)"}}>
                       <div style={{width:32,height:32,borderRadius:8,background:"var(--sag)",display:"flex",alignItems:"center",justifyContent:"center"}}><Music size={15} color="var(--sa)" /></div>
-                      <div style={{flex:1,textAlign:"left"}}><p style={{fontSize:12,fontWeight:700,margin:0}}>Background Music</p><p style={{fontSize:10,color:overlayMusic?"var(--sa)":"var(--std)",margin:0,fontWeight:overlayMusic?600:400}}>{overlayMusic?"♪ Track selected":"Optional — add a soundtrack"}</p></div>
+                      <div style={{flex:1,textAlign:"left"}}><p style={{fontSize:12,fontWeight:700,margin:0}}>Background Music</p><p style={{fontSize:10,color:overlayMusic?"var(--sa)":"var(--std)",margin:0,fontWeight:overlayMusic?600:400}}>{overlayMusic?`♪ ${musicTracks.find((t:any)=>overlayMusic.includes(t.id))?.display_name||"Selected"}`:"Optional — add a soundtrack"}</p></div>
                       <ChevronRight size={13} color="var(--std)" style={{transform:musicExpanded?"rotate(90deg)":"none",transition:"transform 0.2s"}} />
                     </button>
                     {musicExpanded&&<div style={{borderTop:"1px solid var(--sbr)",padding:12}}>
-                      <button onClick={()=>setOverlayMusic("")} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,border:!overlayMusic?"1px solid var(--sa)":"1px solid var(--sbr)",background:!overlayMusic?"var(--sag)":"none",cursor:"pointer",fontSize:11,color:"var(--std)",fontFamily:"var(--sf)",marginBottom:6}}>
+                      {/* No music option */}
+                      <button onClick={()=>setOverlayMusic("")} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,border:!overlayMusic?"1px solid var(--sa)":"1px solid var(--sbr)",background:!overlayMusic?"var(--sag)":"none",cursor:"pointer",fontSize:11,color:"var(--std)",fontFamily:"var(--sf)",marginBottom:8}}>
                         <X size={13} /> No music (keep original audio){!overlayMusic&&<Check size={13} color="var(--sa)" style={{marginLeft:"auto"}} />}
                       </button>
-                      <p style={{fontSize:10,color:"var(--stm)",margin:"8px 0 6px"}}>In production, this connects to your music library API. For now, toggle shows the UI pattern.</p>
+                      {/* Vibe filters */}
+                      <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>
+                        {VIBES.map(v=><button key={v.key} onClick={()=>{setVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{fontSize:10,padding:"4px 8px",borderRadius:6,border:vibeFilter===v.key?"1px solid var(--sa)":"1px solid var(--sbr)",background:vibeFilter===v.key?"var(--sag)":"none",color:vibeFilter===v.key?"var(--sa)":"var(--std)",cursor:"pointer",fontWeight:600,fontFamily:"var(--sf)"}}>{v.label}</button>)}
+                      </div>
+                      {/* Track list */}
+                      {loadingMusic ? <div style={{display:"flex",justifyContent:"center",padding:"16px 0"}}><Loader2 size={16} color="var(--sa)" className="animate-spin" /></div> : (
+                        <div style={{maxHeight:200,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+                          {musicTracks.map((track:any)=>{
+                            const isSelected=overlayMusic.includes(track.id);
+                            return (
+                              <button key={track.id} onClick={()=>setOverlayMusic(`library:${track.id}:${track.file_url}`)}
+                                style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,border:isSelected?"1px solid var(--sa)":"1px solid var(--sbr)",background:isSelected?"var(--sag)":"none",cursor:"pointer",fontFamily:"var(--sf)",textAlign:"left"}}>
+                                <button onClick={(e)=>{e.stopPropagation();handlePlayTrack(track.id,track.file_url);}}
+                                  style={{width:26,height:26,borderRadius:"50%",flexShrink:0,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",background:playingTrackId===track.id?"var(--sa)":"var(--sag)",color:playingTrackId===track.id?"#fff":"var(--sa)",fontSize:9,fontWeight:800}}>
+                                  {playingTrackId===track.id?"■":"▶"}
+                                </button>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <p style={{fontSize:11,fontWeight:600,color:"var(--st)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{track.display_name}</p>
+                                  <p style={{fontSize:9,color:"var(--std)",margin:0}}>{track.duration_seconds}s</p>
+                                </div>
+                                {isSelected&&<Check size={13} color="var(--sa)" style={{flexShrink:0}} />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>}
                   </div>
 
