@@ -22,6 +22,7 @@ import {
   Home,
   LayoutDashboard,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
@@ -263,6 +264,15 @@ function MissionControl({
       ring: "ring-violet-400/20",
     },
     {
+      icon: BookOpen,
+      label: "Reports",
+      desc: "Branded buyer & seller guides",
+      href: "/dashboard/lens/reports",
+      color: "text-amber-400",
+      bg: "bg-amber-400/10",
+      ring: "ring-amber-400/20",
+    },
+    {
       icon: Film,
       label: "Quick Videos",
       desc: "Short clips from $4.95/clip",
@@ -341,7 +351,7 @@ function MissionControl({
               Quick Launch
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 sm:gap-3">
             {tools.map((tool, i) => (
               <Link
                 key={tool.label}
