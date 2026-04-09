@@ -153,7 +153,7 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
   const an=agentName||"Agent Name";
   const am=Array.isArray(amenities)?amenities.filter(Boolean):(amenities?String(amenities).split(",").map((s:string)=>s.trim()).filter(Boolean):[]);
-  const desc=truncateText(description||"",1280);
+  const desc=truncateText(description||"",1536);
   const photoCount=(photos||[]).length;
   const p1=photos?.[0]||null,p2=photos?.[1]||null,p3=photos?.[2]||null;
   const bottomRow=photos?.slice(3,7)||[];
@@ -609,7 +609,6 @@ export default function DesignStudioV2(){
       video.load();
     });
 
-    // Fallback: if loop doesn't work, manually restart on ended
     video.addEventListener("ended", () => {
       video.currentTime = 0;
       video.play().catch(() => {});
@@ -619,18 +618,14 @@ export default function DesignStudioV2(){
     const durationMs = durationSec * 1000;
     video.play().catch(() => {});
 
-    // 3. Compute the video region mathematically from template constants.
-    // InfoBarTemplate: video area = top pp% of template (pp=58 for square/story, 55 for postcard)
-    // OpenHouseTemplate: video area = full canvas (inset:0)
-    // This avoids unreliable getBoundingClientRect with CSS transforms.
+    // 3. Video region — only draw into the photo area, not the full canvas
     let videoRegion = { x: 0, y: 0, w: rawW, h: rawH };
     if (selectedTemplate !== "open-house") {
-      // InfoBarTemplate: photo area is top pp% of the template
       const pp = currentSize.id === "postcard" ? 55 : 58;
       videoRegion = { x: 0, y: 0, w: rawW, h: Math.round(rawH * pp / 100) };
     }
 
-    // 4. Capture the static overlay at full resolution (with video area hidden)
+    // 4. Capture static overlay at full resolution (video area hidden)
     let overlayBitmap: ImageBitmap | null = null;
     if (previewRef.current) {
       const videoArea = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
@@ -645,64 +640,18 @@ export default function DesignStudioV2(){
       }
     }
 
-    // 5. Audio mixing — fetch audio as ArrayBuffer and decode into AudioBufferSourceNode.
-    // This approach feeds audio directly into the MediaStreamDestination for recording.
-    // We do NOT connect to audioCtx.destination (speakers) — audio goes only to the recording.
-    let audioCtx: AudioContext | null = null;
-    let audioDest: MediaStreamAudioDestinationNode | null = null;
-    let musicSource: AudioBufferSourceNode | null = null;
-
-    if (selectedMusicTrack?.url) {
-      try {
-        audioCtx = new AudioContext();
-        audioDest = audioCtx.createMediaStreamDestination();
-
-        // Fetch the audio file as ArrayBuffer
-        const musicResp = await fetch(selectedMusicTrack.url);
-        if (!musicResp.ok) throw new Error(`Music fetch ${musicResp.status}`);
-        const musicArrayBuf = await musicResp.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(musicArrayBuf);
-
-        musicSource = audioCtx.createBufferSource();
-        musicSource.buffer = audioBuffer;
-        musicSource.loop = true;
-
-        // Gain node — full volume, fade out last 2 seconds
-        const gainNode = audioCtx.createGain();
-        const fadeStart = Math.max(0, durationSec - 2);
-        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(1, audioCtx.currentTime + fadeStart);
-        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + durationSec);
-
-        // Connect: source → gain → MediaStreamDestination (for recording ONLY)
-        musicSource.connect(gainNode);
-        gainNode.connect(audioDest);
-        // Do NOT connect to audioCtx.destination — we don't want speaker playback
-        musicSource.start();
-
-        console.log("Music mixing active:", audioBuffer.duration.toFixed(1) + "s audio,", audioDest.stream.getAudioTracks().length, "audio tracks");
-      } catch (e) {
-        console.warn("Audio mix failed, exporting video only:", e);
-        audioCtx = null; audioDest = null; musicSource = null;
-      }
-    }
-
-    // 6. MediaRecorder — combine canvas video + audio streams
+    // 5. Record canvas stream (VIDEO ONLY — no audio mixing in browser)
     const videoStream = canvas.captureStream(30);
-    const combinedStream = new MediaStream([
-      ...videoStream.getVideoTracks(),
-      ...(audioDest ? audioDest.stream.getAudioTracks() : []),
-    ]);
-    const mimeType = MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
-      ? "video/mp4;codecs=avc1"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+      ? "video/webm;codecs=vp8"
       : "video/webm";
-    const recorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const recorder = new MediaRecorder(videoStream, { mimeType, videoBitsPerSecond: 8_000_000 });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-    // 7. Frame loop — draw video cover-fit into the video region, then overlay
+    // 6. Frame loop
     recorder.start(100);
     const startTime = performance.now();
 
@@ -710,7 +659,6 @@ export default function DesignStudioV2(){
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, rawW, rawH);
 
-      // Cover-fit the source video into the videoRegion
       const vw = video.videoWidth || 1920;
       const vh = video.videoHeight || 1080;
       const regionAR = videoRegion.w / videoRegion.h;
@@ -724,11 +672,10 @@ export default function DesignStudioV2(){
         sy = (vh - sh) / 2;
       }
       ctx.drawImage(video, sx, sy, sw, sh, videoRegion.x, videoRegion.y, videoRegion.w, videoRegion.h);
-
       if (overlayBitmap) ctx.drawImage(overlayBitmap, 0, 0);
 
       const elapsed = performance.now() - startTime;
-      const pct = Math.min(100, Math.round((elapsed / durationMs) * 100));
+      const pct = Math.min(95, Math.round((elapsed / durationMs) * 95)); // reserve 5% for muxing
       setExportProgress(pct);
 
       if (elapsed < durationMs) {
@@ -736,26 +683,61 @@ export default function DesignStudioV2(){
       } else {
         recorder.stop();
         video.pause();
-        if (musicSource) { try { musicSource.stop(); } catch(_){} }
-        audioCtx?.close();
       }
     };
     requestAnimationFrame(drawFrame);
 
-    // 8. On stop → download
-    await new Promise<void>((resolve) => {
+    // 7. Wait for recording to finish
+    const videoBlob = await new Promise<Blob>((resolve) => {
       recorder.onstop = () => {
-        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        const blob = new Blob(chunks, { type: mimeType });
-        const url = URL.createObjectURL(blob);
+        resolve(new Blob(chunks, { type: mimeType }));
+      };
+    });
+
+    // 8. If music is selected, send to server for FFmpeg muxing
+    if (selectedMusicTrack?.url) {
+      setExportProgress(96);
+      try {
+        const formData = new FormData();
+        formData.append("video", videoBlob, "video.webm");
+        formData.append("musicUrl", selectedMusicTrack.url);
+        formData.append("duration", String(durationSec));
+        formData.append("fadeOutSec", "2");
+
+        const resp = await fetch("/api/mux-audio", { method: "POST", body: formData });
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => "");
+          throw new Error(`Mux failed (${resp.status}): ${errText}`);
+        }
+
+        setExportProgress(99);
+        const muxedBlob = await resp.blob();
+        const url = URL.createObjectURL(muxedBlob);
         const link = document.createElement("a");
-        link.download = `listing-video-${Date.now()}.${ext}`;
+        link.download = `listing-video-${Date.now()}.mp4`;
         link.href = url;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-        resolve();
-      };
-    });
+      } catch (e: any) {
+        console.error("FFmpeg mux failed, downloading video without music:", e);
+        notify("Music mux failed — downloading video without audio.");
+        // Fallback: download the silent video
+        const url = URL.createObjectURL(videoBlob);
+        const link = document.createElement("a");
+        link.download = `listing-video-${Date.now()}.webm`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+    } else {
+      // No music — download the video directly
+      const url = URL.createObjectURL(videoBlob);
+      const link = document.createElement("a");
+      link.download = `listing-video-${Date.now()}.webm`;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
 
     setExportProgress(0);
     notify("Video exported!");
