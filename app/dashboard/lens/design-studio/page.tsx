@@ -56,7 +56,7 @@ function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, add
   const anF = responsiveSize(Math.round(barH*(isStory?0.080:isPostcard?0.125:0.082)),an,18);
   const brF = responsiveSize(Math.round(barH*(isStory?0.056:isPostcard?0.080:0.055)),br,24);
   const phF = Math.round(barH*(isStory?0.054:isPostcard?0.074:0.052));
-  const adF = responsiveSize(Math.round(barH*(isStory?0.072:isPostcard?0.110:0.094)),ad,20);
+  const adF = responsiveSize(Math.round(barH*(isStory?0.072:isPostcard?0.110:0.094)),ad,16);
   const dtF = Math.round(barH*(isStory?0.048:isPostcard?0.074:0.055));
   const prF = Math.round(barH*(isStory?0.105:isPostcard?0.185:0.15));
 
@@ -81,7 +81,7 @@ function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, add
   );
   const RightCol = () => (
     <div style={{flex:1,textAlign:"right" as const,minWidth:0,display:"flex",flexDirection:"column" as const,justifyContent:"center"}}>
-      <p style={{fontSize:adF,fontWeight:700,color:tp,lineHeight:1.25,margin:0,overflowWrap:"break-word" as const}}>{ad}</p>
+      <p style={{fontSize:adF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,wordBreak:"break-word" as const,overflowWrap:"anywhere" as const}}>{ad}</p>
       <p style={{fontSize:dtF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(6*unit),letterSpacing:"0.04em"}}>{det}</p>
       <div style={{width:Math.round(60*unit),height:Math.round(2*unit),backgroundColor:accentColor||dc,marginLeft:"auto",marginTop:Math.round(10*unit),marginBottom:Math.round(8*unit),borderRadius:1,opacity:accentColor?0.7:1}} />
       <p style={{fontSize:prF,fontWeight:800,color:accent,lineHeight:1.0,margin:0,letterSpacing:"-0.01em",textShadow:accentColor&&!barLight?`0 ${Math.round(2*unit)}px ${Math.round(12*unit)}px ${hexToRgba(accentColor,0.3)}`:"none"}}>{pr}</p>
@@ -95,12 +95,12 @@ function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, add
         <div style={{position:"absolute",bottom:0,left:0,right:0,height:`${100-pp}%`,backgroundColor:barColor}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:Math.round(3*unit),backgroundColor:accent,opacity:accentColor?0.8:0.15}} />
           <div style={{position:"absolute",inset:0,backgroundImage:barLight?"linear-gradient(to bottom,rgba(0,0,0,0.03) 0%,transparent 40%)":"linear-gradient(to bottom,rgba(255,255,255,0.04) 0%,transparent 40%)"}} />
-          <div style={{position:"absolute",inset:0,display:"flex",padding:`${py}px ${Math.round(44*unit)}px ${py}px ${px}px`,gap:Math.round(28*unit)}}>
-            <div style={{flex:"0 0 auto",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",maxWidth:"44%",gap:Math.round(12*unit)}}>
+          <div style={{position:"absolute",inset:0,display:"flex",padding:`${py}px ${Math.round(44*unit)}px ${py}px ${px}px`,gap:Math.round(20*unit)}}>
+            <div style={{flex:1,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",minWidth:0,gap:Math.round(12*unit)}}>
               <Headshot />
-              <div style={{textAlign:"center" as const,minWidth:0}}>
-                <p style={{fontSize:anF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,whiteSpace:"nowrap"}}>{an}</p>
-                <p style={{fontSize:brF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(5*unit)}}>{br}</p>
+              <div style={{textAlign:"center" as const,minWidth:0,width:"100%"}}>
+                <p style={{fontSize:anF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{an}</p>
+                <p style={{fontSize:brF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(5*unit),wordBreak:"break-word" as const}}>{br}</p>
                 <p style={{fontSize:phF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(3*unit)}}>{ph}</p>
               </div>
               {logo && <img src={logo} alt="" style={{maxWidth:Math.round(hs*1.3),maxHeight:Math.round(barH*0.14),objectFit:"contain" as const,marginTop:Math.round(6*unit)}} />}
@@ -118,12 +118,12 @@ function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, add
       <div style={{position:"absolute",bottom:0,left:0,right:0,height:`${100-pp}%`,backgroundColor:barColor}}>
         <div style={{position:"absolute",top:0,left:0,right:0,height:Math.round(3*unit),backgroundColor:accent,opacity:accentColor?0.8:0.15}} />
         <div style={{position:"absolute",inset:0,backgroundImage:barLight?"linear-gradient(to bottom,rgba(0,0,0,0.03) 0%,transparent 40%)":"linear-gradient(to bottom,rgba(255,255,255,0.04) 0%,transparent 40%)"}} />
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:`${py}px ${px}px`,gap:Math.round(24*unit)}}>
-          <div style={{display:"flex",alignItems:"center",gap:Math.round(18*unit),flex:"0 0 auto",maxWidth:"44%"}}>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:`${py}px ${px}px`,gap:Math.round(16*unit)}}>
+          <div style={{display:"flex",alignItems:"center",gap:Math.round(18*unit),flex:1,minWidth:0}}>
             <Headshot />
-            <div style={{minWidth:0}}>
-              <p style={{fontSize:anF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,whiteSpace:"nowrap"}}>{an}</p>
-              <p style={{fontSize:brF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(4*unit)}}>{br}</p>
+            <div style={{minWidth:0,flex:1}}>
+              <p style={{fontSize:anF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{an}</p>
+              <p style={{fontSize:brF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(4*unit),wordBreak:"break-word" as const}}>{br}</p>
               <p style={{fontSize:phF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(2*unit)}}>{ph}</p>
             </div>
           </div>
