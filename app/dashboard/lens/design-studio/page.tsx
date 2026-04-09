@@ -13,7 +13,7 @@ function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");i
 function responsiveSize(base:number,text:string,maxChars:number):number{if(!text||text.length<=maxChars)return base;return Math.max(base*0.5,Math.round(base*Math.max(maxChars/text.length,0.55)));}
 function darken(hex:string,pct:number):string{const n=parseInt(hex.replace("#",""),16);return `rgb(${Math.max(0,(n>>16)-Math.round(2.55*pct))},${Math.max(0,((n>>8)&0xff)-Math.round(2.55*pct))},${Math.max(0,(n&0xff)-Math.round(2.55*pct))})`;}
 function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"}};return m[id]||m["just-listed"];}
-function truncateText(text:string,max:number):string{if(!text||text.length<=max)return text;return text.substring(0,max).trimEnd()+"…";}
+function truncateText(text:string,max:number):string{if(!text||text.length<=max)return text;return text.substring(0,max).trimEnd()+"\u2026";}
 
 // ─── InfoBarTemplate ───────────────────────────────────────────────────────────
 function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,badgeText,badgeColor,fontFamily,barColor,accentColor}:any){
@@ -23,7 +23,7 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
   const tm=barLight?"rgba(17,24,39,0.40)":"rgba(255,255,255,0.35)",dc=barLight?"rgba(0,0,0,0.10)":"rgba(255,255,255,0.12)";
   const an=agentName||"Agent Name",br=brokerage||"Brokerage",ph=phone||"(555) 000-0000";
   const ad=address||"123 Main Street",ad2=addressLine2||"";
-  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  ·  ")||"3 BD  ·  2 BA  ·  1,800 SF";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
   const pr=price?`$${price}`:"$000,000";
   const pp=isPostcard?55:58,barH=h*(1-pp/100);
   const px=Math.round((isPostcard?44:isStory?56:36)*unit),py=Math.round((isStory?28:20)*unit);
@@ -49,10 +49,10 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
 function OpenHouseTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,date,time,agentName,phone,brokerage,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff",badgeBg=accentColor||"#059669",barLight=isLightColor(barColor),pad=Math.round(44*unit);
-  const ad=address||"123 Main Street",ad2=addressLine2||"",dt=date||"Saturday, March 22",tm2=time||"1:00 PM – 4:00 PM";
-  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  ·  ")||"3 BD  ·  2 BA  ·  1,800 SF";
+  const ad=address||"123 Main Street",ad2=addressLine2||"",dt=date||"Saturday, March 22",tm2=time||"1:00 PM \u2013 4:00 PM";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
   const pr=price?`$${price}`:"$000,000",an=agentName||"Agent Name";
-  const cl=[brokerage,phone].filter(Boolean).join("  ·  ")||"Brokerage  ·  (555) 000-0000";
+  const cl=[brokerage,phone].filter(Boolean).join("  \u00b7  ")||"Brokerage  \u00b7  (555) 000-0000";
   const bFs=Math.round((isStory?68:isPostcard?42:36)*unit),dFs=Math.round((isStory?58:isPostcard?36:32)*unit),tFs=Math.round((isStory?44:isPostcard?28:24)*unit);
   const aFs=responsiveSize(Math.round((isStory?58:isPostcard?36:32)*unit),ad,22);
   const pFs=Math.round((isStory?86:isPostcard?52:46)*unit),agFs=responsiveSize(Math.round((isStory?52:isPostcard?34:30)*unit),an,20);
@@ -72,7 +72,7 @@ function YardSignSplitBar({width,height,headshot,logo,agentName,phone,email,brok
   const bNSz=responsiveSize(Math.round(bottomH*0.30),ot,18),bPSz=Math.round(bottomH*0.22);
   const tC=tL?"#000":"#fff",bC=bL?"#000":"#fff",tR=tL?"rgba(0,0,0,0.20)":"rgba(255,255,255,0.30)",bR=bL?"rgba(0,0,0,0.15)":"rgba(255,255,255,0.25)";
   const showBothLines=!!(officeName&&brokerage&&officeName!==brokerage);
-  return(<div style={{width,height,fontFamily,display:"flex",flexDirection:"column" as const}}><div style={{height:topH,backgroundColor:topColor,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{display:"flex",alignItems:"center",gap:Math.round(width*0.03)}}><div style={{width:Math.round(width*0.07),height:Math.round(3*u),backgroundColor:tR}}/><p style={{fontSize:hdrSz,fontWeight:900,color:tC,letterSpacing:"0.14em",textTransform:"uppercase" as const,margin:0,lineHeight:1}}>{headerText||"FOR SALE"}</p><div style={{width:Math.round(width*0.07),height:Math.round(3*u),backgroundColor:tR}}/></div></div><div style={{height:centerH,backgroundColor:"#fff",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`${Math.round(centerH*0.06)}px ${Math.round(width*0.08)}px`,gap:Math.round(centerH*0.03),position:"relative"}}><div style={{position:"absolute",top:0,left:Math.round(width*0.1),right:Math.round(width*0.1),height:Math.round(4*u),backgroundColor:topColor,opacity:0.15}}/>{headshot?<img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${topColor}`}}/>:<div style={{width:hSz,height:hSz,backgroundColor:"#f3f4f6",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${topColor}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:"#9ca3af"}}/></div>}<p style={{fontSize:nSz,fontWeight:800,color:"#111",margin:0,textAlign:"center" as const,letterSpacing:"0.05em",textTransform:"uppercase" as const,whiteSpace:"nowrap"}}>{nt}</p><div style={{width:Math.round(width*0.10),height:Math.round(4*u),backgroundColor:topColor,borderRadius:2}}/><p style={{fontSize:pSz,fontWeight:600,color:"#333",margin:0,textAlign:"center" as const}}>{pt}</p>{email&&<p style={{fontSize:dSz,fontWeight:400,color:"#666",margin:0,textAlign:"center" as const}}>{email}</p>}{bulletPoints?.filter(Boolean).length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.02)}}>{bulletPoints.filter(Boolean).map((bp:string,i:number)=>(<span key={i} style={{fontSize:dSz,fontWeight:600,color:"#444",textTransform:"uppercase" as const}}>{i>0&&<span style={{margin:`0 ${Math.round(width*0.01)}px`,color:topColor}}>·</span>}{bp}</span>))}</div>}{(logo||qrDataUrl)&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.03),marginTop:Math.round(centerH*0.01)}}>{logo&&<img src={logo} alt="" style={{maxHeight:Math.round(centerH*0.12),maxWidth:Math.round(width*0.25),objectFit:"contain" as const}}/>}{qrDataUrl&&<img src={qrDataUrl} alt="QR" style={{width:Math.round(centerH*0.22),height:Math.round(centerH*0.22),borderRadius:Math.round(4*u)}}/>}</div>}<div style={{position:"absolute",bottom:0,left:Math.round(width*0.1),right:Math.round(width*0.1),height:Math.round(4*u),backgroundColor:bottomColor,opacity:0.15}}/></div><div style={{height:bottomH,backgroundColor:bottomColor,display:"flex",alignItems:"center",justifyContent:"center",padding:`0 ${Math.round(width*0.06)}px`}}><div style={{textAlign:"center" as const}}><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.025)}}><div style={{width:Math.round(width*0.05),height:Math.round(2*u),backgroundColor:bR}}/><div>{showBothLines?<><p style={{fontSize:bNSz,fontWeight:800,color:bC,margin:0,letterSpacing:"0.05em"}}>{brokerage}</p><p style={{fontSize:Math.round(bNSz*0.7),fontWeight:600,color:bC,margin:0,marginTop:Math.round(height*0.004),letterSpacing:"0.03em",opacity:0.8}}>{officeName}</p></>:<p style={{fontSize:bNSz,fontWeight:800,color:bC,margin:0,letterSpacing:"0.05em"}}>{ot}</p>}</div><div style={{width:Math.round(width*0.05),height:Math.round(2*u),backgroundColor:bR}}/></div>{officePhone&&<p style={{fontSize:bPSz,fontWeight:600,color:bC,margin:0,marginTop:Math.round(height*0.008)}}>{officePhone}</p>}</div></div></div>);
+  return(<div style={{width,height,fontFamily,display:"flex",flexDirection:"column" as const}}><div style={{height:topH,backgroundColor:topColor,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{display:"flex",alignItems:"center",gap:Math.round(width*0.03)}}><div style={{width:Math.round(width*0.07),height:Math.round(3*u),backgroundColor:tR}}/><p style={{fontSize:hdrSz,fontWeight:900,color:tC,letterSpacing:"0.14em",textTransform:"uppercase" as const,margin:0,lineHeight:1}}>{headerText||"FOR SALE"}</p><div style={{width:Math.round(width*0.07),height:Math.round(3*u),backgroundColor:tR}}/></div></div><div style={{height:centerH,backgroundColor:"#fff",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`${Math.round(centerH*0.06)}px ${Math.round(width*0.08)}px`,gap:Math.round(centerH*0.03),position:"relative"}}><div style={{position:"absolute",top:0,left:Math.round(width*0.1),right:Math.round(width*0.1),height:Math.round(4*u),backgroundColor:topColor,opacity:0.15}}/>{headshot?<img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${topColor}`}}/>:<div style={{width:hSz,height:hSz,backgroundColor:"#f3f4f6",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${topColor}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:"#9ca3af"}}/></div>}<p style={{fontSize:nSz,fontWeight:800,color:"#111",margin:0,textAlign:"center" as const,letterSpacing:"0.05em",textTransform:"uppercase" as const,whiteSpace:"nowrap"}}>{nt}</p><div style={{width:Math.round(width*0.10),height:Math.round(4*u),backgroundColor:topColor,borderRadius:2}}/><p style={{fontSize:pSz,fontWeight:600,color:"#333",margin:0,textAlign:"center" as const}}>{pt}</p>{email&&<p style={{fontSize:dSz,fontWeight:400,color:"#666",margin:0,textAlign:"center" as const}}>{email}</p>}{bulletPoints?.filter(Boolean).length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.02)}}>{bulletPoints.filter(Boolean).map((bp:string,i:number)=>(<span key={i} style={{fontSize:dSz,fontWeight:600,color:"#444",textTransform:"uppercase" as const}}>{i>0&&<span style={{margin:`0 ${Math.round(width*0.01)}px`,color:topColor}}>{"\u00b7"}</span>}{bp}</span>))}</div>}{(logo||qrDataUrl)&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.03),marginTop:Math.round(centerH*0.01)}}>{logo&&<img src={logo} alt="" style={{maxHeight:Math.round(centerH*0.12),maxWidth:Math.round(width*0.25),objectFit:"contain" as const}}/>}{qrDataUrl&&<img src={qrDataUrl} alt="QR" style={{width:Math.round(centerH*0.22),height:Math.round(centerH*0.22),borderRadius:Math.round(4*u)}}/>}</div>}<div style={{position:"absolute",bottom:0,left:Math.round(width*0.1),right:Math.round(width*0.1),height:Math.round(4*u),backgroundColor:bottomColor,opacity:0.15}}/></div><div style={{height:bottomH,backgroundColor:bottomColor,display:"flex",alignItems:"center",justifyContent:"center",padding:`0 ${Math.round(width*0.06)}px`}}><div style={{textAlign:"center" as const}}><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.025)}}><div style={{width:Math.round(width*0.05),height:Math.round(2*u),backgroundColor:bR}}/><div>{showBothLines?<><p style={{fontSize:bNSz,fontWeight:800,color:bC,margin:0,letterSpacing:"0.05em"}}>{brokerage}</p><p style={{fontSize:Math.round(bNSz*0.7),fontWeight:600,color:bC,margin:0,marginTop:Math.round(height*0.004),letterSpacing:"0.03em",opacity:0.8}}>{officeName}</p></>:<p style={{fontSize:bNSz,fontWeight:800,color:bC,margin:0,letterSpacing:"0.05em"}}>{ot}</p>}</div><div style={{width:Math.round(width*0.05),height:Math.round(2*u),backgroundColor:bR}}/></div>{officePhone&&<p style={{fontSize:bPSz,fontWeight:600,color:bC,margin:0,marginTop:Math.round(height*0.008)}}>{officePhone}</p>}</div></div></div>);
 }
 function YardSignSidebar({width,height,headshot,logo,agentName,phone,email,brokerage,website,headerText,sidebarColor,mainBgColor,fontFamily,qrDataUrl,bulletPoints}:any){
   const sW=Math.round(width*0.16),mW=width-sW,sL=isLightColor(sidebarColor),mL=isLightColor(mainBgColor);
@@ -81,7 +81,7 @@ function YardSignSidebar({width,height,headshot,logo,agentName,phone,email,broke
   const hSz=Math.round(mW*0.38),hdrSz=Math.round(height*0.042),nSz=responsiveSize(Math.round(height*0.044),nt,16);
   const pSz=Math.round(height*0.034),dSz=Math.round(height*0.022),bSz=Math.round(height*0.020),lSz=Math.round(sW*0.55);
   const sC=sL?"#000":"#fff",sM=sL?"rgba(0,0,0,0.20)":"rgba(255,255,255,0.20)";
-  return(<div style={{width,height,fontFamily,display:"flex"}}><div style={{width:sW,height,background:`linear-gradient(to bottom,${sidebarColor},${darken(sidebarColor,12)})`,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"space-between",padding:`${Math.round(height*0.04)}px ${Math.round(sW*0.08)}px`}}>{logo&&<img src={logo} alt="" style={{width:lSz,height:lSz,objectFit:"contain" as const}}/>}<p style={{fontSize:Math.round(sW*0.20),fontWeight:800,color:sC,writingMode:"vertical-rl" as any,textOrientation:"mixed" as any,letterSpacing:"0.14em",textTransform:"uppercase" as const,opacity:0.9}}>{bt}</p>{logo&&<img src={logo} alt="" style={{width:lSz,height:lSz,objectFit:"contain" as const}}/>}{!logo&&<div style={{width:Math.round(sW*0.4),height:Math.round(2*u),backgroundColor:sM}}/>}</div><div style={{width:mW,height,backgroundColor:mainBgColor,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`${Math.round(height*0.02)}px ${Math.round(width*0.04)}px`,textAlign:"center" as const,position:"relative",gap:Math.round(height*0.008)}}><div style={{backgroundColor:sidebarColor,padding:`${Math.round(height*0.012)}px ${Math.round(width*0.06)}px`,borderRadius:Math.round(6*u),marginBottom:Math.round(height*0.012)}}><p style={{fontSize:hdrSz,fontWeight:900,color:sL?"#000":"#fff",letterSpacing:"0.12em",textTransform:"uppercase" as const,margin:0,lineHeight:1}}>{headerText||"FOR SALE"}</p></div>{headshot?<img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${sidebarColor}`}}/>:<div style={{width:hSz,height:hSz,borderRadius:"50%",backgroundColor:mL?"#e5e7eb":"rgba(255,255,255,0.08)",border:`${Math.round(6*u)}px solid ${sidebarColor}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:mM}}/></div>}<div style={{width:Math.round(width*0.08),height:Math.round(3*u),backgroundColor:sidebarColor,opacity:0.4}}/><p style={{fontSize:nSz,fontWeight:800,color:mT,margin:0,letterSpacing:"0.06em",textTransform:"uppercase" as const,whiteSpace:"nowrap"}}>{nt}</p><p style={{fontSize:dSz,color:mM,margin:0,textTransform:"uppercase" as const,letterSpacing:"0.08em",fontWeight:500}}>Real Estate Agent</p><div style={{width:Math.round(width*0.08),height:Math.round(3*u),backgroundColor:sidebarColor,opacity:0.4}}/><p style={{fontSize:pSz,fontWeight:700,color:mT,margin:0}}>{pt}</p>{website&&<p style={{fontSize:dSz,color:mM,margin:0,marginTop:Math.round(height*0.008)}}>{website}</p>}{email&&<p style={{fontSize:dSz,color:mM,margin:0,marginTop:Math.round(height*0.005)}}>{email}</p>}{bulletPoints?.filter(Boolean).length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.015),marginTop:Math.round(height*0.015),flexWrap:"wrap" as const}}>{bulletPoints.filter(Boolean).map((bp:string,i:number)=>(<span key={i} style={{fontSize:bSz,fontWeight:600,color:mT,opacity:0.7}}>{i>0&&<span style={{margin:`0 ${Math.round(width*0.008)}px`,color:sidebarColor}}>·</span>}{bp}</span>))}</div>}{qrDataUrl&&<img src={qrDataUrl} alt="QR" style={{width:Math.round(height*0.12),height:Math.round(height*0.12),marginTop:Math.round(height*0.015),borderRadius:Math.round(4*u)}}/>}</div></div>);
+  return(<div style={{width,height,fontFamily,display:"flex"}}><div style={{width:sW,height,background:`linear-gradient(to bottom,${sidebarColor},${darken(sidebarColor,12)})`,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"space-between",padding:`${Math.round(height*0.04)}px ${Math.round(sW*0.08)}px`}}>{logo&&<img src={logo} alt="" style={{width:lSz,height:lSz,objectFit:"contain" as const}}/>}<p style={{fontSize:Math.round(sW*0.20),fontWeight:800,color:sC,writingMode:"vertical-rl" as any,textOrientation:"mixed" as any,letterSpacing:"0.14em",textTransform:"uppercase" as const,opacity:0.9}}>{bt}</p>{logo&&<img src={logo} alt="" style={{width:lSz,height:lSz,objectFit:"contain" as const}}/>}{!logo&&<div style={{width:Math.round(sW*0.4),height:Math.round(2*u),backgroundColor:sM}}/>}</div><div style={{width:mW,height,backgroundColor:mainBgColor,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`${Math.round(height*0.02)}px ${Math.round(width*0.04)}px`,textAlign:"center" as const,position:"relative",gap:Math.round(height*0.008)}}><div style={{backgroundColor:sidebarColor,padding:`${Math.round(height*0.012)}px ${Math.round(width*0.06)}px`,borderRadius:Math.round(6*u),marginBottom:Math.round(height*0.012)}}><p style={{fontSize:hdrSz,fontWeight:900,color:sL?"#000":"#fff",letterSpacing:"0.12em",textTransform:"uppercase" as const,margin:0,lineHeight:1}}>{headerText||"FOR SALE"}</p></div>{headshot?<img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${sidebarColor}`}}/>:<div style={{width:hSz,height:hSz,borderRadius:"50%",backgroundColor:mL?"#e5e7eb":"rgba(255,255,255,0.08)",border:`${Math.round(6*u)}px solid ${sidebarColor}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:mM}}/></div>}<div style={{width:Math.round(width*0.08),height:Math.round(3*u),backgroundColor:sidebarColor,opacity:0.4}}/><p style={{fontSize:nSz,fontWeight:800,color:mT,margin:0,letterSpacing:"0.06em",textTransform:"uppercase" as const,whiteSpace:"nowrap"}}>{nt}</p><p style={{fontSize:dSz,color:mM,margin:0,textTransform:"uppercase" as const,letterSpacing:"0.08em",fontWeight:500}}>Real Estate Agent</p><div style={{width:Math.round(width*0.08),height:Math.round(3*u),backgroundColor:sidebarColor,opacity:0.4}}/><p style={{fontSize:pSz,fontWeight:700,color:mT,margin:0}}>{pt}</p>{website&&<p style={{fontSize:dSz,color:mM,margin:0,marginTop:Math.round(height*0.008)}}>{website}</p>}{email&&<p style={{fontSize:dSz,color:mM,margin:0,marginTop:Math.round(height*0.005)}}>{email}</p>}{bulletPoints?.filter(Boolean).length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.015),marginTop:Math.round(height*0.015),flexWrap:"wrap" as const}}>{bulletPoints.filter(Boolean).map((bp:string,i:number)=>(<span key={i} style={{fontSize:bSz,fontWeight:600,color:mT,opacity:0.7}}>{i>0&&<span style={{margin:`0 ${Math.round(width*0.008)}px`,color:sidebarColor}}>{"\u00b7"}</span>}{bp}</span>))}</div>}{qrDataUrl&&<img src={qrDataUrl} alt="QR" style={{width:Math.round(height*0.12),height:Math.round(height*0.12),marginTop:Math.round(height*0.015),borderRadius:Math.round(4*u)}}/>}</div></div>);
 }
 function YardSignTopHeavy({width,height,headshot,logo,agentName,phone,email,brokerage,headerText,topColor,bottomColor,fontFamily,qrDataUrl,bulletPoints}:any){
   const topH=Math.round(height*0.38),bottomH=height-topH,tL=isLightColor(topColor),bL=isLightColor(bottomColor);
@@ -89,7 +89,7 @@ function YardSignTopHeavy({width,height,headshot,logo,agentName,phone,email,brok
   const bT=bL?"#111":"#fff",bM=bL?"#555":"rgba(255,255,255,0.65)";
   const nt=agentName||"Agent Name",pt=phone||"305.555.7315",bt=brokerage||"";
   const nSz=responsiveSize(Math.round(bottomH*0.08),nt,16),pSz=Math.round(bottomH*0.065),dSz=Math.round(bottomH*0.04);
-  return(<div style={{width,height,fontFamily,display:"flex",flexDirection:"column" as const}}><div style={{height:topH,backgroundColor:topColor,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:Math.round(width*0.06),textAlign:"center" as const}}><p style={{fontSize:hdrSz,fontWeight:900,color:tL?"#000":"#fff",letterSpacing:"0.05em",textTransform:"uppercase" as const,lineHeight:1.0,margin:0}}>{headerText||"FOR SALE"}</p>{logo&&<img src={logo} alt="" style={{maxHeight:Math.round(topH*0.22),maxWidth:Math.round(width*0.45),objectFit:"contain" as const,marginTop:Math.round(topH*0.08)}}/>}{!logo&&bt&&<p style={{fontSize:Math.round(topH*0.10),fontWeight:700,color:tL?"#000":"#fff",marginTop:Math.round(topH*0.06),textTransform:"uppercase" as const,letterSpacing:"0.08em",margin:0}}>{bt}</p>}</div><div style={{height:bottomH,backgroundColor:bottomColor,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`${Math.round(width*0.03)}px ${Math.round(width*0.06)}px`,textAlign:"center" as const,gap:Math.round(bottomH*0.01)}}>{headshot?<img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${topColor}`}}/>:<div style={{width:hSz,height:hSz,backgroundColor:bL?"#e5e7eb":"rgba(255,255,255,0.08)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:bM}}/></div>}<p style={{fontSize:nSz,fontWeight:800,color:bT,lineHeight:1.1,margin:0}}>{nt}</p><p style={{fontSize:dSz,color:bM,textTransform:"uppercase" as const,letterSpacing:"0.05em",margin:0}}>Real Estate Agent</p><p style={{fontSize:pSz,fontWeight:700,color:bT,margin:0}}>{pt}</p>{email&&<p style={{fontSize:dSz,color:bM,margin:0}}>{email}</p>}{bulletPoints?.filter(Boolean).length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.02),marginTop:Math.round(bottomH*0.015),flexWrap:"wrap" as const}}>{bulletPoints.filter(Boolean).map((bp:string,i:number)=>(<span key={i} style={{fontSize:dSz,fontWeight:600,color:bT,opacity:0.7}}>{i>0&&<span style={{margin:`0 ${Math.round(width*0.008)}px`,color:topColor}}>·</span>}{bp}</span>))}</div>}{qrDataUrl&&<img src={qrDataUrl} alt="QR" style={{width:Math.round(bottomH*0.18),height:Math.round(bottomH*0.18),borderRadius:4}}/>}</div></div>);
+  return(<div style={{width,height,fontFamily,display:"flex",flexDirection:"column" as const}}><div style={{height:topH,backgroundColor:topColor,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:Math.round(width*0.06),textAlign:"center" as const}}><p style={{fontSize:hdrSz,fontWeight:900,color:tL?"#000":"#fff",letterSpacing:"0.05em",textTransform:"uppercase" as const,lineHeight:1.0,margin:0}}>{headerText||"FOR SALE"}</p>{logo&&<img src={logo} alt="" style={{maxHeight:Math.round(topH*0.22),maxWidth:Math.round(width*0.45),objectFit:"contain" as const,marginTop:Math.round(topH*0.08)}}/>}{!logo&&bt&&<p style={{fontSize:Math.round(topH*0.10),fontWeight:700,color:tL?"#000":"#fff",marginTop:Math.round(topH*0.06),textTransform:"uppercase" as const,letterSpacing:"0.08em",margin:0}}>{bt}</p>}</div><div style={{height:bottomH,backgroundColor:bottomColor,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`${Math.round(width*0.03)}px ${Math.round(width*0.06)}px`,textAlign:"center" as const,gap:Math.round(bottomH*0.01)}}>{headshot?<img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",border:`${Math.round(6*u)}px solid ${topColor}`}}/>:<div style={{width:hSz,height:hSz,backgroundColor:bL?"#e5e7eb":"rgba(255,255,255,0.08)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:bM}}/></div>}<p style={{fontSize:nSz,fontWeight:800,color:bT,lineHeight:1.1,margin:0}}>{nt}</p><p style={{fontSize:dSz,color:bM,textTransform:"uppercase" as const,letterSpacing:"0.05em",margin:0}}>Real Estate Agent</p><p style={{fontSize:pSz,fontWeight:700,color:bT,margin:0}}>{pt}</p>{email&&<p style={{fontSize:dSz,color:bM,margin:0}}>{email}</p>}{bulletPoints?.filter(Boolean).length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(width*0.02),marginTop:Math.round(bottomH*0.015),flexWrap:"wrap" as const}}>{bulletPoints.filter(Boolean).map((bp:string,i:number)=>(<span key={i} style={{fontSize:dSz,fontWeight:600,color:bT,opacity:0.7}}>{i>0&&<span style={{margin:`0 ${Math.round(width*0.008)}px`,color:topColor}}>{"\u00b7"}</span>}{bp}</span>))}</div>}{qrDataUrl&&<img src={qrDataUrl} alt="QR" style={{width:Math.round(bottomH*0.18),height:Math.round(bottomH*0.18),borderRadius:4}}/>}</div></div>);
 }
 
 // ─── PropertyPdfPage ──────────────────────────────────────────────────────────
@@ -104,9 +104,9 @@ function PropertyPdfPage({pageNumber,address,cityStateZip,price,beds,baths,sqft,
   if(pageNumber===0){
     const hp=photos[0]||null,p2=photos[1]||null,p3=photos[2]||null;
     const aT=address||"Property Name",cT=cityStateZip||"City, State",pT=price?`$${price}`:"$000,000";
-    const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  ·  ");
+    const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ");
     const heroH=Math.round(H*0.42),lW=Math.round(W*0.48),rW=W-lW,pd=100;
-    return(<div style={{width:W,height:H,backgroundColor:"#fff",fontFamily,position:"relative",padding:margin}}><div style={{position:"absolute",top:margin,left:margin,right:margin,height:hBar,backgroundColor:accent}}/><div style={{position:"absolute",top:margin+hBar,left:margin,right:margin,height:heroH,overflow:"hidden"}}>{hp?<img src={hp} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#f0efea",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#ccc",fontSize:56}}>HERO PHOTO</span></div>}</div><div style={{position:"absolute",top:heroH+hBar+margin,left:margin,right:margin,bottom:margin+hBar,display:"flex"}}><div style={{width:lW,padding:`${pd*0.6}px ${pd*0.6}px ${pd*0.5}px ${pd*0.3}px`,display:"flex",flexDirection:"column" as const,justifyContent:"flex-start",overflow:"hidden"}}><p style={{fontSize:50,color:accent,fontWeight:500,letterSpacing:"0.12em",textTransform:"uppercase" as const,margin:0}}>Introducing</p><p style={{fontSize:responsiveSize(102,aT,18),color:"#1a1a1a",fontWeight:800,lineHeight:1.05,margin:0,marginTop:12}}>{aT}</p><p style={{fontSize:42,color:"#666",fontWeight:500,margin:0,marginTop:10}}>{cT}</p><div style={{width:70,height:4,backgroundColor:accent,marginTop:28,borderRadius:2}}/><p style={{fontSize:112,fontWeight:800,color:accent,margin:0,marginTop:14,lineHeight:1.0}}>{pT}</p>{det&&<p style={{fontSize:42,color:"#555",fontWeight:600,margin:0,marginTop:10,letterSpacing:"0.06em"}}>{det}</p>}{fLines.length>0&&<div style={{marginTop:36}}><p style={{fontSize:38,fontWeight:700,color:"#333",letterSpacing:"0.10em",textTransform:"uppercase" as const,margin:0,marginBottom:16}}>Key Features</p><div style={{fontSize:38,color:"#444",lineHeight:2.0}}>{fLines.map((f:string,i:number)=>(<div key={i} style={{display:"flex",gap:14,alignItems:"flex-start"}}><span style={{color:accent,flexShrink:0,fontWeight:700,fontSize:28,marginTop:5}}>—</span><span style={{fontWeight:500}}>{f.replace(/^[•\-*]\s*/,"")}</span></div>))}</div></div>}{p1D.length>0&&<div style={{marginTop:32}}><p style={{fontSize:38,fontWeight:700,color:"#333",letterSpacing:"0.10em",textTransform:"uppercase" as const,margin:0,marginBottom:14}}>About This Property</p><div style={{fontSize:38,color:"#555",lineHeight:1.7}}>{p1D.map((p:string,i:number)=><p key={i} style={{margin:0,marginBottom:10}}>{p}</p>)}</div></div>}</div><div style={{width:3,backgroundColor:accent,opacity:0.15,marginTop:Math.round(pd*0.5),marginBottom:Math.round(pd*0.5),flexShrink:0}}/><div style={{width:rW,display:"flex",flexDirection:"column" as const,padding:`${Math.round(pd*0.4)}px ${Math.round(pd*0.3)}px ${Math.round(pd*0.4)}px ${Math.round(pd*0.4)}px`,gap:10}}><div style={{flex:1,borderRadius:16,overflow:"hidden"}}>{p2?<img src={p2} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#f0efea",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#ccc",fontSize:44}}>Photo 2</span></div>}</div><div style={{flex:1,borderRadius:16,overflow:"hidden"}}>{p3?<img src={p3} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#f5f5f0",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#ccc",fontSize:44}}>Photo 3</span></div>}</div></div></div><div style={{position:"absolute",bottom:margin,left:margin,right:margin,height:hBar,backgroundColor:accent}}/></div>);
+    return(<div style={{width:W,height:H,backgroundColor:"#fff",fontFamily,position:"relative",padding:margin}}><div style={{position:"absolute",top:margin,left:margin,right:margin,height:hBar,backgroundColor:accent}}/><div style={{position:"absolute",top:margin+hBar,left:margin,right:margin,height:heroH,overflow:"hidden"}}>{hp?<img src={hp} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#f0efea",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#ccc",fontSize:56}}>HERO PHOTO</span></div>}</div><div style={{position:"absolute",top:heroH+hBar+margin,left:margin,right:margin,bottom:margin+hBar,display:"flex"}}><div style={{width:lW,padding:`${pd*0.6}px ${pd*0.6}px ${pd*0.5}px ${pd*0.3}px`,display:"flex",flexDirection:"column" as const,justifyContent:"flex-start",overflow:"hidden"}}><p style={{fontSize:50,color:accent,fontWeight:500,letterSpacing:"0.12em",textTransform:"uppercase" as const,margin:0}}>Introducing</p><p style={{fontSize:responsiveSize(102,aT,18),color:"#1a1a1a",fontWeight:800,lineHeight:1.05,margin:0,marginTop:12}}>{aT}</p><p style={{fontSize:42,color:"#666",fontWeight:500,margin:0,marginTop:10}}>{cT}</p><div style={{width:70,height:4,backgroundColor:accent,marginTop:28,borderRadius:2}}/><p style={{fontSize:112,fontWeight:800,color:accent,margin:0,marginTop:14,lineHeight:1.0}}>{pT}</p>{det&&<p style={{fontSize:42,color:"#555",fontWeight:600,margin:0,marginTop:10,letterSpacing:"0.06em"}}>{det}</p>}{fLines.length>0&&<div style={{marginTop:36}}><p style={{fontSize:38,fontWeight:700,color:"#333",letterSpacing:"0.10em",textTransform:"uppercase" as const,margin:0,marginBottom:16}}>Key Features</p><div style={{fontSize:38,color:"#444",lineHeight:2.0}}>{fLines.map((f:string,i:number)=>(<div key={i} style={{display:"flex",gap:14,alignItems:"flex-start"}}><span style={{color:accent,flexShrink:0,fontWeight:700,fontSize:28,marginTop:5}}>{"\u2014"}</span><span style={{fontWeight:500}}>{f.replace(/^[\u2022\-*]\s*/,"")}</span></div>))}</div></div>}{p1D.length>0&&<div style={{marginTop:32}}><p style={{fontSize:38,fontWeight:700,color:"#333",letterSpacing:"0.10em",textTransform:"uppercase" as const,margin:0,marginBottom:14}}>About This Property</p><div style={{fontSize:38,color:"#555",lineHeight:1.7}}>{p1D.map((p:string,i:number)=><p key={i} style={{margin:0,marginBottom:10}}>{p}</p>)}</div></div>}</div><div style={{width:3,backgroundColor:accent,opacity:0.15,marginTop:Math.round(pd*0.5),marginBottom:Math.round(pd*0.5),flexShrink:0}}/><div style={{width:rW,display:"flex",flexDirection:"column" as const,padding:`${Math.round(pd*0.4)}px ${Math.round(pd*0.3)}px ${Math.round(pd*0.4)}px ${Math.round(pd*0.4)}px`,gap:10}}><div style={{flex:1,borderRadius:16,overflow:"hidden"}}>{p2?<img src={p2} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#f0efea",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#ccc",fontSize:44}}>Photo 2</span></div>}</div><div style={{flex:1,borderRadius:16,overflow:"hidden"}}>{p3?<img src={p3} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#f5f5f0",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#ccc",fontSize:44}}>Photo 3</span></div>}</div></div></div><div style={{position:"absolute",bottom:margin,left:margin,right:margin,height:hBar,backgroundColor:accent}}/></div>);
   }
   const hasOverflow=ovD.length>0;
   const isFirstGrid=pageNumber===1;
@@ -140,7 +140,7 @@ function BrandingCardTemplate({orientation,logo,headshot,agentName,phone:ph2,ema
   const hSz=Math.round(innerH*0.62),hBd=Math.round(10*u),nFs=responsiveSize(Math.round(h*0.095),nt,14);
   const cC=isLBg?"#111":"#fff",cM=isLBg?"rgba(0,0,0,0.55)":"rgba(255,255,255,0.75)";
   const aBg=accentColor||(isLBg?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.08)");
-  return(<div style={{width:w,height:h,background:"transparent",position:"relative"}}><div style={{position:"absolute",top:inset,left:inset,right:inset,bottom:inset,borderRadius:rad,border:`${bdW}px solid ${bC}`,backgroundColor:bgColor||"#14532d",overflow:"hidden",fontFamily}}>{bgPhoto&&<><img src={bgPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",inset:0,backgroundColor:"rgba(0,0,0,0.55)"}}/></>}{!bgPhoto&&<><div style={{position:"absolute",top:-Math.round(h*0.15),right:-Math.round(w*0.02),width:Math.round(w*0.18),height:Math.round(h*0.55),backgroundColor:aBg,transform:"rotate(25deg)",opacity:0.4}}/><div style={{position:"absolute",top:Math.round(h*0.35),right:-Math.round(w*0.05),width:Math.round(w*0.15),height:Math.round(h*0.55),backgroundColor:aBg,transform:"rotate(25deg)",opacity:0.25}}/></>}<div style={{position:"relative",zIndex:1,display:"flex",alignItems:"center",width:"100%",height:"100%",padding:`${padY}px ${padX}px`}}><div style={{flex:1,display:"flex",flexDirection:"column" as const,justifyContent:"center",minWidth:0,paddingRight:Math.round(40*u)}}>{(logo||brokerage)&&<div style={{display:"flex",alignItems:"center",gap:Math.round(14*u),marginBottom:Math.round(28*u)}}>{logo&&<img src={logo} alt="" style={{maxWidth:Math.round((w-inset*2)*0.08),maxHeight:Math.round(innerH*0.14),objectFit:"contain" as const}}/>}{brokerage&&<p style={{fontSize:Math.round(h*0.038),color:cM,margin:0,fontWeight:600}}>{brokerage}</p>}</div>}<p style={{fontSize:nFs,fontWeight:900,color:cC,margin:0,lineHeight:1.05,whiteSpace:"nowrap",textTransform:"uppercase" as const}}>{nt}</p><p style={{fontSize:Math.round(h*0.048),fontWeight:500,color:cM,margin:0,marginTop:Math.round(h*0.008)}}>{tagline||"Real Estate Agent"}</p><div style={{width:Math.round(60*u),height:Math.round(5*u),backgroundColor:accent,marginTop:Math.round(h*0.035),marginBottom:Math.round(h*0.03),borderRadius:3}}/><div style={{display:"flex",flexDirection:"column" as const,gap:Math.round(h*0.018)}}>{ph2&&<p style={{fontSize:Math.round(h*0.055),color:cC,fontWeight:700,margin:0}}>{ph2}</p>}{email&&<p style={{fontSize:Math.round(h*0.046),color:cC,fontWeight:500,margin:0,opacity:0.9}}>{email}</p>}{website&&<p style={{fontSize:Math.round(h*0.042),color:cC,fontWeight:500,margin:0,opacity:0.8}}>{website}</p>}</div>{hasProp&&<div style={{marginTop:Math.round(h*0.03),paddingTop:Math.round(h*0.02),borderTop:`2px solid ${bC}`}}><div style={{display:"flex",alignItems:"baseline",gap:Math.round(16*u),flexWrap:"wrap" as const}}>{addr&&<span style={{fontSize:Math.round(h*0.040),fontWeight:600,color:cC}}>{addr}{cityState?`, ${cityState}`:""}</span>}{pr2&&<span style={{fontSize:Math.round(h*0.050),fontWeight:800,color:accent}}>${pr2}</span>}</div>{features&&<div style={{marginTop:Math.round(h*0.008),color:tM,fontSize:Math.round(h*0.032),lineHeight:1.5}}>{features.split("\n").filter(Boolean).map((f:string,i:number)=><span key={i}>{i>0?"  ·  ":""}{f}</span>)}</div>}</div>}</div><div style={{flexShrink:0}}>{headshot?<div style={{padding:hBd,borderRadius:"50%",background:accentColor?`linear-gradient(135deg,${accentColor},${hexToRgba(accentColor,0.4)})`:bC,boxShadow:`0 ${Math.round(10*u)}px ${Math.round(36*u)}px rgba(0,0,0,0.25)`}}><img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",display:"block"}}/></div>:<div style={{width:hSz,height:hSz,borderRadius:"50%",backgroundColor:"rgba(255,255,255,0.04)",border:`${hBd}px solid ${bC}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:tM}}/></div>}</div></div></div></div>);
+  return(<div style={{width:w,height:h,background:"transparent",position:"relative"}}><div style={{position:"absolute",top:inset,left:inset,right:inset,bottom:inset,borderRadius:rad,border:`${bdW}px solid ${bC}`,backgroundColor:bgColor||"#14532d",overflow:"hidden",fontFamily}}>{bgPhoto&&<><img src={bgPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",inset:0,backgroundColor:"rgba(0,0,0,0.55)"}}/></>}{!bgPhoto&&<><div style={{position:"absolute",top:-Math.round(h*0.15),right:-Math.round(w*0.02),width:Math.round(w*0.18),height:Math.round(h*0.55),backgroundColor:aBg,transform:"rotate(25deg)",opacity:0.4}}/><div style={{position:"absolute",top:Math.round(h*0.35),right:-Math.round(w*0.05),width:Math.round(w*0.15),height:Math.round(h*0.55),backgroundColor:aBg,transform:"rotate(25deg)",opacity:0.25}}/></>}<div style={{position:"relative",zIndex:1,display:"flex",alignItems:"center",width:"100%",height:"100%",padding:`${padY}px ${padX}px`}}><div style={{flex:1,display:"flex",flexDirection:"column" as const,justifyContent:"center",minWidth:0,paddingRight:Math.round(40*u)}}>{(logo||brokerage)&&<div style={{display:"flex",alignItems:"center",gap:Math.round(14*u),marginBottom:Math.round(28*u)}}>{logo&&<img src={logo} alt="" style={{maxWidth:Math.round((w-inset*2)*0.08),maxHeight:Math.round(innerH*0.14),objectFit:"contain" as const}}/>}{brokerage&&<p style={{fontSize:Math.round(h*0.038),color:cM,margin:0,fontWeight:600}}>{brokerage}</p>}</div>}<p style={{fontSize:nFs,fontWeight:900,color:cC,margin:0,lineHeight:1.05,whiteSpace:"nowrap",textTransform:"uppercase" as const}}>{nt}</p><p style={{fontSize:Math.round(h*0.048),fontWeight:500,color:cM,margin:0,marginTop:Math.round(h*0.008)}}>{tagline||"Real Estate Agent"}</p><div style={{width:Math.round(60*u),height:Math.round(5*u),backgroundColor:accent,marginTop:Math.round(h*0.035),marginBottom:Math.round(h*0.03),borderRadius:3}}/><div style={{display:"flex",flexDirection:"column" as const,gap:Math.round(h*0.018)}}>{ph2&&<p style={{fontSize:Math.round(h*0.055),color:cC,fontWeight:700,margin:0}}>{ph2}</p>}{email&&<p style={{fontSize:Math.round(h*0.046),color:cC,fontWeight:500,margin:0,opacity:0.9}}>{email}</p>}{website&&<p style={{fontSize:Math.round(h*0.042),color:cC,fontWeight:500,margin:0,opacity:0.8}}>{website}</p>}</div>{hasProp&&<div style={{marginTop:Math.round(h*0.03),paddingTop:Math.round(h*0.02),borderTop:`2px solid ${bC}`}}><div style={{display:"flex",alignItems:"baseline",gap:Math.round(16*u),flexWrap:"wrap" as const}}>{addr&&<span style={{fontSize:Math.round(h*0.040),fontWeight:600,color:cC}}>{addr}{cityState?`, ${cityState}`:""}</span>}{pr2&&<span style={{fontSize:Math.round(h*0.050),fontWeight:800,color:accent}}>${pr2}</span>}</div>{features&&<div style={{marginTop:Math.round(h*0.008),color:tM,fontSize:Math.round(h*0.032),lineHeight:1.5}}>{features.split("\n").filter(Boolean).map((f:string,i:number)=><span key={i}>{i>0?"  \u00b7  ":""}{f}</span>)}</div>}</div>}</div><div style={{flexShrink:0}}>{headshot?<div style={{padding:hBd,borderRadius:"50%",background:accentColor?`linear-gradient(135deg,${accentColor},${hexToRgba(accentColor,0.4)})`:bC,boxShadow:`0 ${Math.round(10*u)}px ${Math.round(36*u)}px rgba(0,0,0,0.25)`}}><img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",display:"block"}}/></div>:<div style={{width:hSz,height:hSz,borderRadius:"50%",backgroundColor:"rgba(255,255,255,0.04)",border:`${hBd}px solid ${bC}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:tM}}/></div>}</div></div></div></div>);
 }
 
 // ─── ListingFlyerTemplate (Task A — 2550×3300 US Letter @ 300dpi) ─────────────
@@ -150,7 +150,7 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const accentText=isLightColor(accent)?"#111":"#fff";
   const ACCENT_BAR=12,BRAND_H=220,PHOTO_H=1240;
   const ad=address||"123 Main Street",cs=cityState||"City, State",pr=price?`$${price}`:"$000,000";
-  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  ·  ")||"3 BD  ·  2 BA  ·  1,800 SF";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
   const an=agentName||"Agent Name";
   const am=Array.isArray(amenities)?amenities.filter(Boolean):(amenities?String(amenities).split(",").map((s:string)=>s.trim()).filter(Boolean):[]);
   const desc=truncateText(description||"",320);
@@ -163,9 +163,9 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const heroW=Math.round(W*0.58);
   const hasUrls=!!(listingUrl||videoUrl||stagingUrl);
   const urlRows:{icon:string;label:string;url:string}[]=[];
-  if(listingUrl)urlRows.push({icon:"🔗",label:"View full listing:",url:listingUrl});
-  if(videoUrl)urlRows.push({icon:"🎬",label:"Watch the video tour:",url:videoUrl});
-  if(stagingUrl)urlRows.push({icon:"🛋️",label:"See the staged rooms:",url:stagingUrl});
+  if(listingUrl)urlRows.push({icon:"\ud83d\udd17",label:"View full listing:",url:listingUrl});
+  if(videoUrl)urlRows.push({icon:"\ud83c\udfac",label:"Watch the video tour:",url:videoUrl});
+  if(stagingUrl)urlRows.push({icon:"\ud83d\udecb\ufe0f",label:"See the staged rooms:",url:stagingUrl});
   const hsz=BRAND_H-40;
   const priceFs=responsiveSize(148,pr,10),addrFs=responsiveSize(64,ad,28),agFs=responsiveSize(52,an,20);
   const DETAILS_TOP=ACCENT_BAR+BRAND_H+totalPhotoBlockH;
@@ -215,11 +215,32 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const TEMPLATES=[{id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},{id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},{id:"price-reduced",label:"Price Reduced",icon:DollarSign,color:"#f59e0b"},{id:"just-sold",label:"Just Sold",icon:CheckCircle,color:"#ef4444"}];
-const SIZES=[{id:"square",label:"Square",sublabel:"1080×1080",width:1080,height:1080},{id:"story",label:"Story",sublabel:"1080×1920",width:1080,height:1920},{id:"postcard",label:"Postcard",sublabel:"1800×1200",width:1800,height:1200}];
-const YARD_SIGN_SIZES=[{id:"18x24",label:'18×24"',sublabel:"Standard",width:5400,height:7200},{id:"24x36",label:'24×36"',sublabel:"Large",width:7200,height:10800}];
-const BRAND_ORIENTATIONS=[{id:"landscape",label:"Landscape",sublabel:"1920×1080",width:1920,height:1080},{id:"vertical",label:"Vertical",sublabel:"1080×1920",width:1080,height:1920}];
-const TABS=[{id:"templates",label:"Listing Graphics",icon:PenTool},{id:"listing-flyer",label:"Listing Flyer",icon:Printer},{id:"branding-card",label:"Branding",icon:CreditCard},{id:"yard-sign",label:"Yard Sign",icon:MapPin},{id:"property-pdf",label:"Property Sheet",icon:FileText}];
+const TEMPLATES=[
+  {id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},
+  {id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},
+  {id:"price-reduced",label:"Price Reduced",icon:DollarSign,color:"#f59e0b"},
+  {id:"just-sold",label:"Just Sold",icon:CheckCircle,color:"#ef4444"},
+];
+const SIZES=[
+  {id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080},
+  {id:"story",label:"Story",sublabel:"1080\u00d71920",width:1080,height:1920},
+  {id:"postcard",label:"Postcard",sublabel:"1800\u00d71200",width:1800,height:1200},
+];
+const YARD_SIGN_SIZES=[
+  {id:"18x24",label:"18\u00d724\"",sublabel:"Standard",width:5400,height:7200},
+  {id:"24x36",label:"24\u00d736\"",sublabel:"Large",width:7200,height:10800},
+];
+const BRAND_ORIENTATIONS=[
+  {id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},
+  {id:"vertical",label:"Vertical",sublabel:"1080\u00d71920",width:1080,height:1920},
+];
+const TABS=[
+  {id:"templates",label:"Listing Graphics",icon:PenTool},
+  {id:"listing-flyer",label:"Listing Flyer",icon:Printer},
+  {id:"branding-card",label:"Branding",icon:CreditCard},
+  {id:"yard-sign",label:"Yard Sign",icon:MapPin},
+  {id:"property-pdf",label:"Property Sheet",icon:FileText},
+];
 const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={
   templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],
   "listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],
@@ -229,7 +250,12 @@ const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={
 };
 const BROKERAGE_COLORS=[{hex:"#b40101",label:"KW Red"},{hex:"#666666",label:"KW Gray"},{hex:"#003399",label:"CB Blue"},{hex:"#012169",label:"CB Navy"},{hex:"#003da5",label:"RM Blue"},{hex:"#dc1c2e",label:"RM Red"},{hex:"#b5985a",label:"C21 Gold"},{hex:"#1c1c1c",label:"C21 Black"},{hex:"#000000",label:"CMP Black"},{hex:"#333333",label:"CMP Dark"},{hex:"#002349",label:"SIR Blue"},{hex:"#1a1a1a",label:"SIR Black"},{hex:"#552448",label:"BH Purple"},{hex:"#2d1a33",label:"BH Dark"},{hex:"#1c3f6e",label:"EXP Blue"},{hex:"#006341",label:"HH Green"},{hex:"#003d28",label:"HH Dk Green"},{hex:"#4c8c2b",label:"BHG Green"},{hex:"#d4272e",label:"EXT Red"},{hex:"#e31937",label:"ERA Red"},{hex:"#273691",label:"ERA Blue"},{hex:"#a02021",label:"RF Red"},{hex:"#ffffff",label:"White"}];
 const ACCENT_COLORS=["#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185d","#0e7490","#c2410c","#71717a","#ffffff","#000000"];
-const FONT_OPTIONS=[{id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},{id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},{id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},{id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"}];
+const FONT_OPTIONS=[
+  {id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},
+  {id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},
+  {id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},
+  {id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"},
+];
 const YARD_DESIGNS=[{id:"split-bar",label:"Split Bar",desc:"Top & bottom bars"},{id:"sidebar",label:"Sidebar",desc:"Vertical side accent"},{id:"top-heavy",label:"Top Heavy",desc:"Large header block"}];
 const DEMO_PHOTOS=["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80","https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80","https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80"];
 const AMENITY_SUGGESTIONS=["Pool","Garage","A/C","Solar","Smart Home","Ocean View","Mountain View","Fireplace","Hot Tub","EV Charger","Guest Suite","Home Office","Chef's Kitchen","Walk-in Closet","Hardwood Floors","Updated Kitchen","New Roof","Cul-de-Sac","Corner Lot","No HOA"];
@@ -447,56 +473,23 @@ export default function DesignStudioV2(){
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
   // ─── Export helpers ───────────────────────────────────────────────────────
-  // Strip CSS lab()/oklch() colors that html2canvas can't parse
-  const sanitizeLabColors=(root:HTMLElement)=>{
-    const all=root.querySelectorAll("*");
-    const props=["color","background","backgroundColor","borderColor","boxShadow","textShadow","fill","stroke","outline"];
-    const labRe=/\b(lab|oklch|lch|oklab)\s*\(/gi;
-    all.forEach(el=>{
-      const s=(el as HTMLElement).style;
-      props.forEach(p=>{
-        const v=s.getPropertyValue(p);
-        if(v&&labRe.test(v)){
-          labRe.lastIndex=0;
-          s.setProperty(p,"transparent");
-        }
-      });
-      // also patch computed styles that leak through inline
-      const cs=getComputedStyle(el);
-      props.forEach(p=>{
-        const v=cs.getPropertyValue(p);
-        if(v&&labRe.test(v)){
-          labRe.lastIndex=0;
-          (el as HTMLElement).style.setProperty(p,"transparent");
-        }
-      });
-    });
-  };
+  // ** FIX: Replaced html2canvas with html-to-image **
+  // html2canvas crashes on CSS lab()/oklch() color functions from Tailwind v4.
+  // html-to-image uses SVG foreignObject rendering and does NOT parse CSS
+  // color functions itself, completely bypassing the issue.
 
   const exportImage=async()=>{
     if(!previewRef.current)return;
-    sanitizeLabColors(previewRef.current);
-    const html2canvas=(await import("html2canvas")).default;
-    const canvas=await html2canvas(previewRef.current,{
-      scale:1,
-      useCORS:true,
-      allowTaint:true,
-      backgroundColor:null,
-      width:rawW,
-      height:rawH,
-      onclone:(doc)=>{
-        // Strip lab() from the cloned document used by html2canvas
-        doc.querySelectorAll("*").forEach(el=>{
-          const style=(el as HTMLElement).getAttribute("style")||"";
-          if(/\b(lab|oklch|lch|oklab)\s*\(/.test(style)){
-            (el as HTMLElement).setAttribute("style",style.replace(/\b(lab|oklch|lch|oklab)\s*\([^)]*\)/g,"transparent"));
-          }
-        });
-      },
+    const { toPng } = await import("html-to-image");
+    const dataUrl = await toPng(previewRef.current, {
+      width: rawW,
+      height: rawH,
+      pixelRatio: 1,
+      cacheBust: true,
     });
     const link=document.createElement("a");
     link.download=`listing-${selectedTemplate}-${Date.now()}.png`;
-    link.href=canvas.toDataURL("image/png");
+    link.href=dataUrl;
     link.click();
     notify("Image exported!");
   };
@@ -526,28 +519,18 @@ export default function DesignStudioV2(){
     const durationMs=Math.min((isFinite(video.duration)?video.duration:30),119)*1000;
     video.play().catch(()=>{});
 
-    // 3. Capture the static overlay once (badge + info bar, no video area)
+    // 3. Capture the static overlay once using html-to-image (no lab() crash)
     let overlayBitmap:ImageBitmap|null=null;
     if(previewRef.current){
       const videoArea=previewRef.current.querySelector("[data-video-area]") as HTMLElement|null;
       if(videoArea)videoArea.style.visibility="hidden";
       try{
-        const html2canvas=(await import("html2canvas")).default;
-        const overlayCanvas=await html2canvas(previewRef.current,{
-          scale:1,
-          useCORS:true,
-          allowTaint:true,
-          backgroundColor:null,
-          width:rawW,
-          height:rawH,
-          onclone:(doc)=>{
-            doc.querySelectorAll("*").forEach(el=>{
-              const style=(el as HTMLElement).getAttribute("style")||"";
-              if(/\b(lab|oklch|lch|oklab)\s*\(/.test(style)){
-                (el as HTMLElement).setAttribute("style",style.replace(/\b(lab|oklch|lch|oklab)\s*\([^)]*\)/g,"transparent"));
-              }
-            });
-          },
+        const { toCanvas } = await import("html-to-image");
+        const overlayCanvas = await toCanvas(previewRef.current, {
+          width: rawW,
+          height: rawH,
+          pixelRatio: 1,
+          cacheBust: true,
         });
         overlayBitmap=await createImageBitmap(overlayCanvas);
       }finally{
@@ -758,7 +741,7 @@ export default function DesignStudioV2(){
           <select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}>
             <option value="">Select property...</option>
             {userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}
-            <option value="__new__">＋ Enter manually</option>
+            <option value="__new__">{"\uff0b"} Enter manually</option>
           </select>
         </div>
         <div className="ssp"/>
@@ -785,7 +768,7 @@ export default function DesignStudioV2(){
           {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<>
             <div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({flyerPhotos.length}/7)</div>
             <div style={{padding:14}}>
-              <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2–3 stack right. Photos 4–7 fill bottom row.</p>
+              <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2-3 stack right. Photos 4-7 fill bottom row.</p>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                 {flyerPhotos.map((url,i)=>(
                   <div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}>
@@ -843,15 +826,15 @@ export default function DesignStudioV2(){
             <div style={{padding:14}}>
               <p style={{fontSize:11,color:"var(--std)",marginBottom:14,lineHeight:1.6}}>Each URL you fill in appears at the bottom of the flyer. Leave blank to hide.</p>
               <Section title="Listing URL" icon={Globe}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>🔗</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>View full listing</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udd17"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>View full listing</span></div>
                 <input className="fi" value={flyerListingUrl} onChange={e=>setFlyerListingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes"/>
               </Section>
               <Section title="Video Tour URL" icon={Video} defaultOpen={false}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>🎬</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>Watch the video tour</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83c\udfac"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>Watch the video tour</span></div>
                 <input className="fi" value={flyerVideoUrl} onChange={e=>setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..."/>
               </Section>
               <Section title="Virtual Staging URL" icon={ImageIcon} defaultOpen={false}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>🛋️</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>See the staged rooms</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udecb\ufe0f"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>See the staged rooms</span></div>
                 <input className="fi" value={flyerStagingUrl} onChange={e=>setFlyerStagingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes#staging"/>
               </Section>
             </div>
@@ -884,12 +867,12 @@ export default function DesignStudioV2(){
               {mediaMode==="video"&&<>
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Film size={13} color="#f59e0b"/><span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Video exports limited to 119s</span></div>
                 <span className="fl">Your Videos</span>
-                {loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>:userVideos.length===0?<div style={{padding:"20px 0",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)"}}><p style={{fontSize:11,color:"var(--std)",margin:0}}>No completed videos found.</p></div>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6,maxHeight:220,overflowY:"auto" as const}}>{userVideos.map((v:any)=>(<button key={v.orderId} onClick={()=>{setSelectedVideo(v);if(v.thumbnail)setListingPhoto(v.thumbnail);}} style={{position:"relative",borderRadius:10,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",textAlign:"left" as const,transition:"all 0.2s",padding:0,boxShadow:selectedVideo?.orderId===v.orderId?"0 0 0 2px var(--sag)":"none",fontFamily:"var(--sf)"}}>{v.thumbnail?<img src={v.thumbnail} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover" as const,display:"block"}}/>:<div style={{width:"100%",aspectRatio:"16/9",background:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="rgba(255,255,255,0.2)"/></div>}<div style={{padding:"6px 8px"}}><p style={{fontSize:10,fontWeight:700,color:"var(--st)",margin:0}}>Order {v.orderId?.slice(0,8)}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{v.date}{v.hasUnbranded?" · Unbranded":""}</p></div>{selectedVideo?.orderId===v.orderId&&<div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={12} color="#fff"/></div>}</button>))}</div>}
+                {loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>:userVideos.length===0?<div style={{padding:"20px 0",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)"}}><p style={{fontSize:11,color:"var(--std)",margin:0}}>No completed videos found.</p></div>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6,maxHeight:220,overflowY:"auto" as const}}>{userVideos.map((v:any)=>(<button key={v.orderId} onClick={()=>{setSelectedVideo(v);if(v.thumbnail)setListingPhoto(v.thumbnail);}} style={{position:"relative",borderRadius:10,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",textAlign:"left" as const,transition:"all 0.2s",padding:0,boxShadow:selectedVideo?.orderId===v.orderId?"0 0 0 2px var(--sag)":"none",fontFamily:"var(--sf)"}}>{v.thumbnail?<img src={v.thumbnail} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover" as const,display:"block"}}/>:<div style={{width:"100%",aspectRatio:"16/9",background:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="rgba(255,255,255,0.2)"/></div>}<div style={{padding:"6px 8px"}}><p style={{fontSize:10,fontWeight:700,color:"var(--st)",margin:0}}>Order {v.orderId?.slice(0,8)}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{v.date}{v.hasUnbranded?" \u00b7 Unbranded":""}</p></div>{selectedVideo?.orderId===v.orderId&&<div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={12} color="#fff"/></div>}</button>))}</div>}
 
                 {/* ── Music selector ── */}
                 <div style={{marginTop:16,borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:14}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                    <span className="fl" style={{margin:0}}>🎵 Music for Export</span>
+                    <span className="fl" style={{margin:0}}>{"\ud83c\udfb5"} Music for Export</span>
                     {selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}
                   </div>
                   {selectedMusicTrack&&(
@@ -897,7 +880,7 @@ export default function DesignStudioV2(){
                       <Music size={12} color="var(--sa)"/>
                       <span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span>
                       <button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"■":"▶"}</span>
+                        <span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span>
                       </button>
                     </div>
                   )}
@@ -927,7 +910,7 @@ export default function DesignStudioV2(){
                       {musicTracks.map(t=>(
                         <div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}>
                           <button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                            <span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"■":"▶"}</span>
+                            <span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span>
                           </button>
                           <span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span>
                           <span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>
@@ -990,22 +973,69 @@ export default function DesignStudioV2(){
                 </p>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                   {pdfPhotos.map((url,i)=>(
-                    <div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}>
+                    <div
+                      key={i}
+                      className="group"
+                      style={{
+                        position:"relative",
+                        aspectRatio:"1",
+                        borderRadius:8,
+                        overflow:"hidden",
+                        border:"1px solid var(--sbr)",
+                      }}
+                    >
                       <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                      <div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>
+                      <div style={{
+                        position:"absolute",
+                        top:2,
+                        left:2,
+                        background:"rgba(0,0,0,0.7)",
+                        color:"#fff",
+                        fontSize:9,
+                        fontWeight:700,
+                        padding:"1px 5px",
+                        borderRadius:4,
+                      }}>
                         {i < 3 ? ("\u2605" + (i + 1)) : i + 1}
                       </div>
                       <button
                         className="ghov"
                         onClick={()=>setPdfPhotos(p=>p.filter((_,idx)=>idx!==i))}
-                        style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}
+                        style={{
+                          position:"absolute",
+                          top:2,
+                          right:2,
+                          width:18,
+                          height:18,
+                          borderRadius:"50%",
+                          background:"rgba(0,0,0,0.6)",
+                          color:"#fff",
+                          border:"none",
+                          cursor:"pointer",
+                          display:"flex",
+                          alignItems:"center",
+                          justifyContent:"center",
+                          opacity:0,
+                          transition:"opacity 0.2s",
+                        }}
                       >
                         <X size={10}/>
                       </button>
                     </div>
                   ))}
                   {pdfPhotos.length<25&&(
-                    <label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}>
+                    <label style={{
+                      aspectRatio:"1",
+                      borderRadius:8,
+                      border:"2px dashed var(--sbr)",
+                      display:"flex",
+                      flexDirection:"column" as const,
+                      alignItems:"center",
+                      justifyContent:"center",
+                      gap:4,
+                      cursor:"pointer",
+                      color:"var(--std)",
+                    }}>
                       <Upload size={16}/>
                       <span style={{fontSize:9,fontWeight:600}}>Add</span>
                       <input
@@ -1070,7 +1100,7 @@ export default function DesignStudioV2(){
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(100)}><RotateCcw size={13}/></button>
             <div className="td"/>
             {activeTab==="templates"&&SIZES.map(s=><button key={s.id} className={`sp ${selectedSize===s.id?"ac":""}`} onClick={()=>setSelectedSize(s.id)}>{s.label}</button>)}
-            {activeTab==="listing-flyer"&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>US Letter 8.5×11"</span>}
+            {activeTab==="listing-flyer"&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>US Letter 8.5{"\u00d7"}11"</span>}
             {activeTab==="yard-sign"&&YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}
             {activeTab==="property-pdf"&&pdfTotalPages>1&&<><button className="bi" style={{width:28,height:28}} onClick={()=>setPdfPreviewPage(Math.max(0,pdfPreviewPage-1))}><ChevronLeft size={13}/></button><span className="zd">Pg {pdfPreviewPage+1}/{pdfTotalPages}</span><button className="bi" style={{width:28,height:28}} onClick={()=>setPdfPreviewPage(Math.min(pdfTotalPages-1,pdfPreviewPage+1))}><ChevronRight size={13}/></button></>}
             {activeTab==="branding-card"&&BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}
@@ -1090,7 +1120,7 @@ export default function DesignStudioV2(){
               <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:isVideoMode?"linear-gradient(135deg,#7c3aed,#6366f1)":undefined}} onClick={handleExport} disabled={exporting}>{exporting?<><Loader2 size={14} className="animate-spin"/>Exporting...</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}</button>
             </>}
           </Section>
-          <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"👤"},{n:"Photos",i:"🖼️"},{n:"Details",i:"📋"},{n:"Amenities",i:"✨"},{n:"URL Links",i:"🔗"}]:activeTab==="templates"?[{n:"Badge",i:"🏷️"},{n:"Price",i:"💲"},{n:"Info Bar",i:"📋"},{n:"Agent",i:"👤"},{n:"Photo",i:"🖼️"}]:activeTab==="yard-sign"?[{n:"Header",i:"🏷️"},{n:"Agent",i:"👤"},{n:"Background",i:"🖼️"}]:activeTab==="property-pdf"?[{n:"Photos",i:"🖼️"},{n:"Details",i:"📋"},{n:"Features",i:"✨"}]:[{n:"Headshot",i:"👤"},{n:"Info",i:"📋"},{n:"Background",i:"🖼️"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
+          <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
         </div>}
       </div>
 
