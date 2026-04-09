@@ -9,10 +9,8 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import {
   ArrowLeft,
-  ArrowRight,
   FileText,
   Home,
-  Search,
   Key,
   CheckCircle,
   Circle,
@@ -23,6 +21,8 @@ import {
   Lock,
   Crown,
   ChevronDown,
+  Eye,
+  Edit3,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
@@ -45,6 +45,32 @@ const pageStyles = `
     animation: rp-pulse 1.5s ease-in-out infinite;
   }
 `;
+
+/* ─────────────────────────────────────────────
+   Accent Color Swatches
+   ───────────────────────────────────────────── */
+const ACCENT_SWATCHES = [
+  { hex: "#b40101", label: "KW Red" },
+  { hex: "#003399", label: "CB Blue" },
+  { hex: "#003da5", label: "RE/MAX Blue" },
+  { hex: "#dc1c2e", label: "RE/MAX Red" },
+  { hex: "#b5985a", label: "C21 Gold" },
+  { hex: "#1c1c1c", label: "Compass Black" },
+  { hex: "#002349", label: "Sotheby's Blue" },
+  { hex: "#552448", label: "BHHS Purple" },
+  { hex: "#1c3f6e", label: "eXp Blue" },
+  { hex: "#006341", label: "Howard Hanna" },
+  { hex: "#a02021", label: "Redfin Red" },
+  { hex: "#0e7490", label: "Deep Teal" },
+  { hex: "#1e40af", label: "Deep Blue" },
+  { hex: "#0d6e4f", label: "Forest Green" },
+  { hex: "#6b21a8", label: "Deep Purple" },
+  { hex: "#be185d", label: "Deep Rose" },
+  { hex: "#c2410c", label: "Burnt Orange" },
+  { hex: "#b8860b", label: "Dark Gold" },
+  { hex: "#71717a", label: "Zinc" },
+  { hex: "#0f172a", label: "Slate 900" },
+];
 
 /* ─────────────────────────────────────────────
    Types
@@ -104,6 +130,141 @@ const BUYER_SECTIONS = [
   "WHY NOW IS THE RIGHT TIME",
 ];
 
+/* ─────────────────────────────────────────────
+   PDF Preview Component (mirrors light-mode PDF)
+   ───────────────────────────────────────────── */
+function PDFPreview({
+  reportType,
+  reportTitle,
+  clientName,
+  accentColor,
+  agentInfo,
+  sections,
+}: {
+  reportType: ReportType;
+  reportTitle: string;
+  clientName: string;
+  accentColor: string;
+  agentInfo: AgentInfo | null;
+  sections: ReportSection[];
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-2">PDF Preview</p>
+
+      {/* ── Cover Page ── */}
+      <div
+        className="relative overflow-hidden rounded-lg shadow-lg"
+        style={{
+          aspectRatio: "8.5 / 11",
+          background: "#ffffff",
+          border: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        {/* Top accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-[5px]" style={{ background: accentColor }} />
+
+        {/* Logo top-right */}
+        {agentInfo?.saved_logo_url && (
+          <div className="absolute top-3 right-4">
+            <img
+              src={agentInfo.saved_logo_url}
+              alt="Logo"
+              className="h-7 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col h-full px-5 pt-8 pb-4">
+          {/* Badge */}
+          <span
+            className="self-start rounded px-2.5 py-0.5 text-[8px] font-extrabold tracking-widest text-white uppercase"
+            style={{ background: accentColor }}
+          >
+            {reportType === "seller" ? "Seller's Guide" : "Buyer's Guide"}
+          </span>
+
+          {/* Title */}
+          <h3 className="mt-3 text-sm font-extrabold leading-snug text-gray-900" style={{ fontSize: "clamp(11px, 3vw, 16px)" }}>
+            {reportTitle || "Your Personalized Real Estate Guide"}
+          </h3>
+
+          {/* Prepared for */}
+          <p className="mt-1.5 text-[9px] text-gray-400">Prepared for: {clientName || "—"}</p>
+
+          {/* Divider */}
+          <div className="mt-2 h-px w-full bg-gray-200" />
+
+          {/* Push agent block to bottom */}
+          <div className="mt-auto flex items-end gap-2.5">
+            {agentInfo?.saved_headshot_url && (
+              <img
+                src={agentInfo.saved_headshot_url}
+                alt="Headshot"
+                className="h-10 w-10 rounded-full object-cover border border-gray-200 shadow-sm flex-shrink-0"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            )}
+            <div className="min-w-0">
+              {agentInfo?.saved_agent_name && (
+                <p className="text-[10px] font-bold text-gray-900 truncate">{agentInfo.saved_agent_name}</p>
+              )}
+              {agentInfo?.saved_company && (
+                <p className="text-[8px] text-gray-400 truncate">{agentInfo.saved_company}</p>
+              )}
+              {agentInfo?.saved_phone && (
+                <p className="text-[7px] text-gray-400">{agentInfo.saved_phone}</p>
+              )}
+              {agentInfo?.saved_email && (
+                <p className="text-[7px] text-gray-400 truncate">{agentInfo.saved_email}</p>
+              )}
+              {agentInfo?.saved_website && (
+                <p className="text-[7px] font-medium truncate" style={{ color: accentColor }}>{agentInfo.saved_website}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom accent bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-[4px]" style={{ background: accentColor }} />
+      </div>
+
+      {/* ── Section Page Previews ── */}
+      {sections.filter((s) => s.content?.trim()).slice(0, 2).map((section) => (
+        <div
+          key={section.title}
+          className="relative overflow-hidden rounded-lg shadow-lg"
+          style={{
+            aspectRatio: "8.5 / 11",
+            background: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: accentColor }} />
+
+          <div className="px-5 pt-5 pb-4">
+            {/* Section title pill */}
+            <div className="rounded px-2.5 py-1 inline-block" style={{ background: "#f1f5f9" }}>
+              <p className="text-[8px] font-extrabold tracking-wide" style={{ color: accentColor }}>{section.title}</p>
+            </div>
+            {/* Content preview */}
+            <p className="mt-2 text-[7px] leading-[1.6] text-gray-500 line-clamp-[14]">
+              {section.content}
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="absolute bottom-0 left-0 right-0 h-5 bg-gray-50 flex items-center px-5">
+            <p className="text-[6px] text-gray-300 truncate">{agentInfo?.saved_agent_name || ""} {agentInfo?.saved_company ? `  •  ${agentInfo.saved_company}` : ""}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    MAIN EXPORT
    ═══════════════════════════════════════════════ */
@@ -118,6 +279,8 @@ export default function ReportsPage() {
   // Wizard state
   const [step, setStep] = useState<Step>(1);
   const [reportType, setReportType] = useState<ReportType>(null);
+  const [accentColor, setAccentColor] = useState("#0e7490");
+  const [previewTab, setPreviewTab] = useState<"preview" | "edit">("edit");
 
   // Form state — seller
   const [sellerName, setSellerName] = useState("");
@@ -156,6 +319,12 @@ export default function ReportsPage() {
 
   const streamRef = useRef<AbortController | null>(null);
 
+  /* ─── Computed ─── */
+  const clientName = reportType === "seller" ? sellerName : buyerName;
+  const reportTitle = reportType === "seller"
+    ? `Seller's Guide to ${sellerAddress || "Your Property"}`
+    : `Buyer's Guide to ${buyerArea || buyerCityState || "Your New Home"}`;
+
   useEffect(() => {
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
@@ -181,8 +350,6 @@ export default function ReportsPage() {
         setIsPro(true);
       } else if (usage?.is_subscriber) {
         setIsSubscriber(true);
-        // For now treat all subscribers as Pro-capable for reports
-        // Later: check subscription_tier === "pro"
         setIsPro(true);
       }
 
@@ -199,7 +366,6 @@ export default function ReportsPage() {
         });
       }
 
-      // Fetch properties for selector
       const { data: props } = await supabase
         .from("agent_properties")
         .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, property_type, year_built, lot_size")
@@ -208,7 +374,6 @@ export default function ReportsPage() {
         .order("updated_at", { ascending: false });
 
       if (props) setProperties(props);
-
       setIsLoading(false);
     };
     init();
@@ -287,9 +452,7 @@ export default function ReportsPage() {
         signal: controller.signal,
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to generate report");
-      }
+      if (!res.ok) throw new Error("Failed to generate report");
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
@@ -304,7 +467,6 @@ export default function ReportsPage() {
 
         fullText += decoder.decode(value, { stream: true });
 
-        // Parse sections from the accumulated text
         const updatedSections = [...initialSections];
         let remaining = fullText;
 
@@ -313,15 +475,12 @@ export default function ReportsPage() {
           const headerIdx = remaining.indexOf(sectionHeader);
 
           if (headerIdx === -1) {
-            // Haven't reached this section yet
             if (i === currentSectionIdx && i > 0) {
-              // Previous section still generating
               updatedSections[i].status = "pending";
             }
             break;
           }
 
-          // Find the start of content (after the header line)
           const afterHeader = remaining.indexOf("\n", headerIdx);
           if (afterHeader === -1) {
             updatedSections[i].status = "generating";
@@ -329,7 +488,6 @@ export default function ReportsPage() {
             break;
           }
 
-          // Find the end of this section (next header or end of text)
           let endIdx = remaining.length;
           for (let j = i + 1; j < sectionNames.length; j++) {
             const nextHeaderIdx = remaining.indexOf(sectionNames[j], afterHeader);
@@ -342,7 +500,6 @@ export default function ReportsPage() {
           const sectionContent = remaining.substring(afterHeader + 1, endIdx).trim();
           updatedSections[i].content = sectionContent;
 
-          // Check if this section is complete (next section started or all text done)
           const nextSectionStarted = i < sectionNames.length - 1 && remaining.indexOf(sectionNames[i + 1], afterHeader) !== -1;
 
           if (nextSectionStarted) {
@@ -354,10 +511,8 @@ export default function ReportsPage() {
           }
         }
 
-        // Mark current as generating
         if (currentSectionIdx < sectionNames.length) {
           updatedSections[currentSectionIdx].status = updatedSections[currentSectionIdx].content ? "generating" : "generating";
-          // Mark all after as pending
           for (let j = currentSectionIdx + 1; j < sectionNames.length; j++) {
             if (updatedSections[j].status !== "done") {
               updatedSections[j].status = "pending";
@@ -368,7 +523,6 @@ export default function ReportsPage() {
         setSections(updatedSections);
       }
 
-      // Mark all as done
       setSections((prev) => prev.map((s) => ({ ...s, status: "done" })));
       setIsGenerating(false);
       setStep(4);
@@ -446,7 +600,6 @@ export default function ReportsPage() {
         if (done) break;
         text += decoder.decode(value, { stream: true });
 
-        // Extract just the section content (strip the header if present)
         let cleaned = text;
         const headerIdx = cleaned.indexOf(section.title);
         if (headerIdx !== -1) {
@@ -478,11 +631,6 @@ export default function ReportsPage() {
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      const clientName = reportType === "seller" ? sellerName : buyerName;
-      const reportTitle = reportType === "seller"
-        ? `Seller's Guide to ${sellerAddress || "Your Property"}`
-        : `Buyer's Guide to ${buyerArea || buyerCityState || "Your New Home"}`;
-
       const res = await fetch("/api/lens/reports/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -492,6 +640,7 @@ export default function ReportsPage() {
           clientName,
           sections: sections.map((s) => ({ title: s.title, content: s.content })),
           agent: agentInfo,
+          accentColor,
         }),
       });
 
@@ -501,7 +650,7 @@ export default function ReportsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${reportType}-guide-${clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+      a.download = `${reportType}-guide-${clientName.replace(/\s+/g, "-").toLowerCase() || "report"}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -547,7 +696,7 @@ export default function ReportsPage() {
         backgroundSize: "48px 48px",
       }} />
 
-      <div className="relative z-10 mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
 
         {/* Header */}
         <div className="rp-animate flex items-center gap-3 mb-8" style={{ animationDelay: "0.05s" }}>
@@ -562,7 +711,7 @@ export default function ReportsPage() {
 
         {/* ═══ GATE: Not subscribed ═══ */}
         {!isSubscriber && (
-          <div className="rp-animate rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8 text-center" style={{ animationDelay: "0.1s" }}>
+          <div className="rp-animate rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8 text-center max-w-3xl mx-auto" style={{ animationDelay: "0.1s" }}>
             <Lock className="h-10 w-10 text-white/20 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white/90 mb-2">Custom Reports are a Lens Pro feature</h2>
             <p className="text-sm text-white/50 mb-6 max-w-md mx-auto">
@@ -581,7 +730,7 @@ export default function ReportsPage() {
         {isSubscriber && (
           <>
             {/* Progress */}
-            <div className="rp-animate mb-8" style={{ animationDelay: "0.1s" }}>
+            <div className="rp-animate mb-8 max-w-3xl mx-auto" style={{ animationDelay: "0.1s" }}>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <div key={s} className="flex items-center gap-2 flex-1">
@@ -611,7 +760,7 @@ export default function ReportsPage() {
 
             {/* ═══ STEP 1: Choose Type ═══ */}
             {step === 1 && (
-              <div className="rp-animate space-y-4" style={{ animationDelay: "0.15s" }}>
+              <div className="rp-animate space-y-4 max-w-3xl mx-auto" style={{ animationDelay: "0.15s" }}>
                 <h2 className="text-lg font-bold text-white/90 mb-4">Choose Report Type</h2>
 
                 <button
@@ -658,9 +807,9 @@ export default function ReportsPage() {
               </div>
             )}
 
-            {/* ═══ STEP 2: Fill In Details ═══ */}
+            {/* ═══ STEP 2: Fill In Details — SELLER ═══ */}
             {step === 2 && reportType === "seller" && (
-              <div className="rp-animate space-y-6" style={{ animationDelay: "0.1s" }}>
+              <div className="rp-animate space-y-6 max-w-3xl mx-auto" style={{ animationDelay: "0.1s" }}>
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-white/90">Seller Details</h2>
                   <button onClick={() => setStep(1)} className="text-xs font-semibold text-white/40 hover:text-white/60 transition-colors">
@@ -669,7 +818,6 @@ export default function ReportsPage() {
                 </div>
 
                 <div className="space-y-5 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6">
-                  {/* Seller name */}
                   <div>
                     <Label className="text-sm font-bold text-white/70">Seller Name <span className="text-red-400">*</span></Label>
                     <Input
@@ -680,7 +828,6 @@ export default function ReportsPage() {
                     />
                   </div>
 
-                  {/* Property selector */}
                   <div>
                     <Label className="text-sm font-bold text-white/70">Property Address <span className="text-red-400">*</span></Label>
                     {properties.length > 0 && (
@@ -708,7 +855,6 @@ export default function ReportsPage() {
                     />
                   </div>
 
-                  {/* Beds / Baths / Sqft */}
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <Label className="text-xs font-bold text-white/50">Bedrooms</Label>
@@ -724,13 +870,11 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Price */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Asking Price (or estimated)</Label>
                     <Input value={sellerPrice} onChange={(e) => setSellerPrice(e.target.value)} type="number" placeholder="425000" className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30" />
                   </div>
 
-                  {/* Condition */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Property Condition</Label>
                     <div className="relative mt-1">
@@ -745,7 +889,6 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Timeline */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Timeline to Sell</Label>
                     <div className="relative mt-1">
@@ -761,13 +904,11 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Known issues */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Known Issues or Notes</Label>
                     <Textarea value={sellerIssues} onChange={(e) => setSellerIssues(e.target.value)} placeholder="Any known repairs needed, HOA restrictions, etc." rows={3} className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30 resize-none" />
                   </div>
 
-                  {/* Target buyer */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Target Buyer Profile</Label>
                     <Input value={sellerTargetBuyer} onChange={(e) => setSellerTargetBuyer(e.target.value)} placeholder="e.g. young families, downsizers, investors" className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30" />
@@ -785,8 +926,9 @@ export default function ReportsPage() {
               </div>
             )}
 
+            {/* ═══ STEP 2: Fill In Details — BUYER ═══ */}
             {step === 2 && reportType === "buyer" && (
-              <div className="rp-animate space-y-6" style={{ animationDelay: "0.1s" }}>
+              <div className="rp-animate space-y-6 max-w-3xl mx-auto" style={{ animationDelay: "0.1s" }}>
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-white/90">Buyer Details</h2>
                   <button onClick={() => setStep(1)} className="text-xs font-semibold text-white/40 hover:text-white/60 transition-colors">
@@ -795,13 +937,11 @@ export default function ReportsPage() {
                 </div>
 
                 <div className="space-y-5 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6">
-                  {/* Buyer name */}
                   <div>
                     <Label className="text-sm font-bold text-white/70">Buyer Name <span className="text-red-400">*</span></Label>
                     <Input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="e.g. Mike & Lisa Johnson" className="mt-1.5 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30" />
                   </div>
 
-                  {/* Budget */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-sm font-bold text-white/70">Budget Min <span className="text-red-400">*</span></Label>
@@ -813,19 +953,16 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Area */}
                   <div>
                     <Label className="text-sm font-bold text-white/70">Desired Area / Neighborhood <span className="text-red-400">*</span></Label>
                     <Input value={buyerArea} onChange={(e) => setBuyerArea(e.target.value)} placeholder="e.g. South Austin, Zilker, Barton Hills" className="mt-1.5 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30" />
                   </div>
 
-                  {/* City, State */}
                   <div>
                     <Label className="text-sm font-bold text-white/70">City, State <span className="text-red-400">*</span></Label>
                     <Input value={buyerCityState} onChange={(e) => setBuyerCityState(e.target.value)} placeholder="Austin, TX" className="mt-1.5 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30" />
                   </div>
 
-                  {/* Beds / Baths */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs font-bold text-white/50">Min Bedrooms</Label>
@@ -837,19 +974,16 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Must-haves */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Must-Haves</Label>
                     <Textarea value={buyerMustHaves} onChange={(e) => setBuyerMustHaves(e.target.value)} placeholder="e.g. garage, pool, good schools, walk to shops" rows={2} className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30 resize-none" />
                   </div>
 
-                  {/* Nice-to-haves */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Nice-to-Haves</Label>
                     <Textarea value={buyerNiceToHaves} onChange={(e) => setBuyerNiceToHaves(e.target.value)} placeholder="e.g. home office, large backyard, updated kitchen" rows={2} className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30 resize-none" />
                   </div>
 
-                  {/* Buyer type */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Buyer Type</Label>
                     <div className="relative mt-1">
@@ -865,7 +999,6 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Timeline */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Timeline</Label>
                     <div className="relative mt-1">
@@ -880,7 +1013,6 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Pre-approved */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Pre-approved?</Label>
                     <div className="relative mt-1">
@@ -894,7 +1026,6 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  {/* Notes */}
                   <div>
                     <Label className="text-xs font-bold text-white/50">Additional Notes</Label>
                     <Textarea value={buyerNotes} onChange={(e) => setBuyerNotes(e.target.value)} placeholder="Any other details about the buyer's preferences or situation" rows={3} className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-cyan-400/30 resize-none" />
@@ -914,7 +1045,7 @@ export default function ReportsPage() {
 
             {/* ═══ STEP 3: Generating ═══ */}
             {step === 3 && (
-              <div className="rp-animate space-y-3" style={{ animationDelay: "0.05s" }}>
+              <div className="rp-animate space-y-3 max-w-3xl mx-auto" style={{ animationDelay: "0.05s" }}>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-white/90">
                     {isGenerating ? "Generating your report..." : "Generation complete"}
@@ -933,7 +1064,7 @@ export default function ReportsPage() {
                   </div>
                 )}
 
-                {sections.map((section, idx) => (
+                {sections.map((section) => (
                   <div
                     key={section.title}
                     className={`rounded-xl border p-4 transition-all ${
@@ -967,10 +1098,11 @@ export default function ReportsPage() {
               </div>
             )}
 
-            {/* ═══ STEP 4: Review & Edit ═══ */}
+            {/* ═══ STEP 4: Review & Edit — with Preview + Color Swatches ═══ */}
             {step === 4 && (
-              <div className="rp-animate space-y-4" style={{ animationDelay: "0.05s" }}>
-                <div className="flex items-center justify-between mb-4">
+              <div className="rp-animate" style={{ animationDelay: "0.05s" }}>
+                {/* Top bar: title + download */}
+                <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-white/90">Review & Edit</h2>
                   <Button
                     onClick={handleDownloadPDF}
@@ -985,57 +1117,129 @@ export default function ReportsPage() {
                   </Button>
                 </div>
 
-                <p className="text-sm text-white/40 mb-4">Edit any section below before downloading. Click the refresh icon to regenerate a section with AI.</p>
-
-                {sections.map((section, idx) => (
-                  <div key={section.title} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-bold text-cyan-400">{section.title}</span>
-                      <button
-                        onClick={() => handleRegenerateSection(idx)}
-                        disabled={regeneratingIdx !== null}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-cyan-400 transition-colors disabled:opacity-30"
-                      >
-                        {regeneratingIdx === idx ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        )}
-                        Regenerate
-                      </button>
-                    </div>
-                    <textarea
-                      value={section.content}
-                      onChange={(e) => {
-                        setSections((prev) => {
-                          const updated = [...prev];
-                          updated[idx] = { ...updated[idx], content: e.target.value };
-                          return updated;
-                        });
-                      }}
-                      rows={8}
-                      className="w-full bg-transparent border-0 text-sm text-white/70 leading-relaxed focus:outline-none focus:ring-0 resize-none"
+                {/* ── Color Swatches ── */}
+                <div className="mb-5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-4 w-4 rounded-full border border-white/10 flex-shrink-0" style={{ background: accentColor }} />
+                    <span className="text-xs font-bold text-white/60 uppercase tracking-wider">Accent Color</span>
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="ml-auto h-7 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
+                      title="Custom color"
                     />
                   </div>
-                ))}
+                  <div className="flex flex-wrap gap-1.5">
+                    {ACCENT_SWATCHES.map((c) => (
+                      <button
+                        key={c.hex}
+                        onClick={() => setAccentColor(c.hex)}
+                        title={c.label}
+                        className={`h-7 w-7 rounded-lg border-2 transition-all flex-shrink-0 ${
+                          accentColor === c.hex
+                            ? "border-white scale-110 ring-2 ring-white/20"
+                            : "border-white/[0.06] hover:border-white/20"
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-                <Button
-                  onClick={handleDownloadPDF}
-                  disabled={isDownloading}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-6 text-base"
-                >
-                  {isDownloading ? (
-                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating PDF...</>
-                  ) : (
-                    <><Download className="mr-2 h-5 w-5" />Download PDF</>
-                  )}
-                </Button>
+                {/* ── Split layout: Preview + Editor ── */}
+                {/* Mobile: tabs. Desktop: side by side */}
+                <div className="lg:hidden mb-4 flex rounded-lg border border-white/[0.06] overflow-hidden">
+                  <button
+                    onClick={() => setPreviewTab("edit")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-colors ${
+                      previewTab === "edit" ? "bg-white/[0.08] text-white" : "bg-white/[0.02] text-white/40"
+                    }`}
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                    Edit Sections
+                  </button>
+                  <button
+                    onClick={() => setPreviewTab("preview")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-colors ${
+                      previewTab === "preview" ? "bg-white/[0.08] text-white" : "bg-white/[0.02] text-white/40"
+                    }`}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview PDF
+                  </button>
+                </div>
+
+                <div className="flex gap-6">
+                  {/* ── Left: Preview (desktop always, mobile conditional) ── */}
+                  <div className={`w-64 flex-shrink-0 ${previewTab === "preview" ? "block" : "hidden lg:block"}`}>
+                    <div className="sticky top-8">
+                      <PDFPreview
+                        reportType={reportType}
+                        reportTitle={reportTitle}
+                        clientName={clientName}
+                        accentColor={accentColor}
+                        agentInfo={agentInfo}
+                        sections={sections}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ── Right: Editor ── */}
+                  <div className={`flex-1 min-w-0 space-y-4 ${previewTab === "edit" ? "block" : "hidden lg:block"}`}>
+                    <p className="text-sm text-white/40">Edit any section below before downloading. Click the refresh icon to regenerate a section with AI.</p>
+
+                    {sections.map((section, idx) => (
+                      <div key={section.title} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-bold" style={{ color: accentColor }}>{section.title}</span>
+                          <button
+                            onClick={() => handleRegenerateSection(idx)}
+                            disabled={regeneratingIdx !== null}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-cyan-400 transition-colors disabled:opacity-30"
+                          >
+                            {regeneratingIdx === idx ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            )}
+                            Regenerate
+                          </button>
+                        </div>
+                        <textarea
+                          value={section.content}
+                          onChange={(e) => {
+                            setSections((prev) => {
+                              const updated = [...prev];
+                              updated[idx] = { ...updated[idx], content: e.target.value };
+                              return updated;
+                            });
+                          }}
+                          rows={8}
+                          className="w-full bg-transparent border-0 text-sm text-white/70 leading-relaxed focus:outline-none focus:ring-0 resize-none"
+                        />
+                      </div>
+                    ))}
+
+                    <Button
+                      onClick={handleDownloadPDF}
+                      disabled={isDownloading}
+                      className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-6 text-base"
+                    >
+                      {isDownloading ? (
+                        <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating PDF...</>
+                      ) : (
+                        <><Download className="mr-2 h-5 w-5" />Download PDF</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* ═══ STEP 5: Done ═══ */}
             {step === 5 && (
-              <div className="rp-animate text-center py-12" style={{ animationDelay: "0.05s" }}>
+              <div className="rp-animate text-center py-12 max-w-3xl mx-auto" style={{ animationDelay: "0.05s" }}>
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400/10 ring-1 ring-cyan-400/20 mb-6">
                   <CheckCircle className="h-8 w-8 text-cyan-400" />
                 </div>
