@@ -458,6 +458,8 @@ export default function DesignStudioV2(){
             setFlyerAccentColor(cc[0]); // flyer accent
             setBrandBgColor(cc[0]); // branding card bg
             setYardTopColor(cc[0]); // yard sign top
+            setYardSidebarColor(cc[0]); // yard sign sidebar
+            setPdfAccentColor(cc[0]); // property sheet accent
           }
           if(cc.length >= 2){
             setAccentColor(cc[1]); // listing accent
@@ -963,7 +965,6 @@ export default function DesignStudioV2(){
             <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
             <Section title="Accent Color" icon={Paintbrush}>
               <ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/>
-              {savedCompanyColors.length>0&&<div style={{marginTop:10}}><span className="fl">Your Colors</span><SwatchGrid colors={savedCompanyColors} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div>}
               <div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div>
               <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div>
             </Section>
@@ -1054,7 +1055,7 @@ export default function DesignStudioV2(){
 
           {activeTab==="templates"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div>
             <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
-            <Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/>{savedCompanyColors.length>0&&<div style={{marginTop:10}}><span className="fl">Your Colors</span><SwatchGrid colors={savedCompanyColors} current={barColor} onSelect={setBarColor}/></div>}<div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section>
+            <Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/><div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section>
             <Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section>
           </>}
 
