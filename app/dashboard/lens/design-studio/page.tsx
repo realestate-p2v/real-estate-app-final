@@ -515,6 +515,8 @@ export default function DesignStudioV2() {
   const [mediaMode,setMediaMode]=useState<"image"|"video">("image");
   const [selectedVideo,setSelectedVideo]=useState<any>(null);
   const [overlayMusic,setOverlayMusic]=useState("");const [musicExpanded,setMusicExpanded]=useState(false);
+  const [userVideos,setUserVideos]=useState<any[]>([]);
+  const [loadingVideos,setLoadingVideos]=useState(false);
   // Yard sign
   const [yardDesign,setYardDesign]=useState("split-bar");const [yardSignSize,setYardSignSize]=useState("18x24");
   const [yardHeaderText,setYardHeaderText]=useState("FOR SALE");
@@ -570,6 +572,35 @@ export default function DesignStudioV2() {
       }
     })();
   },[]);
+
+  // Load user videos from completed orders
+  const loadUserVideos = async () => {
+    if (userVideos.length > 0) return;
+    setLoadingVideos(true);
+    try {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("order_id, delivery_url, unbranded_delivery_url, photos, created_at")
+        .eq("user_id", user.id)
+        .in("status", ["complete", "delivered", "closed"])
+        .order("created_at", { ascending: false });
+      setUserVideos((orders || [])
+        .filter((o: any) => o.unbranded_delivery_url || o.delivery_url)
+        .map((o: any) => ({
+          orderId: o.order_id,
+          url: o.unbranded_delivery_url || o.delivery_url,
+          thumbnail: o.photos?.[0]?.secure_url || null,
+          hasUnbranded: !!o.unbranded_delivery_url,
+          date: new Date(o.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        }))
+      );
+    } catch (err) { console.error("Failed to load videos:", err); }
+    finally { setLoadingVideos(false); }
+  };
+
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
   const handleExport=async()=>{setExporting(true);await new Promise(r=>setTimeout(r,2000));notify("Design exported!");setExporting(false);};
 
@@ -712,17 +743,68 @@ export default function DesignStudioV2() {
               {activeTab==="templates"&&<>
                 <div style={{display:"flex",gap:3,padding:3,background:"rgba(255,255,255,0.04)",borderRadius:10,marginBottom:14}}>
                   <button onClick={()=>{setMediaMode("image");setSelectedVideo(null);}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="image"?"var(--sa)":"none",color:mediaMode==="image"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="image"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><ImageIcon size={14} /> Image</button>
-                  <button onClick={()=>{setMediaMode("video");setListingPhoto(null);}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="video"?"var(--sa)":"none",color:mediaMode==="video"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="video"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><Play size={14} /> Video</button>
+                  <button onClick={()=>{setMediaMode("video");setListingPhoto(null);loadUserVideos();}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="video"?"var(--sa)":"none",color:mediaMode==="video"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="video"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><Play size={14} /> Video</button>
                 </div>
                 {mediaMode==="image"&&<UploadZone label="Listing Photo" imageUrl={listingPhoto} onUpload={f=>setListingPhoto(URL.createObjectURL(f))} onClear={()=>setListingPhoto(null)} uploading={false} />}
-                {mediaMode==="video"&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Film size={13} color="#f59e0b" /><span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Video exports limited to 119s</span></div>}
+                {mediaMode==="video"&&<>
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Film size={13} color="#f59e0b" /><span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Video exports limited to 119s</span></div>
+
+                  {/* Video selector grid */}
+                  <span className="fl">Your Videos</span>
+                  {loadingVideos ? (
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin" /></div>
+                  ) : userVideos.length === 0 ? (
+                    <div style={{padding:"20px 0",textAlign:"center",borderRadius:10,border:"1px dashed var(--sbr)"}}>
+                      <p style={{fontSize:11,color:"var(--std)",margin:0}}>No completed videos found.</p>
+                      <p style={{fontSize:10,color:"var(--stm)",margin:0,marginTop:4}}>Videos appear here after your orders are delivered.</p>
+                    </div>
+                  ) : (
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6,maxHeight:220,overflowY:"auto"}}>
+                      {userVideos.map((v:any)=>(
+                        <button key={v.orderId} onClick={()=>{setSelectedVideo(v);if(v.thumbnail)setListingPhoto(v.thumbnail);}}
+                          style={{position:"relative",borderRadius:10,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",textAlign:"left",transition:"all 0.2s",padding:0,boxShadow:selectedVideo?.orderId===v.orderId?"0 0 0 2px var(--sag)":"none",fontFamily:"var(--sf)"}}>
+                          {v.thumbnail ? <img src={v.thumbnail} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover",display:"block"}} /> : <div style={{width:"100%",aspectRatio:"16/9",background:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="rgba(255,255,255,0.2)" /></div>}
+                          <div style={{padding:"6px 8px"}}>
+                            <p style={{fontSize:10,fontWeight:700,color:"var(--st)",margin:0}}>Order {v.orderId?.slice(0,8)}</p>
+                            <p style={{fontSize:9,color:"var(--std)",margin:0}}>{v.date}{v.hasUnbranded?" · Unbranded":""}</p>
+                          </div>
+                          {selectedVideo?.orderId===v.orderId && <div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={12} color="#fff" /></div>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Music selector */}
+                  <div style={{marginTop:14,borderRadius:10,border:"1px solid var(--sbr)",overflow:"hidden"}}>
+                    <button onClick={()=>setMusicExpanded(!musicExpanded)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"none",border:"none",cursor:"pointer",color:"var(--st)",fontFamily:"var(--sf)"}}>
+                      <div style={{width:32,height:32,borderRadius:8,background:"var(--sag)",display:"flex",alignItems:"center",justifyContent:"center"}}><Music size={15} color="var(--sa)" /></div>
+                      <div style={{flex:1,textAlign:"left"}}><p style={{fontSize:12,fontWeight:700,margin:0}}>Background Music</p><p style={{fontSize:10,color:overlayMusic?"var(--sa)":"var(--std)",margin:0,fontWeight:overlayMusic?600:400}}>{overlayMusic?"♪ Track selected":"Optional — add a soundtrack"}</p></div>
+                      <ChevronRight size={13} color="var(--std)" style={{transform:musicExpanded?"rotate(90deg)":"none",transition:"transform 0.2s"}} />
+                    </button>
+                    {musicExpanded&&<div style={{borderTop:"1px solid var(--sbr)",padding:12}}>
+                      <button onClick={()=>setOverlayMusic("")} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,border:!overlayMusic?"1px solid var(--sa)":"1px solid var(--sbr)",background:!overlayMusic?"var(--sag)":"none",cursor:"pointer",fontSize:11,color:"var(--std)",fontFamily:"var(--sf)",marginBottom:6}}>
+                        <X size={13} /> No music (keep original audio){!overlayMusic&&<Check size={13} color="var(--sa)" style={{marginLeft:"auto"}} />}
+                      </button>
+                      <p style={{fontSize:10,color:"var(--stm)",margin:"8px 0 6px"}}>In production, this connects to your music library API. For now, toggle shows the UI pattern.</p>
+                    </div>}
+                  </div>
+
+                  {/* Headshot & Logo in video mode */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
+                    <UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact />
+                    <UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact />
+                  </div>
+                </>}
               </>}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:activeTab==="templates"?10:0}}>
-                <UploadZone label="Headshot" imageUrl={activeTab==="branding-card"?brandHeadshot:headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact />
-                <UploadZone label="Logo" imageUrl={activeTab==="branding-card"?brandLogo:logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact />
-              </div>
-              {activeTab==="branding-card"&&<div style={{marginTop:10}}><UploadZone label="Background Photo (optional)" imageUrl={brandBgPhoto} onUpload={f=>setBrandBgPhoto(URL.createObjectURL(f))} onClear={()=>setBrandBgPhoto(null)} uploading={false} /></div>}
-              {activeTab==="templates"&&mediaMode==="image"&&<div style={{marginTop:18}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url,i)=><div key={i} onClick={()=>setListingPhoto(url)} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} /></div>)}</div></div>}
+              {/* Headshot/Logo for non-video modes */}
+              {!(activeTab==="templates"&&mediaMode==="video")&&<>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:activeTab==="templates"?10:0}}>
+                  <UploadZone label="Headshot" imageUrl={activeTab==="branding-card"?brandHeadshot:headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact />
+                  <UploadZone label="Logo" imageUrl={activeTab==="branding-card"?brandLogo:logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact />
+                </div>
+                {activeTab==="branding-card"&&<div style={{marginTop:10}}><UploadZone label="Background Photo (optional)" imageUrl={brandBgPhoto} onUpload={f=>setBrandBgPhoto(URL.createObjectURL(f))} onClear={()=>setBrandBgPhoto(null)} uploading={false} /></div>}
+                {activeTab==="templates"&&mediaMode==="image"&&<div style={{marginTop:18}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url,i)=><div key={i} onClick={()=>setListingPhoto(url)} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} /></div>)}</div></div>}
+              </>}
             </div>
           </>}
 
