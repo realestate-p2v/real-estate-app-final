@@ -153,7 +153,7 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
   const an=agentName||"Agent Name";
   const am=Array.isArray(amenities)?amenities.filter(Boolean):(amenities?String(amenities).split(",").map((s:string)=>s.trim()).filter(Boolean):[]);
-  const desc=truncateText(description||"",640);
+  const desc=truncateText(description||"",1280);
   const photoCount=(photos||[]).length;
   const p1=photos?.[0]||null,p2=photos?.[1]||null,p3=photos?.[2]||null;
   const bottomRow=photos?.slice(3,7)||[];
@@ -645,44 +645,45 @@ export default function DesignStudioV2(){
       }
     }
 
-    // 5. Audio mixing — use <audio> element source to avoid CORS fetch issues.
-    // createMediaElementSource can use cross-origin audio that the browser can play,
-    // even when fetch() would be blocked by CORS.
+    // 5. Audio mixing — fetch audio as ArrayBuffer and decode into AudioBufferSourceNode.
+    // This approach feeds audio directly into the MediaStreamDestination for recording.
+    // We do NOT connect to audioCtx.destination (speakers) — audio goes only to the recording.
     let audioCtx: AudioContext | null = null;
     let audioDest: MediaStreamAudioDestinationNode | null = null;
-    let musicAudioEl: HTMLAudioElement | null = null;
+    let musicSource: AudioBufferSourceNode | null = null;
 
     if (selectedMusicTrack?.url) {
       try {
         audioCtx = new AudioContext();
         audioDest = audioCtx.createMediaStreamDestination();
 
-        // Create an <audio> element — browsers can play cross-origin audio
-        musicAudioEl = new Audio();
-        musicAudioEl.crossOrigin = "anonymous";
-        musicAudioEl.src = selectedMusicTrack.url;
-        musicAudioEl.loop = true;
+        // Fetch the audio file as ArrayBuffer
+        const musicResp = await fetch(selectedMusicTrack.url);
+        if (!musicResp.ok) throw new Error(`Music fetch ${musicResp.status}`);
+        const musicArrayBuf = await musicResp.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(musicArrayBuf);
 
-        await new Promise<void>((res, rej) => {
-          musicAudioEl!.oncanplaythrough = () => res();
-          musicAudioEl!.onerror = () => rej(new Error("Music load failed"));
-          musicAudioEl!.load();
-        });
+        musicSource = audioCtx.createBufferSource();
+        musicSource.buffer = audioBuffer;
+        musicSource.loop = true;
 
-        const source = audioCtx.createMediaElementSource(musicAudioEl);
+        // Gain node — full volume, fade out last 2 seconds
         const gainNode = audioCtx.createGain();
         const fadeStart = Math.max(0, durationSec - 2);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime + fadeStart);
         gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + durationSec);
-        source.connect(gainNode);
+
+        // Connect: source → gain → MediaStreamDestination (for recording ONLY)
+        musicSource.connect(gainNode);
         gainNode.connect(audioDest);
-        // Also connect to destination so AudioContext processes it
-        gainNode.connect(audioCtx.destination);
-        musicAudioEl.play().catch(() => {});
+        // Do NOT connect to audioCtx.destination — we don't want speaker playback
+        musicSource.start();
+
+        console.log("Music mixing active:", audioBuffer.duration.toFixed(1) + "s audio,", audioDest.stream.getAudioTracks().length, "audio tracks");
       } catch (e) {
         console.warn("Audio mix failed, exporting video only:", e);
-        audioCtx = null; audioDest = null; musicAudioEl = null;
+        audioCtx = null; audioDest = null; musicSource = null;
       }
     }
 
@@ -735,7 +736,7 @@ export default function DesignStudioV2(){
       } else {
         recorder.stop();
         video.pause();
-        if (musicAudioEl) { musicAudioEl.pause(); musicAudioEl = null; }
+        if (musicSource) { try { musicSource.stop(); } catch(_){} }
         audioCtx?.close();
       }
     };
