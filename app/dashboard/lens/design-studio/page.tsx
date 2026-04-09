@@ -13,7 +13,7 @@ function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");i
 function responsiveSize(base:number,text:string,maxChars:number):number{if(!text||text.length<=maxChars)return base;return Math.max(base*0.5,Math.round(base*Math.max(maxChars/text.length,0.55)));}
 function darken(hex:string,pct:number):string{const n=parseInt(hex.replace("#",""),16);return `rgb(${Math.max(0,(n>>16)-Math.round(2.55*pct))},${Math.max(0,((n>>8)&0xff)-Math.round(2.55*pct))},${Math.max(0,(n&0xff)-Math.round(2.55*pct))})`;}
 function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"}};return m[id]||m["just-listed"];}
-function truncateText(text:string,max:number):string{if(!text||text.length<=max)return text;return text.substring(0,max).trimEnd()+"\u2026";}
+function truncateText(text:string,max:number):string{if(!text)return text;const clean=text.replace(/\*{1,2}([^*]+)\*{1,2}/g,"$1");if(clean.length<=max)return clean;return clean.substring(0,max).trimEnd()+"\u2026";}
 
 // ─── InfoBarTemplate ───────────────────────────────────────────────────────────
 function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,badgeText,badgeColor,fontFamily,barColor,accentColor}:any){
