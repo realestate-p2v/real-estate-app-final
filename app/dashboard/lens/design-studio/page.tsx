@@ -785,6 +785,8 @@ export default function DesignStudioV2(){
     .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:10px 22px;background:var(--suc);color:#fff;font-size:12px;font-weight:700;border-radius:10px;box-shadow:0 8px 32px rgba(16,185,129,0.3);z-index:100;animation:ti 0.3s ease;font-family:var(--sf);}
     @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
     .animate-spin{animation:spin 1s linear infinite;}@keyframes spin{to{transform:rotate(360deg);}}
+    .rb:not(.ac){animation:sidebarNudge 7s ease-in-out infinite;}.rb:nth-child(2):not(.ac){animation-delay:1s;}.rb:nth-child(3):not(.ac){animation-delay:2s;}.rb:nth-child(4):not(.ac){animation-delay:3s;}
+    @keyframes sidebarNudge{0%,90%,100%{transform:scale(1);opacity:1;}93%{transform:scale(1.08);opacity:1;}96%{transform:scale(0.97);opacity:0.8;}}
     .group:hover .ghov{opacity:1!important;}
     .ta{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;resize:none;transition:all 0.15s;}.ta:focus{border-color:var(--sa);box-shadow:0 0 0 3px var(--sag);}
     .ps{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;appearance:none;cursor:pointer;}.ps:focus{border-color:var(--sa);}
@@ -1190,8 +1192,8 @@ export default function DesignStudioV2(){
         <div className="sc">
           <div className="scb"/>
           <div className="scc">
-            <div className="spf" style={{width:pW,height:pH}}>
-              <div ref={previewRef} data-export-target="true" style={{width:rawW,height:rawH,transform:`scale(${scale})`,transformOrigin:"top left"}}>{renderPreview()}</div>
+            <div className="spf" ref={previewRef} style={{width:pW,height:pH}}>
+              <div data-export-target="true" style={{width:rawW,height:rawH,transform:`scale(${scale})`,transformOrigin:"top left"}}>{renderPreview()}</div>
             </div>
           </div>
           <div className="sct">
