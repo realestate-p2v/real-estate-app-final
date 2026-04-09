@@ -447,11 +447,6 @@ const ACCENT_COLORS = ["#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185
 const FONT_OPTIONS = [{id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},{id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},{id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},{id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"}];
 const YARD_DESIGNS = [{id:"split-bar",label:"Split Bar",desc:"Top & bottom bars"},{id:"sidebar",label:"Sidebar",desc:"Vertical side accent"},{id:"top-heavy",label:"Top Heavy",desc:"Large header block"}];
 const DEMO_PHOTOS = ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80","https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80","https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80"];
-const DEMO_PROPERTIES = [
-  {id:"p1",address:"742 Evergreen Terrace",city:"Springfield",state:"IL",beds:"4",baths:"3",sqft:"2,450",price:"485,000",features:"Hardwood floors\nUpdated kitchen\nLarge backyard"},
-  {id:"p2",address:"221B Baker Street",city:"London",state:"UK",beds:"2",baths:"1",sqft:"1,200",price:"1,250,000",features:"Historic building\nFireplace\nCity views"},
-  {id:"p3",address:"10 Ocean Drive",city:"Miami Beach",state:"FL",beds:"5",baths:"4",sqft:"3,800",price:"2,100,000",features:"Oceanfront\nPool & spa\nSmart home"},
-];
 
 /* ═══ SHARED UI COMPONENTS ═══ */
 function UploadZone({label,imageUrl,onUpload,onClear,uploading,compact}:{label:string;imageUrl:string|null;onUpload:(f:File)=>void;onClear:()=>void;uploading:boolean;compact?:boolean}) {
@@ -504,6 +499,8 @@ export default function DesignStudioV2() {
   const [zoom,setZoom]=useState(100);
   // Property selector
   const [selectedPropertyId,setSelectedPropertyId]=useState<string|null>(null);
+  const [userProperties,setUserProperties]=useState<any[]>([]);
+  const [loadingProperties,setLoadingProperties]=useState(false);
   // Shared fields
   const [listingPhoto,setListingPhoto]=useState<string|null>(DEMO_PHOTOS[0]);
   const [headshot,setHeadshot]=useState<string|null>(null);
@@ -553,20 +550,45 @@ export default function DesignStudioV2() {
   const currentPanels=LEFT_PANELS[activeTab]||LEFT_PANELS.templates;
 
   useEffect(()=>{setLeftPanel(currentPanels[0].id);},[activeTab]);
+
+  // Fetch user properties from Supabase on mount
+  useEffect(()=>{
+    (async()=>{
+      try {
+        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: props } = await supabase
+          .from("agent_properties")
+          .select("id, address, address_normalized, city, state, bedrooms, bathrooms, sqft, price, special_features")
+          .eq("user_id", user.id)
+          .is("merged_into_id", null)
+          .order("updated_at", { ascending: false });
+        if (props) setUserProperties(props);
+      } catch (err) {
+        console.error("Failed to load properties:", err);
+      }
+    })();
+  },[]);
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
   const handleExport=async()=>{setExporting(true);await new Promise(r=>setTimeout(r,2000));notify("Design exported!");setExporting(false);};
 
   // Property selector handler
   const handleSelectProperty=(id:string)=>{
     if(id==="__new__"){setSelectedPropertyId(null);setAddress("");setBeds("");setBaths("");setSqft("");setPrice("");setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");setBrandAddress("");setBrandCityState("");setBrandPrice("");setBrandFeatures("");return;}
-    const prop=DEMO_PROPERTIES.find(p=>p.id===id);if(!prop)return;
+    const prop=userProperties.find((p:any)=>p.id===id);if(!prop)return;
     setSelectedPropertyId(prop.id);
     const full=[prop.address,prop.city,prop.state].filter(Boolean).join(", ");
-    setAddress(full);setPdfAddress(prop.address);setBrandAddress(prop.address);
+    setAddress(full);setPdfAddress(prop.address||"");setBrandAddress(prop.address||"");
     const cs=[prop.city,prop.state].filter(Boolean).join(", ");setPdfCityStateZip(cs);setBrandCityState(cs);
-    setBeds(prop.beds);setPdfBeds(prop.beds);setBaths(prop.baths);setPdfBaths(prop.baths);
-    setSqft(prop.sqft);setPdfSqft(prop.sqft);setPrice(prop.price);setPdfPrice(prop.price);setBrandPrice(prop.price);
-    if(prop.features){setPdfFeatures(prop.features);setBrandFeatures(prop.features);}
+    if(prop.bedrooms){const b=prop.bedrooms.toString();setBeds(b);setPdfBeds(b);}
+    if(prop.bathrooms){const b=prop.bathrooms.toString();setBaths(b);setPdfBaths(b);}
+    if(prop.sqft){const s=prop.sqft.toString();setSqft(s);setPdfSqft(s);}
+    if(prop.price){const p=prop.price.toString();setPrice(p);setPdfPrice(p);setBrandPrice(p);}
+    if(prop.special_features&&prop.special_features.length>0){
+      const features=prop.special_features.join("\n");
+      setPdfFeatures(features);setBrandFeatures(features);
+    }
   };
 
   // PDF page count (accounts for description overflow reducing page 2 slots from 6 to 4)
@@ -662,9 +684,9 @@ export default function DesignStudioV2() {
         {/* Property selector */}
         <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
           <Home size={14} color="var(--sa)" />
-          <select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:200}}>
+          <select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}>
             <option value="">Select property...</option>
-            {DEMO_PROPERTIES.map(p=><option key={p.id} value={p.id}>{p.address}, {p.city}</option>)}
+            {userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}{p.state?`, ${p.state}`:""}</option>)}
             <option value="__new__">＋ Enter manually</option>
           </select>
         </div>
