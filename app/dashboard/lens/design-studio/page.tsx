@@ -587,160 +587,78 @@ export default function DesignStudioV2(){
 
   const exportVideo = async () => {
     if (!selectedVideo?.url) { notify("No video selected."); return; }
-    setExportProgress(0);
+    setExportProgress(5);
 
-    // 1. Offscreen canvas at full template resolution
-    const canvas = document.createElement("canvas");
-    canvas.width = rawW;
-    canvas.height = rawH;
-    const ctx = canvas.getContext("2d")!;
+    // 1. Capture the static overlay as a PNG (badge, info bar, agent — no video)
+    let overlayDataUrl: string | null = null;
+    if (previewRef.current) {
+      const videoArea = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
+      if (videoArea) videoArea.style.visibility = "hidden";
+      try {
+        overlayDataUrl = await captureAtFullRes("png") as string | null;
+      } finally {
+        if (videoArea) videoArea.style.visibility = "visible";
+      }
+    }
 
-    // 2. Load the source video
-    const video = document.createElement("video");
-    video.src = selectedVideo.url;
-    video.crossOrigin = "anonymous";
-    video.muted = true;
-    video.playsInline = true;
-    video.loop = true;
+    if (!overlayDataUrl) { notify("Failed to capture overlay."); return; }
 
-    await new Promise<void>((resolve, reject) => {
-      video.oncanplay = () => resolve();
-      video.onerror = () => reject(new Error("Video failed to load. Check CORS headers."));
-      video.load();
-    });
-
-    video.addEventListener("ended", () => {
-      video.currentTime = 0;
-      video.play().catch(() => {});
-    });
-
-    const durationSec = Math.min((isFinite(video.duration) ? video.duration : 30), 119);
-    const durationMs = durationSec * 1000;
-    video.play().catch(() => {});
-
-    // 3. Video region — only draw into the photo area, not the full canvas
+    // 2. Determine the video region (where the source video should be placed)
+    // InfoBarTemplate: top pp% of template. OpenHouseTemplate: full frame.
     let videoRegion = { x: 0, y: 0, w: rawW, h: rawH };
     if (selectedTemplate !== "open-house") {
       const pp = currentSize.id === "postcard" ? 55 : 58;
       videoRegion = { x: 0, y: 0, w: rawW, h: Math.round(rawH * pp / 100) };
     }
 
-    // 4. Capture static overlay at full resolution (video area hidden)
-    let overlayBitmap: ImageBitmap | null = null;
-    if (previewRef.current) {
-      const videoArea = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
-      if (videoArea) videoArea.style.visibility = "hidden";
-      try {
-        const overlayCanvas = await captureAtFullRes("canvas");
-        if (overlayCanvas && overlayCanvas instanceof HTMLCanvasElement) {
-          overlayBitmap = await createImageBitmap(overlayCanvas);
-        }
-      } finally {
-        if (videoArea) videoArea.style.visibility = "visible";
-      }
+    setExportProgress(15);
+
+    // 3. Convert overlay data URL to blob for upload
+    const overlayResp = await fetch(overlayDataUrl);
+    const overlayBlob = await overlayResp.blob();
+
+    // 4. POST to server — FFmpeg handles everything
+    const formData = new FormData();
+    formData.append("overlay", overlayBlob, "overlay.png");
+    formData.append("videoUrl", selectedVideo.url);
+    formData.append("width", String(rawW));
+    formData.append("height", String(rawH));
+    formData.append("regionX", String(videoRegion.x));
+    formData.append("regionY", String(videoRegion.y));
+    formData.append("regionW", String(videoRegion.w));
+    formData.append("regionH", String(videoRegion.h));
+    if (selectedMusicTrack?.url) {
+      formData.append("musicUrl", selectedMusicTrack.url);
     }
 
-    // 5. Record canvas stream (VIDEO ONLY — no audio mixing in browser)
-    const videoStream = canvas.captureStream(30);
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-      ? "video/webm;codecs=vp9"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-      ? "video/webm;codecs=vp8"
-      : "video/webm";
-    const recorder = new MediaRecorder(videoStream, { mimeType, videoBitsPerSecond: 8_000_000 });
-    const chunks: Blob[] = [];
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    setExportProgress(20);
 
-    // 6. Frame loop
-    recorder.start(100);
-    const startTime = performance.now();
+    try {
+      const resp = await fetch("/api/design-studio/export-video", {
+        method: "POST",
+        body: formData,
+      });
 
-    const drawFrame = () => {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, rawW, rawH);
-
-      const vw = video.videoWidth || 1920;
-      const vh = video.videoHeight || 1080;
-      const regionAR = videoRegion.w / videoRegion.h;
-      const videoAR = vw / vh;
-      let sx = 0, sy = 0, sw = vw, sh = vh;
-      if (videoAR > regionAR) {
-        sw = vh * regionAR;
-        sx = (vw - sw) / 2;
-      } else {
-        sh = vw / regionAR;
-        sy = (vh - sh) / 2;
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        throw new Error(`Export failed (${resp.status}): ${errText}`);
       }
-      ctx.drawImage(video, sx, sy, sw, sh, videoRegion.x, videoRegion.y, videoRegion.w, videoRegion.h);
-      if (overlayBitmap) ctx.drawImage(overlayBitmap, 0, 0);
 
-      const elapsed = performance.now() - startTime;
-      const pct = Math.min(95, Math.round((elapsed / durationMs) * 95)); // reserve 5% for muxing
-      setExportProgress(pct);
-
-      if (elapsed < durationMs) {
-        requestAnimationFrame(drawFrame);
-      } else {
-        recorder.stop();
-        video.pause();
-      }
-    };
-    requestAnimationFrame(drawFrame);
-
-    // 7. Wait for recording to finish
-    const videoBlob = await new Promise<Blob>((resolve) => {
-      recorder.onstop = () => {
-        resolve(new Blob(chunks, { type: mimeType }));
-      };
-    });
-
-    // 8. If music is selected, send to server for FFmpeg muxing
-    if (selectedMusicTrack?.url) {
-      setExportProgress(96);
-      try {
-        const formData = new FormData();
-        formData.append("video", videoBlob, "video.webm");
-        formData.append("musicUrl", selectedMusicTrack.url);
-        formData.append("duration", String(durationSec));
-        formData.append("fadeOutSec", "2");
-
-        const resp = await fetch("/api/mux-audio", { method: "POST", body: formData });
-        if (!resp.ok) {
-          const errText = await resp.text().catch(() => "");
-          throw new Error(`Mux failed (${resp.status}): ${errText}`);
-        }
-
-        setExportProgress(99);
-        const muxedBlob = await resp.blob();
-        const url = URL.createObjectURL(muxedBlob);
-        const link = document.createElement("a");
-        link.download = `listing-video-${Date.now()}.mp4`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      } catch (e: any) {
-        console.error("FFmpeg mux failed, downloading video without music:", e);
-        notify("Music mux failed — downloading video without audio.");
-        // Fallback: download the silent video
-        const url = URL.createObjectURL(videoBlob);
-        const link = document.createElement("a");
-        link.download = `listing-video-${Date.now()}.webm`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
-    } else {
-      // No music — download the video directly
-      const url = URL.createObjectURL(videoBlob);
+      setExportProgress(95);
+      const mp4Blob = await resp.blob();
+      const url = URL.createObjectURL(mp4Blob);
       const link = document.createElement("a");
-      link.download = `listing-video-${Date.now()}.webm`;
+      link.download = `listing-video-${Date.now()}.mp4`;
       link.href = url;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
+      notify("Video exported!");
+    } catch (e: any) {
+      console.error("Video export failed:", e);
+      notify(e?.message || "Video export failed.");
     }
 
     setExportProgress(0);
-    notify("Video exported!");
   };
 
   const handleExport = async () => {
