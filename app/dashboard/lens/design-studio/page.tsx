@@ -36,7 +36,7 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
   const dtF=Math.round(barH*(isStory?0.048:isPostcard?0.074:0.055));
   const prF=Math.round(barH*(isStory?0.105:isPostcard?0.185:0.15));
   const Headshot=()=>headshot?(<div style={{width:hs,height:hs,borderRadius:"50%",padding:hb,background:accentColor?`linear-gradient(135deg,${accentColor},${hexToRgba(accentColor,0.4)})`:barLight?"linear-gradient(135deg,rgba(0,0,0,0.15),rgba(0,0,0,0.05))":"linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.1))",flexShrink:0}}><img src={headshot} alt="" style={{width:"100%",height:"100%",borderRadius:"50%",objectFit:"cover",display:"block"}}/></div>):<div style={{width:hs,height:hs,borderRadius:"50%",backgroundColor:barLight?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.06)",border:`${hb}px solid ${dc}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><User style={{width:hs*0.38,height:hs*0.38,color:tm}}/></div>;
-  const Photo=()=>(<div style={{position:"absolute",top:0,left:0,right:0,height:`${pp}%`}}>{videoElement?<div style={{width:"100%",height:"100%",position:"relative",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}<div style={{position:"absolute",bottom:0,left:0,right:0,height:Math.round(140*unit),backgroundImage:`linear-gradient(to top,${barColor} 0%,${hexToRgba(barColor,0.85)} 30%,${hexToRgba(barColor,0.4)} 65%,transparent 100%)`}}/></div>);
+  const Photo=()=>(<div style={{position:"absolute",top:0,left:0,right:0,height:`${pp}%`}}>{videoElement?<div data-video-area style={{width:"100%",height:"100%",position:"relative",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}<div style={{position:"absolute",bottom:0,left:0,right:0,height:Math.round(140*unit),backgroundImage:`linear-gradient(to top,${barColor} 0%,${hexToRgba(barColor,0.85)} 30%,${hexToRgba(barColor,0.4)} 65%,transparent 100%)`}}/></div>);
   const Badge=()=>(<div style={{position:"absolute",top:`calc(${pp}% - ${Math.round(bH*0.5)}px)`,right:px,zIndex:10}}><div style={{display:"inline-flex",alignItems:"center",height:bH,padding:`0 ${Math.round(22*unit)}px`,backgroundColor:usedBadge,borderRadius:Math.round(4*unit),boxShadow:`0 ${Math.round(4*unit)}px ${Math.round(20*unit)}px ${hexToRgba(usedBadge,0.45)}`}}><span style={{fontSize:bF,fontWeight:800,color:isLightColor(usedBadge)?"#111":"#fff",letterSpacing:"0.14em",textTransform:"uppercase" as const,lineHeight:1}}>{badgeText}</span></div></div>);
   const ad2F=Math.round(adF*0.75);
   const RightCol=()=>(<div style={{flex:1,textAlign:"right" as const,minWidth:0,display:"flex",flexDirection:"column" as const,justifyContent:"center"}}><p style={{fontSize:adF,fontWeight:700,color:tp,lineHeight:1.15,margin:0}}>{ad}</p>{ad2&&<p style={{fontSize:ad2F,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(2*unit)}}>{ad2}</p>}<p style={{fontSize:dtF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(6*unit),letterSpacing:"0.04em"}}>{det}</p><div style={{width:Math.round(60*unit),height:Math.round(2*unit),backgroundColor:accentColor||dc,marginLeft:"auto",marginTop:Math.round(10*unit),marginBottom:Math.round(8*unit),borderRadius:1,opacity:accentColor?0.7:1}}/><p style={{fontSize:prF,fontWeight:800,color:accent,lineHeight:1.0,margin:0,letterSpacing:"-0.01em",textShadow:accentColor&&!barLight?`0 ${Math.round(2*unit)}px ${Math.round(12*unit)}px ${hexToRgba(accentColor,0.3)}`:"none"}}>{pr}</p></div>);
@@ -59,7 +59,7 @@ function OpenHouseTemplate({size,listingPhoto,videoElement,headshot,logo,address
   const cFs=responsiveSize(Math.round((isStory?40:isPostcard?26:22)*unit),cl,35),hsz=Math.round((isStory?180:isPostcard?120:110)*unit);
   const abH=Math.round((isStory?220:isPostcard?140:130)*unit),ts2=`0 ${Math.round(2*unit)}px ${Math.round(8*unit)}px rgba(0,0,0,0.5)`;
   const detFs=Math.round((isStory?44:isPostcard?28:24)*unit);
-  return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>{videoElement?<div style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}<div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(to bottom,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.15) 25%,transparent 40%)"}}/><div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(to top,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.35) 20%,transparent 45%)"}}/><div style={{position:"absolute",top:0,left:0,right:0,height:isStory?"26%":"34%",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`0 ${pad}px`,textAlign:"center" as const}}><div style={{display:"inline-flex",alignItems:"center",padding:`${Math.round((isStory?16:8)*unit)}px ${Math.round((isStory?44:24)*unit)}px`,backgroundColor:badgeBg,borderRadius:Math.round(6*unit),boxShadow:`0 ${Math.round(4*unit)}px ${Math.round(24*unit)}px ${hexToRgba(badgeBg,0.4)}`}}><span style={{fontSize:bFs,fontWeight:800,color:isLightColor(badgeBg)?"#111":"#fff",letterSpacing:"0.16em",textTransform:"uppercase" as const,lineHeight:1}}>Open House</span></div><p style={{fontSize:dFs,fontWeight:800,color:"#fff",margin:0,marginTop:Math.round(18*unit),textShadow:ts2}}>{dt}</p><p style={{fontSize:tFs,fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(6*unit),textShadow:ts2}}>{tm2}</p></div><div style={{position:"absolute",bottom:0,left:0,right:0,padding:`0 ${pad}px`}}><div style={{textAlign:"center" as const,marginBottom:Math.round(14*unit)}}><p style={{fontSize:aFs,fontWeight:700,color:"#fff",lineHeight:1.2,margin:0,textShadow:ts2}}>{ad}</p>{ad2&&<p style={{fontSize:Math.round(aFs*0.75),fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(4*unit),textShadow:ts2}}>{ad2}</p>}<p style={{fontSize:detFs,fontWeight:500,color:"rgba(255,255,255,0.70)",margin:0,marginTop:Math.round(6*unit),textShadow:ts2}}>{det}</p><div style={{width:Math.round(50*unit),height:Math.round(2*unit),backgroundColor:accentColor||"rgba(255,255,255,0.20)",margin:`${Math.round(10*unit)}px auto ${Math.round(8*unit)}px`,borderRadius:1,opacity:accentColor?0.7:1}}/><p style={{fontSize:pFs,fontWeight:800,color:accent,lineHeight:1.0,margin:0,textShadow:accentColor?`0 ${Math.round(2*unit)}px ${Math.round(14*unit)}px ${hexToRgba(accentColor,0.35)}`:ts2}}>{pr}</p></div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(14*unit),height:abH,padding:`0 ${Math.round(24*unit)}px`,backgroundColor:hexToRgba(barColor,0.88),borderRadius:`${Math.round(14*unit)}px ${Math.round(14*unit)}px 0 0`}}>{headshot?<img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`${Math.round(2.5*unit)}px solid ${accentColor?hexToRgba(accentColor,0.5):"rgba(255,255,255,0.25)"}`}}/>:<div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:barLight?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><User style={{width:hsz*0.38,height:hsz*0.38,color:"rgba(255,255,255,0.25)"}}/></div>}<div style={{minWidth:0}}><p style={{fontSize:agFs,fontWeight:700,color:barLight?"#111827":"#fff",margin:0,whiteSpace:"nowrap"}}>{an}</p><p style={{fontSize:cFs,fontWeight:500,color:barLight?"rgba(17,24,39,0.50)":"rgba(255,255,255,0.50)",margin:0,marginTop:Math.round(2*unit)}}>{cl}</p></div>{logo&&<img src={logo} alt="" style={{maxWidth:Math.round((isStory?260:150)*unit),maxHeight:Math.round((isStory?110:64)*unit),objectFit:"contain" as const,flexShrink:0,marginLeft:"auto"}}/>}</div></div></div>);
+  return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>{videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}<div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(to bottom,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.15) 25%,transparent 40%)"}}/><div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(to top,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.35) 20%,transparent 45%)"}}/><div style={{position:"absolute",top:0,left:0,right:0,height:isStory?"26%":"34%",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`0 ${pad}px`,textAlign:"center" as const}}><div style={{display:"inline-flex",alignItems:"center",padding:`${Math.round((isStory?16:8)*unit)}px ${Math.round((isStory?44:24)*unit)}px`,backgroundColor:badgeBg,borderRadius:Math.round(6*unit),boxShadow:`0 ${Math.round(4*unit)}px ${Math.round(24*unit)}px ${hexToRgba(badgeBg,0.4)}`}}><span style={{fontSize:bFs,fontWeight:800,color:isLightColor(badgeBg)?"#111":"#fff",letterSpacing:"0.16em",textTransform:"uppercase" as const,lineHeight:1}}>Open House</span></div><p style={{fontSize:dFs,fontWeight:800,color:"#fff",margin:0,marginTop:Math.round(18*unit),textShadow:ts2}}>{dt}</p><p style={{fontSize:tFs,fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(6*unit),textShadow:ts2}}>{tm2}</p></div><div style={{position:"absolute",bottom:0,left:0,right:0,padding:`0 ${pad}px`}}><div style={{textAlign:"center" as const,marginBottom:Math.round(14*unit)}}><p style={{fontSize:aFs,fontWeight:700,color:"#fff",lineHeight:1.2,margin:0,textShadow:ts2}}>{ad}</p>{ad2&&<p style={{fontSize:Math.round(aFs*0.75),fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(4*unit),textShadow:ts2}}>{ad2}</p>}<p style={{fontSize:detFs,fontWeight:500,color:"rgba(255,255,255,0.70)",margin:0,marginTop:Math.round(6*unit),textShadow:ts2}}>{det}</p><div style={{width:Math.round(50*unit),height:Math.round(2*unit),backgroundColor:accentColor||"rgba(255,255,255,0.20)",margin:`${Math.round(10*unit)}px auto ${Math.round(8*unit)}px`,borderRadius:1,opacity:accentColor?0.7:1}}/><p style={{fontSize:pFs,fontWeight:800,color:accent,lineHeight:1.0,margin:0,textShadow:accentColor?`0 ${Math.round(2*unit)}px ${Math.round(14*unit)}px ${hexToRgba(accentColor,0.35)}`:ts2}}>{pr}</p></div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(14*unit),height:abH,padding:`0 ${Math.round(24*unit)}px`,backgroundColor:hexToRgba(barColor,0.88),borderRadius:`${Math.round(14*unit)}px ${Math.round(14*unit)}px 0 0`}}>{headshot?<img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`${Math.round(2.5*unit)}px solid ${accentColor?hexToRgba(accentColor,0.5):"rgba(255,255,255,0.25)"}`}}/>:<div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:barLight?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><User style={{width:hsz*0.38,height:hsz*0.38,color:"rgba(255,255,255,0.25)"}}/></div>}<div style={{minWidth:0}}><p style={{fontSize:agFs,fontWeight:700,color:barLight?"#111827":"#fff",margin:0,whiteSpace:"nowrap"}}>{an}</p><p style={{fontSize:cFs,fontWeight:500,color:barLight?"rgba(17,24,39,0.50)":"rgba(255,255,255,0.50)",margin:0,marginTop:Math.round(2*unit)}}>{cl}</p></div>{logo&&<img src={logo} alt="" style={{maxWidth:Math.round((isStory?260:150)*unit),maxHeight:Math.round((isStory?110:64)*unit),objectFit:"contain" as const,flexShrink:0,marginLeft:"auto"}}/>}</div></div></div>);
 }
 
 // ─── YardSign components (compact) ────────────────────────────────────────────
@@ -441,8 +441,136 @@ export default function DesignStudioV2(){
   const fetchMusicTracks=async(vibe:string="")=>{setLoadingMusic(true);try{const resp=await fetch(`/api/generate-music?library=true&vibe=${vibe}`);const data=await resp.json();setMusicTracks(data.tracks||[]);}catch(e){console.error(e);}setLoadingMusic(false);};
   const handlePlayTrack=(trackId:string,url:string)=>{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}if(playingTrackId===trackId){setPlayingTrackId(null);return;}const audio=new Audio(url);audio.play().catch(()=>{});audio.onended=()=>setPlayingTrackId(null);audioRef.current=audio;setPlayingTrackId(trackId);};
   useEffect(()=>{return()=>{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}};},[]);
+
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
-  const handleExport=async()=>{setExporting(true);await new Promise(r=>setTimeout(r,2000));notify("Design exported!");setExporting(false);};
+
+  // ─── Export helpers ───────────────────────────────────────────────────────
+  const exportImage=async()=>{
+    if(!previewRef.current)return;
+    const html2canvas=(await import("html2canvas")).default;
+    const canvas=await html2canvas(previewRef.current,{
+      scale:1,
+      useCORS:true,
+      allowTaint:true,
+      backgroundColor:null,
+      width:rawW,
+      height:rawH,
+    });
+    const link=document.createElement("a");
+    link.download=`listing-${selectedTemplate}-${Date.now()}.png`;
+    link.href=canvas.toDataURL("image/png");
+    link.click();
+    notify("Image exported!");
+  };
+
+  const exportVideo=async()=>{
+    if(!selectedVideo?.url){notify("No video selected.");return;}
+
+    // 1. Offscreen canvas at full template resolution
+    const canvas=document.createElement("canvas");
+    canvas.width=rawW;
+    canvas.height=rawH;
+    const ctx=canvas.getContext("2d")!;
+
+    // 2. Load the source video
+    const video=document.createElement("video");
+    video.src=selectedVideo.url;
+    video.crossOrigin="anonymous";
+    video.muted=true;
+    video.playsInline=true;
+
+    await new Promise<void>((resolve,reject)=>{
+      video.oncanplay=()=>resolve();
+      video.onerror=()=>reject(new Error("Video failed to load. Check CORS headers on the video URL."));
+      video.load();
+    });
+
+    // Clamp to 119 s per the existing UI warning
+    const durationMs=Math.min((isFinite(video.duration)?video.duration:30),119)*1000;
+    video.play().catch(()=>{});
+
+    // 3. Capture the static overlay once (badge + info bar, no video area)
+    let overlayBitmap:ImageBitmap|null=null;
+    if(previewRef.current){
+      // Hide the live video element so html2canvas doesn't choke on it
+      const videoArea=previewRef.current.querySelector("[data-video-area]") as HTMLElement|null;
+      if(videoArea)videoArea.style.visibility="hidden";
+      try{
+        const html2canvas=(await import("html2canvas")).default;
+        const overlayCanvas=await html2canvas(previewRef.current,{
+          scale:1,
+          useCORS:true,
+          allowTaint:true,
+          backgroundColor:null,
+          width:rawW,
+          height:rawH,
+        });
+        overlayBitmap=await createImageBitmap(overlayCanvas);
+      }finally{
+        if(videoArea)videoArea.style.visibility="visible";
+      }
+    }
+
+    // 4. Set up MediaRecorder
+    const stream=canvas.captureStream(30);
+    const mimeType=MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")
+      ?"video/mp4;codecs=avc1"
+      :MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ?"video/webm;codecs=vp9"
+      :"video/webm";
+    const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8_000_000});
+    const chunks:Blob[]=[];
+    recorder.ondataavailable=(e)=>{if(e.data.size>0)chunks.push(e.data);};
+
+    // 5. Frame loop — video fills canvas, overlay composited on top
+    recorder.start(100);
+    const startTime=performance.now();
+
+    const drawFrame=()=>{
+      ctx.clearRect(0,0,rawW,rawH);
+      ctx.drawImage(video,0,0,rawW,rawH);
+      if(overlayBitmap)ctx.drawImage(overlayBitmap,0,0);
+      if(performance.now()-startTime<durationMs){
+        requestAnimationFrame(drawFrame);
+      }else{
+        recorder.stop();
+        video.pause();
+      }
+    };
+    requestAnimationFrame(drawFrame);
+
+    // 6. On stop → download
+    await new Promise<void>((resolve)=>{
+      recorder.onstop=()=>{
+        const ext=mimeType.includes("mp4")?"mp4":"webm";
+        const blob=new Blob(chunks,{type:mimeType});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement("a");
+        link.download=`listing-video-${Date.now()}.${ext}`;
+        link.href=url;
+        link.click();
+        setTimeout(()=>URL.revokeObjectURL(url),5000);
+        resolve();
+      };
+    });
+
+    notify("Video exported!");
+  };
+
+  const handleExport=async()=>{
+    setExporting(true);
+    try{
+      if(isVideoMode){
+        await exportVideo();
+      }else{
+        await exportImage();
+      }
+    }catch(err:any){
+      console.error("Export error:",err);
+      notify(err?.message||"Export failed. Try again.");
+    }
+    setExporting(false);
+  };
 
   const pdfFLines=pdfFeatures?pdfFeatures.split("\n").filter(Boolean).length:0;
   const pdfEstFH=pdfFLines*80+(pdfFLines>0?90:0);
@@ -716,54 +844,7 @@ export default function DesignStudioV2(){
             <Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={6} value={pdfDescription} onChange={e=>setPdfDescription(e.target.value)} placeholder="Property description..."/></Section>
             <Section title="Key Features" icon={Sparkles}><textarea className="ta" rows={6} value={pdfFeatures} onChange={e=>setPdfFeatures(e.target.value)} placeholder="One feature per line..."/></Section>
           </>}
-          {activeTab === "property-pdf" && leftPanel === "photos" && (
-            <>
-              <div className="ph">
-                <ImageIcon size={15} color="var(--sa)" />
-                Photos ({pdfPhotos.length}/25)
-              </div>
-              <div style={{ padding: 14 }}>
-                <p style={{ fontSize: 11, color: "var(--std)", marginBottom: 10 }}>
-                  First 3 on page 1. Rest fill grids.
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                  {pdfPhotos.map((url, i) => (
-                    <div key={i} className="group" style={{ position: "relative", aspectRatio: "1", borderRadius: 8, overflow: "hidden", border: "1px solid var(--sbr)" }}>
-                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      <div style={{ position: "absolute", top: 2, left: 2, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>
-                        {i < 3 ? `★${i + 1}` : i + 1}
-                      </div>
-                      <button
-                        className="ghov"
-                        onClick={() => setPdfPhotos(p => p.filter((_, idx) => idx !== i))}
-                        style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s" }}
-                      >
-                        <X size={10} />
-                      </button>
-                    </div>
-                  ))}
-                  {pdfPhotos.length < 25 && (
-                    <label style={{ aspectRatio: "1", borderRadius: 8, border: "2px dashed var(--sbr)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", color: "var(--std)" }}>
-                      <Upload size={16} />
-                      <span style={{ fontSize: 9, fontWeight: 600 }}>Add</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        style={{ display: 'none' }}
-                        onChange={e => {
-                          Array.from(e.target.files || []).forEach(f => {
-                            setPdfPhotos(p => [...p, URL.createObjectURL(f)]);
-                          });
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+          {activeTab==="property-pdf"&&leftPanel==="photos"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({pdfPhotos.length}/25)</div><div style={{padding:14}}><p style={{fontSize:11,color:"var(--std)",marginBottom:10}}>First 3 on page 1. Rest fill grids.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{pdfPhotos.map((url,i)=><div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i<3?`★${i+1}`:i+1}</div><button className="ghov" onClick={()=>setPdfPhotos(p=>p.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>}{pdfPhotos.length<25&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).forEach(f=>{setPdfPhotos(p=>[...p,URL.createObjectURL(f)]);});e.target.value="";}}/></label>}</div></div></>}
           {activeTab==="property-pdf"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Accent Color</div><Section title="Color" icon={Paintbrush}><ColorPicker value={pdfAccentColor} onChange={setPdfAccentColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} showLabels/></div><div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor}/></div></Section></>}
 
           {/* ── BRANDING PANELS ── */}
