@@ -595,6 +595,7 @@ export default function DesignStudioV2(){
     video.crossOrigin = "anonymous";
     video.muted = true;
     video.playsInline = true;
+    video.loop = true; // loop so it doesn't freeze at end
 
     await new Promise<void>((resolve, reject) => {
       video.oncanplay = () => resolve();
@@ -606,7 +607,29 @@ export default function DesignStudioV2(){
     const durationMs = durationSec * 1000;
     video.play().catch(() => {});
 
-    // 3. Capture the static overlay at full resolution (no transform scale)
+    // 3. Determine the video drawing region.
+    // For InfoBarTemplate: video fills the top pp% (58% for square/story).
+    // For OpenHouseTemplate: video fills the entire canvas (full bleed behind overlays).
+    // We figure this out by measuring the [data-video-area] element in the preview.
+    let videoRegion = { x: 0, y: 0, w: rawW, h: rawH }; // default: full canvas
+    if (previewRef.current) {
+      const videoAreaEl = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
+      if (videoAreaEl) {
+        const parentRect = previewRef.current.getBoundingClientRect();
+        const areaRect = videoAreaEl.getBoundingClientRect();
+        // Convert from displayed (scaled) coordinates to raw template coordinates
+        const scaleX = rawW / parentRect.width;
+        const scaleY = rawH / parentRect.height;
+        videoRegion = {
+          x: Math.round((areaRect.left - parentRect.left) * scaleX),
+          y: Math.round((areaRect.top - parentRect.top) * scaleY),
+          w: Math.round(areaRect.width * scaleX),
+          h: Math.round(areaRect.height * scaleY),
+        };
+      }
+    }
+
+    // 4. Capture the static overlay at full resolution (with video area hidden)
     let overlayBitmap: ImageBitmap | null = null;
     if (previewRef.current) {
       const videoArea = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
@@ -621,7 +644,7 @@ export default function DesignStudioV2(){
       }
     }
 
-    // 4. Audio mixing — if a music track is selected
+    // 5. Audio mixing — if a music track is selected
     let audioCtx: AudioContext | null = null;
     let audioDest: MediaStreamAudioDestinationNode | null = null;
     let musicSource: AudioBufferSourceNode | null = null;
@@ -630,13 +653,14 @@ export default function DesignStudioV2(){
       try {
         audioCtx = new AudioContext();
         audioDest = audioCtx.createMediaStreamDestination();
-        const resp = await fetch(selectedMusicTrack.url);
+        const resp = await fetch(selectedMusicTrack.url, { mode: "cors" });
+        if (!resp.ok) throw new Error(`Music fetch failed: ${resp.status}`);
         const buf = await resp.arrayBuffer();
         const decoded = await audioCtx.decodeAudioData(buf);
         musicSource = audioCtx.createBufferSource();
         musicSource.buffer = decoded;
         musicSource.loop = true;
-        // Fade out over the last 2 seconds (not the entire duration)
+        // Fade out over the last 2 seconds only
         const gainNode = audioCtx.createGain();
         const fadeStart = Math.max(0, durationSec - 2);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
@@ -651,7 +675,7 @@ export default function DesignStudioV2(){
       }
     }
 
-    // 5. MediaRecorder — combine canvas video + audio streams
+    // 6. MediaRecorder — combine canvas video + audio streams
     const videoStream = canvas.captureStream(30);
     const combinedStream = new MediaStream([
       ...videoStream.getVideoTracks(),
@@ -666,30 +690,33 @@ export default function DesignStudioV2(){
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-    // 6. Frame loop — draw video with cover-fit, then overlay on top
+    // 7. Frame loop — draw video cover-fit INTO the video region only, then overlay
     recorder.start(100);
     const startTime = performance.now();
 
     const drawFrame = () => {
-      ctx.clearRect(0, 0, rawW, rawH);
+      // Fill canvas with black first (for any area not covered by overlay)
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, rawW, rawH);
 
-      // Cover-fit the source video into the canvas (center-crop, no stretch)
-      const vw = video.videoWidth || rawW;
-      const vh = video.videoHeight || rawH;
-      const canvasAR = rawW / rawH;
+      // Cover-fit the source video into the videoRegion (not the full canvas)
+      const vw = video.videoWidth || 1920;
+      const vh = video.videoHeight || 1080;
+      const regionAR = videoRegion.w / videoRegion.h;
       const videoAR = vw / vh;
       let sx = 0, sy = 0, sw = vw, sh = vh;
-      if (videoAR > canvasAR) {
-        // video is wider — crop sides
-        sw = vh * canvasAR;
+      if (videoAR > regionAR) {
+        // video is wider than region — crop sides
+        sw = vh * regionAR;
         sx = (vw - sw) / 2;
       } else {
-        // video is taller — crop top/bottom
-        sh = vw / canvasAR;
+        // video is taller than region — crop top/bottom
+        sh = vw / regionAR;
         sy = (vh - sh) / 2;
       }
-      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, rawW, rawH);
+      ctx.drawImage(video, sx, sy, sw, sh, videoRegion.x, videoRegion.y, videoRegion.w, videoRegion.h);
 
+      // Draw the static overlay (badge, info bar, etc.) on top
       if (overlayBitmap) ctx.drawImage(overlayBitmap, 0, 0);
 
       const elapsed = performance.now() - startTime;
@@ -707,7 +734,7 @@ export default function DesignStudioV2(){
     };
     requestAnimationFrame(drawFrame);
 
-    // 7. On stop → download
+    // 8. On stop → download
     await new Promise<void>((resolve) => {
       recorder.onstop = () => {
         const ext = mimeType.includes("mp4") ? "mp4" : "webm";
