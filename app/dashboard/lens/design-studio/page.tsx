@@ -140,10 +140,10 @@ function InfoBarTemplate({ size, listingPhoto, videoElement, headshot, logo, add
 }
 
 /* ═══ OPEN HOUSE ═══ */
-function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, logo, address, beds, baths, sqft, price, date, time, agentName, phone, brokerage, fontFamily, barColor, accentColor }: any) {
+function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, logo, address, addressLine2, beds, baths, sqft, price, date, time, agentName, phone, brokerage, fontFamily, barColor, accentColor }: any) {
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff",badgeBg=accentColor||"#059669",barLight=isLightColor(barColor),pad=Math.round(44*unit);
-  const ad=address||"123 Main Street",dt=date||"Saturday, March 22",tm2=time||"1:00 PM – 4:00 PM";
+  const ad=address||"123 Main Street",ad2=addressLine2||"",dt=date||"Saturday, March 22",tm2=time||"1:00 PM – 4:00 PM";
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  ·  ")||"3 BD  ·  2 BA  ·  1,800 SF";
   const pr=price?`$${price}`:"$000,000",an=agentName||"Agent Name";
   const cl=[brokerage,phone].filter(Boolean).join("  ·  ")||"Brokerage  ·  (555) 000-0000";
@@ -174,6 +174,7 @@ function OpenHouseTemplate({ size, listingPhoto, videoElement, headshot, logo, a
       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:`0 ${pad}px`}}>
         <div style={{textAlign:"center" as const,marginBottom:Math.round(14*unit)}}>
           <p style={{fontSize:aFs,fontWeight:700,color:"#fff",lineHeight:1.2,margin:0,textShadow:ts}}>{ad}</p>
+          {ad2&&<p style={{fontSize:Math.round(aFs*0.75),fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(4*unit),textShadow:ts}}>{ad2}</p>}
           <p style={{fontSize:detFs,fontWeight:500,color:"rgba(255,255,255,0.70)",margin:0,marginTop:Math.round(6*unit),textShadow:ts}}>{det}</p>
           <div style={{width:Math.round(50*unit),height:Math.round(2*unit),backgroundColor:accentColor||"rgba(255,255,255,0.20)",margin:`${Math.round(10*unit)}px auto ${Math.round(8*unit)}px`,borderRadius:1,opacity:accentColor?0.7:1}} />
           <p style={{fontSize:pFs,fontWeight:800,color:accent,lineHeight:1.0,margin:0,textShadow:accentColor?`0 ${Math.round(2*unit)}px ${Math.round(14*unit)}px ${hexToRgba(accentColor,0.35)}`:ts}}>{pr}</p>
@@ -549,6 +550,7 @@ export default function DesignStudioV2() {
   // UI
   const [exporting,setExporting]=useState(false);const [showRight,setShowRight]=useState(true);const [notification,setNotification]=useState<string|null>(null);
   const [theme,setTheme]=useState<"dark"|"light">("dark");
+  const [mobilePanel,setMobilePanel]=useState<string|null>(null);
   const previewRef=useRef<HTMLDivElement>(null);
 
   const currentSize=SIZES.find(s=>s.id===selectedSize)!;
@@ -771,7 +773,25 @@ export default function DesignStudioV2() {
     .thm-toggle{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:var(--std);position:relative;overflow:hidden;}
     .thm-toggle:hover{background:var(--sih);color:var(--st);}
     .thm-toggle .thm-icon{transition:transform 0.3s ease,opacity 0.3s ease;}
-    @media(max-width:1100px){.slp{width:260px;}.srp{width:240px;}}@media(max-width:850px){.slr,.slp,.srp{display:none;}}
+    @media(max-width:1100px){.slp{width:260px;}.srp{width:240px;}}
+    .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--ss);border-top:1px solid var(--sbr);z-index:25;padding:0 8px;align-items:center;justify-content:space-around;gap:2px;}
+    .mob-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--std);cursor:pointer;padding:6px 0;border-radius:8px;font-family:var(--sf);transition:all 0.15s;}
+    .mob-nav button span{font-size:9px;font-weight:600;}
+    .mob-nav button.ac{color:var(--sa);background:var(--sag);}
+    .mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:28;}
+    @media(max-width:850px){
+      .slr{display:none;}.srp{display:none;}
+      .slp{position:fixed;bottom:56px;left:0;right:0;top:auto;width:100%;max-height:55vh;z-index:30;border-right:none;border-top:1px solid var(--sbr);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform 0.3s ease;overflow-y:auto;}
+      .slp.mob-open{transform:translateY(0);}
+      .st{padding:0 8px;gap:4px;height:48px;overflow-x:auto;overflow-y:hidden;}
+      .stbi{padding:5px 10px;font-size:11px;}.slg{display:none;}
+      .sac .bi{width:30px;height:30px;}.bx{padding:6px 14px;font-size:11px;}
+      .mob-nav{display:flex;}
+      .mob-hide{display:none !important;}
+      .sct{bottom:64px;}
+      .sc{padding-bottom:56px;}
+      .toast{bottom:72px;}
+    }
   `;
 
   return (
@@ -782,7 +802,7 @@ export default function DesignStudioV2() {
         <div className="slg"><div className="slm"><PenTool size={14} color="#fff" /></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13} />{t.label}</button>)}</div>
         {/* Property selector */}
-        <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
+        <div className="mob-hide" style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
           <Home size={14} color="var(--sa)" />
           <select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}>
             <option value="">Select property...</option>
@@ -792,7 +812,7 @@ export default function DesignStudioV2() {
         </div>
         <div className="ssp" />
         <div className="sac">
-          <button className="bi" title="Undo"><Undo2 size={15} /></button><button className="bi" title="Redo"><Redo2 size={15} /></button><div className="td" />
+          <button className="bi mob-hide" title="Undo"><Undo2 size={15} /></button><button className="bi mob-hide" title="Redo"><Redo2 size={15} /></button><div className="td mob-hide" />
           <button className="thm-toggle" title={theme==="dark"?"Switch to light mode":"Switch to dark mode"} onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>
             {theme==="dark"?<Sun size={15} />:<Moon size={15} />}
           </button>
@@ -804,7 +824,7 @@ export default function DesignStudioV2() {
       <div className="sb">
         <div className="slr">{currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18} /><span>{p.label}</span></button>)}</div>
 
-        <div className="slp">
+        <div className={`slp ${mobilePanel?"mob-open":""}`}>
           {/* LISTING: Templates */}
           {activeTab==="templates"&&leftPanel==="templates"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)" /> Templates</div><div style={{padding:14}}><div className="tg">{TEMPLATES.map(t=><button key={t.id} className={`tc ${selectedTemplate===t.id?"ac":""}`} onClick={()=>setSelectedTemplate(t.id)}><div className="tiw" style={{background:`${t.color}20`}}><t.icon size={18} color={t.color} /></div><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{t.label}</div></button>)}</div></div></>}
 
@@ -1003,6 +1023,24 @@ export default function DesignStudioV2() {
           </Section>
           <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column",gap:3}}>{(activeTab==="templates"?[{n:"Badge",i:"🏷️"},{n:"Price",i:"💲"},{n:"Info Bar",i:"📋"},{n:"Agent",i:"👤"},{n:"Photo",i:"🖼️"}]:activeTab==="yard-sign"?[{n:"Header",i:"🏷️"},{n:"Agent",i:"👤"},{n:"Background",i:"🖼️"}]:activeTab==="property-pdf"?[{n:"Photos",i:"🖼️"},{n:"Details",i:"📋"},{n:"Features",i:"✨"}]:[{n:"Headshot",i:"👤"},{n:"Info",i:"📋"},{n:"Background",i:"🖼️"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)" /></div>)}</div></Section>
         </div>}
+      </div>
+
+      {/* MOBILE BACKDROP */}
+      {mobilePanel&&<div onClick={()=>setMobilePanel(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:28}} />}
+
+      {/* MOBILE BOTTOM NAV */}
+      <div className="mob-nav">
+        {currentPanels.map(p=>(
+          <button key={p.id} className={mobilePanel===p.id?"ac":""} onClick={()=>{
+            if(mobilePanel===p.id){setMobilePanel(null);}
+            else{setLeftPanel(p.id);setMobilePanel(p.id);}
+          }}>
+            <p.icon size={18} /><span>{p.label}</span>
+          </button>
+        ))}
+        <button className={mobilePanel==="export"?"ac":""} onClick={()=>{handleExport();}}>
+          <Download size={18} /><span>Export</span>
+        </button>
       </div>
 
       {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}} />{notification}</div>}
