@@ -144,7 +144,7 @@ function BrandingCardTemplate({orientation,logo,headshot,agentName,phone:ph2,ema
 }
 
 // ─── ListingFlyerTemplate (Task A — 2550×3300 US Letter @ 300dpi) ─────────────
-function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds,baths,sqft,description,amenities,agentName,phone,email,brokerage,listingUrl,videoUrl,stagingUrl,accentColor,fontFamily}:any){
+function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds,baths,sqft,description,amenities,agentName,phone,email,brokerage,listingUrl,videoUrl,stagingUrl,accentColor,fontFamily,unbranded}:any){
   const W=2550,H=3300;
   const accent=accentColor||"#1e3a5f";
   const accentText=isLightColor(accent)?"#111":"#fff";
@@ -169,29 +169,34 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const hsz=BRAND_H-40;
   const priceFs=responsiveSize(148,pr,10),addrFs=responsiveSize(64,ad,28),agFs=responsiveSize(52,an,20);
   const M=60; // print-safe margin on all sides
+  const brandH=unbranded?0:(ACCENT_BAR+BRAND_H); // total branding height (0 when unbranded)
+  const photoTop=M+brandH;
+  const detailsTop=photoTop+totalPhotoBlockH;
   return(
     <div style={{width:W,height:H,backgroundColor:"#fff",fontFamily,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"4px 4px 0 0"}}/>
-      <div style={{
-        position:"absolute",top:M+ACCENT_BAR,left:M,right:M,height:BRAND_H,
-        backgroundColor:accent,display:"flex",alignItems:"center",
-        padding:`0 60px`,gap:28,
-      }}>
-        {headshot
-          ? <img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`4px solid ${hexToRgba("#ffffff",0.3)}`}}/>
-          : <div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:hexToRgba("#ffffff",0.12),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hsz*0.4,height:hsz*0.4,color:hexToRgba("#ffffff",0.4)}}/></div>
-        }
-        <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:agFs,fontWeight:800,color:accentText,margin:0,lineHeight:1.1}}>{an}</p>
-          <p style={{fontSize:40,fontWeight:500,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.65),margin:0,marginTop:6}}>{brokerage||"Real Estate"}</p>
-          <div style={{display:"flex",gap:32,marginTop:8}}>
-            {phone&&<span style={{fontSize:38,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.80),fontWeight:600}}>{phone}</span>}
-            {email&&<span style={{fontSize:38,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.70)}}>{email}</span>}
+      {!unbranded&&<>
+        <div style={{position:"absolute",top:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"4px 4px 0 0"}}/>
+        <div style={{
+          position:"absolute",top:M+ACCENT_BAR,left:M,right:M,height:BRAND_H,
+          backgroundColor:accent,display:"flex",alignItems:"center",
+          padding:`0 60px`,gap:28,
+        }}>
+          {headshot
+            ? <img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`4px solid ${hexToRgba("#ffffff",0.3)}`}}/>
+            : <div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:hexToRgba("#ffffff",0.12),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hsz*0.4,height:hsz*0.4,color:hexToRgba("#ffffff",0.4)}}/></div>
+          }
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontSize:agFs,fontWeight:800,color:accentText,margin:0,lineHeight:1.1}}>{an}</p>
+            <p style={{fontSize:40,fontWeight:500,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.65),margin:0,marginTop:6}}>{brokerage||"Real Estate"}</p>
+            <div style={{display:"flex",gap:32,marginTop:8}}>
+              {phone&&<span style={{fontSize:38,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.80),fontWeight:600}}>{phone}</span>}
+              {email&&<span style={{fontSize:38,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.70)}}>{email}</span>}
+            </div>
           </div>
+          {logo&&<img src={logo} alt="" style={{maxWidth:280,maxHeight:BRAND_H-60,objectFit:"contain",flexShrink:0}}/>}
         </div>
-        {logo&&<img src={logo} alt="" style={{maxWidth:280,maxHeight:BRAND_H-60,objectFit:"contain",flexShrink:0}}/>}
-      </div>
-      <div style={{position:"absolute",top:M+ACCENT_BAR+BRAND_H,left:M,right:M,height:totalPhotoBlockH}}>
+      </>}
+      <div style={{position:"absolute",top:photoTop,left:M,right:M,height:totalPhotoBlockH}}>
         <div style={{display:"flex",width:"100%",height:PHOTO_H,gap:20}}>
           <div style={{width:`58%`,height:PHOTO_H,overflow:"hidden",flexShrink:0,borderRadius:4}}>
             {p1 ? <img src={p1} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -223,7 +228,7 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
         )}
       </div>
       <div style={{
-        position:"absolute",top:M+ACCENT_BAR+BRAND_H+totalPhotoBlockH,left:M,right:M,
+        position:"absolute",top:detailsTop,left:M,right:M,
         backgroundColor:"#fff",padding:`40px 60px 28px`,
         borderBottom:`3px solid ${hexToRgba(accent,0.12)}`,
       }}>
@@ -254,9 +259,9 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
           ))}
         </div>
       )}
-      {!hasUrls&&(
+      {!hasUrls&&!unbranded&&(
         <div style={{
-          position:"absolute",bottom:M+ACCENT_BAR,left:M,right:M,
+          position:"absolute",bottom:M+(unbranded?0:ACCENT_BAR),left:M,right:M,
           padding:`20px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,
           backgroundColor:hexToRgba(accent,0.03),
           display:"flex",alignItems:"center",justifyContent:"space-between",
@@ -267,7 +272,7 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
           {brokerage&&<span style={{fontSize:36,color:"#888"}}>{brokerage}</span>}
         </div>
       )}
-      <div style={{position:"absolute",bottom:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"0 0 4px 4px"}}/>
+      {!unbranded&&<div style={{position:"absolute",bottom:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"0 0 4px 4px"}}/>}
     </div>
   );
 }
@@ -401,6 +406,7 @@ export default function DesignStudioV2(){
   const[flyerStagingUrl,setFlyerStagingUrl]=useState("");
   const[flyerAccentColor,setFlyerAccentColor]=useState("#1e3a5f");
   const[flyerFont,setFlyerFont]=useState("sans");
+  const[flyerUnbranded,setFlyerUnbranded]=useState(false);
   // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
@@ -595,38 +601,33 @@ export default function DesignStudioV2(){
     video.crossOrigin = "anonymous";
     video.muted = true;
     video.playsInline = true;
-    video.loop = true; // loop so it doesn't freeze at end
+    video.loop = true;
 
     await new Promise<void>((resolve, reject) => {
       video.oncanplay = () => resolve();
-      video.onerror = () => reject(new Error("Video failed to load. Check CORS headers on the video URL."));
+      video.onerror = () => reject(new Error("Video failed to load. Check CORS headers."));
       video.load();
+    });
+
+    // Fallback: if loop doesn't work, manually restart on ended
+    video.addEventListener("ended", () => {
+      video.currentTime = 0;
+      video.play().catch(() => {});
     });
 
     const durationSec = Math.min((isFinite(video.duration) ? video.duration : 30), 119);
     const durationMs = durationSec * 1000;
     video.play().catch(() => {});
 
-    // 3. Determine the video drawing region.
-    // For InfoBarTemplate: video fills the top pp% (58% for square/story).
-    // For OpenHouseTemplate: video fills the entire canvas (full bleed behind overlays).
-    // We figure this out by measuring the [data-video-area] element in the preview.
-    let videoRegion = { x: 0, y: 0, w: rawW, h: rawH }; // default: full canvas
-    if (previewRef.current) {
-      const videoAreaEl = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
-      if (videoAreaEl) {
-        const parentRect = previewRef.current.getBoundingClientRect();
-        const areaRect = videoAreaEl.getBoundingClientRect();
-        // Convert from displayed (scaled) coordinates to raw template coordinates
-        const scaleX = rawW / parentRect.width;
-        const scaleY = rawH / parentRect.height;
-        videoRegion = {
-          x: Math.round((areaRect.left - parentRect.left) * scaleX),
-          y: Math.round((areaRect.top - parentRect.top) * scaleY),
-          w: Math.round(areaRect.width * scaleX),
-          h: Math.round(areaRect.height * scaleY),
-        };
-      }
+    // 3. Compute the video region mathematically from template constants.
+    // InfoBarTemplate: video area = top pp% of template (pp=58 for square/story, 55 for postcard)
+    // OpenHouseTemplate: video area = full canvas (inset:0)
+    // This avoids unreliable getBoundingClientRect with CSS transforms.
+    let videoRegion = { x: 0, y: 0, w: rawW, h: rawH };
+    if (selectedTemplate !== "open-house") {
+      // InfoBarTemplate: photo area is top pp% of the template
+      const pp = currentSize.id === "postcard" ? 55 : 58;
+      videoRegion = { x: 0, y: 0, w: rawW, h: Math.round(rawH * pp / 100) };
     }
 
     // 4. Capture the static overlay at full resolution (with video area hidden)
@@ -644,34 +645,44 @@ export default function DesignStudioV2(){
       }
     }
 
-    // 5. Audio mixing — if a music track is selected
+    // 5. Audio mixing — use <audio> element source to avoid CORS fetch issues.
+    // createMediaElementSource can use cross-origin audio that the browser can play,
+    // even when fetch() would be blocked by CORS.
     let audioCtx: AudioContext | null = null;
     let audioDest: MediaStreamAudioDestinationNode | null = null;
-    let musicSource: AudioBufferSourceNode | null = null;
+    let musicAudioEl: HTMLAudioElement | null = null;
 
     if (selectedMusicTrack?.url) {
       try {
         audioCtx = new AudioContext();
         audioDest = audioCtx.createMediaStreamDestination();
-        const resp = await fetch(selectedMusicTrack.url, { mode: "cors" });
-        if (!resp.ok) throw new Error(`Music fetch failed: ${resp.status}`);
-        const buf = await resp.arrayBuffer();
-        const decoded = await audioCtx.decodeAudioData(buf);
-        musicSource = audioCtx.createBufferSource();
-        musicSource.buffer = decoded;
-        musicSource.loop = true;
-        // Fade out over the last 2 seconds only
+
+        // Create an <audio> element — browsers can play cross-origin audio
+        musicAudioEl = new Audio();
+        musicAudioEl.crossOrigin = "anonymous";
+        musicAudioEl.src = selectedMusicTrack.url;
+        musicAudioEl.loop = true;
+
+        await new Promise<void>((res, rej) => {
+          musicAudioEl!.oncanplaythrough = () => res();
+          musicAudioEl!.onerror = () => rej(new Error("Music load failed"));
+          musicAudioEl!.load();
+        });
+
+        const source = audioCtx.createMediaElementSource(musicAudioEl);
         const gainNode = audioCtx.createGain();
         const fadeStart = Math.max(0, durationSec - 2);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime + fadeStart);
         gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + durationSec);
-        musicSource.connect(gainNode);
+        source.connect(gainNode);
         gainNode.connect(audioDest);
-        musicSource.start();
+        // Also connect to destination so AudioContext processes it
+        gainNode.connect(audioCtx.destination);
+        musicAudioEl.play().catch(() => {});
       } catch (e) {
         console.warn("Audio mix failed, exporting video only:", e);
-        audioCtx = null; audioDest = null; musicSource = null;
+        audioCtx = null; audioDest = null; musicAudioEl = null;
       }
     }
 
@@ -690,33 +701,29 @@ export default function DesignStudioV2(){
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-    // 7. Frame loop — draw video cover-fit INTO the video region only, then overlay
+    // 7. Frame loop — draw video cover-fit into the video region, then overlay
     recorder.start(100);
     const startTime = performance.now();
 
     const drawFrame = () => {
-      // Fill canvas with black first (for any area not covered by overlay)
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, rawW, rawH);
 
-      // Cover-fit the source video into the videoRegion (not the full canvas)
+      // Cover-fit the source video into the videoRegion
       const vw = video.videoWidth || 1920;
       const vh = video.videoHeight || 1080;
       const regionAR = videoRegion.w / videoRegion.h;
       const videoAR = vw / vh;
       let sx = 0, sy = 0, sw = vw, sh = vh;
       if (videoAR > regionAR) {
-        // video is wider than region — crop sides
         sw = vh * regionAR;
         sx = (vw - sw) / 2;
       } else {
-        // video is taller than region — crop top/bottom
         sh = vw / regionAR;
         sy = (vh - sh) / 2;
       }
       ctx.drawImage(video, sx, sy, sw, sh, videoRegion.x, videoRegion.y, videoRegion.w, videoRegion.h);
 
-      // Draw the static overlay (badge, info bar, etc.) on top
       if (overlayBitmap) ctx.drawImage(overlayBitmap, 0, 0);
 
       const elapsed = performance.now() - startTime;
@@ -728,7 +735,7 @@ export default function DesignStudioV2(){
       } else {
         recorder.stop();
         video.pause();
-        musicSource?.stop();
+        if (musicAudioEl) { musicAudioEl.pause(); musicAudioEl = null; }
         audioCtx?.close();
       }
     };
@@ -804,7 +811,7 @@ export default function DesignStudioV2(){
   const videoPreviewEl=(mediaMode==="video"&&selectedVideo?.url)?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;
 
   const renderPreview=()=>{
-    if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily}/>;
+    if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
     if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"?videoPreviewEl:undefined;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
     if(activeTab==="yard-sign"){const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};if(yardDesign==="sidebar")return<YardSignSidebar{...ys}website={yardWebsite}sidebarColor={yardSidebarColor}mainBgColor={yardMainBgColor}/>;if(yardDesign==="top-heavy")return<YardSignTopHeavy{...ys}topColor={yardTopColor}bottomColor={yardBottomColor}/>;return<YardSignSplitBar{...ys}officeName={yardOfficeName}officePhone={yardOfficePhone}topColor={yardTopColor}bottomColor={yardBottomColor}/>;}
     if(activeTab==="property-pdf")return<PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={fontFamily}/>;
@@ -989,6 +996,27 @@ export default function DesignStudioV2(){
 
           {activeTab==="listing-flyer"&&leftPanel==="styles"&&<>
             <div className="ph"><Palette size={15} color="var(--sa)"/>Flyer Styles</div>
+            <Section title="Branding" icon={Eye}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}>
+                <div>
+                  <p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Unbranded Mode</p>
+                  <p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>Hide agent bar &amp; branding</p>
+                </div>
+                <button onClick={()=>setFlyerUnbranded(!flyerUnbranded)} style={{
+                  width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",
+                  background:flyerUnbranded?"var(--sa)":"rgba(255,255,255,0.12)",
+                  position:"relative",transition:"background 0.2s",flexShrink:0,
+                }}>
+                  <div style={{
+                    width:18,height:18,borderRadius:"50%",background:"#fff",
+                    position:"absolute",top:3,
+                    left:flyerUnbranded?23:3,
+                    transition:"left 0.2s",
+                    boxShadow:"0 1px 3px rgba(0,0,0,0.3)",
+                  }}/>
+                </button>
+              </div>
+            </Section>
             <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
             <Section title="Accent Color" icon={Paintbrush}>
               <ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/>
