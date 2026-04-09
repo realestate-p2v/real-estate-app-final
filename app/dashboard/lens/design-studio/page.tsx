@@ -537,128 +537,152 @@ export default function DesignStudioV2(){
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
   // ─── Export helpers ───────────────────────────────────────────────────────
-  // html-to-image replaces html2canvas (which crashes on CSS lab()/oklch()).
-  // Key fix: temporarily remove CSS transform scale before capture so we get
-  // full-resolution output instead of the tiny scaled preview.
+  // Uses html2canvas-pro (handles lab()/oklch() CSS colors from Tailwind v4)
+  // Uses @ffmpeg/ffmpeg WASM for client-side video compositing — no server needed
 
-  const captureAtFullRes = async (mode: "png" | "canvas") => {
-    if (!previewRef.current) return null;
-    const el = previewRef.current;
-    // Save and remove the display scale so capture is at native resolution
-    const origTransform = el.style.transform;
-    const origOrigin = el.style.transformOrigin;
+  const prepareForExport = (el: HTMLElement): { restore: () => void } => {
+    const parent = el.parentElement as HTMLElement;
+    const st = el.style.transform, so = parent?.style.overflow, sw = parent?.style.width, sh = parent?.style.height;
     el.style.transform = "none";
-    el.style.transformOrigin = "top left";
-    try {
-      if (mode === "png") {
-        const { toPng } = await import("html-to-image");
-        return await toPng(el, { width: rawW, height: rawH, pixelRatio: 1, cacheBust: true });
-      } else {
-        const { toCanvas } = await import("html-to-image");
-        return await toCanvas(el, { width: rawW, height: rawH, pixelRatio: 1, cacheBust: true });
-      }
-    } finally {
-      el.style.transform = origTransform;
-      el.style.transformOrigin = origOrigin;
-    }
+    if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; }
+    return { restore: () => { el.style.transform = st; if (parent) { parent.style.overflow = so || ""; parent.style.width = sw || ""; parent.style.height = sh || ""; } } };
   };
 
   const exportImage = async () => {
-    const dataUrl = await captureAtFullRes("png");
-    if (!dataUrl || typeof dataUrl !== "string") return;
+    if (!previewRef.current) return;
+    const html2canvas = (await import("html2canvas-pro")).default;
+    const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+    if (!el) return;
+    const { restore } = prepareForExport(el);
+    const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
+    restore();
     const link = document.createElement("a");
     link.download = `listing-${selectedTemplate}-${Date.now()}.png`;
-    link.href = dataUrl;
+    link.href = canvas.toDataURL("image/png");
     link.click();
     notify("Image exported!");
   };
 
   const exportPdf = async () => {
-    const dataUrl = await captureAtFullRes("png");
-    if (!dataUrl || typeof dataUrl !== "string") return;
-    // Build a minimal PDF that embeds the PNG at US Letter size
+    if (!previewRef.current) return;
+    const html2canvas = (await import("html2canvas-pro")).default;
     const { jsPDF } = await import("jspdf");
     const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
-    // 8.5 × 11 inches, image fills the page
-    pdf.addImage(dataUrl, "PNG", 0, 0, 8.5, 11);
+    const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+    if (!el) return;
+    const { restore } = prepareForExport(el);
+    const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: rawW, height: rawH });
+    restore();
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11);
     pdf.save(`listing-flyer-${Date.now()}.pdf`);
     notify("PDF exported!");
   };
 
+  const getMusicSource = (): { type: "url"; url: string } | { type: "file"; file: File } | null => {
+    if (selectedMusicTrack) return { type: "url", url: selectedMusicTrack.url };
+    return null;
+  };
+
   const exportVideo = async () => {
-    if (!selectedVideo?.url) { notify("No video selected."); return; }
-    setExportProgress(5);
-
-    // 1. Capture the static overlay as a PNG (badge, info bar, agent — no video)
-    let overlayDataUrl: string | null = null;
-    if (previewRef.current) {
-      const videoArea = previewRef.current.querySelector("[data-video-area]") as HTMLElement | null;
-      if (videoArea) videoArea.style.visibility = "hidden";
-      try {
-        overlayDataUrl = await captureAtFullRes("png") as string | null;
-      } finally {
-        if (videoArea) videoArea.style.visibility = "visible";
-      }
-    }
-
-    if (!overlayDataUrl) { notify("Failed to capture overlay."); return; }
-
-    // 2. Determine the video region (where the source video should be placed)
-    // InfoBarTemplate: top pp% of template. OpenHouseTemplate: full frame.
-    let videoRegion = { x: 0, y: 0, w: rawW, h: rawH };
-    if (selectedTemplate !== "open-house") {
-      const pp = currentSize.id === "postcard" ? 55 : 58;
-      videoRegion = { x: 0, y: 0, w: rawW, h: Math.round(rawH * pp / 100) };
-    }
-
-    setExportProgress(15);
-
-    // 3. Convert overlay data URL to blob for upload
-    const overlayResp = await fetch(overlayDataUrl);
-    const overlayBlob = await overlayResp.blob();
-
-    // 4. POST to server — FFmpeg handles everything
-    const formData = new FormData();
-    formData.append("overlay", overlayBlob, "overlay.png");
-    formData.append("videoUrl", selectedVideo.url);
-    formData.append("width", String(rawW));
-    formData.append("height", String(rawH));
-    formData.append("regionX", String(videoRegion.x));
-    formData.append("regionY", String(videoRegion.y));
-    formData.append("regionW", String(videoRegion.w));
-    formData.append("regionH", String(videoRegion.h));
-    if (selectedMusicTrack?.url) {
-      formData.append("musicUrl", selectedMusicTrack.url);
-    }
-
-    setExportProgress(20);
-
+    if (!selectedVideo?.url || !previewRef.current) { notify("Please select a video first."); return; }
+    setExporting(true); setExportProgress(0);
     try {
-      const resp = await fetch("/api/design-studio/export-video", {
-        method: "POST",
-        body: formData,
+      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+      const { toBlobURL, fetchFile } = await import("@ffmpeg/util");
+      const ffmpeg = new FFmpeg();
+      ffmpeg.on("progress", ({ progress: p }) => setExportProgress(Math.min(Math.round(p * 100), 99)));
+
+      setExportProgress(2);
+      const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
       });
 
-      if (!resp.ok) {
-        const errText = await resp.text().catch(() => "");
-        throw new Error(`Export failed (${resp.status}): ${errText}`);
+      setExportProgress(5);
+      const videoData = await fetchFile(selectedVideo.url);
+      await ffmpeg.writeFile("input.mp4", videoData);
+
+      const musicSource = getMusicSource();
+      let hasMusic = false;
+      if (musicSource) {
+        setExportProgress(8);
+        if (musicSource.type === "url") {
+          await ffmpeg.writeFile("music.mp3", await fetchFile(musicSource.url));
+          hasMusic = true;
+        } else {
+          await ffmpeg.writeFile("music.mp3", new Uint8Array(await musicSource.file.arrayBuffer()));
+          hasMusic = true;
+        }
+      }
+
+      setExportProgress(10);
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+      if (!el) throw new Error("Export target not found");
+
+      // Hide video elements so overlay capture is just the static graphics
+      const videoEls = el.querySelectorAll("video");
+      videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; });
+      const placeholders = el.querySelectorAll("[data-video-area]");
+      placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; });
+
+      const { restore } = prepareForExport(el);
+      const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
+      restore();
+
+      videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; });
+      placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; });
+
+      const overlayBlob = await new Promise<Blob>(resolve => overlayCanvas.toBlob(b => resolve(b!), "image/png"));
+      await ffmpeg.writeFile("overlay.png", new Uint8Array(await overlayBlob.arrayBuffer()));
+
+      setExportProgress(15);
+      const outW = currentSize.width, outH = currentSize.height;
+      const photoPercent = selectedTemplate === "open-house" ? 100 : selectedSize === "postcard" ? 55 : 58;
+      const photoH = Math.round(outH * photoPercent / 100);
+
+      if (hasMusic) {
+        await ffmpeg.exec([
+          "-i", "input.mp4", "-i", "overlay.png", "-i", "music.mp3", "-t", "119",
+          "-filter_complex",
+          `[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:119,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`,
+          "-map", "[vout]", "-map", "[aout]",
+          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+          "-c:a", "aac", "-b:a", "128k",
+          "-movflags", "+faststart", "-y", "output.mp4",
+        ]);
+      } else {
+        await ffmpeg.exec([
+          "-i", "input.mp4", "-i", "overlay.png", "-t", "119",
+          "-filter_complex",
+          `[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`,
+          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+          "-c:a", "aac", "-b:a", "128k",
+          "-movflags", "+faststart", "-y", "output.mp4",
+        ]);
       }
 
       setExportProgress(95);
-      const mp4Blob = await resp.blob();
-      const url = URL.createObjectURL(mp4Blob);
+      const outputData = await ffmpeg.readFile("output.mp4");
+      const outputBlob = new Blob([outputData], { type: "video/mp4" });
+      const downloadUrl = URL.createObjectURL(outputBlob);
       const link = document.createElement("a");
       link.download = `listing-video-${Date.now()}.mp4`;
-      link.href = url;
+      link.href = downloadUrl;
       link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      notify("Video exported!");
-    } catch (e: any) {
-      console.error("Video export failed:", e);
-      notify(e?.message || "Video export failed.");
-    }
+      URL.revokeObjectURL(downloadUrl);
 
+      setExportProgress(100);
+      notify("Video exported!");
+      setTimeout(() => { setExportProgress(0); setExporting(false); }, 1500);
+      return;
+    } catch (err: any) {
+      console.error("Video export error:", err);
+      notify("Video export failed: " + (err.message || "Unknown error"));
+    }
     setExportProgress(0);
+    setExporting(false);
   };
 
   const handleExport = async () => {
@@ -666,6 +690,7 @@ export default function DesignStudioV2(){
     try {
       if (isVideoMode) {
         await exportVideo();
+        return; // exportVideo manages its own setExporting
       } else {
         await exportImage();
       }
