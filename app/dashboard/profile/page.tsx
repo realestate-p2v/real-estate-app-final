@@ -265,16 +265,16 @@ export default function AgentProfilePage() {
           </div>
         </div>
 
-        {/* Headshot + Logo */}
+        {/* Headshot + Logo + Brand Colors */}
         <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
-          <h2 className="text-lg font-bold text-foreground mb-5">Photos</h2>
-          <div className="flex items-start gap-8">
+          <h2 className="text-lg font-bold text-foreground mb-5">Brand Identity</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
             {/* Headshot */}
             <div className="text-center">
               <p className="text-xs font-semibold text-muted-foreground mb-2">Headshot</p>
               <div className="relative group">
                 {headshot ? (
-                  <div className="h-28 w-28 rounded-2xl overflow-hidden border-2 border-border">
+                  <div className="h-28 w-28 mx-auto rounded-2xl overflow-hidden border-2 border-border">
                     <img src={headshot} alt="Headshot" className="h-full w-full object-cover" />
                     <button
                       onClick={() => setHeadshot(null)}
@@ -287,39 +287,18 @@ export default function AgentProfilePage() {
                   <button
                     onClick={() => headshotRef.current?.click()}
                     disabled={uploadingHeadshot}
-                    className="h-28 w-28 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
+                    className="h-28 w-28 mx-auto rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
                   >
-                    {uploadingHeadshot ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <>
-                        <Camera className="h-6 w-6" />
-                        <span className="text-[10px] font-medium">Upload</span>
-                      </>
-                    )}
+                    {uploadingHeadshot ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Camera className="h-6 w-6" /><span className="text-[10px] font-medium">Upload</span></>}
                   </button>
                 )}
                 {headshot && (
-                  <button
-                    onClick={() => headshotRef.current?.click()}
-                    disabled={uploadingHeadshot}
-                    className="text-[10px] font-semibold text-accent hover:text-accent/80 mt-1.5"
-                  >
+                  <button onClick={() => headshotRef.current?.click()} disabled={uploadingHeadshot} className="text-[10px] font-semibold text-accent hover:text-accent/80 mt-1.5">
                     {uploadingHeadshot ? "Uploading..." : "Change"}
                   </button>
                 )}
               </div>
-              <input
-                ref={headshotRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleHeadshotUpload(f);
-                  e.target.value = "";
-                }}
-              />
+              <input ref={headshotRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleHeadshotUpload(f); e.target.value = ""; }} />
             </div>
 
             {/* Logo */}
@@ -327,7 +306,7 @@ export default function AgentProfilePage() {
               <p className="text-xs font-semibold text-muted-foreground mb-2">Brokerage Logo</p>
               <div className="relative group">
                 {logo ? (
-                  <div className="h-28 w-28 rounded-2xl overflow-hidden border-2 border-border bg-white flex items-center justify-center p-2">
+                  <div className="h-28 w-28 mx-auto rounded-2xl overflow-hidden border-2 border-border bg-white flex items-center justify-center p-2">
                     <img src={logo} alt="Logo" className="max-h-full max-w-full object-contain" />
                     <button
                       onClick={() => setLogo(null)}
@@ -340,39 +319,161 @@ export default function AgentProfilePage() {
                   <button
                     onClick={() => logoRef.current?.click()}
                     disabled={uploadingLogo}
-                    className="h-28 w-28 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
+                    className="h-28 w-28 mx-auto rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
                   >
-                    {uploadingLogo ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <>
-                        <ImageIcon className="h-6 w-6" />
-                        <span className="text-[10px] font-medium">Upload</span>
-                      </>
-                    )}
+                    {uploadingLogo ? <Loader2 className="h-6 w-6 animate-spin" /> : <><ImageIcon className="h-6 w-6" /><span className="text-[10px] font-medium">Upload</span></>}
                   </button>
                 )}
                 {logo && (
-                  <button
-                    onClick={() => logoRef.current?.click()}
-                    disabled={uploadingLogo}
-                    className="text-[10px] font-semibold text-accent hover:text-accent/80 mt-1.5"
-                  >
+                  <button onClick={() => logoRef.current?.click()} disabled={uploadingLogo} className="text-[10px] font-semibold text-accent hover:text-accent/80 mt-1.5">
                     {uploadingLogo ? "Uploading..." : "Change"}
                   </button>
                 )}
               </div>
-              <input
-                ref={logoRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleLogoUpload(f);
-                  e.target.value = "";
-                }}
-              />
+              <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }} />
+            </div>
+
+            {/* Primary Color */}
+            <div className="text-center">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Primary Color</p>
+              <div className="relative group">
+                {companyColors[0] ? (
+                  <div className="h-28 w-28 mx-auto rounded-2xl border-2 border-border shadow-sm flex items-center justify-center" style={{ backgroundColor: companyColors[0] }}>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/30 backdrop-blur-sm" style={{ color: isLightColor(companyColors[0]) ? "#333" : "#fff" }}>{companyColors[0]}</span>
+                    <button
+                      onClick={() => removeColor(companyColors[0])}
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="h-28 w-28 mx-auto rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
+                    <Palette className="h-6 w-6" />
+                    <span className="text-[10px] font-medium">Pick below</span>
+                  </label>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Info bar / header</p>
+            </div>
+
+            {/* Secondary Color */}
+            <div className="text-center">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Secondary Color</p>
+              <div className="relative group">
+                {companyColors[1] ? (
+                  <div className="h-28 w-28 mx-auto rounded-2xl border-2 border-border shadow-sm flex items-center justify-center" style={{ backgroundColor: companyColors[1] }}>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/30 backdrop-blur-sm" style={{ color: isLightColor(companyColors[1]) ? "#333" : "#fff" }}>{companyColors[1]}</span>
+                    <button
+                      onClick={() => removeColor(companyColors[1])}
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="h-28 w-28 mx-auto rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer">
+                    <Palette className="h-6 w-6" />
+                    <span className="text-[10px] font-medium">Pick below</span>
+                  </label>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Accent / highlight</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Company Colors Picker */}
+        <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
+            <Palette className="h-5 w-5 text-accent" />
+            Company Colors
+          </h2>
+          <p className="text-sm text-muted-foreground mb-5">Pick up to 6 brand colors. First two auto-fill as primary &amp; secondary in the Design Studio.</p>
+
+          {/* All selected colors */}
+          {companyColors.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-5">
+              {companyColors.map((hex, i) => (
+                <div key={hex} className="relative group">
+                  <div className="h-12 w-12 rounded-xl border-2 border-border shadow-sm" style={{ backgroundColor: hex }} />
+                  <button
+                    onClick={() => removeColor(hex)}
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <p className="text-[9px] text-muted-foreground text-center mt-1 font-mono">{i === 0 ? "1st" : i === 1 ? "2nd" : hex}</p>
+                </div>
+              ))}
+              {companyColors.length < 6 && (
+                <div className="h-12 w-12 rounded-xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground">
+                  <Plus className="h-4 w-4" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {companyColors.length >= 6 && (
+            <p className="text-xs text-amber-600 mb-4">Maximum 6 colors reached. Remove one to add another.</p>
+          )}
+
+          {/* Brokerage presets */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Brokerage Presets</p>
+            <div className="flex flex-wrap gap-1.5">
+              {BROKERAGE_COLORS.map(c => {
+                const selected = companyColors.includes(c.hex.toLowerCase());
+                return (
+                  <button
+                    key={c.hex + c.label}
+                    onClick={() => selected ? removeColor(c.hex.toLowerCase()) : addColor(c.hex)}
+                    title={c.label}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-semibold"
+                    style={{
+                      borderColor: selected ? "#6366f1" : "rgba(0,0,0,0.1)",
+                      backgroundColor: selected ? "rgba(99,102,241,0.08)" : "transparent",
+                    }}
+                  >
+                    <span className="h-3.5 w-3.5 rounded-sm border border-black/10 flex-shrink-0" style={{ backgroundColor: c.hex }} />
+                    <span className="text-muted-foreground">{c.label}</span>
+                    {selected && <Check className="h-3 w-3 text-accent" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Accent colors */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Accent Colors</p>
+            <div className="flex flex-wrap gap-2">
+              {ACCENT_COLORS.map(hex => {
+                const selected = companyColors.includes(hex.toLowerCase());
+                return (
+                  <button
+                    key={hex}
+                    onClick={() => selected ? removeColor(hex.toLowerCase()) : addColor(hex)}
+                    className="h-8 w-8 rounded-lg border-2 transition-all"
+                    style={{ backgroundColor: hex, borderColor: selected ? "#6366f1" : "rgba(0,0,0,0.1)", boxShadow: selected ? "0 0 0 2px rgba(99,102,241,0.4)" : "none" }}
+                    title={hex}
+                  >
+                    {selected && <Check className="h-4 w-4 mx-auto" style={{ color: isLightColor(hex) ? "#333" : "#fff" }} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom color picker */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Custom Color</p>
+            <div className="flex items-center gap-3">
+              <input type="color" value={customColorInput} onChange={e => setCustomColorInput(e.target.value)} className="h-9 w-9 rounded-lg border border-border cursor-pointer p-0 bg-transparent" />
+              <Input value={customColorInput} onChange={e => setCustomColorInput(e.target.value)} className="w-28 font-mono text-sm" placeholder="#000000" />
+              <Button size="sm" variant="outline" onClick={() => addColor(customColorInput)} disabled={companyColors.length >= 6 || companyColors.includes(customColorInput.toLowerCase())} className="font-semibold">
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+              </Button>
             </div>
           </div>
         </section>
@@ -460,130 +561,7 @@ export default function AgentProfilePage() {
           </div>
         </section>
 
-        {/* Company Colors */}
-        <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-            <Palette className="h-5 w-5 text-accent" />
-            Company Colors
-          </h2>
-          <p className="text-sm text-muted-foreground mb-5">Pick up to 6 brand colors. These auto-fill as defaults in the Design Studio.</p>
-
-          {/* Selected colors */}
-          {companyColors.length > 0 && (
-            <div className="flex flex-wrap gap-3 mb-5">
-              {companyColors.map(hex => (
-                <div key={hex} className="relative group">
-                  <div
-                    className="h-12 w-12 rounded-xl border-2 border-border shadow-sm"
-                    style={{ backgroundColor: hex }}
-                  />
-                  <button
-                    onClick={() => removeColor(hex)}
-                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  <p className="text-[9px] text-muted-foreground text-center mt-1 font-mono">{hex}</p>
-                </div>
-              ))}
-              {companyColors.length < 6 && (
-                <div className="h-12 w-12 rounded-xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground">
-                  <Plus className="h-4 w-4" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {companyColors.length >= 6 && (
-            <p className="text-xs text-amber-600 mb-4">Maximum 6 colors reached. Remove one to add another.</p>
-          )}
-
-          {/* Brokerage presets */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Brokerage Presets</p>
-            <div className="flex flex-wrap gap-1.5">
-              {BROKERAGE_COLORS.map(c => {
-                const selected = companyColors.includes(c.hex.toLowerCase());
-                return (
-                  <button
-                    key={c.hex + c.label}
-                    onClick={() => selected ? removeColor(c.hex.toLowerCase()) : addColor(c.hex)}
-                    title={c.label}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-semibold"
-                    style={{
-                      borderColor: selected ? "#6366f1" : "rgba(0,0,0,0.1)",
-                      backgroundColor: selected ? "rgba(99,102,241,0.08)" : "transparent",
-                    }}
-                  >
-                    <span
-                      className="h-3.5 w-3.5 rounded-sm border border-black/10 flex-shrink-0"
-                      style={{ backgroundColor: c.hex }}
-                    />
-                    <span className="text-muted-foreground">{c.label}</span>
-                    {selected && <Check className="h-3 w-3 text-accent" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Accent colors */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Accent Colors</p>
-            <div className="flex flex-wrap gap-2">
-              {ACCENT_COLORS.map(hex => {
-                const selected = companyColors.includes(hex.toLowerCase());
-                return (
-                  <button
-                    key={hex}
-                    onClick={() => selected ? removeColor(hex.toLowerCase()) : addColor(hex)}
-                    className="h-8 w-8 rounded-lg border-2 transition-all"
-                    style={{
-                      backgroundColor: hex,
-                      borderColor: selected ? "#6366f1" : "rgba(0,0,0,0.1)",
-                      boxShadow: selected ? "0 0 0 2px rgba(99,102,241,0.4)" : "none",
-                    }}
-                    title={hex}
-                  >
-                    {selected && (
-                      <Check className="h-4 w-4 mx-auto" style={{ color: isLightColor(hex) ? "#333" : "#fff" }} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Custom color picker */}
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Custom Color</p>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={customColorInput}
-                onChange={e => setCustomColorInput(e.target.value)}
-                className="h-9 w-9 rounded-lg border border-border cursor-pointer p-0 bg-transparent"
-              />
-              <Input
-                value={customColorInput}
-                onChange={e => setCustomColorInput(e.target.value)}
-                className="w-28 font-mono text-sm"
-                placeholder="#000000"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => addColor(customColorInput)}
-                disabled={companyColors.length >= 6 || companyColors.includes(customColorInput.toLowerCase())}
-                className="font-semibold"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Save button between sections */}
+        {/* Save button */}
         <div className="flex items-center gap-3 mb-6 px-2">
           <Button
             onClick={handleSave}
