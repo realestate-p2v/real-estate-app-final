@@ -1,9 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -26,12 +28,14 @@ export async function middleware(request: NextRequest) {
       },
     }
   );
+
   // IMPORTANT: Do not run code between createServerClient and
   // supabase.auth.getUser(). A simple mistake could make it very
   // hard to debug issues with users being randomly logged out.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   // Protect /dashboard routes - redirect to /login if not authenticated
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
@@ -39,6 +43,7 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
+
   // Protect /admin routes - redirect to /login if not authenticated
   if (!user && request.nextUrl.pathname.startsWith("/admin")) {
     const url = request.nextUrl.clone();
@@ -46,6 +51,7 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
+
   // If logged in user visits /login, redirect to the redirect param or /dashboard
   if (user && request.nextUrl.pathname === "/login") {
     const url = request.nextUrl.clone();
@@ -54,8 +60,18 @@ export async function middleware(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url);
   }
+
+  // Allow FFmpeg WASM on Design Studio (requires eval for WebAssembly compilation)
+  if (request.nextUrl.pathname.startsWith("/dashboard/lens/design-studio")) {
+    supabaseResponse.headers.set(
+      "Content-Security-Policy",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://*.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com blob:; worker-src 'self' blob:; default-src 'self'; connect-src *; img-src * data: blob:; media-src * blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' blob:;"
+    );
+  }
+
   return supabaseResponse;
 }
+
 export const config = {
   matcher: [
     /*
