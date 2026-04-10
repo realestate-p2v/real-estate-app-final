@@ -759,25 +759,60 @@ export default function DesignStudioV2(){
         if(musicSource.type==="url"){await ffmpeg.writeFile("music.mp3",await fetchFile(musicSource.url));hasMusic=true;}
         else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
       }
+      // Branding card capture
+      let hasBranding=false;
+      if(remixBranding&&isLensSubscriber&&previewRef.current){
+        try{
+          const html2canvas=(await import("html2canvas-pro")).default;
+          const brandEl=previewRef.current.querySelector("[data-branding-card]") as HTMLElement;
+          if(brandEl){
+            const origD=brandEl.style.display;brandEl.style.display="block";
+            const bc=await html2canvas(brandEl,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:1920,height:1080});
+            brandEl.style.display=origD;
+            const blob=await new Promise<Blob>(r=>bc.toBlob(b=>r(b!),"image/png"));
+            await ffmpeg.writeFile("brand.png",new Uint8Array(await blob.arrayBuffer()));
+            hasBranding=true;
+          }
+        }catch(e){console.error("Branding capture error:",e);}
+      }
       setExportProgress(35);
-      // Build filter: scale+trim each clip, then concat
+      // Build filter
       const filterParts:string[]=[];
       const concatInputs:string[]=[];
+      let inputIdx=0;
+      const inputArgs:string[]=[];
+      // If branding, add intro as first input (5s still image → video)
+      if(hasBranding){
+        inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
+        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
+        concatInputs.push("[vintro]");
+        inputIdx++;
+      }
+      // Add all clips
       for(let i=0;i<remixClips.length;i++){
+        inputArgs.push("-i",`clip_${i}.mp4`);
         const c=remixClips[i];
         const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
-        filterParts.push(`[${i}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH}${speed}[v${i}]`);
+        filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
         concatInputs.push(`[v${i}]`);
+        inputIdx++;
       }
-      filterParts.push(`${concatInputs.join("")}concat=n=${remixClips.length}:v=1:a=0[vout]`);
-      const totalDur=remixTotalDuration;
-      const inputArgs:string[]=[];
-      for(let i=0;i<remixClips.length;i++){inputArgs.push("-i",`clip_${i}.mp4`);}
+      // If branding, add outro as last input (same image, 5s)
+      if(hasBranding){
+        inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
+        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
+        concatInputs.push("[voutro]");
+        inputIdx++;
+      }
+      // Concat all segments
+      const nSegments=concatInputs.length;
+      filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
+      const totalDur=remixTotalDuration+(hasBranding?10:0);
       let filterStr=filterParts.join(";");
       const cmdArgs=[...inputArgs];
       if(hasMusic){
         cmdArgs.push("-i","music.mp3");
-        filterStr+=`;[${remixClips.length}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
+        filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
         cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
       }else{
         cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
