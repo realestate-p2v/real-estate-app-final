@@ -122,13 +122,7 @@ const MODULE_LABELS: Record<string, string> = {
 
 function generateSlug(address: string, city?: string | null, state?: string | null): string {
   const parts = [address, city, state].filter(Boolean).join(" ");
-  return parts
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 80);
+  return parts.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 }
 
 function timeAgo(dateStr: string): string {
@@ -143,7 +137,6 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(day / 30)}mo ago`;
 }
 
-/* ─── Before/After Slider ─── */
 function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
   const [position, setPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -212,7 +205,6 @@ export default function SinglePropertyPage() {
   const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Publish section state
   const [pubTemplate, setPubTemplate] = useState<string>("modern_clean");
   const [pubModules, setPubModules] = useState<Record<string, boolean>>({
     photos: true, videos: true, description: true, staging: true,
@@ -224,7 +216,6 @@ export default function SinglePropertyPage() {
   const [pubSaving, setPubSaving] = useState(false);
   const [slugCopied, setSlugCopied] = useState(false);
 
-  // Booking section state
   const [bookingEnabled, setBookingEnabled] = useState(false);
   const [bookingToggling, setBookingToggling] = useState(false);
   const [showingRequests, setShowingRequests] = useState<ShowingRequest[]>([]);
@@ -232,8 +223,6 @@ export default function SinglePropertyPage() {
   const [markingRead, setMarkingRead] = useState<string | null>(null);
 
   const supabase = createClient();
-
-  // Ref for scrolling to publish section
   const publishSectionRef = useRef<HTMLDivElement>(null);
 
   const buildPropertyParams = (prop: Property) => {
@@ -253,30 +242,17 @@ export default function SinglePropertyPage() {
     return p.toString();
   };
 
-  // Initialize publish state from property data
   function initPublishState(prop: Property) {
     setPubTemplate(prop.website_template || "modern_clean");
-    setPubModules(prop.website_modules || {
-      photos: true, videos: true, description: true, staging: true,
-      exports: true, booking: false, lead_capture: true, lensy: false,
-    });
+    setPubModules(prop.website_modules || { photos: true, videos: true, description: true, staging: true, exports: true, booking: false, lead_capture: true, lensy: false });
     setPubCurated(prop.website_curated || {});
     setPubSlug(prop.website_slug || generateSlug(prop.address, prop.city, prop.state));
     setPubPublished(prop.website_published || false);
   }
 
-  // Fetch showing requests
   const fetchShowingRequests = useCallback(async () => {
     setShowingsLoading(true);
-    try {
-      const res = await fetch(`/api/showings?propertyId=${propertyId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setShowingRequests(data.requests || data || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch showing requests:", err);
-    }
+    try { const res = await fetch(`/api/showings?propertyId=${propertyId}`); if (res.ok) { const data = await res.json(); setShowingRequests(data.requests || data || []); } } catch (err) { console.error("Failed to fetch showing requests:", err); }
     setShowingsLoading(false);
   }, [propertyId]);
 
@@ -285,21 +261,12 @@ export default function SinglePropertyPage() {
     if (!user) { router.push("/login?redirect=/dashboard/properties"); return; }
     setUserId(user.id);
     const isAdmin = user.email === "realestatephoto2video@gmail.com";
-    if (isAdmin) {
-      setIsSubscriber(true);
-      setSubscriptionTier("pro");
-    } else {
-      const { data: usage } = await supabase
-        .from("lens_usage")
-        .select("is_subscriber, subscription_tier, included_website_used")
-        .eq("user_id", user.id)
-        .single();
+    if (isAdmin) { setIsSubscriber(true); setSubscriptionTier("pro"); }
+    else {
+      const { data: usage } = await supabase.from("lens_usage").select("is_subscriber, subscription_tier, included_website_used").eq("user_id", user.id).single();
       if (usage?.is_subscriber) setIsSubscriber(true);
-      if (usage?.subscription_tier === "pro") {
-        setSubscriptionTier("pro");
-      } else if (usage?.subscription_tier === "lens" || usage?.is_subscriber) {
-        setSubscriptionTier("lens");
-      }
+      if (usage?.subscription_tier === "pro") setSubscriptionTier("pro");
+      else if (usage?.subscription_tier === "lens" || usage?.is_subscriber) setSubscriptionTier("lens");
       if (usage?.included_website_used) setIncludedSiteUsed(true);
     }
     const { data: prop, error } = await supabase.from("agent_properties").select("*").eq("id", propertyId).eq("user_id", user.id).single();
@@ -329,13 +296,7 @@ export default function SinglePropertyPage() {
   }, [supabase, propertyId, router]);
 
   useEffect(() => { loadProperty(); }, [loadProperty]);
-
-  // Fetch showing requests after property loads
-  useEffect(() => {
-    if (property) {
-      fetchShowingRequests();
-    }
-  }, [property, fetchShowingRequests]);
+  useEffect(() => { if (property) fetchShowingRequests(); }, [property, fetchShowingRequests]);
 
   const handleSave = async () => {
     if (!property) return; setSaving(true);
@@ -345,114 +306,39 @@ export default function SinglePropertyPage() {
   };
 
   const handlePublishSave = async () => {
-    if (!property) return;
-    setPubSaving(true);
+    if (!property) return; setPubSaving(true);
     const slug = pubSlug.trim() || generateSlug(property.address, property.city, property.state);
-    const { error } = await supabase.from("agent_properties").update({
-      website_template: pubTemplate,
-      website_modules: pubModules,
-      website_curated: pubCurated,
-      website_slug: slug,
-      website_published: pubPublished,
-      updated_at: new Date().toISOString(),
-    }).eq("id", property.id);
-    if (error) {
-      alert("Failed to save: " + error.message);
-    } else {
-      setProperty({
-        ...property,
-        website_template: pubTemplate,
-        website_modules: pubModules,
-        website_curated: pubCurated,
-        website_slug: slug,
-        website_published: pubPublished,
-        updated_at: new Date().toISOString(),
-      } as Property);
-      setPubSlug(slug);
-    }
+    const { error } = await supabase.from("agent_properties").update({ website_template: pubTemplate, website_modules: pubModules, website_curated: pubCurated, website_slug: slug, website_published: pubPublished, updated_at: new Date().toISOString() }).eq("id", property.id);
+    if (error) { alert("Failed to save: " + error.message); }
+    else { setProperty({ ...property, website_template: pubTemplate, website_modules: pubModules, website_curated: pubCurated, website_slug: slug, website_published: pubPublished, updated_at: new Date().toISOString() } as Property); setPubSlug(slug); }
     setPubSaving(false);
   };
 
   const togglePublish = async () => {
-    const next = !pubPublished;
-    setPubPublished(next);
-    if (!property) return;
-    const slug = pubSlug.trim() || generateSlug(property.address, property.city, property.state);
-    setPubSlug(slug);
-    setPubSaving(true);
-    await supabase.from("agent_properties").update({
-      website_published: next,
-      website_slug: slug,
-      website_template: pubTemplate,
-      website_modules: pubModules,
-      website_curated: pubCurated,
-      updated_at: new Date().toISOString(),
-    }).eq("id", property.id);
-    setProperty({
-      ...property,
-      website_published: next,
-      website_slug: slug,
-      website_template: pubTemplate,
-      website_modules: pubModules,
-      website_curated: pubCurated,
-      updated_at: new Date().toISOString(),
-    } as Property);
+    const next = !pubPublished; setPubPublished(next); if (!property) return;
+    const slug = pubSlug.trim() || generateSlug(property.address, property.city, property.state); setPubSlug(slug); setPubSaving(true);
+    await supabase.from("agent_properties").update({ website_published: next, website_slug: slug, website_template: pubTemplate, website_modules: pubModules, website_curated: pubCurated, updated_at: new Date().toISOString() }).eq("id", property.id);
+    setProperty({ ...property, website_published: next, website_slug: slug, website_template: pubTemplate, website_modules: pubModules, website_curated: pubCurated, updated_at: new Date().toISOString() } as Property);
     setPubSaving(false);
   };
 
   const toggleBookingEnabled = async () => {
-    if (!property) return;
-    setBookingToggling(true);
+    if (!property) return; setBookingToggling(true);
     const next = !bookingEnabled;
-    const { error } = await supabase.from("agent_properties").update({
-      booking_enabled: next,
-      updated_at: new Date().toISOString(),
-    }).eq("id", property.id);
-    if (!error) {
-      setBookingEnabled(next);
-      setProperty({ ...property, booking_enabled: next, updated_at: new Date().toISOString() } as Property);
-    }
+    const { error } = await supabase.from("agent_properties").update({ booking_enabled: next, updated_at: new Date().toISOString() }).eq("id", property.id);
+    if (!error) { setBookingEnabled(next); setProperty({ ...property, booking_enabled: next, updated_at: new Date().toISOString() } as Property); }
     setBookingToggling(false);
   };
 
   const handleMarkRead = async (requestId: string) => {
     setMarkingRead(requestId);
-    try {
-      const res = await fetch("/api/showings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: requestId, read: true }),
-      });
-      if (res.ok) {
-        setShowingRequests((prev) =>
-          prev.map((r) => (r.id === requestId ? { ...r, read: true } : r))
-        );
-      }
-    } catch (err) {
-      console.error("Failed to mark read:", err);
-    }
+    try { const res = await fetch("/api/showings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: requestId, read: true }) }); if (res.ok) { setShowingRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, read: true } : r))); } } catch (err) { console.error("Failed to mark read:", err); }
     setMarkingRead(null);
   };
 
-  function toggleCuratedItem(category: string, itemId: string) {
-    setPubCurated(prev => {
-      const list = prev[category] || [];
-      if (list.includes(itemId)) {
-        return { ...prev, [category]: list.filter(x => x !== itemId) };
-      } else {
-        return { ...prev, [category]: [...list, itemId] };
-      }
-    });
-  }
-
-  function selectAllCurated(category: string, items: string[]) {
-    setPubCurated(prev => ({ ...prev, [category]: [...items] }));
-  }
-
-  function deselectAllCurated(category: string) {
-    setPubCurated(prev => ({ ...prev, [category]: [] }));
-  }
-
+  function toggleCuratedItem(category: string, itemId: string) { setPubCurated(prev => { const list = prev[category] || []; if (list.includes(itemId)) return { ...prev, [category]: list.filter(x => x !== itemId) }; else return { ...prev, [category]: [...list, itemId] }; }); }
+  function selectAllCurated(category: string, items: string[]) { setPubCurated(prev => ({ ...prev, [category]: [...items] })); }
+  function deselectAllCurated(category: string) { setPubCurated(prev => ({ ...prev, [category]: [] })); }
   const copyToClipboard = (text: string, id: string) => { navigator.clipboard.writeText(text); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
 
   const sendPhotosToOrder = (photoList: any[]) => {
@@ -492,7 +378,6 @@ export default function SinglePropertyPage() {
   const allCoachApproved: any[] = [];
   photos.forEach((session: any) => { if (Array.isArray(session.photos)) { session.photos.filter((p: any) => p.approved).forEach((photo: any, i: number) => { allCoachApproved.push({ ...photo, sessionId: session.id, indexInSession: i }); }); } });
 
-  // Build lists for curation
   const curatedPhotoUrls = orderPhotos.map(p => p.secure_url).filter(Boolean);
   const curatedVideoUrls: { url: string; label: string; orderId: string }[] = [];
   videos.forEach((v: any) => {
@@ -502,40 +387,23 @@ export default function SinglePropertyPage() {
   const curatedDescIds = descriptions.map(d => d.id);
   const curatedStagingIds = stagings.map(s => s.id);
   const curatedExportIds = exports.map(e => e.id);
-
   const pubLiveUrl = `https://${pubSlug}.p2v.homes`;
-
-  // Hero thumbnail for the website preview banner
-  const heroThumb = orderPhotos[0]?.secure_url
-    ? (orderPhotos[0].secure_url.includes("/upload/")
-        ? orderPhotos[0].secure_url.replace("/upload/", "/upload/w_800,h_450,c_fill,q_auto/")
-        : orderPhotos[0].secure_url)
-    : null;
-
-  // Showing requests counts
+  const heroThumb = orderPhotos[0]?.secure_url ? (orderPhotos[0].secure_url.includes("/upload/") ? orderPhotos[0].secure_url.replace("/upload/", "/upload/w_800,h_450,c_fill,q_auto/") : orderPhotos[0].secure_url) : null;
   const unreadShowings = showingRequests.filter((r) => !r.read).length;
+  const nonRemixExports = exports.filter((e: any) => e.template_type !== "video_remix");
+  const remixExports = exports.filter((e: any) => e.template_type === "video_remix");
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        currentTier={subscriptionTier}
-        includedSiteUsed={includedSiteUsed}
-      />
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} currentTier={subscriptionTier} includedSiteUsed={includedSiteUsed} />
 
       {/* Staging Before/After Modal */}
       {stagingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={() => setStagingModal(null)}>
           <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-foreground">{stagingModal.room_type ? stagingModal.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Virtual Staging"}</h3>
-                <p className="text-xs text-muted-foreground">{stagingModal.style} · {new Date(stagingModal.created_at).toLocaleDateString()}</p>
-              </div>
+              <div><h3 className="text-lg font-bold text-foreground">{stagingModal.room_type ? stagingModal.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Virtual Staging"}</h3><p className="text-xs text-muted-foreground">{stagingModal.style} · {new Date(stagingModal.created_at).toLocaleDateString()}</p></div>
               <button onClick={() => setStagingModal(null)} className="p-2 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
             </div>
             <BeforeAfterSlider beforeUrl={stagingModal.original_url} afterUrl={stagingModal.staged_url} />
@@ -551,31 +419,23 @@ export default function SinglePropertyPage() {
       {exportModal && (() => {
         const dl = exportModal.export_url || exportModal.overlay_video_url;
         const isVideo = exportModal.export_format === "mp4" || dl?.match(/\.(mp4|mov|webm)$/i);
-        const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
+        const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card", video_remix: "Video Remix" };
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={() => setExportModal(null)}>
             <div className="bg-card rounded-2xl border border-border w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2.5 py-0.5 rounded-full">{tl[exportModal.template_type] || exportModal.template_type}</span>
+                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${exportModal.template_type === "video_remix" ? "text-purple-700 bg-purple-100" : "text-orange-700 bg-orange-100"}`}>{tl[exportModal.template_type] || exportModal.template_type}</span>
                   <p className="text-xs text-muted-foreground">{new Date(exportModal.created_at).toLocaleDateString()}</p>
                 </div>
                 <button onClick={() => setExportModal(null)} className="p-2 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="bg-black">
-                {isVideo ? (
-                  <video src={dl} controls autoPlay playsInline className="w-full max-h-[60vh] object-contain" />
-                ) : (
-                  <img src={dl} alt={tl[exportModal.template_type] || "Export"} className="w-full max-h-[60vh] object-contain" />
-                )}
+                {isVideo ? <video src={dl} controls autoPlay playsInline className="w-full max-h-[60vh] object-contain" /> : <img src={dl} alt={tl[exportModal.template_type] || "Export"} className="w-full max-h-[60vh] object-contain" />}
               </div>
               <div className="flex items-center gap-3 p-4 border-t border-border">
-                <a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-4 py-2 rounded-full">
-                  <Download className="h-3.5 w-3.5" />Download
-                </a>
-                <a href={dl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm px-4 py-2 rounded-full">
-                  <ExternalLink className="h-3.5 w-3.5" />Open in New Tab
-                </a>
+                <a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-4 py-2 rounded-full"><Download className="h-3.5 w-3.5" />Download</a>
+                <a href={dl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm px-4 py-2 rounded-full"><ExternalLink className="h-3.5 w-3.5" />Open in New Tab</a>
               </div>
             </div>
           </div>
@@ -590,101 +450,44 @@ export default function SinglePropertyPage() {
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">{property.address}</h1>
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${STATUS_COLORS[property.status] || STATUS_COLORS.active}`}>{property.status}</span>
-              {pubPublished && (
-                <span className="text-green-600 bg-green-100 text-[10px] font-semibold px-2 py-0.5 rounded-full">Live</span>
-              )}
+              {pubPublished && <span className="text-green-600 bg-green-100 text-[10px] font-semibold px-2 py-0.5 rounded-full">Live</span>}
             </div>
             <p className="text-muted-foreground mt-0.5">{[property.city, property.state, property.zip].filter(Boolean).join(", ")}{property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}</p>
           </div>
         </div>
 
-        {/* ═══ PROPERTY WEBSITE PREVIEW BANNER ═══ */}
+        {/* Website Preview Banner */}
         {pubPublished ? (
           <div className="mt-6 mb-8 rounded-2xl border border-border overflow-hidden bg-card hover:border-accent/40 hover:shadow-lg transition-all">
             <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer" className="block">
               <div className="relative h-48 sm:h-56 bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
-                {heroThumb ? (
-                  <img src={heroThumb} alt={property.address} className="w-full h-full object-cover opacity-90" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Globe className="h-16 w-16 text-white/10" />
-                  </div>
-                )}
+                {heroThumb ? <img src={heroThumb} alt={property.address} className="w-full h-full object-cover opacity-90" /> : <div className="w-full h-full flex items-center justify-center"><Globe className="h-16 w-16 text-white/10" /></div>}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute top-4 left-4">
-                  <span className="text-green-400 bg-green-400/20 backdrop-blur-sm text-xs font-bold px-3 py-1 rounded-full border border-green-400/30">
-                    ● Live
-                  </span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
-                  <p className="text-white/70 text-xs font-medium mb-1">Your Property Website</p>
-                  <p className="text-white text-xl sm:text-2xl font-extrabold">{property.address}</p>
-                  <p className="text-white/60 text-sm mt-1 truncate">{pubSlug}.p2v.homes</p>
-                </div>
+                <div className="absolute top-4 left-4"><span className="text-green-400 bg-green-400/20 backdrop-blur-sm text-xs font-bold px-3 py-1 rounded-full border border-green-400/30">● Live</span></div>
+                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6"><p className="text-white/70 text-xs font-medium mb-1">Your Property Website</p><p className="text-white text-xl sm:text-2xl font-extrabold">{property.address}</p><p className="text-white/60 text-sm mt-1 truncate">{pubSlug}.p2v.homes</p></div>
               </div>
             </a>
             <div className="px-5 py-3 flex items-center justify-between border-t border-border">
               <div className="flex items-center gap-3">
-                <a
-                  href={pubLiveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2 rounded-full transition-colors"
-                >
-                  <Eye className="h-4 w-4" />
-                  View Live Page
-                </a>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(pubLiveUrl); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {slugCopied ? <><CheckCircle className="h-3.5 w-3.5 text-green-500" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy Link</>}
-                </button>
+                <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2 rounded-full transition-colors"><Eye className="h-4 w-4" />View Live Page</a>
+                <button onClick={() => { navigator.clipboard.writeText(pubLiveUrl); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }} className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">{slugCopied ? <><CheckCircle className="h-3.5 w-3.5 text-green-500" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy Link</>}</button>
               </div>
-              <button
-                onClick={() => publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Edit Settings →
-              </button>
+              <button onClick={() => publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">Edit Settings →</button>
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => {
-              if (subscriptionTier !== "pro") {
-                setShowUpgradeModal(true);
-              } else {
-                publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }
-            }}
-            className="w-full mt-6 mb-8 rounded-2xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all p-6 sm:p-8 text-left group"
-          >
+          <button onClick={() => { if (subscriptionTier !== "pro") setShowUpgradeModal(true); else publishSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="w-full mt-6 mb-8 rounded-2xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all p-6 sm:p-8 text-left group">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
-                <Globe className="h-7 w-7 text-accent" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-lg font-extrabold text-foreground">Create Your Property Website</p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Build a beautiful listing page with photos, videos, staging, and lead capture — ready to share in minutes.
-                </p>
-              </div>
-              <div className="hidden sm:block flex-shrink-0">
-                <span className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2.5 rounded-full">
-                  Get Started
-                  <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
-                </span>
-              </div>
+              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors"><Globe className="h-7 w-7 text-accent" /></div>
+              <div className="flex-1 min-w-0"><p className="text-lg font-extrabold text-foreground">Create Your Property Website</p><p className="text-sm text-muted-foreground mt-0.5">Build a beautiful listing page with photos, videos, staging, and lead capture — ready to share in minutes.</p></div>
+              <div className="hidden sm:block flex-shrink-0"><span className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-5 py-2.5 rounded-full">Get Started<ArrowLeft className="h-3.5 w-3.5 rotate-180" /></span></div>
             </div>
           </button>
         )}
 
         {/* Quick Actions */}
         <div className="flex flex-wrap gap-2 mb-8">
-          <a href={`/order?${qs}`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-sm font-semibold text-accent hover:bg-accent/20 transition-all">
-  <Film className="h-3.5 w-3.5" />Order Video
-</a>
+          <a href={`/order?${qs}`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-sm font-semibold text-accent hover:bg-accent/20 transition-all"><Film className="h-3.5 w-3.5" />Order Video</a>
           <QuickAction href={`/dashboard/lens/coach?${qs}`} icon={Camera} label="Photo Coach" requiresSub />
           <QuickAction href={`/dashboard/lens/descriptions?${qs}`} icon={FileText} label="Write Description" requiresSub />
           <QuickAction href={`/dashboard/lens/staging?${qs}`} icon={Sofa} label="Stage Room" requiresSub />
@@ -694,20 +497,12 @@ export default function SinglePropertyPage() {
         {/* ═══ PROPERTY DETAILS ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-extrabold text-foreground">Property Details</h2>
-              <p className="text-sm text-muted-foreground mt-1">Complete details auto-fill your marketing tools, listing pages, and video branding.</p>
-            </div>
-            <Button onClick={() => { if (editing) handleSave(); else setEditing(true); }} variant={editing ? "default" : "outline"} className={`font-bold ${editing ? "bg-accent hover:bg-accent/90 text-accent-foreground" : ""}`}>
-              {editing ? <><Check className="h-4 w-4 mr-1.5" />Save</> : <><Pencil className="h-4 w-4 mr-1.5" />Edit Details</>}
-            </Button>
+            <div><h2 className="text-xl font-extrabold text-foreground">Property Details</h2><p className="text-sm text-muted-foreground mt-1">Complete details auto-fill your marketing tools, listing pages, and video branding.</p></div>
+            <Button onClick={() => { if (editing) handleSave(); else setEditing(true); }} variant={editing ? "default" : "outline"} className={`font-bold ${editing ? "bg-accent hover:bg-accent/90 text-accent-foreground" : ""}`}>{editing ? <><Check className="h-4 w-4 mr-1.5" />Save</> : <><Pencil className="h-4 w-4 mr-1.5" />Edit Details</>}</Button>
           </div>
           {editing ? (
             <div className="space-y-6">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Address / Property Name</label>
-                <input type="text" value={editForm.address || ""} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} placeholder="123 Main Street" className={inp} />
-              </div>
+              <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Address / Property Name</label><input type="text" value={editForm.address || ""} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} placeholder="123 Main Street" className={inp} /></div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Status</label><select value={editForm.status || "active"} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className={inp}><option value="active">Active</option><option value="pending">Pending</option><option value="sold">Sold</option><option value="withdrawn">Withdrawn</option><option value="rental">Rental</option></select></div>
                 <div><label className="block text-xs font-semibold text-muted-foreground mb-1">Listing Type</label><select value={editForm.listing_type || "sale"} onChange={(e) => setEditForm({ ...editForm, listing_type: e.target.value })} className={inp}><option value="sale">Sale</option><option value="rental">Rental</option><option value="commercial">Commercial</option></select></div>
@@ -724,103 +519,27 @@ export default function SinglePropertyPage() {
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {[
-                  { label: "Bedrooms", value: property.bedrooms, icon: "🛏️" },
-                  { label: "Bathrooms", value: property.bathrooms, icon: "🚿" },
-                  { label: "Sqft", value: property.sqft?.toLocaleString(), icon: "📐" },
-                  { label: "Lot Size", value: property.lot_size, icon: "🌳" },
-                  { label: "Year Built", value: property.year_built, icon: "🏗️" },
-                  { label: "Price", value: property.price ? `$${property.price.toLocaleString()}${property.price_period ? `/${property.price_period}` : ""}` : null, icon: "💰" },
-                  { label: "Listing Type", value: property.listing_type ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1) : null, icon: "📋" },
-                  { label: "Property Type", value: PROPERTY_TYPES[property.property_type] || property.property_type, icon: "🏠" },
-                ].map((item, i) => (
-                  <div key={i} className="bg-muted/30 rounded-xl p-3.5 border border-border/50">
-                    <div className="flex items-center gap-2 mb-1"><span className="text-sm">{item.icon}</span><p className="text-xs font-semibold text-muted-foreground">{item.label}</p></div>
-                    <p className="text-base font-bold text-foreground">{item.value || "—"}</p>
-                  </div>
+                {[{ label: "Bedrooms", value: property.bedrooms, icon: "🛏️" },{ label: "Bathrooms", value: property.bathrooms, icon: "🚿" },{ label: "Sqft", value: property.sqft?.toLocaleString(), icon: "📐" },{ label: "Lot Size", value: property.lot_size, icon: "🌳" },{ label: "Year Built", value: property.year_built, icon: "🏗️" },{ label: "Price", value: property.price ? `$${property.price.toLocaleString()}${property.price_period ? `/${property.price_period}` : ""}` : null, icon: "💰" },{ label: "Listing Type", value: property.listing_type ? property.listing_type.charAt(0).toUpperCase() + property.listing_type.slice(1) : null, icon: "📋" },{ label: "Property Type", value: PROPERTY_TYPES[property.property_type] || property.property_type, icon: "🏠" }].map((item, i) => (
+                  <div key={i} className="bg-muted/30 rounded-xl p-3.5 border border-border/50"><div className="flex items-center gap-2 mb-1"><span className="text-sm">{item.icon}</span><p className="text-xs font-semibold text-muted-foreground">{item.label}</p></div><p className="text-base font-bold text-foreground">{item.value || "—"}</p></div>
                 ))}
               </div>
-              {property.special_features && property.special_features.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-border">
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">Special Features</p>
-                  <div className="flex flex-wrap gap-2">{property.special_features.map((f, i) => <span key={i} className="text-xs font-medium bg-accent/10 text-accent px-2.5 py-1 rounded-full">{f}</span>)}</div>
-                </div>
-              )}
-              {(!property.bedrooms || !property.bathrooms || !property.price || !property.sqft) && (
-                <div className="mt-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                  <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-800">Complete your property details</p>
-                    <p className="text-xs text-amber-700 mt-0.5">Adding beds, baths, price, and sqft lets your tools auto-fill — saving time when creating descriptions, graphics, and property sheets.</p>
-                    <button onClick={() => setEditing(true)} className="text-xs font-bold text-accent hover:text-accent/80 mt-2 underline">Edit Details →</button>
-                  </div>
-                </div>
-              )}
+              {property.special_features && property.special_features.length > 0 && <div className="mt-5 pt-5 border-t border-border"><p className="text-xs font-semibold text-muted-foreground mb-2">Special Features</p><div className="flex flex-wrap gap-2">{property.special_features.map((f, i) => <span key={i} className="text-xs font-medium bg-accent/10 text-accent px-2.5 py-1 rounded-full">{f}</span>)}</div></div>}
+              {(!property.bedrooms || !property.bathrooms || !property.price || !property.sqft) && <div className="mt-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3"><Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" /><div><p className="text-sm font-semibold text-amber-800">Complete your property details</p><p className="text-xs text-amber-700 mt-0.5">Adding beds, baths, price, and sqft lets your tools auto-fill — saving time when creating descriptions, graphics, and property sheets.</p><button onClick={() => setEditing(true)} className="text-xs font-bold text-accent hover:text-accent/80 mt-2 underline">Edit Details →</button></div></div>}
             </>
           )}
           {/* Amenities */}
-              <div className="mt-5 pt-5 border-t border-border">
-                <p className="text-xs font-semibold text-muted-foreground mb-3">Amenities</p>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: "ac", label: "A/C", icon: "❄️" },
-                    { id: "heating", label: "Heating", icon: "🔥" },
-                    { id: "pool", label: "Pool", icon: "🏊" },
-                    { id: "garage", label: "Garage", icon: "🚗" },
-                    { id: "parking", label: "Parking", icon: "🅿️" },
-                    { id: "security", label: "Security System", icon: "🔒" },
-                    { id: "gated", label: "Gated Community", icon: "🚧" },
-                    { id: "laundry", label: "Laundry", icon: "👕" },
-                    { id: "dishwasher", label: "Dishwasher", icon: "🍽️" },
-                    { id: "fireplace", label: "Fireplace", icon: "🪵" },
-                    { id: "furnished", label: "Furnished", icon: "🛋️" },
-                    { id: "pet_friendly", label: "Pet Friendly", icon: "🐾" },
-                    { id: "gym", label: "Gym", icon: "💪" },
-                    { id: "elevator", label: "Elevator", icon: "🛗" },
-                    { id: "balcony", label: "Balcony", icon: "🌅" },
-                    { id: "garden", label: "Garden", icon: "🌿" },
-                    { id: "rooftop", label: "Rooftop", icon: "🏙️" },
-                    { id: "storage", label: "Storage", icon: "📦" },
-                    { id: "wheelchair", label: "Wheelchair Access", icon: "♿" },
-                    { id: "solar", label: "Solar Panels", icon: "☀️" },
-                    { id: "ev_charging", label: "EV Charging", icon: "🔌" },
-                    { id: "smart_home", label: "Smart Home", icon: "📱" },
-                    { id: "water_heater", label: "Water Heater", icon: "🚿" },
-                    { id: "ceiling_fans", label: "Ceiling Fans", icon: "🌀" },
-                  ].map((amenity) => {
-                    const selected = (property.amenities || []).includes(amenity.id);
-                    return (
-                      <button
-                        key={amenity.id}
-                        onClick={async () => {
-                          const current = property.amenities || [];
-                          const updated = selected
-                            ? current.filter((a: string) => a !== amenity.id)
-                            : [...current, amenity.id];
-                          const { error } = await supabase
-                            .from("agent_properties")
-                            .update({ amenities: updated, updated_at: new Date().toISOString() })
-                            .eq("id", property.id);
-                          if (!error) {
-                            setProperty({ ...property, amenities: updated, updated_at: new Date().toISOString() } as Property);
-                          }
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                          selected
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-border text-muted-foreground hover:border-accent/30"
-                        }`}
-                      >
-                        <span>{amenity.icon}</span>
-                        {amenity.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+          <div className="mt-5 pt-5 border-t border-border">
+            <p className="text-xs font-semibold text-muted-foreground mb-3">Amenities</p>
+            <div className="flex flex-wrap gap-2">
+              {[{ id: "ac", label: "A/C", icon: "❄️" },{ id: "heating", label: "Heating", icon: "🔥" },{ id: "pool", label: "Pool", icon: "🏊" },{ id: "garage", label: "Garage", icon: "🚗" },{ id: "parking", label: "Parking", icon: "🅿️" },{ id: "security", label: "Security System", icon: "🔒" },{ id: "gated", label: "Gated Community", icon: "🚧" },{ id: "laundry", label: "Laundry", icon: "👕" },{ id: "dishwasher", label: "Dishwasher", icon: "🍽️" },{ id: "fireplace", label: "Fireplace", icon: "🪵" },{ id: "furnished", label: "Furnished", icon: "🛋️" },{ id: "pet_friendly", label: "Pet Friendly", icon: "🐾" },{ id: "gym", label: "Gym", icon: "💪" },{ id: "elevator", label: "Elevator", icon: "🛗" },{ id: "balcony", label: "Balcony", icon: "🌅" },{ id: "garden", label: "Garden", icon: "🌿" },{ id: "rooftop", label: "Rooftop", icon: "🏙️" },{ id: "storage", label: "Storage", icon: "📦" },{ id: "wheelchair", label: "Wheelchair Access", icon: "♿" },{ id: "solar", label: "Solar Panels", icon: "☀️" },{ id: "ev_charging", label: "EV Charging", icon: "🔌" },{ id: "smart_home", label: "Smart Home", icon: "📱" },{ id: "water_heater", label: "Water Heater", icon: "🚿" },{ id: "ceiling_fans", label: "Ceiling Fans", icon: "🌀" }].map((amenity) => {
+                const selected = (property.amenities || []).includes(amenity.id);
+                return (<button key={amenity.id} onClick={async () => { const current = property.amenities || []; const updated = selected ? current.filter((a: string) => a !== amenity.id) : [...current, amenity.id]; const { error } = await supabase.from("agent_properties").update({ amenities: updated, updated_at: new Date().toISOString() }).eq("id", property.id); if (!error) setProperty({ ...property, amenities: updated, updated_at: new Date().toISOString() } as Property); }} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selected ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:border-accent/30"}`}><span>{amenity.icon}</span>{amenity.label}</button>);
+              })}
+            </div>
+          </div>
         </section>
 
-        {/* ═══ VIDEOS — playable ═══ */}
+        {/* ═══ VIDEOS ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2"><Film className="h-5 w-5 text-cyan-600" /><h2 className="text-lg font-bold text-foreground">Videos</h2>{videos.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{videos.length}</span>}</div>
@@ -837,34 +556,18 @@ export default function SinglePropertyPage() {
                 if (brandedUrl) videoVersions.push({ url: brandedUrl, label: "Branded", isBranded: true });
                 if (unbrandedUrl) videoVersions.push({ url: unbrandedUrl, label: "Unbranded", isBranded: false });
                 if (videoVersions.length === 0) videoVersions.push({ url: "", label: "", isBranded: false });
-
                 return (
                   <div key={order.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
                     <div className="p-4 pb-2 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${sc[order.status] || "bg-gray-100 text-gray-600"}`}>{order.status?.replace(/_/g, " ")}</span>
-                          {videoVersions.length > 1 && <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{videoVersions.length} versions</span>}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}</p>
-                      </div>
+                      <div><div className="flex items-center gap-2"><p className="text-sm font-semibold text-foreground">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${sc[order.status] || "bg-gray-100 text-gray-600"}`}>{order.status?.replace(/_/g, " ")}</span>{videoVersions.length > 1 && <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{videoVersions.length} versions</span>}</div><p className="text-xs text-muted-foreground mt-0.5">{order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}</p></div>
                       {order.delivery_url && <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/video/${order.order_id}`}><ExternalLink className="h-3 w-3 mr-1.5" />Share</Link></Button>}
                     </div>
                     <div className={`${videoVersions.length > 1 ? "grid grid-cols-2 gap-3 px-4 pb-4" : "px-4 pb-4"}`}>
                       {videoVersions.map((v) => v.url && (
                         <div key={v.label} className="space-y-2">
-                          {videoVersions.length > 1 && (
-                            <p className={`text-xs font-semibold ${v.isBranded ? "text-cyan-700" : "text-muted-foreground"}`}>
-                              {v.isBranded ? "🎨 Branded" : "📎 Unbranded"}
-                            </p>
-                          )}
-                          <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                            <video src={v.url} controls playsInline preload="metadata" className="w-full h-full" />
-                          </div>
-                          <a href={v.url.includes("/upload/") ? v.url.replace("/upload/", "/upload/fl_attachment/") : v.url} download className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
-                            <Download className="h-3 w-3" />Download {v.label}
-                          </a>
+                          {videoVersions.length > 1 && <p className={`text-xs font-semibold ${v.isBranded ? "text-cyan-700" : "text-muted-foreground"}`}>{v.isBranded ? "🎨 Branded" : "📎 Unbranded"}</p>}
+                          <div className="aspect-video bg-black rounded-lg overflow-hidden"><video src={v.url} controls playsInline preload="metadata" className="w-full h-full" /></div>
+                          <a href={v.url.includes("/upload/") ? v.url.replace("/upload/", "/upload/fl_attachment/") : v.url} download className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"><Download className="h-3 w-3" />Download {v.label}</a>
                         </div>
                       ))}
                     </div>
@@ -875,16 +578,49 @@ export default function SinglePropertyPage() {
           )}
         </section>
 
-        {/* ═══ MARKETING MATERIALS ═══ */}
+        {/* ═══ VIDEO REMIXES ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><PenTool className="h-5 w-5 text-orange-600" /><h2 className="text-lg font-bold text-foreground">Marketing Materials</h2>{exports.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{exports.length}</span>}</div>
+            <div className="flex items-center gap-2"><Film className="h-5 w-5 text-purple-600" /><h2 className="text-lg font-bold text-foreground">Video Remixes</h2>{remixExports.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{remixExports.length}</span>}</div>
+            <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/design-studio?${qs}`}><PenTool className="h-3 w-3 mr-1.5" />Create Remix</Link></Button>
           </div>
-          {exports.length === 0 ? (
+          {remixExports.length === 0 ? (
+            <div className="text-center py-10"><Film className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" /><p className="text-sm text-muted-foreground mb-1">No video remixes yet.</p><p className="text-xs text-muted-foreground mb-4">Remix your clips in the Design Studio to create social-ready videos.</p><Button asChild size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold"><Link href={`/dashboard/lens/design-studio?${qs}`}><Film className="h-4 w-4 mr-2" />Open Video Remix</Link></Button></div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {remixExports.map((remix: any) => {
+                const dl = remix.export_url || remix.overlay_video_url;
+                let thumb: string | null = null;
+                if (dl?.includes("cloudinary.com") && dl.includes("/video/upload/")) thumb = dl.replace("/video/upload/", "/video/upload/so_1,w_500,h_280,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg");
+                return (
+                  <div key={remix.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden group">
+                    <button onClick={() => setExportModal(remix)} className="block w-full text-left">
+                      <div className="aspect-video relative bg-black">
+                        {thumb ? <img src={thumb} alt="Video Remix" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><Film className="h-10 w-10 text-muted-foreground/20" /></div>}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div className="h-14 w-14 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center"><Play className="h-6 w-6 text-white ml-0.5" /></div></div>
+                      </div>
+                    </button>
+                    <div className="p-3 flex items-center justify-between">
+                      <div><div className="flex items-center gap-1.5"><span className="text-[10px] font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">Video Remix</span><span className="text-[10px] font-semibold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded-full">MP4</span></div><p className="text-xs text-muted-foreground mt-1.5">{new Date(remix.created_at).toLocaleDateString()}</p></div>
+                      <div className="flex items-center gap-2"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">Watch</a><a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ MARKETING MATERIALS (excludes video_remix) ═══ */}
+        <section className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><PenTool className="h-5 w-5 text-orange-600" /><h2 className="text-lg font-bold text-foreground">Marketing Materials</h2>{nonRemixExports.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{nonRemixExports.length}</span>}</div>
+          </div>
+          {nonRemixExports.length === 0 ? (
             <div className="text-center py-8"><p className="text-sm text-muted-foreground mb-3">No design exports yet.</p>{isSubscriber ? <Button asChild size="sm" variant="outline" className="font-semibold"><Link href={`/dashboard/lens/design-studio?${qs}`}>Create a Graphic</Link></Button> : <Button asChild size="sm" variant="outline" className="font-semibold"><Link href="/lens"><Lock className="h-3 w-3 mr-1.5" />Subscribe</Link></Button>}</div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {exports.map((exp: any) => {
+              {nonRemixExports.map((exp: any) => {
                 const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
                 const fl: Record<string, string> = { png: "PNG", pdf: "PDF", mp4: "Video" };
                 const dl = exp.export_url || exp.overlay_video_url;
@@ -897,11 +633,7 @@ export default function SinglePropertyPage() {
                 return (
                   <div key={exp.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
                     {thumb ? <button onClick={() => setExportModal(exp)} className="block w-full text-left"><div className="aspect-[4/3] relative bg-muted"><img src={thumb} alt={tl[exp.template_type] || "Export"} className="w-full h-full object-cover" />{exp.export_format === "mp4" && <div className="absolute inset-0 flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center"><Play className="h-4 w-4 text-white ml-0.5" /></div></div>}</div></button> : <button onClick={() => setExportModal(exp)} className="block w-full"><div className="aspect-[4/3] bg-muted flex items-center justify-center"><PenTool className="h-8 w-8 text-muted-foreground/30" /></div></button>}
-                    <div className="p-3">
-                      <div className="flex items-center gap-1.5 flex-wrap"><span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">{tl[exp.template_type] || exp.template_type}</span>{exp.export_format && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"}`}>{fl[exp.export_format] || exp.export_format.toUpperCase()}</span>}</div>
-                      <p className="text-xs text-muted-foreground mt-1.5">{new Date(exp.created_at).toLocaleDateString()}</p>
-                      {dl && <div className="flex items-center gap-2 mt-1.5"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">{exp.export_format === "mp4" ? "Watch" : "View"}</a><a href={dl.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a></div>}
-                    </div>
+                    <div className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">{tl[exp.template_type] || exp.template_type}</span>{exp.export_format && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"}`}>{fl[exp.export_format] || exp.export_format.toUpperCase()}</span>}</div><p className="text-xs text-muted-foreground mt-1.5">{new Date(exp.created_at).toLocaleDateString()}</p>{dl && <div className="flex items-center gap-2 mt-1.5"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">{exp.export_format === "mp4" ? "Watch" : "View"}</a><a href={dl.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a></div>}</div>
                   </div>
                 );
               })}
@@ -909,7 +641,7 @@ export default function SinglePropertyPage() {
           )}
         </section>
 
-        {/* ═══ PHOTO COACH — selectable ═══ */}
+        {/* ═══ PHOTO COACH ═══ */}
         {allCoachApproved.length > 0 && (
           <section className="bg-card rounded-2xl border border-border p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -935,7 +667,7 @@ export default function SinglePropertyPage() {
           </section>
         )}
 
-        {/* ═══ LISTING PHOTOS — selectable ═══ */}
+        {/* ═══ LISTING PHOTOS ═══ */}
         {orderPhotos.length > 0 && (
           <section className="bg-card rounded-2xl border border-border p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -965,7 +697,7 @@ export default function SinglePropertyPage() {
           </section>
         )}
 
-        {/* ═══ VIDEO CLIPS — selectable, send to design studio ═══ */}
+        {/* ═══ VIDEO CLIPS ═══ */}
         {orderClips.length > 0 && (
           <section className="bg-card rounded-2xl border border-border p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -992,7 +724,7 @@ export default function SinglePropertyPage() {
           </section>
         )}
 
-        {/* ═══ VIRTUAL STAGING — click for before/after modal ═══ */}
+        {/* ═══ VIRTUAL STAGING ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2"><Sofa className="h-5 w-5 text-indigo-600" /><h2 className="text-lg font-bold text-foreground">Virtual Staging</h2>{stagings.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{stagings.length}</span>}</div>
@@ -1004,10 +736,7 @@ export default function SinglePropertyPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {stagings.map((s: any) => (
                   <button key={s.id} onClick={() => setStagingModal(s)} className="rounded-xl border border-border overflow-hidden bg-muted/30 hover:border-indigo-500/40 hover:shadow-md transition-all text-left group">
-                    <div className="grid grid-cols-2 aspect-[8/3]">
-                      <div className="relative overflow-hidden"><img src={s.original_url} alt="Before" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span></div>
-                      <div className="relative overflow-hidden"><img src={s.staged_url} alt="After" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">After</span></div>
-                    </div>
+                    <div className="grid grid-cols-2 aspect-[8/3]"><div className="relative overflow-hidden"><img src={s.original_url} alt="Before" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span></div><div className="relative overflow-hidden"><img src={s.staged_url} alt="After" className="w-full h-full object-cover" /><span className="absolute bottom-1 left-1 text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded">After</span></div></div>
                     <div className="p-2.5"><p className="text-xs font-semibold text-foreground">{s.room_type ? s.room_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "Room"}</p><p className="text-[10px] text-muted-foreground">{s.style} · Click to compare</p></div>
                   </button>
                 ))}
@@ -1017,7 +746,7 @@ export default function SinglePropertyPage() {
           )}
         </section>
 
-        {/* ═══ DESCRIPTIONS — collapsible ═══ */}
+        {/* ═══ DESCRIPTIONS ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-teal-600" /><h2 className="text-lg font-bold text-foreground">Descriptions</h2>{descriptions.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{descriptions.length}</span>}</div>
@@ -1031,18 +760,8 @@ export default function SinglePropertyPage() {
                 return (
                   <div key={desc.id} className="p-4 rounded-xl bg-muted/30 border border-border">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-muted-foreground capitalize mb-1">{desc.style || "Professional"} style · {new Date(desc.created_at).toLocaleDateString()}</p>
-                        <p className={`text-sm text-foreground whitespace-pre-wrap ${isExp ? "" : "line-clamp-2"}`}>{desc.description}</p>
-                        {desc.description?.length > 150 && (
-                          <button onClick={() => setExpandedDesc(isExp ? null : desc.id)} className="text-xs font-semibold text-accent hover:text-accent/80 mt-1.5 flex items-center gap-1">
-                            <ChevronDown className={`h-3 w-3 transition-transform ${isExp ? "rotate-180" : ""}`} />{isExp ? "Show less" : "Read full description"}
-                          </button>
-                        )}
-                      </div>
-                      <button onClick={() => copyToClipboard(desc.description || "", desc.id)} className="flex-shrink-0 p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground" title="Copy">
-                        {copiedId === desc.id ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </button>
+                      <div className="flex-1 min-w-0"><p className="text-xs font-semibold text-muted-foreground capitalize mb-1">{desc.style || "Professional"} style · {new Date(desc.created_at).toLocaleDateString()}</p><p className={`text-sm text-foreground whitespace-pre-wrap ${isExp ? "" : "line-clamp-2"}`}>{desc.description}</p>{desc.description?.length > 150 && <button onClick={() => setExpandedDesc(isExp ? null : desc.id)} className="text-xs font-semibold text-accent hover:text-accent/80 mt-1.5 flex items-center gap-1"><ChevronDown className={`h-3 w-3 transition-transform ${isExp ? "rotate-180" : ""}`} />{isExp ? "Show less" : "Read full description"}</button>}</div>
+                      <button onClick={() => copyToClipboard(desc.description || "", desc.id)} className="flex-shrink-0 p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground" title="Copy">{copiedId === desc.id ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}</button>
                     </div>
                   </div>
                 );
@@ -1051,442 +770,85 @@ export default function SinglePropertyPage() {
           )}
         </section>
 
-        {/* ═══ SECTION 9: PUBLISH TO WEBSITE ═══ */}
+        {/* ═══ PUBLISH TO WEBSITE ═══ */}
         <section ref={publishSectionRef} className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
           {subscriptionTier !== "pro" && !property.website_published ? (
-            /* ─── Gated: not a Pro subscriber and no existing published site ─── */
             <div className="text-center py-8">
-              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                <Globe className="h-7 w-7 text-accent" />
-              </div>
+              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4"><Globe className="h-7 w-7 text-accent" /></div>
               <h2 className="text-xl font-extrabold text-foreground mb-2">Publish to Website</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
-                Create a beautiful property page with photos, videos, staging, and lead capture. Own it forever for $399 or subscribe to Lens Pro.
-              </p>
-              <Button
-                onClick={() => setShowUpgradeModal(true)}
-                className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"
-              >
-                <Globe className="h-4 w-4 mr-2" />
-                Get Your Website
-              </Button>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">Create a beautiful property page with photos, videos, staging, and lead capture. Own it forever for $399 or subscribe to Lens Pro.</p>
+              <Button onClick={() => setShowUpgradeModal(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Globe className="h-4 w-4 mr-2" />Get Your Website</Button>
             </div>
           ) : (
-            /* ─── Full publish section ─── */
             <>
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Globe className="h-5 w-5 text-accent" />
-              <div>
-                <h2 className="text-xl font-extrabold text-foreground">Publish to Website</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Create a beautiful property page and choose what to show.</p>
-              </div>
-            </div>
-            {pubPublished && (
-              <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700">
-                <Eye className="h-3.5 w-3.5" />View Live Page
-              </a>
-            )}
+            <div className="flex items-center gap-3"><Globe className="h-5 w-5 text-accent" /><div><h2 className="text-xl font-extrabold text-foreground">Publish to Website</h2><p className="text-sm text-muted-foreground mt-0.5">Create a beautiful property page and choose what to show.</p></div></div>
+            {pubPublished && <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700"><Eye className="h-3.5 w-3.5" />View Live Page</a>}
           </div>
-
-          {/* Publish toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border mb-6">
-            <div>
-              <p className="text-sm font-bold text-foreground">{pubPublished ? "Website is Live" : "Website is Off"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{pubPublished ? "Visitors can see your property page." : "Toggle on to publish your property page."}</p>
-            </div>
-            <button
-              onClick={togglePublish}
-              disabled={pubSaving}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${pubPublished ? "bg-green-500" : "bg-gray-300"}`}
-            >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${pubPublished ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
+            <div><p className="text-sm font-bold text-foreground">{pubPublished ? "Website is Live" : "Website is Off"}</p><p className="text-xs text-muted-foreground mt-0.5">{pubPublished ? "Visitors can see your property page." : "Toggle on to publish your property page."}</p></div>
+            <button onClick={togglePublish} disabled={pubSaving} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${pubPublished ? "bg-green-500" : "bg-gray-300"}`}><span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${pubPublished ? "translate-x-6" : "translate-x-1"}`} /></button>
           </div>
+          <div className="mb-6"><label className="block text-xs font-semibold text-muted-foreground mb-1.5">Page URL</label><div className="flex items-center gap-2"><input type="text" value={pubSlug} onChange={(e) => setPubSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 80))} className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="123-main-st-austin-tx" /><span className="text-sm text-muted-foreground flex-shrink-0">.p2v.homes</span><button onClick={() => { navigator.clipboard.writeText(pubLiveUrl); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground" title="Copy URL">{slugCopied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Link2 className="h-4 w-4" />}</button></div></div>
+          <div className="mb-6"><label className="block text-xs font-semibold text-muted-foreground mb-3">Template</label><div className="grid grid-cols-3 gap-3">{TEMPLATES.map((t) => (<button key={t.id} onClick={() => setPubTemplate(t.id)} className={`rounded-xl border-2 p-4 text-left transition-all ${pubTemplate === t.id ? "border-accent ring-2 ring-accent/30" : "border-border hover:border-accent/40"}`}><div className={`h-12 rounded-lg mb-2 border ${t.colors} flex items-center justify-center`}><span className="text-xs font-bold">Aa</span></div><p className="text-sm font-bold text-foreground">{t.label}</p><p className="text-[10px] text-muted-foreground">{t.desc}</p></button>))}</div></div>
+          <div className="mb-6"><label className="block text-xs font-semibold text-muted-foreground mb-3">Sections to Show</label><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{Object.entries(MODULE_LABELS).map(([key, label]) => { const isOn = key === "lead_capture" ? true : (pubModules[key] ?? false); const isLocked = key === "lead_capture"; const hasContent = key === "photos" ? orderPhotos.length > 0 : key === "videos" ? videos.some((v: any) => v.delivery_url || v.unbranded_delivery_url) : key === "description" ? descriptions.length > 0 : key === "staging" ? stagings.length > 0 : key === "exports" ? exports.length > 0 : true; return (<button key={key} onClick={() => { if (isLocked) return; setPubModules(prev => ({ ...prev, [key]: !prev[key] })); }} disabled={isLocked} className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left ${isOn ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20"} ${isLocked ? "opacity-60 cursor-not-allowed" : ""}`}><div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isOn ? "bg-accent border-accent" : "border-border"}`}>{isOn && <Check className="h-2.5 w-2.5 text-white" />}</div><div className="min-w-0"><p className="text-xs font-semibold text-foreground">{label}</p>{!hasContent && key !== "booking" && key !== "lead_capture" && key !== "lensy" && <p className="text-[9px] text-muted-foreground">No content yet</p>}{isLocked && <p className="text-[9px] text-muted-foreground">Always on</p>}</div></button>); })}</div></div>
 
-          {/* Slug */}
-          <div className="mb-6">
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Page URL</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={pubSlug}
-                onChange={(e) => setPubSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 80))}
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                placeholder="123-main-st-austin-tx"
-              />
-              <span className="text-sm text-muted-foreground flex-shrink-0">.p2v.homes</span>
-              <button
-                onClick={() => { navigator.clipboard.writeText(pubLiveUrl); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }}
-                className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-                title="Copy URL"
-              >
-                {slugCopied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Link2 className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Template picker */}
-          <div className="mb-6">
-            <label className="block text-xs font-semibold text-muted-foreground mb-3">Template</label>
-            <div className="grid grid-cols-3 gap-3">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setPubTemplate(t.id)}
-                  className={`rounded-xl border-2 p-4 text-left transition-all ${
-                    pubTemplate === t.id
-                      ? "border-accent ring-2 ring-accent/30"
-                      : "border-border hover:border-accent/40"
-                  }`}
-                >
-                  <div className={`h-12 rounded-lg mb-2 border ${t.colors} flex items-center justify-center`}>
-                    <span className="text-xs font-bold">Aa</span>
-                  </div>
-                  <p className="text-sm font-bold text-foreground">{t.label}</p>
-                  <p className="text-[10px] text-muted-foreground">{t.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Module toggles */}
-          <div className="mb-6">
-            <label className="block text-xs font-semibold text-muted-foreground mb-3">Sections to Show</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {Object.entries(MODULE_LABELS).map(([key, label]) => {
-                const isOn = key === "lead_capture" ? true : (pubModules[key] ?? false);
-                const isLocked = key === "lead_capture";
-                const hasContent = key === "photos" ? orderPhotos.length > 0 :
-                  key === "videos" ? videos.some((v: any) => v.delivery_url || v.unbranded_delivery_url) :
-                  key === "description" ? descriptions.length > 0 :
-                  key === "staging" ? stagings.length > 0 :
-                  key === "exports" ? exports.length > 0 :
-                  true;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      if (isLocked) return;
-                      setPubModules(prev => ({ ...prev, [key]: !prev[key] }));
-                    }}
-                    disabled={isLocked}
-                    className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left ${
-                      isOn
-                        ? "border-accent/40 bg-accent/5"
-                        : "border-border hover:border-accent/20"
-                    } ${isLocked ? "opacity-60 cursor-not-allowed" : ""}`}
-                  >
-                    <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                      isOn ? "bg-accent border-accent" : "border-border"
-                    }`}>
-                      {isOn && <Check className="h-2.5 w-2.5 text-white" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{label}</p>
-                      {!hasContent && key !== "booking" && key !== "lead_capture" && key !== "lensy" && (
-                        <p className="text-[9px] text-muted-foreground">No content yet</p>
-                      )}
-                      {isLocked && <p className="text-[9px] text-muted-foreground">Always on</p>}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Per-asset curation panels */}
+          {/* Curation panels */}
           {pubModules.photos && orderPhotos.length > 0 && (
-            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-foreground">Curate Photos ({(pubCurated.photos || []).length} of {curatedPhotoUrls.length} selected)</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => selectAllCurated("photos", curatedPhotoUrls)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
-                  <button onClick={() => deselectAllCurated("photos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                {orderPhotos.map((photo: any, i: number) => {
-                  const url = photo.secure_url;
-                  const isSel = (pubCurated.photos || []).includes(url);
-                  const th = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_150,h_112,c_fill/") : url;
-                  return (
-                    <button key={i} onClick={() => toggleCuratedItem("photos", url)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}>
-                      <div className="aspect-[4/3] bg-muted"><img src={th} alt="" className="w-full h-full object-cover" /></div>
-                      {isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border"><div className="flex items-center justify-between mb-3"><p className="text-xs font-bold text-foreground">Curate Photos ({(pubCurated.photos || []).length} of {curatedPhotoUrls.length} selected)</p><div className="flex items-center gap-2"><button onClick={() => selectAllCurated("photos", curatedPhotoUrls)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button><button onClick={() => deselectAllCurated("photos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button></div></div><div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">{orderPhotos.map((photo: any, i: number) => { const url = photo.secure_url; const isSel = (pubCurated.photos || []).includes(url); const th = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_150,h_112,c_fill/") : url; return (<button key={i} onClick={() => toggleCuratedItem("photos", url)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}><div className="aspect-[4/3] bg-muted"><img src={th} alt="" className="w-full h-full object-cover" /></div>{isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}</button>); })}</div></div>
           )}
-
           {pubModules.videos && curatedVideoUrls.length > 0 && (
-            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-foreground">Curate Videos ({(pubCurated.videos || []).length} of {curatedVideoUrls.length} selected)</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => selectAllCurated("videos", curatedVideoUrls.map(v => v.url))} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
-                  <button onClick={() => deselectAllCurated("videos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {curatedVideoUrls.map((v) => {
-                  const isSel = (pubCurated.videos || []).includes(v.url);
-                  return (
-                    <button key={v.url} onClick={() => toggleCuratedItem("videos", v.url)} className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
-                      <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? "bg-accent border-accent" : "border-border"}`}>
-                        {isSel && <Check className="h-2.5 w-2.5 text-white" />}
-                      </div>
-                      <Film className="h-4 w-4 text-cyan-600 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-foreground">{v.label}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border"><div className="flex items-center justify-between mb-3"><p className="text-xs font-bold text-foreground">Curate Videos ({(pubCurated.videos || []).length} of {curatedVideoUrls.length} selected)</p><div className="flex items-center gap-2"><button onClick={() => selectAllCurated("videos", curatedVideoUrls.map(v => v.url))} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button><button onClick={() => deselectAllCurated("videos")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button></div></div><div className="space-y-2">{curatedVideoUrls.map((v) => { const isSel = (pubCurated.videos || []).includes(v.url); return (<button key={v.url} onClick={() => toggleCuratedItem("videos", v.url)} className={`flex items-center gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}><div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? "bg-accent border-accent" : "border-border"}`}>{isSel && <Check className="h-2.5 w-2.5 text-white" />}</div><Film className="h-4 w-4 text-cyan-600 flex-shrink-0" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground">{v.label}</p></div></button>); })}</div></div>
           )}
-
           {pubModules.description && descriptions.length > 0 && (
-            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-foreground">Curate Descriptions ({(pubCurated.descriptions || []).length} of {curatedDescIds.length} selected)</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => selectAllCurated("descriptions", curatedDescIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
-                  <button onClick={() => deselectAllCurated("descriptions")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {descriptions.map((desc: any) => {
-                  const isSel = (pubCurated.descriptions || []).includes(desc.id);
-                  return (
-                    <button key={desc.id} onClick={() => toggleCuratedItem("descriptions", desc.id)} className={`flex items-start gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
-                      <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 ${isSel ? "bg-accent border-accent" : "border-border"}`}>
-                        {isSel && <Check className="h-2.5 w-2.5 text-white" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-foreground capitalize">{desc.style || "Professional"} style</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{desc.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border"><div className="flex items-center justify-between mb-3"><p className="text-xs font-bold text-foreground">Curate Descriptions ({(pubCurated.descriptions || []).length} of {curatedDescIds.length} selected)</p><div className="flex items-center gap-2"><button onClick={() => selectAllCurated("descriptions", curatedDescIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button><button onClick={() => deselectAllCurated("descriptions")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button></div></div><div className="space-y-2">{descriptions.map((desc: any) => { const isSel = (pubCurated.descriptions || []).includes(desc.id); return (<button key={desc.id} onClick={() => toggleCuratedItem("descriptions", desc.id)} className={`flex items-start gap-3 w-full p-3 rounded-xl border transition-all text-left ${isSel ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}><div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 ${isSel ? "bg-accent border-accent" : "border-border"}`}>{isSel && <Check className="h-2.5 w-2.5 text-white" />}</div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-foreground capitalize">{desc.style || "Professional"} style</p><p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{desc.description}</p></div></button>); })}</div></div>
           )}
-
           {pubModules.staging && stagings.length > 0 && (
-            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-foreground">Curate Staging ({(pubCurated.staging || []).length} of {curatedStagingIds.length} selected)</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => selectAllCurated("staging", curatedStagingIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
-                  <button onClick={() => deselectAllCurated("staging")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {stagings.map((s: any) => {
-                  const isSel = (pubCurated.staging || []).includes(s.id);
-                  return (
-                    <button key={s.id} onClick={() => toggleCuratedItem("staging", s.id)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}>
-                      <div className="aspect-[4/3] bg-muted"><img src={s.staged_url} alt="" className="w-full h-full object-cover" /></div>
-                      {isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}
-                      <div className="px-1.5 py-1 bg-card"><p className="text-[9px] font-semibold truncate">{s.room_type?.replace(/_/g, " ") || "Room"}</p></div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border"><div className="flex items-center justify-between mb-3"><p className="text-xs font-bold text-foreground">Curate Staging ({(pubCurated.staging || []).length} of {curatedStagingIds.length} selected)</p><div className="flex items-center gap-2"><button onClick={() => selectAllCurated("staging", curatedStagingIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button><button onClick={() => deselectAllCurated("staging")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button></div></div><div className="grid grid-cols-3 sm:grid-cols-4 gap-2">{stagings.map((s: any) => { const isSel = (pubCurated.staging || []).includes(s.id); return (<button key={s.id} onClick={() => toggleCuratedItem("staging", s.id)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}><div className="aspect-[4/3] bg-muted"><img src={s.staged_url} alt="" className="w-full h-full object-cover" /></div>{isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}<div className="px-1.5 py-1 bg-card"><p className="text-[9px] font-semibold truncate">{s.room_type?.replace(/_/g, " ") || "Room"}</p></div></button>); })}</div></div>
           )}
-
           {pubModules.exports && exports.length > 0 && (
-            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-foreground">Curate Marketing Materials ({(pubCurated.exports || []).length} of {curatedExportIds.length} selected)</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => selectAllCurated("exports", curatedExportIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button>
-                  <button onClick={() => deselectAllCurated("exports")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {exports.map((exp: any) => {
-                  const isSel = (pubCurated.exports || []).includes(exp.id);
-                  const dl = exp.export_url || exp.overlay_video_url;
-                  let thumb: string | null = null;
-                  if (dl?.includes("cloudinary.com")) {
-                    if (exp.export_format === "mp4" || dl.match(/\.(mp4|mov|webm)$/i)) thumb = dl.replace("/video/upload/", "/video/upload/so_1,w_200,h_150,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg");
-                    else thumb = dl.includes("/upload/") ? dl.replace("/upload/", "/upload/w_200,h_150,c_fill/") : dl;
-                  }
-                  const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card" };
-                  return (
-                    <button key={exp.id} onClick={() => toggleCuratedItem("exports", exp.id)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}>
-                      <div className="aspect-[4/3] bg-muted">
-                        {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><PenTool className="h-6 w-6 text-muted-foreground/30" /></div>}
-                      </div>
-                      {isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}
-                      <div className="px-1.5 py-1 bg-card"><p className="text-[9px] font-semibold truncate">{tl[exp.template_type] || exp.template_type}</p></div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="mb-5 p-4 rounded-xl bg-muted/20 border border-border"><div className="flex items-center justify-between mb-3"><p className="text-xs font-bold text-foreground">Curate Marketing Materials ({(pubCurated.exports || []).length} of {curatedExportIds.length} selected)</p><div className="flex items-center gap-2"><button onClick={() => selectAllCurated("exports", curatedExportIds)} className="text-[10px] font-semibold text-accent hover:text-accent/80">Select All</button><button onClick={() => deselectAllCurated("exports")} className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Clear</button></div></div><div className="grid grid-cols-3 sm:grid-cols-4 gap-2">{exports.map((exp: any) => { const isSel = (pubCurated.exports || []).includes(exp.id); const dl = exp.export_url || exp.overlay_video_url; let thumb: string | null = null; if (dl?.includes("cloudinary.com")) { if (exp.export_format === "mp4" || dl.match(/\.(mp4|mov|webm)$/i)) thumb = dl.replace("/video/upload/", "/video/upload/so_1,w_200,h_150,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i, ".jpg"); else thumb = dl.includes("/upload/") ? dl.replace("/upload/", "/upload/w_200,h_150,c_fill/") : dl; } const tl: Record<string, string> = { just_listed: "Just Listed", open_house: "Open House", price_reduced: "Price Reduced", just_sold: "Just Sold", yard_sign: "Yard Sign", property_pdf: "Property PDF", branding_card: "Branding Card", video_remix: "Video Remix" }; return (<button key={exp.id} onClick={() => toggleCuratedItem("exports", exp.id)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${isSel ? "border-accent" : "border-transparent hover:border-accent/30"}`}><div className="aspect-[4/3] bg-muted">{thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><PenTool className="h-6 w-6 text-muted-foreground/30" /></div>}</div>{isSel && <div className="absolute top-1 right-1 h-4 w-4 rounded-full bg-accent flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" /></div>}<div className="px-1.5 py-1 bg-card"><p className="text-[9px] font-semibold truncate">{tl[exp.template_type] || exp.template_type}</p></div></button>); })}</div></div>
           )}
 
-          {/* Save + Preview */}
           <div className="flex items-center gap-3 pt-4 border-t border-border">
-            <Button onClick={handlePublishSave} disabled={pubSaving} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-              {pubSaving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : "Save Settings"}
-            </Button>
-            {pubSlug && (
-              <Button asChild variant="outline" className="font-bold">
-                <a href={pubLiveUrl} target="_blank" rel="noopener noreferrer">
-                  <Eye className="h-4 w-4 mr-2" />Preview
-                </a>
-              </Button>
-            )}
-            {pubPublished && (
-              <button onClick={togglePublish} disabled={pubSaving} className="text-xs font-semibold text-red-500 hover:text-red-600 ml-auto">
-                Unpublish
-              </button>
-            )}
+            <Button onClick={handlePublishSave} disabled={pubSaving} className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">{pubSaving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : "Save Settings"}</Button>
+            {pubSlug && <Button asChild variant="outline" className="font-bold"><a href={pubLiveUrl} target="_blank" rel="noopener noreferrer"><Eye className="h-4 w-4 mr-2" />Preview</a></Button>}
+            {pubPublished && <button onClick={togglePublish} disabled={pubSaving} className="text-xs font-semibold text-red-500 hover:text-red-600 ml-auto">Unpublish</button>}
           </div>
             </>
           )}
         </section>
 
-        {/* ═══ SECTION 10: BOOKING CALENDAR MANAGEMENT ═══ */}
+        {/* ═══ BOOKING CALENDAR ═══ */}
         <section className="bg-card rounded-2xl border border-border p-6 sm:p-8 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <CalendarDays className="h-5 w-5 text-blue-600" />
-              <div>
-                <h2 className="text-xl font-extrabold text-foreground">Booking Calendar</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Let buyers schedule showings directly from your property website.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Enable toggle */}
+          <div className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><CalendarDays className="h-5 w-5 text-blue-600" /><div><h2 className="text-xl font-extrabold text-foreground">Booking Calendar</h2><p className="text-sm text-muted-foreground mt-0.5">Let buyers schedule showings directly from your property website.</p></div></div></div>
           <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border mb-6">
-            <div>
-              <p className="text-sm font-bold text-foreground">{bookingEnabled ? "Booking Calendar is On" : "Booking Calendar is Off"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {bookingEnabled
-                  ? "Visitors can book showings from your property website."
-                  : "Enable to let visitors book showings on your property page."}
-              </p>
-            </div>
-            <button
-              onClick={toggleBookingEnabled}
-              disabled={bookingToggling}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${bookingEnabled ? "bg-green-500" : "bg-gray-300"}`}
-            >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${bookingEnabled ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
+            <div><p className="text-sm font-bold text-foreground">{bookingEnabled ? "Booking Calendar is On" : "Booking Calendar is Off"}</p><p className="text-xs text-muted-foreground mt-0.5">{bookingEnabled ? "Visitors can book showings from your property website." : "Enable to let visitors book showings on your property page."}</p></div>
+            <button onClick={toggleBookingEnabled} disabled={bookingToggling} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${bookingEnabled ? "bg-green-500" : "bg-gray-300"}`}><span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${bookingEnabled ? "translate-x-6" : "translate-x-1"}`} /></button>
           </div>
-
           {bookingEnabled && (
             <>
-              {/* Manage calendar */}
-              <div className="mb-8">
-                <BookingCalendar
-                  propertyId={property.id}
-                  mode="manage"
-                  propertyAddress={property.address}
-                />
-              </div>
-
-              {/* Showing Requests */}
+              <div className="mb-8"><BookingCalendar propertyId={property.id} mode="manage" propertyAddress={property.address} /></div>
               <div className="border-t border-border pt-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <MessageSquare className="h-5 w-5 text-teal-600" />
-                  <h3 className="text-lg font-bold text-foreground">Showing Requests</h3>
-                  {unreadShowings > 0 && (
-                    <span className="text-xs font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full">
-                      {unreadShowings} new
-                    </span>
-                  )}
-                </div>
-
-                {showingsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : showingRequests.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      No showing requests yet. They&apos;ll appear here when visitors inquire from your property page.
-                    </p>
-                  </div>
-                ) : (
+                <div className="flex items-center gap-3 mb-4"><MessageSquare className="h-5 w-5 text-teal-600" /><h3 className="text-lg font-bold text-foreground">Showing Requests</h3>{unreadShowings > 0 && <span className="text-xs font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full">{unreadShowings} new</span>}</div>
+                {showingsLoading ? <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : showingRequests.length === 0 ? <div className="text-center py-8"><MessageSquare className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" /><p className="text-sm text-muted-foreground">No showing requests yet. They&apos;ll appear here when visitors inquire from your property page.</p></div> : (
                   <div className="space-y-3">
                     {showingRequests.map((req) => (
-                      <div
-                        key={req.id}
-                        className={`p-4 rounded-xl border transition-all ${
-                          !req.read
-                            ? "border-blue-200 bg-blue-50/50"
-                            : "border-border bg-muted/20"
-                        }`}
-                      >
+                      <div key={req.id} className={`p-4 rounded-xl border transition-all ${!req.read ? "border-blue-200 bg-blue-50/50" : "border-border bg-muted/20"}`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 min-w-0 flex-1">
-                            {/* Unread dot */}
-                            {!req.read && (
-                              <div className="h-2.5 w-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
-                            )}
+                            {!req.read && <div className="h-2.5 w-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-bold text-foreground">{req.visitor_name}</p>
                               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                                {req.visitor_email && (
-                                  <a
-                                    href={`mailto:${req.visitor_email}`}
-                                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium"
-                                  >
-                                    <Mail className="h-3 w-3" />
-                                    {req.visitor_email}
-                                  </a>
-                                )}
-                                {req.visitor_phone && (
-                                  <a
-                                    href={`tel:${req.visitor_phone}`}
-                                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium"
-                                  >
-                                    <Phone className="h-3 w-3" />
-                                    {req.visitor_phone}
-                                  </a>
-                                )}
+                                {req.visitor_email && <a href={`mailto:${req.visitor_email}`} className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium"><Mail className="h-3 w-3" />{req.visitor_email}</a>}
+                                {req.visitor_phone && <a href={`tel:${req.visitor_phone}`} className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-medium"><Phone className="h-3 w-3" />{req.visitor_phone}</a>}
                               </div>
-                              {req.message && (
-                                <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
-                                  {req.message}
-                                </p>
-                              )}
-                              <p className="text-[10px] text-muted-foreground mt-2">
-                                {timeAgo(req.created_at)}
-                                {req.source && ` · via ${req.source}`}
-                              </p>
+                              {req.message && <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{req.message}</p>}
+                              <p className="text-[10px] text-muted-foreground mt-2">{timeAgo(req.created_at)}{req.source && ` · via ${req.source}`}</p>
                             </div>
                           </div>
-                          {!req.read && (
-                            <button
-                              onClick={() => handleMarkRead(req.id)}
-                              disabled={markingRead === req.id}
-                              className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground bg-white border border-border rounded-lg px-3 py-1.5 transition-colors"
-                            >
-                              {markingRead === req.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <>
-                                  <Check className="h-3 w-3" />
-                                  Mark Read
-                                </>
-                              )}
-                            </button>
-                          )}
+                          {!req.read && <button onClick={() => handleMarkRead(req.id)} disabled={markingRead === req.id} className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground bg-white border border-border rounded-lg px-3 py-1.5 transition-colors">{markingRead === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3" />Mark Read</>}</button>}
                         </div>
                       </div>
                     ))}
