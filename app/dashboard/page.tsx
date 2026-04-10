@@ -46,7 +46,14 @@ import {
   Pencil,
   Upload,
   Save,
+  Eye,
+  Copy,
 } from "lucide-react";
+
+/* ─────────────────────────────────────────────
+   Constants
+   ───────────────────────────────────────────── */
+const PROPERTY_SITE_BASE = "/p"; // Change to "https://" + slug + ".p2v.homes" when DNS is live
 
 /* ─────────────────────────────────────────────
    Styles
@@ -104,6 +111,14 @@ interface RecentProperty {
   special_features: string[] | null;
 }
 
+interface PublishedWebsite {
+  id: string;
+  address: string;
+  website_slug: string;
+  website_published: boolean;
+  website_curated: any;
+}
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE EXPORT
    ═══════════════════════════════════════════════ */
@@ -120,6 +135,8 @@ export default function DashboardPage() {
   const [descriptionCount, setDescriptionCount] = useState(0);
   const [propertyCount, setPropertyCount] = useState(0);
   const [recentProperties, setRecentProperties] = useState<RecentProperty[]>([]);
+  const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFreePrize, setIsFreePrize] = useState(false);
   const [freeLensDaysLeft, setFreeLensDaysLeft] = useState<number | null>(null);
@@ -226,6 +243,18 @@ export default function DashboardPage() {
         .limit(5);
       if (props) setRecentProperties(props);
 
+      // Published property websites
+      const { data: publishedSites } = await supabase
+        .from("agent_properties")
+        .select("id, address, website_slug, website_published, website_curated")
+        .eq("user_id", authUser.id)
+        .eq("website_published", true)
+        .is("merged_into_id", null)
+        .not("website_slug", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(6);
+      if (publishedSites) setPublishedWebsites(publishedSites);
+
       // Directory listing check
       try {
         const res = await fetch("/api/directory/me");
@@ -237,6 +266,23 @@ export default function DashboardPage() {
     };
     init();
   }, []);
+
+  /* ─── Copy link handler ─── */
+  const handleCopyLink = async (slug: string) => {
+    const url = `${window.location.origin}/p/${slug}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedSlug(slug);
+    setTimeout(() => setCopiedSlug(null), 2000);
+  };
+
+  /* ─── Get hero image from website_curated ─── */
+  const getHeroImage = (curated: any): string | null => {
+    if (!curated) return null;
+    if (Array.isArray(curated) && curated.length > 0) return typeof curated[0] === "string" ? curated[0] : curated[0]?.url || null;
+    if (curated.photos && Array.isArray(curated.photos) && curated.photos.length > 0) return typeof curated.photos[0] === "string" ? curated.photos[0] : curated.photos[0]?.url || null;
+    if (curated.hero && Array.isArray(curated.hero) && curated.hero.length > 0) return typeof curated.hero[0] === "string" ? curated.hero[0] : curated.hero[0]?.url || null;
+    return null;
+  };
 
   /* ─── Profile save ─── */
   const handleSaveProfile = async () => {
@@ -462,6 +508,73 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+
+          {/* ═══ PROPERTY WEBSITES ═══ */}
+          {publishedWebsites.length > 0 && (
+            <div className="mc-animate mt-8" style={{ animationDelay: "0.18s" }}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Property Websites</p>
+                <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">Manage all →</Link>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {publishedWebsites.map((site, i) => {
+                  const heroUrl = getHeroImage(site.website_curated);
+                  const siteUrl = `${PROPERTY_SITE_BASE}/${site.website_slug}`;
+                  return (
+                    <div
+                      key={site.id}
+                      className="mc-chip-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
+                      style={{ animationDelay: `${0.2 + i * 0.06}s` }}
+                    >
+                      {/* Hero image */}
+                      <div className="relative h-40 w-full overflow-hidden">
+                        {heroUrl ? (
+                          <img src={heroUrl} alt={site.address} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 50%, rgba(168,85,247,0.15) 100%)" }} />
+                        )}
+                        {/* Live badge */}
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                          <span className="text-[10px] font-bold text-green-400">Live</span>
+                        </div>
+                      </div>
+                      {/* Info */}
+                      <div className="p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Your Property Website</p>
+                        <p className="text-sm font-bold text-white/90 truncate">{site.address}</p>
+                        <p className="text-[11px] text-cyan-400/60 truncate mt-0.5">{site.website_slug}.p2v.homes</p>
+                      </div>
+                      {/* Actions */}
+                      <div className="border-t border-white/[0.06] px-4 py-3 flex items-center gap-3">
+                        <a
+                          href={siteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"
+                        >
+                          <Eye className="h-3 w-3" />
+                          View Live Page
+                        </a>
+                        <button
+                          onClick={() => handleCopyLink(site.website_slug)}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors"
+                        >
+                          {copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}
+                        </button>
+                        <Link
+                          href={`/dashboard/properties/${site.id}`}
+                          className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors"
+                        >
+                          Edit Settings →
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ═══ QUICK ACTIONS ═══ */}
           <div className="mc-animate mt-6 grid gap-3 sm:grid-cols-2" style={{ animationDelay: "0.2s" }}>
