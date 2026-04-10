@@ -6,6 +6,7 @@ import {
   Calendar, Play, FileText, Sparkles, Film, Music, Check, Type, Eye, Layers,
   ZoomIn, ZoomOut, LayoutTemplate, Settings, RotateCcw, Share2, Undo2, Redo2,
   ChevronLeft, ChevronRight, Paintbrush, Sun, Moon, Printer, Globe, Video,
+  Clock, ArrowUp, ArrowDown, Trash2, Lock,
 } from "lucide-react";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
@@ -168,23 +169,16 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   if(stagingUrl)urlRows.push({icon:"\ud83d\udecb\ufe0f",label:"See the staged rooms:",url:stagingUrl});
   const hsz=BRAND_H-40;
   const priceFs=responsiveSize(148,pr,10),addrFs=responsiveSize(64,ad,28),agFs=responsiveSize(52,an,20);
-  const M=60; // print-safe margin on all sides
-  const brandH=unbranded?0:(ACCENT_BAR+BRAND_H); // total branding height (0 when unbranded)
+  const M=60;
+  const brandH=unbranded?0:(ACCENT_BAR+BRAND_H);
   const photoTop=M+brandH;
   const detailsTop=photoTop+totalPhotoBlockH;
   return(
     <div style={{width:W,height:H,backgroundColor:"#fff",fontFamily,position:"relative",overflow:"hidden"}}>
       {!unbranded&&<>
         <div style={{position:"absolute",top:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"4px 4px 0 0"}}/>
-        <div style={{
-          position:"absolute",top:M+ACCENT_BAR,left:M,right:M,height:BRAND_H,
-          backgroundColor:accent,display:"flex",alignItems:"center",
-          padding:`0 60px`,gap:28,
-        }}>
-          {headshot
-            ? <img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`4px solid ${hexToRgba("#ffffff",0.3)}`}}/>
-            : <div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:hexToRgba("#ffffff",0.12),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hsz*0.4,height:hsz*0.4,color:hexToRgba("#ffffff",0.4)}}/></div>
-          }
+        <div style={{position:"absolute",top:M+ACCENT_BAR,left:M,right:M,height:BRAND_H,backgroundColor:accent,display:"flex",alignItems:"center",padding:`0 60px`,gap:28}}>
+          {headshot?<img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`4px solid ${hexToRgba("#ffffff",0.3)}`}}/>:<div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:hexToRgba("#ffffff",0.12),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hsz*0.4,height:hsz*0.4,color:hexToRgba("#ffffff",0.4)}}/></div>}
           <div style={{flex:1,minWidth:0}}>
             <p style={{fontSize:agFs,fontWeight:800,color:accentText,margin:0,lineHeight:1.1}}>{an}</p>
             <p style={{fontSize:40,fontWeight:500,color:hexToRgba(accentText==="#fff"?"#ffffff":"#000000",0.65),margin:0,marginTop:6}}>{brokerage||"Real Estate"}</p>
@@ -198,40 +192,15 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
       </>}
       <div style={{position:"absolute",top:photoTop,left:M,right:M,height:totalPhotoBlockH}}>
         <div style={{display:"flex",width:"100%",height:PHOTO_H,gap:20}}>
-          <div style={{width:`58%`,height:PHOTO_H,overflow:"hidden",flexShrink:0,borderRadius:4}}>
-            {p1 ? <img src={p1} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                 : <div style={{width:"100%",height:"100%",backgroundColor:"#1e293b",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:80,height:80,color:"rgba(255,255,255,0.1)"}}/></div>}
-          </div>
+          <div style={{width:`58%`,height:PHOTO_H,overflow:"hidden",flexShrink:0,borderRadius:4}}>{p1?<img src={p1} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1e293b",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:80,height:80,color:"rgba(255,255,255,0.1)"}}/></div>}</div>
           <div style={{flex:1,display:"flex",flexDirection:"column" as const,gap:20}}>
-            <div style={{flex:1,overflow:"hidden",borderRadius:4}}>
-              {p2 ? <img src={p2} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                   : <div style={{width:"100%",height:"100%",backgroundColor:"#263045"}}/>}
-            </div>
-            <div style={{flex:1,overflow:"hidden",borderRadius:4}}>
-              {p3 ? <img src={p3} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                   : <div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}
-            </div>
+            <div style={{flex:1,overflow:"hidden",borderRadius:4}}>{p2?<img src={p2} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#263045"}}/>}</div>
+            <div style={{flex:1,overflow:"hidden",borderRadius:4}}>{p3?<img src={p3} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}</div>
           </div>
         </div>
-        {showBottomRow&&(
-          <div style={{display:"flex",gap:20,height:bottomPhotoH,marginTop:20}}>
-            {Array.from({length:4},(_,i)=>{
-              const photo=bottomRow[i]||null;
-              return(
-                <div key={i} style={{flex:1,overflow:"hidden",borderRadius:4}}>
-                  {photo ? <img src={photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                         : <div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {showBottomRow&&(<div style={{display:"flex",gap:20,height:bottomPhotoH,marginTop:20}}>{Array.from({length:4},(_,i)=>{const photo=bottomRow[i]||null;return(<div key={i} style={{flex:1,overflow:"hidden",borderRadius:4}}>{photo?<img src={photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1e293b"}}/>}</div>);})}</div>)}
       </div>
-      <div style={{
-        position:"absolute",top:detailsTop,left:M,right:M,
-        backgroundColor:"#fff",padding:`40px 60px 28px`,
-        borderBottom:`3px solid ${hexToRgba(accent,0.12)}`,
-      }}>
+      <div style={{position:"absolute",top:detailsTop,left:M,right:M,backgroundColor:"#fff",padding:`40px 60px 28px`,borderBottom:`3px solid ${hexToRgba(accent,0.12)}`}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:40}}>
           <div style={{flex:1,minWidth:0}}>
             <p style={{fontSize:addrFs,fontWeight:800,color:"#111",margin:0,lineHeight:1.1}}>{ad}</p>
@@ -243,41 +212,30 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
         {am.length>0&&<div style={{display:"flex",flexWrap:"wrap" as const,gap:12,marginTop:20}}>{am.map((a:string,i:number)=>(<div key={i} style={{padding:"8px 22px",borderRadius:40,border:`2px solid ${hexToRgba(accent,0.25)}`,backgroundColor:hexToRgba(accent,0.05)}}><span style={{fontSize:36,fontWeight:600,color:accent}}>{a}</span></div>))}</div>}
         {desc&&<p style={{fontSize:38,color:"#555",lineHeight:1.65,margin:0,marginTop:22}}>{desc}</p>}
       </div>
-      {hasUrls&&(
-        <div style={{
-          position:"absolute",bottom:M+ACCENT_BAR,left:M,right:M,
-          padding:`24px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,
-          backgroundColor:hexToRgba(accent,0.03),
-          display:"flex",flexDirection:"column" as const,gap:8,
-        }}>
-          {urlRows.map((row,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:18}}>
-              <span style={{fontSize:40}}>{row.icon}</span>
-              <span style={{fontSize:36,fontWeight:700,color:"#444"}}>{row.label}</span>
-              <span style={{fontSize:36,fontWeight:500,color:accent,wordBreak:"break-all" as const}}>{row.url}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {!hasUrls&&!unbranded&&(
-        <div style={{
-          position:"absolute",bottom:M+(unbranded?0:ACCENT_BAR),left:M,right:M,
-          padding:`20px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,
-          backgroundColor:hexToRgba(accent,0.03),
-          display:"flex",alignItems:"center",justifyContent:"space-between",
-        }}>
-          <span style={{fontSize:36,fontWeight:700,color:"#333"}}>{an}</span>
-          {phone&&<span style={{fontSize:36,color:"#555"}}>{phone}</span>}
-          {email&&<span style={{fontSize:36,color:"#555"}}>{email}</span>}
-          {brokerage&&<span style={{fontSize:36,color:"#888"}}>{brokerage}</span>}
-        </div>
-      )}
+      {hasUrls&&(<div style={{position:"absolute",bottom:M+ACCENT_BAR,left:M,right:M,padding:`24px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,backgroundColor:hexToRgba(accent,0.03),display:"flex",flexDirection:"column" as const,gap:8}}>{urlRows.map((row,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:18}}><span style={{fontSize:40}}>{row.icon}</span><span style={{fontSize:36,fontWeight:700,color:"#444"}}>{row.label}</span><span style={{fontSize:36,fontWeight:500,color:accent,wordBreak:"break-all" as const}}>{row.url}</span></div>))}</div>)}
+      {!hasUrls&&!unbranded&&(<div style={{position:"absolute",bottom:M+(unbranded?0:ACCENT_BAR),left:M,right:M,padding:`20px 60px`,borderTop:`3px solid ${hexToRgba(accent,0.10)}`,backgroundColor:hexToRgba(accent,0.03),display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontSize:36,fontWeight:700,color:"#333"}}>{an}</span>{phone&&<span style={{fontSize:36,color:"#555"}}>{phone}</span>}{email&&<span style={{fontSize:36,color:"#555"}}>{email}</span>}{brokerage&&<span style={{fontSize:36,color:"#888"}}>{brokerage}</span>}</div>)}
       {!unbranded&&<div style={{position:"absolute",bottom:M,left:M,right:M,height:ACCENT_BAR,backgroundColor:accent,borderRadius:"0 0 4px 4px"}}/>}
     </div>
   );
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const REMIX_SIZES=[
+  {id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},
+  {id:"story",label:"Story/Reel",sublabel:"1080\u00d71920",width:1080,height:1920},
+  {id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080},
+];
+interface RemixClip {
+  id: string; sourceUrl: string; thumbnail: string | null; label: string;
+  duration: number; trimStart: number; trimEnd: number; speed: number; order: number;
+}
+const SPEED_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+function LensGate({children,locked,label}:{children:ReactNode;locked:boolean;label?:string}){
+  if(!locked)return<>{children}</>;
+  return<div style={{position:"relative",opacity:0.45,pointerEvents:"none",userSelect:"none"}}>{children}<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}><div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:8,background:"linear-gradient(135deg,rgba(99,102,241,0.9),rgba(168,85,247,0.9))",boxShadow:"0 4px 16px rgba(99,102,241,0.35)"}}><Lock size={11} color="#fff"/><span style={{fontSize:10,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>{label||"Subscribe to Lens"}</span></div></div></div>;
+}
+
 const TEMPLATES=[
   {id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},
   {id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},
@@ -299,12 +257,14 @@ const BRAND_ORIENTATIONS=[
 ];
 const TABS=[
   {id:"templates",label:"Listing Graphics",icon:PenTool},
+  {id:"video-remix",label:"Video Remix",icon:Film},
   {id:"listing-flyer",label:"Listing Flyer",icon:Printer},
   {id:"branding-card",label:"Branding",icon:CreditCard},
   {id:"yard-sign",label:"Yard Sign",icon:MapPin},
   {id:"property-pdf",label:"Property Sheet",icon:FileText},
 ];
 const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={
+  "video-remix":[{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],
   templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],
   "listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],
   "yard-sign":[{id:"design",label:"Design",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Colors",icon:Palette}],
@@ -395,7 +355,7 @@ export default function DesignStudioV2(){
   const[brandPrice,setBrandPrice]=useState("");const[brandFeatures,setBrandFeatures]=useState("");
   const[brandBgColor,setBrandBgColor]=useState("#14532d");const[brandAccentColor,setBrandAccentColor]=useState("");
   const[brandOrientation,setBrandOrientation]=useState("landscape");const[brandFont,setBrandFont]=useState("serif");
-  // ── Listing Flyer (Task A) ──
+  // ── Listing Flyer ──
   const[flyerPhotos,setFlyerPhotos]=useState<string[]>([]);
   const[flyerAddress,setFlyerAddress]=useState("");const[flyerCityState,setFlyerCityState]=useState("");
   const[flyerPrice,setFlyerPrice]=useState("");const[flyerBeds,setFlyerBeds]=useState("");
@@ -408,6 +368,15 @@ export default function DesignStudioV2(){
   const[flyerAccentColor,setFlyerAccentColor]=useState("#1e3a5f");
   const[flyerFont,setFlyerFont]=useState("sans");
   const[flyerUnbranded,setFlyerUnbranded]=useState(false);
+  // Video Remix
+  const[remixClips,setRemixClips]=useState<RemixClip[]>([]);
+  const[remixSize,setRemixSize]=useState("landscape");
+  const[remixBranding,setRemixBranding]=useState(true);
+  const[expandedClipId,setExpandedClipId]=useState<string|null>(null);
+  const[remixClipSources,setRemixClipSources]=useState<{orderId:string;address:string;date:string;clips:{url:string;thumbnail:string|null;label:string}[]}[]>([]);
+  const[loadingRemixClips,setLoadingRemixClips]=useState(false);
+  const[isLensSubscriber,setIsLensSubscriber]=useState(false);
+  const[hasVideoOrders,setHasVideoOrders]=useState<boolean|null>(null);
   // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
@@ -417,16 +386,17 @@ export default function DesignStudioV2(){
   const currentSize=SIZES.find(s=>s.id===selectedSize)!;
   const currentYardSize=YARD_SIGN_SIZES.find(s=>s.id===yardSignSize)!;
   const currentBrandOr=BRAND_ORIENTATIONS.find(o=>o.id===brandOrientation)!;
+  const currentRemixSize=REMIX_SIZES.find(s=>s.id===remixSize)!;
   const fontFamily=FONT_OPTIONS.find(f=>f.id===fontId)?.family||FONT_OPTIONS[1].family;
   const brandFontFamily=FONT_OPTIONS.find(f=>f.id===brandFont)?.family||FONT_OPTIONS[0].family;
   const flyerFontFamily=FONT_OPTIONS.find(f=>f.id===flyerFont)?.family||FONT_OPTIONS[1].family;
   const badge=getBadgeConfig(selectedTemplate);
   const currentPanels=LEFT_PANELS[activeTab]||LEFT_PANELS.templates;
   const isVideoMode=activeTab==="templates"&&mediaMode==="video"&&!!selectedVideo;
+  const isRemixMode=activeTab==="video-remix";
 
-  useEffect(()=>{setLeftPanel(currentPanels[0].id);},[activeTab]);
+  useEffect(()=>{setLeftPanel(currentPanels[0].id);if(activeTab==="video-remix")loadUserVideos();},[activeTab]);
 
-  // URL param: ?template=listing_flyer&propertyId=XXX
   useEffect(()=>{
     if(typeof window==="undefined")return;
     const params=new URLSearchParams(window.location.search);
@@ -435,12 +405,14 @@ export default function DesignStudioV2(){
     if(pid)setSelectedPropertyId(pid);
   },[]);
 
-  // Load profile + properties
+  // Load profile + properties + subscription status
   useEffect(()=>{
     (async()=>{
       try{
         const supabase=(await import("@/lib/supabase/client")).createClient();
         const{data:{user}}=await supabase.auth.getUser();if(!user)return;
+        const{data:subData}=await supabase.from("subscriptions").select("status").eq("user_id",user.id).in("status",["active","trialing"]).limit(1);
+        setIsLensSubscriber((subData||[]).length>0);
         const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
@@ -450,22 +422,10 @@ export default function DesignStudioV2(){
           if(data.saved_email){setAgentEmail(data.saved_email);setBrandEmail(data.saved_email);}
           if(data.saved_company){setBrokerage(data.saved_company);setBrandBrokerage(data.saved_company);}
           if(data.saved_website){setBrandWebsite(data.saved_website);}
-          // Apply saved company colors as defaults
           const cc = Array.isArray(data.saved_company_colors) ? data.saved_company_colors : [];
           setSavedCompanyColors(cc);
-          if(cc.length >= 1){
-            setBarColor(cc[0]); // listing info bar
-            setFlyerAccentColor(cc[0]); // flyer accent
-            setBrandBgColor(cc[0]); // branding card bg
-            setYardTopColor(cc[0]); // yard sign top
-            setYardSidebarColor(cc[0]); // yard sign sidebar
-            setPdfAccentColor(cc[0]); // property sheet accent
-          }
-          if(cc.length >= 2){
-            setAccentColor(cc[1]); // listing accent
-            setBrandAccentColor(cc[1]); // branding card accent
-            setYardBottomColor(cc[1]); // yard sign bottom
-          }
+          if(cc.length >= 1){setBarColor(cc[0]);setFlyerAccentColor(cc[0]);setBrandBgColor(cc[0]);setYardTopColor(cc[0]);setYardSidebarColor(cc[0]);setPdfAccentColor(cc[0]);}
+          if(cc.length >= 2){setAccentColor(cc[1]);setBrandAccentColor(cc[1]);setYardBottomColor(cc[1]);}
         }
         const{data:props}=await supabase.from("agent_properties").select("id,address,address_normalized,city,state,bedrooms,bathrooms,sqft,price,special_features,amenities,website_slug,website_published,website_curated").eq("user_id",user.id).is("merged_into_id",null).order("updated_at",{ascending:false});
         if(props)setUserProperties(props);
@@ -540,8 +500,18 @@ export default function DesignStudioV2(){
     try{
       const supabase=(await import("@/lib/supabase/client")).createClient();
       const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-      const{data:orders}=await supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,photos,created_at").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false});
-      setUserVideos((orders||[]).filter((o:any)=>o.unbranded_delivery_url||o.delivery_url).map((o:any)=>({orderId:o.order_id,url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,hasUnbranded:!!o.unbranded_delivery_url,date:new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})})));
+      const{data:orders}=await supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,clip_urls,photos,created_at,property_address").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false});
+      const vids=(orders||[]).filter((o:any)=>o.unbranded_delivery_url||o.delivery_url);
+      setHasVideoOrders(vids.length>0);
+      setUserVideos(vids.map((o:any)=>({orderId:o.order_id,url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,hasUnbranded:!!o.unbranded_delivery_url,date:new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})})));
+      const sources=vids.map((o:any)=>{
+        const clipUrls:string[]=Array.isArray(o.clip_urls)?o.clip_urls:[];
+        const addr=o.property_address||"Unknown Property";
+        const dt=new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+        if(clipUrls.length>0){return{orderId:o.order_id,address:addr,date:dt,clips:clipUrls.map((url:string,i:number)=>({url,thumbnail:null,label:`Clip ${i+1}`}))};}
+        return{orderId:o.order_id,address:addr,date:dt,clips:[{url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,label:"Full Video"}]};
+      });
+      setRemixClipSources(sources);
     }catch(err){console.error("Video load error:",err);}
     setLoadingVideos(false);
   };
@@ -553,10 +523,25 @@ export default function DesignStudioV2(){
 
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
-  // ─── Export helpers ───────────────────────────────────────────────────────
-  // Uses html2canvas-pro (handles lab()/oklch() CSS colors from Tailwind v4)
-  // Uses @ffmpeg/ffmpeg WASM for client-side video compositing — no server needed
+  // ─── Remix helpers ───────────────────────────────────────────────────────
+  const addClipToRemix=(sourceUrl:string,thumbnail:string|null,label:string)=>{
+    const newClip:RemixClip={id:String(Date.now())+Math.random().toString(36).slice(2,6),sourceUrl,thumbnail,label,duration:15,trimStart:0,trimEnd:15,speed:1,order:remixClips.length};
+    setRemixClips(prev=>[...prev,newClip]);
+  };
+  const removeClipFromRemix=(id:string)=>setRemixClips(prev=>prev.filter(c=>c.id!==id).map((c,i)=>({...c,order:i})));
+  const moveClipInRemix=(id:string,dir:-1|1)=>{
+    setRemixClips(prev=>{
+      const idx=prev.findIndex(c=>c.id===id);if(idx<0)return prev;
+      const ni=idx+dir;if(ni<0||ni>=prev.length)return prev;
+      const a=[...prev];[a[idx],a[ni]]=[a[ni],a[idx]];
+      return a.map((c,i)=>({...c,order:i}));
+    });
+  };
+  const updateRemixClip=(id:string,updates:Partial<RemixClip>)=>setRemixClips(prev=>prev.map(c=>c.id===id?{...c,...updates}:c));
+  const remixTotalDuration=remixClips.reduce((sum,c)=>sum+(c.trimEnd-c.trimStart)/c.speed,0);
+  const isClipOnTimeline=(url:string)=>remixClips.some(c=>c.sourceUrl===url);
 
+  // ─── Export helpers ───────────────────────────────────────────────────────
   const prepareForExport = (el: HTMLElement): { restore: () => void } => {
     const parent = el.parentElement as HTMLElement;
     const st = el.style.transform, so = parent?.style.overflow, sw = parent?.style.width, sh = parent?.style.height;
@@ -608,125 +593,141 @@ export default function DesignStudioV2(){
       const { toBlobURL, fetchFile } = await import("@ffmpeg/util");
       const ffmpeg = new FFmpeg();
       ffmpeg.on("progress", ({ progress: p }) => setExportProgress(Math.min(Math.round(p * 100), 99)));
-
       setExportProgress(2);
       const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
-      });
-
+      await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm") });
       setExportProgress(5);
       const videoData = await fetchFile(selectedVideo.url);
       await ffmpeg.writeFile("input.mp4", videoData);
-
       const musicSource = getMusicSource();
       let hasMusic = false;
       if (musicSource) {
         setExportProgress(8);
-        if (musicSource.type === "url") {
-          await ffmpeg.writeFile("music.mp3", await fetchFile(musicSource.url));
-          hasMusic = true;
-        } else {
-          await ffmpeg.writeFile("music.mp3", new Uint8Array(await musicSource.file.arrayBuffer()));
-          hasMusic = true;
-        }
+        if (musicSource.type === "url") { await ffmpeg.writeFile("music.mp3", await fetchFile(musicSource.url)); hasMusic = true; }
+        else { await ffmpeg.writeFile("music.mp3", new Uint8Array(await musicSource.file.arrayBuffer())); hasMusic = true; }
       }
-
       setExportProgress(10);
       const html2canvas = (await import("html2canvas-pro")).default;
       const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
       if (!el) throw new Error("Export target not found");
-
-      // Hide video elements so overlay capture is just the static graphics
       const videoEls = el.querySelectorAll("video");
       videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; });
       const placeholders = el.querySelectorAll("[data-video-area]");
       placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; });
-
       const { restore } = prepareForExport(el);
       const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
       restore();
-
       videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; });
       placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; });
-
       const overlayBlob = await new Promise<Blob>(resolve => overlayCanvas.toBlob(b => resolve(b!), "image/png"));
       await ffmpeg.writeFile("overlay.png", new Uint8Array(await overlayBlob.arrayBuffer()));
-
       setExportProgress(15);
       const outW = currentSize.width, outH = currentSize.height;
       const photoPercent = selectedTemplate === "open-house" ? 100 : selectedSize === "postcard" ? 55 : 58;
       const photoH = Math.round(outH * photoPercent / 100);
-
       if (hasMusic) {
-        await ffmpeg.exec([
-          "-i", "input.mp4", "-i", "overlay.png", "-i", "music.mp3", "-t", "119",
-          "-filter_complex",
-          `[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:119,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`,
-          "-map", "[vout]", "-map", "[aout]",
-          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-          "-c:a", "aac", "-b:a", "128k",
-          "-movflags", "+faststart", "-y", "output.mp4",
-        ]);
+        await ffmpeg.exec(["-i","input.mp4","-i","overlay.png","-i","music.mp3","-t","119","-filter_complex",`[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:119,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`,"-map","[vout]","-map","[aout]","-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-y","output.mp4"]);
       } else {
-        await ffmpeg.exec([
-          "-i", "input.mp4", "-i", "overlay.png", "-t", "119",
-          "-filter_complex",
-          `[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`,
-          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-          "-c:a", "aac", "-b:a", "128k",
-          "-movflags", "+faststart", "-y", "output.mp4",
-        ]);
+        await ffmpeg.exec(["-i","input.mp4","-i","overlay.png","-t","119","-filter_complex",`[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`,"-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-y","output.mp4"]);
       }
-
       setExportProgress(95);
       const outputData = await ffmpeg.readFile("output.mp4");
       const outputBlob = new Blob([outputData], { type: "video/mp4" });
       const downloadUrl = URL.createObjectURL(outputBlob);
-      const link = document.createElement("a");
-      link.download = `listing-video-${Date.now()}.mp4`;
-      link.href = downloadUrl;
-      link.click();
+      const link = document.createElement("a"); link.download = `listing-video-${Date.now()}.mp4`; link.href = downloadUrl; link.click();
       URL.revokeObjectURL(downloadUrl);
+      setExportProgress(100); notify("Video exported!");
+      setTimeout(() => { setExportProgress(0); setExporting(false); }, 1500); return;
+    } catch (err: any) { console.error("Video export error:", err); notify("Video export failed: " + (err.message || "Unknown error")); }
+    setExportProgress(0); setExporting(false);
+  };
 
-      setExportProgress(100);
-      notify("Video exported!");
-      setTimeout(() => { setExportProgress(0); setExporting(false); }, 1500);
-      return;
-    } catch (err: any) {
-      console.error("Video export error:", err);
-      notify("Video export failed: " + (err.message || "Unknown error"));
-    }
-    setExportProgress(0);
-    setExporting(false);
+  const exportRemix = async () => {
+    if(remixClips.length===0){notify("Add clips to the timeline first.");return;}
+    setExporting(true);setExportProgress(0);
+    try{
+      const{FFmpeg}=await import("@ffmpeg/ffmpeg");
+      const{toBlobURL,fetchFile}=await import("@ffmpeg/util");
+      const ffmpeg=new FFmpeg();
+      ffmpeg.on("progress",({progress:p})=>setExportProgress(Math.min(Math.round(p*100),99)));
+      setExportProgress(2);
+      const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      await ffmpeg.load({coreURL:await toBlobURL(`${coreBase}/ffmpeg-core.js`,"text/javascript"),wasmURL:await toBlobURL(`${coreBase}/ffmpeg-core.wasm`,"application/wasm")});
+      setExportProgress(5);
+      const outW=currentRemixSize.width,outH=currentRemixSize.height;
+      for(let i=0;i<remixClips.length;i++){
+        setExportProgress(5+Math.round((i/remixClips.length)*30));
+        const d=await fetchFile(remixClips[i].sourceUrl);
+        await ffmpeg.writeFile(`clip_${i}.mp4`,d);
+      }
+      const musicSource=getMusicSource();
+      let hasMusic=false;
+      if(musicSource){
+        if(musicSource.type==="url"){await ffmpeg.writeFile("music.mp3",await fetchFile(musicSource.url));hasMusic=true;}
+        else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
+      }
+      let hasBranding=false;
+      if(remixBranding&&isLensSubscriber&&previewRef.current){
+        try{
+          const html2canvas=(await import("html2canvas-pro")).default;
+          const brandEl=previewRef.current.querySelector("[data-branding-card]") as HTMLElement;
+          if(brandEl){
+            const origD=brandEl.style.display;brandEl.style.display="block";
+            const bc=await html2canvas(brandEl,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:outW,height:outH});
+            brandEl.style.display=origD;
+            const blob=await new Promise<Blob>(r=>bc.toBlob(b=>r(b!),"image/png"));
+            await ffmpeg.writeFile("intro.png",new Uint8Array(await blob.arrayBuffer()));
+            hasBranding=true;
+          }
+        }catch(e){console.error("Branding capture error:",e);}
+      }
+      setExportProgress(40);
+      const inputs:string[]=[];const filters:string[]=[];const concatParts:string[]=[];let inputIdx=0;
+      if(hasBranding){inputs.push("-loop","1","-t","3","-i","intro.png");filters.push(`[${inputIdx}:v]scale=${outW}:${outH}[vintro]`);inputIdx++;}
+      for(let i=0;i<remixClips.length;i++){
+        const c=remixClips[i];
+        inputs.push("-ss",String(c.trimStart),"-t",String(c.trimEnd-c.trimStart),"-i",`clip_${i}.mp4`);
+        const sf=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
+        filters.push(`[${inputIdx}:v]scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH}${sf}[v${i}]`);
+        concatParts.push(`[v${i}]`);inputIdx++;
+      }
+      if(hasBranding){filters.push(`[vintro]${concatParts.join("")}[vintro]concat=n=${remixClips.length+2}:v=1:a=0[vout]`);}
+      else{filters.push(`${concatParts.join("")}concat=n=${remixClips.length}:v=1:a=0[vout]`);}
+      const totalDur=remixTotalDuration+(hasBranding?6:0);
+      const cmdArgs=[...inputs];let filterStr=filters.join(";");
+      if(hasMusic){
+        cmdArgs.push("-i","music.mp3");
+        filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
+        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
+      }else{cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");}
+      cmdArgs.push("-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+      setExportProgress(45);
+      await ffmpeg.exec(cmdArgs);
+      setExportProgress(95);
+      const outputData=await ffmpeg.readFile("output.mp4");
+      const outputBlob=new Blob([outputData],{type:"video/mp4"});
+      const downloadUrl=URL.createObjectURL(outputBlob);
+      const link=document.createElement("a");link.download=`remix-${remixSize}-${Date.now()}.mp4`;link.href=downloadUrl;link.click();
+      URL.revokeObjectURL(downloadUrl);
+      setExportProgress(100);notify("Remix exported!");
+      setTimeout(()=>{setExportProgress(0);setExporting(false);},1500);return;
+    }catch(err:any){console.error("Remix export error:",err);notify("Remix export failed: "+(err.message||"Unknown error"));}
+    setExportProgress(0);setExporting(false);
   };
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      if (isVideoMode) {
-        await exportVideo();
-        return; // exportVideo manages its own setExporting
-      } else {
-        await exportImage();
-      }
-    } catch (err: any) {
-      console.error("Export error:", err);
-      notify(err?.message || "Export failed. Try again.");
-    }
-    setExporting(false);
-    setExportProgress(0);
+      if (isRemixMode) { await exportRemix(); return; }
+      else if (isVideoMode) { await exportVideo(); return; }
+      else { await exportImage(); }
+    } catch (err: any) { console.error("Export error:", err); notify(err?.message || "Export failed. Try again."); }
+    setExporting(false); setExportProgress(0);
   };
 
   const handleExportPdf = async () => {
     setExporting(true);
-    try {
-      await exportPdf();
-    } catch (err: any) {
-      console.error("PDF export error:", err);
-      notify(err?.message || "PDF export failed. Try again.");
-    }
+    try { await exportPdf(); } catch (err: any) { console.error("PDF export error:", err); notify(err?.message || "PDF export failed. Try again."); }
     setExporting(false);
   };
 
@@ -741,19 +742,33 @@ export default function DesignStudioV2(){
 
   const getPreviewDims=useCallback(()=>{
     let w:number,h:number;
-    if(activeTab==="yard-sign"){w=currentYardSize.width;h=currentYardSize.height;}
+    if(activeTab==="video-remix"){w=currentRemixSize.width;h=currentRemixSize.height;}
+    else if(activeTab==="yard-sign"){w=currentYardSize.width;h=currentYardSize.height;}
     else if(activeTab==="property-pdf"){w=2550;h=3300;}
     else if(activeTab==="branding-card"){w=currentBrandOr.width;h=currentBrandOr.height;}
     else if(activeTab==="listing-flyer"){w=2550;h=3300;}
     else{w=currentSize.width;h=currentSize.height;}
     const maxW=580,maxH=560;const s=Math.min(maxW/w,maxH/h,1)*(zoom/100);
     return{scale:s,pW:w*s,pH:h*s,rawW:w,rawH:h};
-  },[activeTab,currentSize,currentYardSize,currentBrandOr,zoom]);
+  },[activeTab,currentSize,currentYardSize,currentBrandOr,currentRemixSize,zoom]);
   const{scale,pW,pH,rawW,rawH}=getPreviewDims();
 
   const videoPreviewEl=(mediaMode==="video"&&selectedVideo?.url)?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;
 
   const renderPreview=()=>{
+    if(activeTab==="video-remix"){
+      if(hasVideoOrders===false)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:20,fontFamily:"var(--sf)",padding:40,textAlign:"center" as const}}><div style={{width:100,height:100,borderRadius:24,background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.15))",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={40} color="rgba(99,102,241,0.5)"/></div><p style={{fontSize:22,color:"rgba(255,255,255,0.7)",fontWeight:700,margin:0}}>No Videos Yet</p><p style={{fontSize:14,color:"rgba(255,255,255,0.35)",margin:0,maxWidth:400,lineHeight:1.6}}>Order a listing video to unlock Video Remix. Buy the clips once, remix them forever.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,var(--sa),#a855f7)",color:"#fff",fontSize:13,fontWeight:700,textDecoration:"none"}}>Order a Video</a></div>;
+      if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,border:"2px dashed rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={48} color="rgba(255,255,255,0.12)"/></div><p style={{fontSize:18,color:"rgba(255,255,255,0.3)",fontWeight:600,margin:0}}>Add clips from the left panel to start remixing</p></div>;
+      const firstClip=remixClips[0];
+      return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",position:"relative",overflow:"hidden"}}>
+        {firstClip.thumbnail?<img src={firstClip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.8}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={64} color="rgba(255,255,255,0.15)"/></div>}
+        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"20px 30px",background:"linear-gradient(transparent,rgba(0,0,0,0.8))",display:"flex",alignItems:"flex-end",gap:8}}>
+          {remixClips.map((c,i)=><div key={c.id} style={{flex:(c.trimEnd-c.trimStart)/c.speed,height:8,borderRadius:4,backgroundColor:i===0?"var(--sa)":["#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4"][i%5],opacity:0.8}}/>)}
+        </div>
+        <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)"}}>{Math.round(remixTotalDuration)}s {"\u00b7"} {remixClips.length} clip{remixClips.length!==1?"s":""}</div>
+        {remixBranding&&isLensSubscriber&&<div data-branding-card style={{display:"none",position:"absolute",top:0,left:0}}><BrandingCardTemplate orientation={currentRemixSize} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div>}
+      </div>;
+    }
     if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
     if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"?videoPreviewEl:undefined;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
     if(activeTab==="yard-sign"){const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};if(yardDesign==="sidebar")return<YardSignSidebar{...ys}website={yardWebsite}sidebarColor={yardSidebarColor}mainBgColor={yardMainBgColor}/>;if(yardDesign==="top-heavy")return<YardSignTopHeavy{...ys}topColor={yardTopColor}bottomColor={yardBottomColor}/>;return<YardSignSplitBar{...ys}officeName={yardOfficeName}officePhone={yardOfficePhone}topColor={yardTopColor}bottomColor={yardBottomColor}/>;}
@@ -830,9 +845,7 @@ export default function DesignStudioV2(){
     <div className={`sr ${theme==="light"?"light":""}`}>
       {/* TOP BAR */}
       <div className="st">
-        <a href="/dashboard" className="back-btn" title="Back to Dashboard">
-          <ChevronLeft size={14}/>
-        </a>
+        <a href="/dashboard" className="back-btn" title="Back to Dashboard"><ChevronLeft size={14}/></a>
         <div className="slg"><div className="slm"><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
         <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
@@ -849,41 +862,27 @@ export default function DesignStudioV2(){
           <button className="bi" title="Redo"><Redo2 size={15}/></button>
           <div className="td"/>
           <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
-          <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
-            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+          <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isRemixMode?{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
+            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isRemixMode?<><Film size={14}/>Export Remix</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
           </button>
         </div>
       </div>
 
       <div className="sb">
-        {/* ICON RAIL */}
         <div className="slr">{currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}</div>
 
-        {/* LEFT PANEL */}
         <div className={`slp ${mobilePanel?"mob-open":""}`}>
 
           {/* ── LISTING FLYER PANELS ── */}
-
           {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<>
             <div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({flyerPhotos.length}/7)</div>
             <div style={{padding:14}}>
               <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2-3 stack right. Photos 4-7 fill bottom row.</p>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                {flyerPhotos.map((url,i)=>(
-                  <div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}>
-                    <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    <div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i===0?"Hero":i<3?`R${i}`:`B${i-2}`}</div>
-                    <button className="ghov" onClick={()=>setFlyerPhotos(p=>p.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button>
-                  </div>
-                ))}
+                {flyerPhotos.map((url,i)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i===0?"Hero":i<3?`R${i}`:`B${i-2}`}</div><button className="ghov" onClick={()=>setFlyerPhotos(p=>p.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}
                 {flyerPhotos.length<7&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).slice(0,7-flyerPhotos.length).forEach(f=>setFlyerPhotos(p=>[...p,URL.createObjectURL(f)]));e.target.value="";}}/></label>}
               </div>
-              <div style={{marginTop:16}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  <UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/>
-                  <UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/>
-                </div>
-              </div>
+              <div style={{marginTop:16}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div>
             </div>
           </>}
 
@@ -892,82 +891,29 @@ export default function DesignStudioV2(){
             <Section title="Address & Price" icon={Home}>
               <div className="fg"><label className="fl">Street Address</label><input className="fi" value={flyerAddress} onChange={e=>setFlyerAddress(e.target.value)} placeholder="123 Main Street"/></div>
               <div className="fg"><label className="fl">City, State</label><input className="fi" value={flyerCityState} onChange={e=>setFlyerCityState(e.target.value)} placeholder="Austin, TX"/></div>
-              <div className="fr">
-                <div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={flyerPrice} onChange={e=>setFlyerPrice(e.target.value)} placeholder="425,000"/></div>
-                <div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={flyerBeds} onChange={e=>setFlyerBeds(e.target.value)}/></div>
-                <div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={flyerBaths} onChange={e=>setFlyerBaths(e.target.value)}/></div>
-              </div>
+              <div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={flyerPrice} onChange={e=>setFlyerPrice(e.target.value)} placeholder="425,000"/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={flyerBeds} onChange={e=>setFlyerBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={flyerBaths} onChange={e=>setFlyerBaths(e.target.value)}/></div></div>
               <div className="fg"><label className="fl">Sq Ft</label><input className="fi" value={flyerSqft} onChange={e=>setFlyerSqft(e.target.value)}/></div>
             </Section>
-            <Section title="Description" icon={FileText} defaultOpen={false}>
-              <p style={{fontSize:10,color:"var(--std)",marginBottom:8,lineHeight:1.5}}>Shown on flyer (truncated to ~320 chars)</p>
-              <textarea className="ta" rows={5} value={flyerDescription} onChange={e=>setFlyerDescription(e.target.value)} placeholder="Stunning 3-bed home with modern finishes..."/>
-            </Section>
-            <Section title="Amenities" icon={Sparkles}>
-              <p style={{fontSize:10,color:"var(--std)",marginBottom:8,lineHeight:1.5}}>Select or add custom amenity pills</p>
-              <div style={{display:"flex",flexWrap:"wrap" as const,gap:6,marginBottom:10}}>
-                {AMENITY_SUGGESTIONS.map(a=><button key={a} className={`am-chip ${flyerAmenities.includes(a)?"ac":""}`} onClick={()=>setFlyerAmenities(prev=>prev.includes(a)?prev.filter(x=>x!==a):[...prev,a])}>{flyerAmenities.includes(a)&&<Check size={10}/>}{a}</button>)}
-              </div>
-              <input className="fi" placeholder="Add custom + Enter" onKeyDown={e=>{if(e.key==="Enter"){const v=(e.target as HTMLInputElement).value.trim();if(v&&!flyerAmenities.includes(v))setFlyerAmenities(p=>[...p,v]);(e.target as HTMLInputElement).value="";}}}/>
-            </Section>
-            <Section title="Agent Info" icon={User}>
-              <div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div>
-              <div className="fr">
-                <div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
-                <div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div>
-              </div>
-              <div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div>
-            </Section>
+            <Section title="Description" icon={FileText} defaultOpen={false}><p style={{fontSize:10,color:"var(--std)",marginBottom:8,lineHeight:1.5}}>Shown on flyer (truncated to ~320 chars)</p><textarea className="ta" rows={5} value={flyerDescription} onChange={e=>setFlyerDescription(e.target.value)} placeholder="Stunning 3-bed home with modern finishes..."/></Section>
+            <Section title="Amenities" icon={Sparkles}><p style={{fontSize:10,color:"var(--std)",marginBottom:8,lineHeight:1.5}}>Select or add custom amenity pills</p><div style={{display:"flex",flexWrap:"wrap" as const,gap:6,marginBottom:10}}>{AMENITY_SUGGESTIONS.map(a=><button key={a} className={`am-chip ${flyerAmenities.includes(a)?"ac":""}`} onClick={()=>setFlyerAmenities(prev=>prev.includes(a)?prev.filter(x=>x!==a):[...prev,a])}>{flyerAmenities.includes(a)&&<Check size={10}/>}{a}</button>)}</div><input className="fi" placeholder="Add custom + Enter" onKeyDown={e=>{if(e.key==="Enter"){const v=(e.target as HTMLInputElement).value.trim();if(v&&!flyerAmenities.includes(v))setFlyerAmenities(p=>[...p,v]);(e.target as HTMLInputElement).value="";}}}/></Section>
+            <Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></Section>
           </>}
 
           {activeTab==="listing-flyer"&&leftPanel==="urls"&&<>
             <div className="ph"><Globe size={15} color="var(--sa)"/>URLs & Links</div>
             <div style={{padding:14}}>
               <p style={{fontSize:11,color:"var(--std)",marginBottom:14,lineHeight:1.6}}>Each URL you fill in appears at the bottom of the flyer. Leave blank to hide.</p>
-              <Section title="Listing URL" icon={Globe}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udd17"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>View full listing</span></div>
-                <input className="fi" value={flyerListingUrl} onChange={e=>setFlyerListingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes"/>
-              </Section>
-              <Section title="Video Tour URL" icon={Video} defaultOpen={false}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83c\udfac"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>Watch the video tour</span></div>
-                <input className="fi" value={flyerVideoUrl} onChange={e=>setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..."/>
-              </Section>
-              <Section title="Virtual Staging URL" icon={ImageIcon} defaultOpen={false}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udecb\ufe0f"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>See the staged rooms</span></div>
-                <input className="fi" value={flyerStagingUrl} onChange={e=>setFlyerStagingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes#staging"/>
-              </Section>
+              <Section title="Listing URL" icon={Globe}><div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udd17"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>View full listing</span></div><input className="fi" value={flyerListingUrl} onChange={e=>setFlyerListingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes"/></Section>
+              <Section title="Video Tour URL" icon={Video} defaultOpen={false}><div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83c\udfac"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>Watch the video tour</span></div><input className="fi" value={flyerVideoUrl} onChange={e=>setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..."/></Section>
+              <Section title="Virtual Staging URL" icon={ImageIcon} defaultOpen={false}><div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udecb\ufe0f"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>See the staged rooms</span></div><input className="fi" value={flyerStagingUrl} onChange={e=>setFlyerStagingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes#staging"/></Section>
             </div>
           </>}
 
           {activeTab==="listing-flyer"&&leftPanel==="styles"&&<>
             <div className="ph"><Palette size={15} color="var(--sa)"/>Flyer Styles</div>
-            <Section title="Branding" icon={Eye}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}>
-                <div>
-                  <p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Unbranded Mode</p>
-                  <p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>Hide agent bar &amp; branding</p>
-                </div>
-                <button onClick={()=>setFlyerUnbranded(!flyerUnbranded)} style={{
-                  width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",
-                  background:flyerUnbranded?"var(--sa)":"rgba(255,255,255,0.12)",
-                  position:"relative",transition:"background 0.2s",flexShrink:0,
-                }}>
-                  <div style={{
-                    width:18,height:18,borderRadius:"50%",background:"#fff",
-                    position:"absolute",top:3,
-                    left:flyerUnbranded?23:3,
-                    transition:"left 0.2s",
-                    boxShadow:"0 1px 3px rgba(0,0,0,0.3)",
-                  }}/>
-                </button>
-              </div>
-            </Section>
+            <Section title="Branding" icon={Eye}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Unbranded Mode</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>Hide agent bar &amp; branding</p></div><button onClick={()=>setFlyerUnbranded(!flyerUnbranded)} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:flyerUnbranded?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:flyerUnbranded?23:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div></Section>
             <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
-            <Section title="Accent Color" icon={Paintbrush}>
-              <ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/>
-              <div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div>
-              <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div>
-            </Section>
+            <Section title="Accent Color" icon={Paintbrush}><ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/><div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div><div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div></Section>
           </>}
 
           {/* ── TEMPLATES PANELS ── */}
@@ -980,71 +926,19 @@ export default function DesignStudioV2(){
                 <button onClick={()=>{setMediaMode("image");setSelectedVideo(null);}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="image"?"var(--sa)":"none",color:mediaMode==="image"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="image"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><ImageIcon size={14}/>Image</button>
                 <button onClick={()=>{setMediaMode("video");setListingPhoto(null);loadUserVideos();}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="video"?"var(--sa)":"none",color:mediaMode==="video"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="video"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><Play size={14}/>Video</button>
               </div>
-              {mediaMode==="image"&&<>
-                <UploadZone label="Listing Photo" imageUrl={listingPhoto} onUpload={f=>setListingPhoto(URL.createObjectURL(f))} onClear={()=>setListingPhoto(null)} uploading={false}/>
-                <div style={{marginTop:12}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url,i)=><div key={i} onClick={()=>setListingPhoto(url)} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>)}</div></div>
-              </>}
+              {mediaMode==="image"&&<><UploadZone label="Listing Photo" imageUrl={listingPhoto} onUpload={f=>setListingPhoto(URL.createObjectURL(f))} onClear={()=>setListingPhoto(null)} uploading={false}/><div style={{marginTop:12}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url,i)=><div key={i} onClick={()=>setListingPhoto(url)} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>)}</div></div></>}
               {mediaMode==="video"&&<>
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Film size={13} color="#f59e0b"/><span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Video exports limited to 119s</span></div>
                 <span className="fl">Your Videos</span>
                 {loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>:userVideos.length===0?<div style={{padding:"20px 0",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)"}}><p style={{fontSize:11,color:"var(--std)",margin:0}}>No completed videos found.</p></div>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6,maxHeight:220,overflowY:"auto" as const}}>{userVideos.map((v:any)=>(<button key={v.orderId} onClick={()=>{setSelectedVideo(v);if(v.thumbnail)setListingPhoto(v.thumbnail);}} style={{position:"relative",borderRadius:10,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",textAlign:"left" as const,transition:"all 0.2s",padding:0,boxShadow:selectedVideo?.orderId===v.orderId?"0 0 0 2px var(--sag)":"none",fontFamily:"var(--sf)"}}>{v.thumbnail?<img src={v.thumbnail} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover" as const,display:"block"}}/>:<div style={{width:"100%",aspectRatio:"16/9",background:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="rgba(255,255,255,0.2)"/></div>}<div style={{padding:"6px 8px"}}><p style={{fontSize:10,fontWeight:700,color:"var(--st)",margin:0}}>Order {v.orderId?.slice(0,8)}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{v.date}{v.hasUnbranded?" \u00b7 Unbranded":""}</p></div>{selectedVideo?.orderId===v.orderId&&<div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={12} color="#fff"/></div>}</button>))}</div>}
-
-                {/* ── Music selector ── */}
                 <div style={{marginTop:16,borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:14}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                    <span className="fl" style={{margin:0}}>{"\ud83c\udfb5"} Music for Export</span>
-                    {selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}
-                  </div>
-                  {selectedMusicTrack&&(
-                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}>
-                      <Music size={12} color="var(--sa)"/>
-                      <span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span>
-                      <button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span>
-                      </button>
-                    </div>
-                  )}
-                  {/* Vibe filter chips */}
-                  <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>
-                    {[{key:"",label:"All"},
-                      {key:"upbeat_modern",label:"Upbeat"},
-                      {key:"chill_tropical",label:"Chill"},
-                      {key:"energetic_pop",label:"Energy"},
-                      {key:"elegant_classical",label:"Elegant"},
-                      {key:"warm_acoustic",label:"Acoustic"},
-                      {key:"bold_cinematic",label:"Cinematic"},
-                      {key:"smooth_jazz",label:"Jazz"},
-                      {key:"ambient",label:"Ambient"},
-                    ].map(v=>(
-                      <button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)",transition:"all 0.15s"}}>{v.label}</button>
-                    ))}
-                  </div>
-                  {/* Track list */}
-                  {loadingMusic?(
-                    <div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>
-                  ):(
-                    <div style={{maxHeight:180,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>
-                      {musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}>
-                        <button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button>
-                      </p>}
-                      {musicTracks.map(t=>(
-                        <div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}>
-                          <button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                            <span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span>
-                          </button>
-                          <span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span>
-                          <span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>
-                          {selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><span className="fl" style={{margin:0}}>{"\ud83c\udfb5"} Music for Export</span>{selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}</div>
+                  {selectedMusicTrack&&(<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}><Music size={12} color="var(--sa)"/><span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span><button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span></button></div>)}
+                  <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>{[{key:"",label:"All"},{key:"upbeat_modern",label:"Upbeat"},{key:"chill_tropical",label:"Chill"},{key:"energetic_pop",label:"Energy"},{key:"elegant_classical",label:"Elegant"},{key:"warm_acoustic",label:"Acoustic"},{key:"bold_cinematic",label:"Cinematic"},{key:"smooth_jazz",label:"Jazz"},{key:"ambient",label:"Ambient"}].map(v=>(<button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)",transition:"all 0.15s"}}>{v.label}</button>))}</div>
+                  {loadingMusic?(<div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>):(<div style={{maxHeight:180,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>{musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}><button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button></p>}{musicTracks.map(t=>(<div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}><button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span></button><span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span><span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>{selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}</div>))}</div>)}
                 </div>
-              </> }
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
-                <UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/>
-                <UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/>
-              </div>
+              </>}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/></div>
             </div>
           </>}
 
@@ -1059,14 +953,83 @@ export default function DesignStudioV2(){
             <Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section>
           </>}
 
+          {/* ── VIDEO REMIX PANELS ── */}
+          {activeTab==="video-remix"&&leftPanel==="clips"&&<>
+            <div className="ph"><Film size={15} color="var(--sa)"/>Your Clips</div>
+            <div style={{padding:14}}>
+              {loadingRemixClips||loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>
+              :remixClipSources.length===0?<div style={{padding:"24px 0",textAlign:"center" as const}}>
+                {hasVideoOrders===false?<><Film size={28} color="var(--std)"/><p style={{fontSize:12,color:"var(--std)",margin:0,marginTop:8,lineHeight:1.6}}>Order a listing video to start remixing clips into social content.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:12,padding:"7px 18px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none"}}>Order a Video</a></>:<><p style={{fontSize:11,color:"var(--std)",margin:0,marginBottom:8}}>No completed videos found.</p><button onClick={()=>loadUserVideos()} className="bx" style={{margin:"0 auto",fontSize:11,padding:"6px 16px"}}>Reload</button></>}
+              </div>
+              :<div style={{display:"flex",flexDirection:"column" as const,gap:16}}>
+                {remixClipSources.map(src=>(
+                  <div key={src.orderId}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><span style={{fontSize:13}}>{"\ud83d\udce6"}</span><div><p style={{fontSize:11,fontWeight:700,color:"var(--st)",margin:0}}>Order {src.orderId.slice(0,8)} {"\u00b7"} {src.date}</p><p style={{fontSize:10,color:"var(--std)",margin:0}}>{src.address}</p></div></div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                      {src.clips.map((clip,ci)=>{const onTL=isClipOnTimeline(clip.url);return<button key={ci} onClick={()=>{if(!onTL)addClipToRemix(clip.url,clip.thumbnail,`${src.address.slice(0,20)} \u00b7 ${clip.label}`);}} style={{position:"relative",borderRadius:8,overflow:"hidden",border:onTL?"1px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:onTL?"default":"pointer",padding:0,fontFamily:"var(--sf)",opacity:onTL?0.7:1,transition:"all 0.15s"}}><div style={{aspectRatio:"16/9",backgroundColor:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}>{clip.thumbnail?<img src={clip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<Film size={20} color="rgba(255,255,255,0.15)"/>}</div><div style={{padding:"4px 6px"}}><p style={{fontSize:9,fontWeight:600,color:"var(--st)",margin:0,textAlign:"left"}}>{clip.label}</p></div>{onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={10} color="#fff"/></div>}{!onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:700}}>+</div>}</button>;})}
+                    </div>
+                  </div>
+                ))}
+              </div>}
+              <div style={{marginTop:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/></div>
+            </div>
+          </>}
+
+          {activeTab==="video-remix"&&leftPanel==="timeline"&&<>
+            <div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Timeline</div>
+            <div style={{padding:14}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid var(--sbr)"}}><span style={{fontSize:12,fontWeight:700,color:"var(--st)"}}>{remixClips.length} clip{remixClips.length!==1?"s":""}</span><span style={{fontSize:12,fontWeight:700,color:remixTotalDuration>119?"#f59e0b":"var(--sa)"}}>{Math.round(remixTotalDuration)}s total</span></div>
+              {remixTotalDuration>119&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Clock size={12} color="#f59e0b"/><span style={{fontSize:10,color:"#f59e0b",fontWeight:600}}>Total exceeds 2 min. Export may be slow or fail.</span></div>}
+              {remixClips.length===0?<div style={{padding:"24px 0",textAlign:"center" as const,border:"2px dashed var(--sbr)",borderRadius:10}}><Film size={24} color="var(--std)"/><p style={{fontSize:11,color:"var(--std)",margin:0,marginTop:8}}>No clips added yet</p></div>
+              :<div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+                {remixClips.map((clip,idx)=>{const isExp=expandedClipId===clip.id;const effDur=(clip.trimEnd-clip.trimStart)/clip.speed;
+                  return<div key={clip.id} style={{borderRadius:10,border:"1px solid var(--sbr)",background:"rgba(255,255,255,0.02)",overflow:"hidden"}}>
+                    <button onClick={()=>setExpandedClipId(isExp?null:clip.id)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textAlign:"left" as const}}>
+                      <span style={{fontSize:12,fontWeight:800,color:"var(--sa)",width:20,flexShrink:0}}>{idx+1}.</span>
+                      <div style={{width:36,height:24,borderRadius:4,overflow:"hidden",flexShrink:0,backgroundColor:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center"}}>{clip.thumbnail?<img src={clip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<Film size={12} color="rgba(255,255,255,0.2)"/>}</div>
+                      <div style={{flex:1,minWidth:0}}><p style={{fontSize:11,fontWeight:600,color:"var(--st)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{clip.label}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{effDur.toFixed(1)}s{clip.speed!==1?` @ ${clip.speed}\u00d7`:""}</p></div>
+                      <ChevronDown size={12} color="var(--std)" style={{transform:isExp?"rotate(180deg)":"none",transition:"transform 0.2s"}}/>
+                    </button>
+                    {isExp&&<div style={{padding:"0 12px 12px"}}>
+                      <div style={{marginBottom:10}}><label className="fl">Trim Start: {clip.trimStart.toFixed(1)}s</label><input type="range" min={0} max={clip.duration} step={0.5} value={clip.trimStart} onChange={e=>{const v=parseFloat(e.target.value);if(v<clip.trimEnd-1)updateRemixClip(clip.id,{trimStart:v});}} style={{width:"100%",accentColor:"var(--sa)"}}/></div>
+                      <div style={{marginBottom:10}}><label className="fl">Trim End: {clip.trimEnd.toFixed(1)}s</label><input type="range" min={0} max={clip.duration} step={0.5} value={clip.trimEnd} onChange={e=>{const v=parseFloat(e.target.value);if(v>clip.trimStart+1)updateRemixClip(clip.id,{trimEnd:v});}} style={{width:"100%",accentColor:"var(--sa)"}}/></div>
+                      <div style={{marginBottom:10}}><label className="fl">Speed</label><div style={{display:"flex",flexWrap:"wrap" as const,gap:4}}>{SPEED_PRESETS.map(s=><button key={s} onClick={()=>updateRemixClip(clip.id,{speed:s})} style={{padding:"4px 10px",borderRadius:6,border:clip.speed===s?"1px solid var(--sa)":"1px solid var(--sbr)",background:clip.speed===s?"var(--sag)":"none",color:clip.speed===s?"var(--sa)":"var(--std)",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}>{s}{"\u00d7"}</button>)}</div></div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>moveClipInRemix(clip.id,-1)} disabled={idx===0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"6px 0",borderRadius:6,border:"1px solid var(--sbr)",background:"none",color:idx===0?"var(--stm)":"var(--std)",fontSize:10,fontWeight:600,cursor:idx===0?"not-allowed":"pointer",fontFamily:"var(--sf)"}}><ArrowUp size={11}/>Up</button>
+                        <button onClick={()=>moveClipInRemix(clip.id,1)} disabled={idx===remixClips.length-1} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"6px 0",borderRadius:6,border:"1px solid var(--sbr)",background:"none",color:idx===remixClips.length-1?"var(--stm)":"var(--std)",fontSize:10,fontWeight:600,cursor:idx===remixClips.length-1?"not-allowed":"pointer",fontFamily:"var(--sf)"}}><ArrowDown size={11}/>Down</button>
+                        <button onClick={()=>removeClipFromRemix(clip.id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"6px 0",borderRadius:6,border:"1px solid rgba(239,68,68,0.3)",background:"rgba(239,68,68,0.08)",color:"#ef4444",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}><Trash2 size={11}/>Remove</button>
+                      </div>
+                    </div>}
+                  </div>;})}
+              </div>}
+            </div>
+          </>}
+
+          {activeTab==="video-remix"&&leftPanel==="music"&&<>
+            <div className="ph"><Music size={15} color="var(--sa)"/>Music</div>
+            <div style={{padding:14}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><span className="fl" style={{margin:0}}>{"\ud83c\udfb5"} Background Music</span>{selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}</div>
+              {selectedMusicTrack&&(<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}><Music size={12} color="var(--sa)"/><span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span><button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span></button></div>)}
+              <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>{[{key:"",label:"All"},{key:"upbeat_modern",label:"Upbeat"},{key:"chill_tropical",label:"Chill"},{key:"energetic_pop",label:"Energy"},{key:"elegant_classical",label:"Elegant"},{key:"warm_acoustic",label:"Acoustic"},{key:"bold_cinematic",label:"Cinematic"},{key:"smooth_jazz",label:"Jazz"},{key:"ambient",label:"Ambient"}].map(v=>(<button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)",transition:"all 0.15s"}}>{v.label}</button>))}</div>
+              {loadingMusic?<div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>:<div style={{maxHeight:400,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>{musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}><button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button></p>}{musicTracks.map(t=>(<div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}><button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span></button><span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span><span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>{selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}</div>))}</div>}
+            </div>
+          </>}
+
+          {activeTab==="video-remix"&&leftPanel==="styles"&&<>
+            <div className="ph"><Palette size={15} color="var(--sa)"/>Remix Styles</div>
+            <LensGate locked={!isLensSubscriber}><Section title="Branding Overlay" icon={CreditCard}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",marginBottom:8}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Show Branding</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>3s intro &amp; outro frames</p></div><button onClick={()=>setRemixBranding(!remixBranding)} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:remixBranding?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:remixBranding?23:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div>{remixBranding&&<p style={{fontSize:10,color:"var(--std)",lineHeight:1.5,margin:0,padding:"6px 8px",borderRadius:6,background:"rgba(255,255,255,0.03)"}}>Your branding card appears as a 3-second intro and outro frame.</p>}</Section></LensGate>
+            <LensGate locked={!isLensSubscriber} label="Lens: Auto-fill Profile"><Section title="Saved Profile" icon={User} defaultOpen={false}><p style={{fontSize:10,color:"var(--std)",lineHeight:1.5,margin:0}}>Lens subscribers get branding auto-filled from their saved profile.</p></Section></LensGate>
+            <Section title="Output Size" icon={Layers}><div style={{display:"flex",gap:4}}>{REMIX_SIZES.map(s=><button key={s.id} className={`sp ${remixSize===s.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const,fontSize:10}} onClick={()=>setRemixSize(s.id)}><div style={{fontWeight:700}}>{s.label}</div><div style={{fontSize:8,color:"var(--std)",marginTop:2}}>{s.sublabel}</div></button>)}</div></Section>
+            <LensGate locked={!isLensSubscriber} label="Lens: Font Styles"><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section></LensGate>
+            {!isLensSubscriber&&<div style={{margin:"12px 20px",padding:"14px 16px",borderRadius:10,background:"linear-gradient(135deg,rgba(99,102,241,0.12),rgba(168,85,247,0.08))",border:"1px solid rgba(99,102,241,0.2)"}}><p style={{fontSize:12,fontWeight:700,color:"var(--sa)",margin:0}}>Unlock Full Remix</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:4,lineHeight:1.6}}>Subscribe to Lens for branded intro/outro, auto-filled profile, premium templates, and more.</p><a href="/dashboard/lens" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:10,padding:"7px 16px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none",boxShadow:"0 2px 12px rgba(99,102,241,0.3)"}}><Sparkles size={12}/>Subscribe to Lens</a></div>}
+            <div style={{padding:"12px 20px"}}><div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 12px",borderRadius:8,background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.15)"}}><Clock size={13} color="#f59e0b"/><p style={{fontSize:10,color:"#f59e0b",fontWeight:500,margin:0,lineHeight:1.5}}>Video export runs in your browser. May take 5-20 min. Keep this tab open.</p></div></div>
+          </>}
+
           {/* ── YARD SIGN PANELS ── */}
           {activeTab==="yard-sign"&&leftPanel==="design"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Yard Sign Design</div><div style={{padding:14}}><div className="tg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>{YARD_DESIGNS.map(d=><button key={d.id} className={`tc ${yardDesign===d.id?"ac":""}`} onClick={()=>setYardDesign(d.id)}><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{d.label}</div><div style={{fontSize:9,color:"var(--std)",marginTop:2}}>{d.desc}</div></button>)}</div><div style={{marginTop:14}}><span className="fl">Sign Size</span><div className="fr" style={{marginTop:4}}>{YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}</div></div></div></>}
           {activeTab==="yard-sign"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></>}
           {activeTab==="yard-sign"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Sign Details</div>
-            <Section title="Header & Agent" icon={User}><div className="fg"><label className="fl">Header Text</label><input className="fi" value={yardHeaderText} onChange={e=>setYardHeaderText(e.target.value)}/></div><div className="fg"><label className="fl">Agent Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div>
-              {yardDesign==="split-bar"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Office Name</label><input className="fi" value={yardOfficeName} onChange={e=>setYardOfficeName(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Office Phone</label><input className="fi" value={yardOfficePhone} onChange={e=>setYardOfficePhone(e.target.value)}/></div></div>}
-              {yardDesign==="sidebar"&&<div className="fg"><label className="fl">Website</label><input className="fi" value={yardWebsite} onChange={e=>setYardWebsite(e.target.value)} placeholder="www.janesmith.com"/></div>}
-            </Section>
+            <Section title="Header & Agent" icon={User}><div className="fg"><label className="fl">Header Text</label><input className="fi" value={yardHeaderText} onChange={e=>setYardHeaderText(e.target.value)}/></div><div className="fg"><label className="fl">Agent Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div>{yardDesign==="split-bar"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Office Name</label><input className="fi" value={yardOfficeName} onChange={e=>setYardOfficeName(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Office Phone</label><input className="fi" value={yardOfficePhone} onChange={e=>setYardOfficePhone(e.target.value)}/></div></div>}{yardDesign==="sidebar"&&<div className="fg"><label className="fl">Website</label><input className="fi" value={yardWebsite} onChange={e=>setYardWebsite(e.target.value)} placeholder="www.janesmith.com"/></div>}</Section>
             <Section title="Property Highlights" icon={Home}><div className="fg"><input className="fi" value={yardBullet1} onChange={e=>setYardBullet1(e.target.value)} placeholder="e.g. 3 BDR / 2 BTH"/></div><div className="fg"><input className="fi" value={yardBullet2} onChange={e=>setYardBullet2(e.target.value)} placeholder="e.g. Pool & Spa"/></div><div className="fg"><input className="fi" value={yardBullet3} onChange={e=>setYardBullet3(e.target.value)} placeholder="e.g. Ocean View"/></div></Section>
           </>}
           {activeTab==="yard-sign"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Colors</div>
@@ -1076,133 +1039,14 @@ export default function DesignStudioV2(){
           </>}
 
           {/* ── PDF PANELS ── */}
-          {activeTab==="property-pdf"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div>
-            <Section title="Address & Price" icon={MapPin}><div className="fg"><label className="fl">Address</label><input className="fi" value={pdfAddress} onChange={e=>setPdfAddress(e.target.value)}/></div><div className="fg"><label className="fl">City, State, Zip</label><input className="fi" value={pdfCityStateZip} onChange={e=>setPdfCityStateZip(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={pdfPrice} onChange={e=>setPdfPrice(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={pdfBeds} onChange={e=>setPdfBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={pdfBaths} onChange={e=>setPdfBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={pdfSqft} onChange={e=>setPdfSqft(e.target.value)}/></div></div></Section>
-            <Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={6} value={pdfDescription} onChange={e=>setPdfDescription(e.target.value)} placeholder="Property description..."/></Section>
-            <Section title="Key Features" icon={Sparkles}><textarea className="ta" rows={6} value={pdfFeatures} onChange={e=>setPdfFeatures(e.target.value)} placeholder="One feature per line..."/></Section>
-          </>}
-          {activeTab==="property-pdf"&&leftPanel==="photos"&&(
-            <>
-              <div className="ph">
-                <ImageIcon size={15} color="var(--sa)"/>
-                Photos ({pdfPhotos.length}/25)
-              </div>
-              <div style={{padding:14}}>
-                <p style={{fontSize:11,color:"var(--std)",marginBottom:10}}>
-                  First 3 on page 1. Rest fill grids.
-                </p>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                  {pdfPhotos.map((url,i)=>(
-                    <div
-                      key={i}
-                      className="group"
-                      style={{
-                        position:"relative",
-                        aspectRatio:"1",
-                        borderRadius:8,
-                        overflow:"hidden",
-                        border:"1px solid var(--sbr)",
-                      }}
-                    >
-                      <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                      <div style={{
-                        position:"absolute",
-                        top:2,
-                        left:2,
-                        background:"rgba(0,0,0,0.7)",
-                        color:"#fff",
-                        fontSize:9,
-                        fontWeight:700,
-                        padding:"1px 5px",
-                        borderRadius:4,
-                      }}>
-                        {i < 3 ? ("\u2605" + (i + 1)) : i + 1}
-                      </div>
-                      <button
-                        className="ghov"
-                        onClick={()=>setPdfPhotos(p=>p.filter((_,idx)=>idx!==i))}
-                        style={{
-                          position:"absolute",
-                          top:2,
-                          right:2,
-                          width:18,
-                          height:18,
-                          borderRadius:"50%",
-                          background:"rgba(0,0,0,0.6)",
-                          color:"#fff",
-                          border:"none",
-                          cursor:"pointer",
-                          display:"flex",
-                          alignItems:"center",
-                          justifyContent:"center",
-                          opacity:0,
-                          transition:"opacity 0.2s",
-                        }}
-                      >
-                        <X size={10}/>
-                      </button>
-                    </div>
-                  ))}
-                  {pdfPhotos.length<25&&(
-                    <label style={{
-                      aspectRatio:"1",
-                      borderRadius:8,
-                      border:"2px dashed var(--sbr)",
-                      display:"flex",
-                      flexDirection:"column" as const,
-                      alignItems:"center",
-                      justifyContent:"center",
-                      gap:4,
-                      cursor:"pointer",
-                      color:"var(--std)",
-                    }}>
-                      <Upload size={16}/>
-                      <span style={{fontSize:9,fontWeight:600}}>Add</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        style={{display:"none"}}
-                        onChange={e=>{
-                          Array.from(e.target.files||[]).forEach(f=>{
-                            setPdfPhotos(p=>[...p,URL.createObjectURL(f)]);
-                          });
-                          e.target.value="";
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-          {activeTab==="property-pdf"&&leftPanel==="styles"&&(
-            <>
-              <div className="ph"><Palette size={15} color="var(--sa)"/>Accent Color</div>
-              <Section title="Color" icon={Paintbrush}>
-                <ColorPicker value={pdfAccentColor} onChange={setPdfAccentColor}/>
-                <div style={{marginTop:8}}>
-                  <SwatchGrid colors={BROKERAGE_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} showLabels/>
-                </div>
-                <div style={{marginTop:10}}>
-                  <SwatchGrid colors={ACCENT_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor}/>
-                </div>
-              </Section>
-            </>
-          )}
+          {activeTab==="property-pdf"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div><Section title="Address & Price" icon={MapPin}><div className="fg"><label className="fl">Address</label><input className="fi" value={pdfAddress} onChange={e=>setPdfAddress(e.target.value)}/></div><div className="fg"><label className="fl">City, State, Zip</label><input className="fi" value={pdfCityStateZip} onChange={e=>setPdfCityStateZip(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={pdfPrice} onChange={e=>setPdfPrice(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={pdfBeds} onChange={e=>setPdfBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={pdfBaths} onChange={e=>setPdfBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={pdfSqft} onChange={e=>setPdfSqft(e.target.value)}/></div></div></Section><Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={6} value={pdfDescription} onChange={e=>setPdfDescription(e.target.value)} placeholder="Property description..."/></Section><Section title="Key Features" icon={Sparkles}><textarea className="ta" rows={6} value={pdfFeatures} onChange={e=>setPdfFeatures(e.target.value)} placeholder="One feature per line..."/></Section></>}
+          {activeTab==="property-pdf"&&leftPanel==="photos"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({pdfPhotos.length}/25)</div><div style={{padding:14}}><p style={{fontSize:11,color:"var(--std)",marginBottom:10}}>First 3 on page 1. Rest fill grids.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{pdfPhotos.map((url,i)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i<3?("\u2605"+(i+1)):i+1}</div><button className="ghov" onClick={()=>setPdfPhotos(p=>p.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}{pdfPhotos.length<25&&(<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).forEach(f=>{setPdfPhotos(p=>[...p,URL.createObjectURL(f)]);});e.target.value="";}}/></label>)}</div></div></>}
+          {activeTab==="property-pdf"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Accent Color</div><Section title="Color" icon={Paintbrush}><ColorPicker value={pdfAccentColor} onChange={setPdfAccentColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} showLabels/></div><div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor}/></div></Section></>}
 
           {/* ── BRANDING PANELS ── */}
           {activeTab==="branding-card"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={brandHeadshot} onUpload={f=>setBrandHeadshot(URL.createObjectURL(f))} onClear={()=>setBrandHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={brandLogo} onUpload={f=>setBrandLogo(URL.createObjectURL(f))} onClear={()=>setBrandLogo(null)} uploading={false} compact/></div><div style={{marginTop:10}}><UploadZone label="Background Photo (optional)" imageUrl={brandBgPhoto} onUpload={f=>setBrandBgPhoto(URL.createObjectURL(f))} onClear={()=>setBrandBgPhoto(null)} uploading={false}/></div></div></>}
-          {activeTab==="branding-card"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Card Details</div>
-            <Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={brandAgentName} onChange={e=>setBrandAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={brandPhone} onChange={e=>setBrandPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={brandEmail} onChange={e=>setBrandEmail(e.target.value)}/></div></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brandBrokerage} onChange={e=>setBrandBrokerage(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Tagline</label><input className="fi" value={brandTagline} onChange={e=>setBrandTagline(e.target.value)}/></div></div><div className="fg"><label className="fl">Website</label><input className="fi" value={brandWebsite} onChange={e=>setBrandWebsite(e.target.value)}/></div></Section>
-            <Section title="Property (optional)" icon={Home} defaultOpen={false}><div className="fg"><label className="fl">Address</label><input className="fi" value={brandAddress} onChange={e=>setBrandAddress(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">City, State</label><input className="fi" value={brandCityState} onChange={e=>setBrandCityState(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={brandPrice} onChange={e=>setBrandPrice(e.target.value)}/></div></div><div className="fg"><label className="fl">Features</label><textarea className="ta" rows={3} value={brandFeatures} onChange={e=>setBrandFeatures(e.target.value)}/></div></Section>
-          </>}
-          {activeTab==="branding-card"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div>
-            <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${brandFont===f.id?"ac":""}`} onClick={()=>setBrandFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
-            <Section title="Background Color" icon={Paintbrush}><ColorPicker value={brandBgColor} onChange={setBrandBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={brandBgColor} onSelect={setBrandBgColor} showLabels/></div></Section>
-            <Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={brandAccentColor||"#ffffff"} onChange={setBrandAccentColor}/>{brandAccentColor&&<button onClick={()=>setBrandAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={brandAccentColor} onSelect={setBrandAccentColor}/></div></Section>
-            <Section title="Orientation" icon={Layers}><div className="fr">{BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}</div></Section>
-          </>}
+          {activeTab==="branding-card"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Card Details</div><Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={brandAgentName} onChange={e=>setBrandAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={brandPhone} onChange={e=>setBrandPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={brandEmail} onChange={e=>setBrandEmail(e.target.value)}/></div></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brandBrokerage} onChange={e=>setBrandBrokerage(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Tagline</label><input className="fi" value={brandTagline} onChange={e=>setBrandTagline(e.target.value)}/></div></div><div className="fg"><label className="fl">Website</label><input className="fi" value={brandWebsite} onChange={e=>setBrandWebsite(e.target.value)}/></div></Section><Section title="Property (optional)" icon={Home} defaultOpen={false}><div className="fg"><label className="fl">Address</label><input className="fi" value={brandAddress} onChange={e=>setBrandAddress(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">City, State</label><input className="fi" value={brandCityState} onChange={e=>setBrandCityState(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={brandPrice} onChange={e=>setBrandPrice(e.target.value)}/></div></div><div className="fg"><label className="fl">Features</label><textarea className="ta" rows={3} value={brandFeatures} onChange={e=>setBrandFeatures(e.target.value)}/></div></Section></>}
+          {activeTab==="branding-card"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${brandFont===f.id?"ac":""}`} onClick={()=>setBrandFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Background Color" icon={Paintbrush}><ColorPicker value={brandBgColor} onChange={setBrandBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={brandBgColor} onSelect={setBrandBgColor} showLabels/></div></Section><Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={brandAccentColor||"#ffffff"} onChange={setBrandAccentColor}/>{brandAccentColor&&<button onClick={()=>setBrandAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={brandAccentColor} onSelect={setBrandAccentColor}/></div></Section><Section title="Orientation" icon={Layers}><div className="fr">{BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}</div></Section></>}
         </div>
 
         {/* CANVAS */}
@@ -1219,6 +1063,7 @@ export default function DesignStudioV2(){
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(Math.min(200,zoom+10))}><ZoomIn size={13}/></button>
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(100)}><RotateCcw size={13}/></button>
             <div className="td"/>
+            {activeTab==="video-remix"&&<>{REMIX_SIZES.map(s=><button key={s.id} className={`sp ${remixSize===s.id?"ac":""}`} onClick={()=>setRemixSize(s.id)}>{s.label}</button>)}<div className="td"/><span style={{fontSize:11,fontWeight:600,color:remixTotalDuration>119?"#f59e0b":"var(--std)",padding:"0 4px"}}>{Math.round(remixTotalDuration)}s</span></>}
             {activeTab==="templates"&&SIZES.map(s=><button key={s.id} className={`sp ${selectedSize===s.id?"ac":""}`} onClick={()=>setSelectedSize(s.id)}>{s.label}</button>)}
             {activeTab==="listing-flyer"&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>US Letter 8.5{"\u00d7"}11"</span>}
             {activeTab==="yard-sign"&&YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}
@@ -1237,15 +1082,15 @@ export default function DesignStudioV2(){
               <button className="bi" style={{width:"100%",marginTop:6,fontSize:11,fontWeight:600,justifyContent:"center",gap:6,height:36}} onClick={handleExportPdf} disabled={exporting}><FileText size={13}/>Download PDF (Print)</button>
             </>}
             {activeTab!=="listing-flyer"&&<>
-              <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:isVideoMode?"linear-gradient(135deg,#7c3aed,#6366f1)":undefined,position:"relative",overflow:"hidden"}} onClick={handleExport} disabled={exporting}>
+              <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:isRemixMode?"linear-gradient(135deg,#7c3aed,#ec4899)":isVideoMode?"linear-gradient(135deg,#7c3aed,#6366f1)":undefined,position:"relative",overflow:"hidden"}} onClick={handleExport} disabled={exporting}>
                 {exporting&&exportProgress>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${exportProgress}%`,background:"rgba(255,255,255,0.15)",transition:"width 0.3s ease"}}/>}
                 <span style={{position:"relative",display:"flex",alignItems:"center",gap:7}}>
-                  {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+                  {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</>:isRemixMode?<><Film size={14}/>Export Remix</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
                 </span>
               </button>
             </>}
           </Section>
-          <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
+          <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="video-remix"?[{n:"Clips",i:"\ud83c\udfac"},{n:"Music",i:"\ud83c\udfb5"},{n:"Branding",i:"\ud83d\udc64"},{n:"Timeline",i:"\u23f1\ufe0f"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
         </div>}
       </div>
 
