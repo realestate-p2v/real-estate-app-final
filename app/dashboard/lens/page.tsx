@@ -30,10 +30,7 @@ import {
   Check,
 } from "lucide-react";
 
-/* ─────────────────────────────────────────────
-   Constants
-   ───────────────────────────────────────────── */
-const PROPERTY_SITE_BASE = "/p"; // Change to "https://" + slug + ".p2v.homes" when DNS is live
+const PROPERTY_SITE_BASE = "/p";
 
 const launcherStyles = `
   @keyframes launcher-in {
@@ -46,9 +43,6 @@ const launcherStyles = `
   }
 `;
 
-/* ─────────────────────────────────────────────
-   Types
-   ───────────────────────────────────────────── */
 interface PublishedWebsite {
   id: string;
   address: string;
@@ -99,7 +93,6 @@ export default function DashboardLensPage() {
         }
       }
 
-      // Published property websites
       const { data: publishedSites } = await supabase
         .from("agent_properties")
         .select("id, address, website_slug, website_published, website_curated")
@@ -116,7 +109,6 @@ export default function DashboardLensPage() {
     init();
   }, []);
 
-  /* ─── Copy link handler ─── */
   const handleCopyLink = async (slug: string) => {
     const url = `${window.location.origin}/p/${slug}`;
     await navigator.clipboard.writeText(url);
@@ -124,7 +116,6 @@ export default function DashboardLensPage() {
     setTimeout(() => setCopiedSlug(null), 2000);
   };
 
-  /* ─── Get hero image from website_curated ─── */
   const getHeroImage = (curated: any): string | null => {
     if (!curated) return null;
     if (Array.isArray(curated) && curated.length > 0) return typeof curated[0] === "string" ? curated[0] : curated[0]?.url || null;
@@ -171,8 +162,31 @@ export default function DashboardLensPage() {
     );
   }
 
-  // ── Subscriber: Clean tool launcher ──
   const tools = [
+    {
+      icon: Film,
+      label: "Order a Video",
+      desc: "Cinematic listing walkthrough from $4.95/clip",
+      href: "/order",
+      iconColor: "text-cyan-400",
+      bg: "bg-cyan-500/10",
+    },
+    {
+      icon: Film,
+      label: "Video Remix",
+      desc: "Remix your clips into social-ready videos with music & branding",
+      href: "/dashboard/lens/remix",
+      iconColor: "text-purple-400",
+      bg: "bg-purple-500/10",
+    },
+    {
+      icon: PenTool,
+      label: "Design Studio",
+      desc: "Listing graphics, flyers, yard signs, branding cards",
+      href: "/dashboard/lens/design-studio",
+      iconColor: "text-indigo-400",
+      bg: "bg-indigo-500/10",
+    },
     {
       icon: Camera,
       label: "Photo Coach",
@@ -180,14 +194,6 @@ export default function DashboardLensPage() {
       href: "/dashboard/lens/coach",
       iconColor: "text-blue-400",
       bg: "bg-blue-500/10",
-    },
-    {
-      icon: PenTool,
-      label: "Design Studio",
-      desc: "Listing graphics, video remixes, flyers, yard signs",
-      href: "/dashboard/lens/design-studio",
-      iconColor: "text-indigo-400",
-      bg: "bg-indigo-500/10",
     },
     {
       icon: MessageSquare,
@@ -214,14 +220,6 @@ export default function DashboardLensPage() {
       bg: "bg-amber-500/10",
       badge: "PRO",
     },
-    {
-      icon: Film,
-      label: "Order a Video",
-      desc: "Cinematic listing walkthrough from $4.95/clip",
-      href: "/order",
-      iconColor: "text-cyan-400",
-      bg: "bg-cyan-500/10",
-    },
   ];
 
   const quickLinks = [
@@ -244,7 +242,6 @@ export default function DashboardLensPage() {
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
 
-        {/* Header */}
         <div className="launcher-item flex items-center justify-between mb-10" style={{ animationDelay: "0.05s" }}>
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -261,7 +258,6 @@ export default function DashboardLensPage() {
           </Link>
         </div>
 
-        {/* Tool Grid */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-12">
           {tools.map((tool, i) => (
             <Link
@@ -287,16 +283,11 @@ export default function DashboardLensPage() {
           ))}
         </div>
 
-        {/* Quick Links */}
         <div className="launcher-item" style={{ animationDelay: "0.5s" }}>
           <p className="text-xs font-bold uppercase tracking-wider text-white/25 mb-3">Quick Links</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {quickLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] py-4 px-3 text-center transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]"
-              >
+              <Link key={link.label} href={link.href} className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] py-4 px-3 text-center transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]">
                 <link.icon className="h-4 w-4 text-white/30 group-hover:text-cyan-400/70 transition-colors" />
                 <span className="text-[11px] font-semibold text-white/50 group-hover:text-white/80 transition-colors">{link.label}</span>
               </Link>
@@ -304,7 +295,6 @@ export default function DashboardLensPage() {
           </div>
         </div>
 
-        {/* ═══ PROPERTY WEBSITES ═══ */}
         {publishedWebsites.length > 0 && (
           <div className="launcher-item mt-10" style={{ animationDelay: "0.6s" }}>
             <div className="flex items-center justify-between mb-4">
@@ -316,53 +306,16 @@ export default function DashboardLensPage() {
                 const heroUrl = getHeroImage(site.website_curated);
                 const siteUrl = `${PROPERTY_SITE_BASE}/${site.website_slug}`;
                 return (
-                  <div
-                    key={site.id}
-                    className="launcher-item rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
-                    style={{ animationDelay: `${0.65 + i * 0.06}s` }}
-                  >
-                    {/* Hero image */}
+                  <div key={site.id} className="launcher-item rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]" style={{ animationDelay: `${0.65 + i * 0.06}s` }}>
                     <div className="relative h-40 w-full overflow-hidden">
-                      {heroUrl ? (
-                        <img src={heroUrl} alt={site.address} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 50%, rgba(168,85,247,0.15) 100%)" }} />
-                      )}
-                      {/* Live badge */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-[10px] font-bold text-green-400">Live</span>
-                      </div>
+                      {heroUrl ? <img src={heroUrl} alt={site.address} className="w-full h-full object-cover" /> : <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 50%, rgba(168,85,247,0.15) 100%)" }} />}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1"><div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /><span className="text-[10px] font-bold text-green-400">Live</span></div>
                     </div>
-                    {/* Info */}
-                    <div className="p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Your Property Website</p>
-                      <p className="text-sm font-bold text-white/90 truncate">{site.address}</p>
-                      <p className="text-[11px] text-cyan-400/60 truncate mt-0.5">{site.website_slug}.p2v.homes</p>
-                    </div>
-                    {/* Actions */}
+                    <div className="p-4"><p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Your Property Website</p><p className="text-sm font-bold text-white/90 truncate">{site.address}</p><p className="text-[11px] text-cyan-400/60 truncate mt-0.5">{site.website_slug}.p2v.homes</p></div>
                     <div className="border-t border-white/[0.06] px-4 py-3 flex items-center gap-3">
-                      <a
-                        href={siteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"
-                      >
-                        <Eye className="h-3 w-3" />
-                        View Live Page
-                      </a>
-                      <button
-                        onClick={() => handleCopyLink(site.website_slug)}
-                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors"
-                      >
-                        {copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}
-                      </button>
-                      <Link
-                        href={`/dashboard/properties/${site.id}`}
-                        className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors"
-                      >
-                        Edit Settings →
-                      </Link>
+                      <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"><Eye className="h-3 w-3" />View Live Page</a>
+                      <button onClick={() => handleCopyLink(site.website_slug)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors">{copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}</button>
+                      <Link href={`/dashboard/properties/${site.id}`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings →</Link>
                     </div>
                   </div>
                 );
@@ -371,7 +324,6 @@ export default function DashboardLensPage() {
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-16 border-t border-white/[0.04] pt-6 pb-8 text-center">
           <p className="text-xs text-white/20">&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
         </div>
@@ -380,13 +332,12 @@ export default function DashboardLensPage() {
   );
 }
 
-/* ═══════════════════════════════════════════════
-   NON-SUBSCRIBER — Upsell page
-   ═══════════════════════════════════════════════ */
 function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }) {
   const features = [
+    { icon: Film, title: "Order a Video", description: "Cinematic listing walkthrough videos from $4.95/clip.", actionLabel: "Order Now", actionHref: "/order" },
+    { icon: Film, title: "Video Remix", description: "Remix your clips into social-ready videos with music & branding.", actionLabel: "Open Remix", actionHref: "/dashboard/lens/remix" },
+    { icon: PenTool, title: "Design Studio", description: "Listing graphics, flyers, yard signs, branding cards.", actionLabel: "Open Design Studio", actionHref: "/dashboard/lens/design-studio" },
     { icon: Camera, title: "AI Photo Coach", description: "AI-powered photo scoring & instant feedback during shoots.", actionLabel: "Start a Shoot", actionHref: "/dashboard/lens/coach" },
-    { icon: PenTool, title: "Design Studio", description: "Listing graphics, video remixes, flyers, yard signs, branding cards.", actionLabel: "Open Design Studio", actionHref: "/dashboard/lens/design-studio" },
     { icon: MessageSquare, title: "Description Writer", description: "MLS-ready listing copy generated from your photos & details.", actionLabel: "Write a Description", actionHref: "/dashboard/lens/descriptions" },
     { icon: Sofa, title: "Virtual Staging", description: "Furnish empty rooms with AI — 6 design styles, before/after.", actionLabel: "Stage a Room", actionHref: "/dashboard/lens/staging" },
     { icon: FileText, title: "Reports", description: "Branded buyer & seller guides with AI-written content.", actionLabel: "Create Report", actionHref: "/dashboard/lens/reports", badge: "PRO" },
@@ -408,11 +359,7 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mt-6">
           <div className="flex items-start gap-4">
             <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0"><Clock className="h-5 w-5 text-red-600" /></div>
-            <div className="flex-1">
-              <h3 className="font-bold text-red-800">Your free month has ended</h3>
-              <p className="text-sm text-red-700 mt-1">Subscribe to continue using all features.</p>
-              <Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo</Link></Button>
-            </div>
+            <div className="flex-1"><h3 className="font-bold text-red-800">Your free month has ended</h3><p className="text-sm text-red-700 mt-1">Subscribe to continue using all features.</p><Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo</Link></Button></div>
           </div>
         </div>
       )}
@@ -423,18 +370,13 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-foreground">Unlock P2V Lens</h2>
             <p className="text-sm text-muted-foreground mt-1">AI photo coaching, design studio, listing descriptions, virtual staging, reports, and priority delivery.</p>
-            <div className="flex flex-wrap gap-3 mt-4">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-            </div>
+            <div className="flex flex-wrap gap-3 mt-4"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo<ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
           </div>
         </div>
       </div>
 
       <div className="mt-10 mb-14">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-8 w-1.5 bg-accent rounded-full" />
-          <h2 className="text-2xl font-bold text-foreground">What You Get</h2>
-        </div>
+        <div className="flex items-center gap-3 mb-6"><div className="h-8 w-1.5 bg-accent rounded-full" /><h2 className="text-2xl font-bold text-foreground">What You Get</h2></div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map(({ icon: Icon, title, description, actionLabel, actionHref, badge }, i) => (
             <Link key={i} href={actionHref} className="relative bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block group">
