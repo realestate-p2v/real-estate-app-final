@@ -380,12 +380,11 @@ export default function DesignStudioV2(){
   const[remixPlaying,setRemixPlaying]=useState(false);
   const[remixPlayingIdx,setRemixPlayingIdx]=useState(0);
   const[remixPlaybackTime,setRemixPlaybackTime]=useState(0);
-  const remixVideoRef=useRef<HTMLVideoElement|null>(null);
-  const remixVideoRefB=useRef<HTMLVideoElement|null>(null);
+  const remixVideosRef=useRef<Map<string,HTMLVideoElement>>(new Map());
   const remixTimerRef=useRef<number|null>(null);
   const remixTimeRef=useRef(0);
   const remixIdxRef=useRef(0);
-  const remixActiveVideo=useRef<"A"|"B">("A");
+  const remixDragging=useRef(false);
   // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
@@ -554,60 +553,35 @@ export default function DesignStudioV2(){
   const remixClipDurations=remixClips.map(c=>(c.trimEnd-c.trimStart)/c.speed);
   const remixClipStarts=remixClipDurations.reduce<number[]>((acc,d,i)=>{acc.push(i===0?0:acc[i-1]+remixClipDurations[i-1]);return acc;},[]);
 
-  const getActiveVideo=()=>remixActiveVideo.current==="A"?remixVideoRef.current:remixVideoRefB.current;
-  const getInactiveVideo=()=>remixActiveVideo.current==="A"?remixVideoRefB.current:remixVideoRef.current;
+  const idxForTime=(t:number)=>{let idx=0;for(let i=0;i<remixClips.length;i++){if(t>=remixClipStarts[i])idx=i;}return idx;};
 
-  const playClipOnVideo=(v:HTMLVideoElement,clip:RemixClip)=>{
-    v.src=clip.sourceUrl;v.currentTime=clip.trimStart;v.playbackRate=clip.speed;
-    v.style.opacity="1";v.style.zIndex="2";
-    v.play().catch(()=>{});
-  };
-
-  const preloadNextClip=(idx:number)=>{
-    const next=remixClips[idx+1];if(!next)return;
-    const inv=getInactiveVideo();if(!inv)return;
-    inv.src=next.sourceUrl;inv.currentTime=next.trimStart;inv.playbackRate=next.speed;
-    inv.style.opacity="0";inv.style.zIndex="1";
-    inv.load();
+  const syncVideoToTime=(t:number,shouldPlay:boolean)=>{
+    const idx=idxForTime(t);
+    const clip=remixClips[idx];if(!clip)return;
+    const localT=(t-remixClipStarts[idx])*clip.speed+clip.trimStart;
+    remixVideosRef.current.forEach((v,id)=>{
+      if(id===clip.id){v.style.opacity="1";v.style.zIndex="2";v.currentTime=localT;v.playbackRate=clip.speed;if(shouldPlay&&v.paused)v.play().catch(()=>{});}
+      else{v.style.opacity="0";v.style.zIndex="1";if(!v.paused)v.pause();}
+    });
+    if(idx!==remixIdxRef.current){remixIdxRef.current=idx;setRemixPlayingIdx(idx);}
   };
 
   const startRemixPlayback=()=>{
     if(remixClips.length===0)return;
-    remixTimeRef.current=0;remixIdxRef.current=0;
-    setRemixPlaying(true);setRemixPlayingIdx(0);setRemixPlaybackTime(0);
-    remixActiveVideo.current="A";
-    const v=remixVideoRef.current;
-    if(v){playClipOnVideo(v,remixClips[0]);preloadNextClip(0);}
-    const vb=remixVideoRefB.current;if(vb){vb.style.opacity="0";vb.style.zIndex="1";}
+    const t=remixTimeRef.current;
+    if(t>=remixTotalDuration){remixTimeRef.current=0;setRemixPlaybackTime(0);}
+    setRemixPlaying(true);
+    syncVideoToTime(remixTimeRef.current,true);
     if(remixTimerRef.current)cancelAnimationFrame(remixTimerRef.current);
-    let lastT=performance.now();
-    const clips=remixClips;const starts=[...remixClipStarts];const durs=[...remixClipDurations];const total=remixTotalDuration;
+    let lastT=performance.now();const total=remixTotalDuration;
     const tick=()=>{
       const now=performance.now();const dt=(now-lastT)/1000;lastT=now;
+      if(remixDragging.current){remixTimerRef.current=requestAnimationFrame(tick);return;}
       remixTimeRef.current+=dt;
       const t=remixTimeRef.current;
-      if(t>=total){stopRemixPlayback();return;}
-      // Find which clip we should be on
-      let targetIdx=remixIdxRef.current;
-      for(let i=targetIdx;i<clips.length;i++){
-        if(t>=starts[i]&&t<starts[i]+durs[i]){targetIdx=i;break;}
-        if(i===clips.length-1)targetIdx=i;
-      }
-      if(targetIdx!==remixIdxRef.current){
-        remixIdxRef.current=targetIdx;
-        // Swap A/B
-        const inv=getInactiveVideo();
-        if(inv){
-          inv.style.opacity="1";inv.style.zIndex="2";
-          inv.currentTime=clips[targetIdx].trimStart;inv.playbackRate=clips[targetIdx].speed;
-          inv.play().catch(()=>{});
-        }
-        const prev=getActiveVideo();
-        if(prev){prev.style.opacity="0";prev.style.zIndex="1";prev.pause();}
-        remixActiveVideo.current=remixActiveVideo.current==="A"?"B":"A";
-        preloadNextClip(targetIdx);
-        setRemixPlayingIdx(targetIdx);
-      }
+      if(t>=total){remixTimeRef.current=total;setRemixPlaybackTime(total);stopRemixPlayback();return;}
+      const newIdx=idxForTime(t);
+      if(newIdx!==remixIdxRef.current)syncVideoToTime(t,true);
       setRemixPlaybackTime(t);
       remixTimerRef.current=requestAnimationFrame(tick);
     };
@@ -616,26 +590,21 @@ export default function DesignStudioV2(){
 
   const stopRemixPlayback=()=>{
     setRemixPlaying(false);
-    const va=remixVideoRef.current;if(va)va.pause();
-    const vb=remixVideoRefB.current;if(vb)vb.pause();
     if(remixTimerRef.current){cancelAnimationFrame(remixTimerRef.current);remixTimerRef.current=null;}
+    remixVideosRef.current.forEach(v=>{if(!v.paused)v.pause();});
   };
 
   const seekRemixTo=(t:number)=>{
-    remixTimeRef.current=t;setRemixPlaybackTime(t);
-    let idx=0;for(let i=0;i<remixClips.length;i++){if(t>=remixClipStarts[i])idx=i;}
-    remixIdxRef.current=idx;setRemixPlayingIdx(idx);
-    const c=remixClips[idx];
-    remixActiveVideo.current="A";
-    const va=remixVideoRef.current;const vb=remixVideoRefB.current;
-    if(va){va.src=c.sourceUrl;va.currentTime=c.trimStart+(t-remixClipStarts[idx])*c.speed;va.playbackRate=c.speed;va.style.opacity="1";va.style.zIndex="2";if(remixPlaying)va.play().catch(()=>{});}
-    if(vb){vb.style.opacity="0";vb.style.zIndex="1";vb.pause();}
-    preloadNextClip(idx);
+    const clamped=Math.max(0,Math.min(t,remixTotalDuration));
+    remixTimeRef.current=clamped;setRemixPlaybackTime(clamped);
+    syncVideoToTime(clamped,remixPlaying);
   };
 
   const toggleRemixPlayback=()=>{if(remixPlaying)stopRemixPlayback();else startRemixPlayback();};
 
   useEffect(()=>{return()=>{if(remixTimerRef.current)cancelAnimationFrame(remixTimerRef.current);};},[]);
+  // When clips change, reset playback
+  useEffect(()=>{remixTimeRef.current=0;setRemixPlaybackTime(0);remixIdxRef.current=0;setRemixPlayingIdx(0);if(remixPlaying)stopRemixPlayback();},[remixClips.length]);
 
   // ─── Export helpers ───────────────────────────────────────────────────────
   const prepareForExport = (el: HTMLElement): { restore: () => void } => {
@@ -848,8 +817,7 @@ export default function DesignStudioV2(){
       if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,border:"2px dashed rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={48} color="rgba(255,255,255,0.12)"/></div><p style={{fontSize:18,color:"rgba(255,255,255,0.3)",fontWeight:600,margin:0}}>Add clips from the left panel to start remixing</p></div>;
       const currentClip=remixClips[remixPlayingIdx]||remixClips[0];
       return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",position:"relative",overflow:"hidden"}}>
-        <video ref={remixVideoRef} poster={currentClip.thumbnail||undefined} muted playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.15s",zIndex:2}}/>
-        <video ref={remixVideoRefB} muted playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0,transition:"opacity 0.15s",zIndex:1}}/>
+        {remixClips.map((clip,i)=><video key={clip.id} ref={el=>{if(el)remixVideosRef.current.set(clip.id,el);else remixVideosRef.current.delete(clip.id);}} src={clip.sourceUrl} poster={clip.thumbnail||undefined} muted playsInline preload="auto" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:i===remixPlayingIdx?1:0,zIndex:i===remixPlayingIdx?2:1,transition:"opacity 0.12s ease"}}/>)}
         {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",zIndex:5}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
         {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
         <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
@@ -1145,25 +1113,45 @@ export default function DesignStudioV2(){
               <div data-export-target="true" style={{width:rawW,height:rawH,transform:`scale(${scale})`,transformOrigin:"top left"}}>{renderPreview()}</div>
             </div>
           </div>
-          {/* Remix timeline bar — rendered OUTSIDE the scaled preview at full UI size */}
+          {/* Remix timeline — YouTube Studio style */}
           {isRemixMode&&remixClips.length>0&&(()=>{
             const TC=["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16"];
-            return<div style={{position:"absolute",bottom:52,left:16,right:16,zIndex:12,background:"var(--ss)",borderRadius:14,border:"1px solid var(--sbr)",boxShadow:"0 -4px 24px rgba(0,0,0,0.3)",padding:"14px 18px 12px",display:"flex",flexDirection:"column" as const,gap:10}}>
-              {/* Clip segments */}
-              <div style={{display:"flex",gap:3,height:20,borderRadius:6,overflow:"hidden",position:"relative",cursor:"pointer"}} onClick={e=>{
-                const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
-                const pct=(e.clientX-rect.left)/rect.width;
-                seekRemixTo(pct*remixTotalDuration);
-              }}>
-                {remixClips.map((c,i)=><div key={c.id} style={{flex:remixClipDurations[i],height:"100%",backgroundColor:TC[i%TC.length],opacity:i===remixPlayingIdx?1:0.45,borderRadius:4,transition:"opacity 0.15s",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:9,fontWeight:800,color:"#fff",textShadow:"0 1px 3px rgba(0,0,0,0.6)",letterSpacing:"0.02em"}}>{i+1}</span></div>)}
-                {remixTotalDuration>0&&<div style={{position:"absolute",top:-3,left:`${(remixPlaybackTime/remixTotalDuration)*100}%`,width:4,height:26,backgroundColor:"#fff",borderRadius:3,boxShadow:"0 0 8px rgba(255,255,255,0.7)",transition:remixPlaying?"left 0.1s linear":"none",zIndex:2,marginLeft:-2}}/>}
+            const pct=remixTotalDuration>0?(remixPlaybackTime/remixTotalDuration)*100:0;
+            const formatT=(s:number)=>{const m=Math.floor(s/60);const sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,"0")}`;};
+            const handleScrub=(e:React.MouseEvent|MouseEvent,el:HTMLElement)=>{
+              const rect=el.getBoundingClientRect();const x=Math.max(0,Math.min(e.clientX-rect.left,rect.width));
+              seekRemixTo((x/rect.width)*remixTotalDuration);
+            };
+            const onMouseDown=(e:React.MouseEvent)=>{
+              remixDragging.current=true;
+              const el=e.currentTarget as HTMLElement;
+              handleScrub(e,el);
+              const onMove=(ev:MouseEvent)=>handleScrub(ev,el);
+              const onUp=()=>{remixDragging.current=false;window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
+              window.addEventListener("mousemove",onMove);window.addEventListener("mouseup",onUp);
+            };
+            return<div style={{position:"absolute",bottom:52,left:0,right:0,zIndex:12,background:"var(--ss)",borderTop:"1px solid var(--sbr)",padding:"0"}}>
+              {/* Clip track */}
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px 6px"}}>
+                <button onClick={toggleRemixPlayback} style={{width:40,height:40,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 2px 10px rgba(99,102,241,0.35)"}}>{remixPlaying?<span style={{display:"flex",gap:3}}><span style={{width:4,height:16,backgroundColor:"#fff",borderRadius:1}}/><span style={{width:4,height:16,backgroundColor:"#fff",borderRadius:1}}/></span>:<Play size={18} color="#fff" style={{marginLeft:2}}/>}</button>
+                <span style={{fontSize:13,fontWeight:700,color:"var(--st)",fontFamily:"monospace",minWidth:90}}>{formatT(remixPlaybackTime)} <span style={{color:"var(--std)",fontWeight:400}}>/ {formatT(remixTotalDuration)}</span></span>
+                <div style={{flex:1}}/>
+                <span style={{fontSize:11,color:"var(--std)",fontWeight:600}}>{remixClips.length} clip{remixClips.length!==1?"s":""}</span>
               </div>
-              {/* Controls row */}
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <button onClick={toggleRemixPlayback} style={{width:36,height:36,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 2px 8px rgba(99,102,241,0.3)"}}>{remixPlaying?<span style={{display:"flex",gap:3}}><span style={{width:4,height:14,backgroundColor:"#fff",borderRadius:1}}/><span style={{width:4,height:14,backgroundColor:"#fff",borderRadius:1}}/></span>:<Play size={16} color="#fff" style={{marginLeft:2}}/>}</button>
-                <span style={{fontSize:13,fontWeight:700,color:"var(--st)",fontFamily:"var(--sf)",minWidth:80}}>{Math.round(remixPlaybackTime)}s <span style={{color:"var(--std)",fontWeight:500}}>/ {Math.round(remixTotalDuration)}s</span></span>
-                <div style={{flex:1,display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap" as const}}>{remixClips.map((c,i)=><div key={c.id} onClick={()=>seekRemixTo(remixClipStarts[i])} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,cursor:"pointer",background:i===remixPlayingIdx?"rgba(255,255,255,0.1)":"none",transition:"background 0.15s"}}><div style={{width:8,height:8,borderRadius:"50%",backgroundColor:TC[i%TC.length],flexShrink:0}}/><span style={{fontSize:10,fontWeight:600,color:i===remixPlayingIdx?"var(--st)":"var(--std)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:80}}>{c.label}</span></div>)}</div>
-                <span style={{fontSize:11,color:"var(--std)",fontWeight:600,flexShrink:0}}>{remixClips.length} clip{remixClips.length!==1?"s":""}</span>
+              {/* Scrubber bar */}
+              <div style={{padding:"0 16px 4px",cursor:"pointer"}} onMouseDown={onMouseDown}>
+                <div style={{position:"relative",height:36,display:"flex",gap:2,alignItems:"stretch",borderRadius:6,overflow:"hidden"}}>
+                  {remixClips.map((c,i)=><div key={c.id} style={{flex:remixClipDurations[i],display:"flex",flexDirection:"column" as const,justifyContent:"center",position:"relative",backgroundColor:TC[i%TC.length],opacity:i===remixPlayingIdx?1:0.5,transition:"opacity 0.15s",overflow:"hidden",borderRight:i<remixClips.length-1?"2px solid var(--ss)":"none"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4,padding:"0 8px",minWidth:0}}>
+                      {c.thumbnail&&<img src={c.thumbnail} alt="" style={{width:24,height:16,objectFit:"cover",borderRadius:2,flexShrink:0}}/>}
+                      <span style={{fontSize:9,fontWeight:700,color:"#fff",textShadow:"0 1px 2px rgba(0,0,0,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</span>
+                    </div>
+                  </div>)}
+                  {/* Playhead */}
+                  <div style={{position:"absolute",top:0,bottom:0,left:`${pct}%`,width:3,backgroundColor:"#fff",zIndex:3,boxShadow:"0 0 8px rgba(255,255,255,0.8),-1px 0 0 rgba(0,0,0,0.3),1px 0 0 rgba(0,0,0,0.3)",pointerEvents:"none"}}>
+                    <div style={{position:"absolute",top:-4,left:-5,width:13,height:13,borderRadius:"50%",backgroundColor:"#fff",boxShadow:"0 0 6px rgba(0,0,0,0.4)"}}/>
+                  </div>
+                </div>
               </div>
             </div>;
           })()}
