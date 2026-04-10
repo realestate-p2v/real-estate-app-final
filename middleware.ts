@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/dashboard/lens/design-studio")) {
     supabaseResponse.headers.set(
       "Content-Security-Policy",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://*.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com blob:; worker-src 'self' blob:; default-src 'self'; connect-src *; img-src * data: blob:; media-src * blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' blob:;"
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://*.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com https://accounts.google.com https://connect.facebook.net blob:; worker-src 'self' blob:; default-src 'self'; connect-src * blob:; img-src * data: blob:; media-src * blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' https://accounts.google.com blob:;"
     );
   }
 
