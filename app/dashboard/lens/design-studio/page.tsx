@@ -823,10 +823,33 @@ export default function DesignStudioV2(){
       setExportProgress(96);
       const outputData=await ffmpeg.readFile("output.mp4");
       const outputBlob=new Blob([outputData],{type:"video/mp4"});
+      // Upload to Cloudinary + save to design_exports
+      let cloudinaryUrl:string|null=null;
+      try{
+        const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-exports"})});
+        const sigData=await sigResp.json();
+        if(sigData.success){
+          const{signature,timestamp,cloudName,apiKey,folder:folderPath}=sigData.data;
+          const fd=new FormData();fd.append("file",outputBlob,`remix-${Date.now()}.mp4`);fd.append("api_key",apiKey);fd.append("timestamp",timestamp.toString());fd.append("signature",signature);fd.append("folder",folderPath);fd.append("resource_type","video");
+          const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,{method:"POST",body:fd});
+          const upResult=await upResp.json();
+          cloudinaryUrl=upResult.secure_url||null;
+        }
+      }catch(e){console.error("Cloudinary upload error:",e);}
+      if(cloudinaryUrl){
+        try{
+          const supabase=(await import("@/lib/supabase/client")).createClient();
+          const{data:{user}}=await supabase.auth.getUser();
+          if(user){
+            await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});
+          }
+        }catch(e){console.error("design_exports save error:",e);}
+      }
+      // Download locally too
       const downloadUrl=URL.createObjectURL(outputBlob);
       const link=document.createElement("a");link.download=`remix-${remixSize}-${Date.now()}.mp4`;link.href=downloadUrl;link.click();
       URL.revokeObjectURL(downloadUrl);
-      setExportProgress(100);notify("Remix exported!");
+      setExportProgress(100);notify(cloudinaryUrl?"Remix exported & saved!":"Remix exported!");
       setTimeout(()=>{setExportProgress(0);setExporting(false);},1500);return;
     }catch(err:any){console.error("Remix export error:",err);notify("Remix export failed: "+(err.message||"Unknown error"));}
     setExportProgress(0);setExporting(false);
