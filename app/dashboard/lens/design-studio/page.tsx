@@ -386,7 +386,7 @@ export default function DesignStudioV2(){
   const remixIdxRef=useRef(0);
   const remixDragging=useRef(false);
   // UI
-  const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
+  const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[exportStatus,setExportStatus]=useState("");const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
   const[mobilePanel,setMobilePanel]=useState<string|null>(null);
   const previewRef=useRef<HTMLDivElement>(null);
@@ -735,76 +735,104 @@ export default function DesignStudioV2(){
 
   const exportRemix = async () => {
     if(remixClips.length===0){notify("Add clips to the timeline first.");return;}
-    setExporting(true);setExportProgress(0);
+    setExporting(true);setExportProgress(0);setExportStatus("Loading video encoder...");
     try{
+      console.log("[remix] Step 1: importing ffmpeg modules");
+      setExportStatus("Loading FFmpeg modules...");
       const{FFmpeg}=await import("@ffmpeg/ffmpeg");
       const{toBlobURL,fetchFile}=await import("@ffmpeg/util");
+      console.log("[remix] Step 2: creating FFmpeg instance");
       const ffmpeg=new FFmpeg();
-      ffmpeg.on("progress",({progress:p})=>setExportProgress(Math.min(Math.round(p*100),95)));
-      setExportProgress(2);
+      ffmpeg.on("progress",({progress:p})=>{if(p>0)setExportProgress(Math.min(40+Math.round(p*50),95));});
+      ffmpeg.on("log",({message})=>{console.log("[ffmpeg]",message);});
+
+      setExportProgress(2);setExportStatus("Downloading FFmpeg WASM core...");
+      console.log("[remix] Step 3: downloading WASM core");
       const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-      await ffmpeg.load({coreURL:await toBlobURL(`${coreBase}/ffmpeg-core.js`,"text/javascript"),wasmURL:await toBlobURL(`${coreBase}/ffmpeg-core.wasm`,"application/wasm")});
-      setExportProgress(5);
+      const coreJS=await toBlobURL(`${coreBase}/ffmpeg-core.js`,"text/javascript");
+      console.log("[remix] Step 3a: core JS blob ready");
+      setExportProgress(3);
+      const coreWASM=await toBlobURL(`${coreBase}/ffmpeg-core.wasm`,"application/wasm");
+      console.log("[remix] Step 3b: core WASM blob ready");
+      setExportProgress(5);setExportStatus("Initializing FFmpeg...");
+
+      console.log("[remix] Step 4: loading FFmpeg");
+      await ffmpeg.load({coreURL:coreJS,wasmURL:coreWASM});
+      console.log("[remix] Step 4 done: FFmpeg loaded");
+
+      setExportProgress(8);
       const outW=currentRemixSize.width,outH=currentRemixSize.height;
-      // Download all clips
+
       for(let i=0;i<remixClips.length;i++){
-        setExportProgress(5+Math.round((i/remixClips.length)*25));
+        setExportStatus(`Downloading clip ${i+1} of ${remixClips.length}...`);
+        setExportProgress(8+Math.round((i/remixClips.length)*22));
+        console.log(`[remix] Step 5: downloading clip ${i+1}/${remixClips.length}: ${remixClips[i].sourceUrl.slice(0,80)}...`);
         const d=await fetchFile(remixClips[i].sourceUrl);
         await ffmpeg.writeFile(`clip_${i}.mp4`,d);
+        console.log(`[remix] Step 5: clip ${i+1} written (${(d as Uint8Array).length} bytes)`);
       }
-      // Music
+
+      setExportProgress(30);
       const musicSource=getMusicSource();
       let hasMusic=false;
       if(musicSource){
+        setExportStatus("Loading music track...");
+        console.log("[remix] Step 6: loading music");
         if(musicSource.type==="url"){await ffmpeg.writeFile("music.mp3",await fetchFile(musicSource.url));hasMusic=true;}
         else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
+        console.log("[remix] Step 6 done: music loaded");
       }
-      // Branding card capture
+
       let hasBranding=false;
       if(remixBranding&&isLensSubscriber&&previewRef.current){
+        setExportStatus("Capturing branding card...");
+        console.log("[remix] Step 7: capturing branding card");
         try{
           const html2canvas=(await import("html2canvas-pro")).default;
           const brandEl=previewRef.current.querySelector("[data-branding-card]") as HTMLElement;
           if(brandEl){
-            const origD=brandEl.style.display;brandEl.style.display="block";
+            brandEl.style.display="block";
+            brandEl.style.position="fixed";
+            brandEl.style.top="-9999px";
+            brandEl.style.left="-9999px";
+            await new Promise(r=>setTimeout(r,300));
             const bc=await html2canvas(brandEl,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:1920,height:1080});
-            brandEl.style.display=origD;
+            brandEl.style.display="none";
+            brandEl.style.position="absolute";
+            brandEl.style.top="0";
+            brandEl.style.left="0";
             const blob=await new Promise<Blob>(r=>bc.toBlob(b=>r(b!),"image/png"));
             await ffmpeg.writeFile("brand.png",new Uint8Array(await blob.arrayBuffer()));
             hasBranding=true;
-          }
-        }catch(e){console.error("Branding capture error:",e);}
+            console.log("[remix] Step 7 done: branding card captured");
+          }else{console.log("[remix] Step 7: no branding card element found");}
+        }catch(e){console.error("[remix] Branding capture error:",e);}
       }
-      setExportProgress(35);
-      // Build filter
+
+      setExportProgress(35);setExportStatus("Building video filter...");
+      console.log("[remix] Step 8: building filter_complex");
       const filterParts:string[]=[];
       const concatInputs:string[]=[];
       let inputIdx=0;
       const inputArgs:string[]=[];
-      // If branding, add intro as first input (5s still image → video)
+
       if(hasBranding){
         inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
         filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
-        concatInputs.push("[vintro]");
-        inputIdx++;
+        concatInputs.push("[vintro]");inputIdx++;
       }
-      // Add all clips
       for(let i=0;i<remixClips.length;i++){
         inputArgs.push("-i",`clip_${i}.mp4`);
         const c=remixClips[i];
         const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
         filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
-        concatInputs.push(`[v${i}]`);
-        inputIdx++;
+        concatInputs.push(`[v${i}]`);inputIdx++;
       }
-      // If branding, add outro as last input (same image, 5s)
       if(hasBranding){
         inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
         filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
-        concatInputs.push("[voutro]");
-        inputIdx++;
+        concatInputs.push("[voutro]");inputIdx++;
       }
-      // Concat all segments
       const nSegments=concatInputs.length;
       filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
       const totalDur=remixTotalDuration+(hasBranding?10:0);
@@ -818,14 +846,23 @@ export default function DesignStudioV2(){
         cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
       }
       cmdArgs.push("-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
-      setExportProgress(40);
+
+      console.log("[remix] Step 9: executing FFmpeg command");
+      console.log("[remix] filter_complex:",filterStr);
+      console.log("[remix] full args:",cmdArgs.join(" "));
+      setExportProgress(38);setExportStatus("Encoding video... this may take a few minutes");
       await ffmpeg.exec(cmdArgs);
-      setExportProgress(96);
+      console.log("[remix] Step 9 done: FFmpeg exec complete");
+
+      setExportProgress(92);setExportStatus("Reading output...");
       const outputData=await ffmpeg.readFile("output.mp4");
       const outputBlob=new Blob([outputData],{type:"video/mp4"});
-      // Upload to Cloudinary + save to design_exports
+      console.log(`[remix] Step 10: output ready (${outputBlob.size} bytes)`);
+
+      setExportProgress(94);setExportStatus("Uploading to cloud...");
       let cloudinaryUrl:string|null=null;
       try{
+        console.log("[remix] Step 11: uploading to Cloudinary");
         const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-exports"})});
         const sigData=await sigResp.json();
         if(sigData.success){
@@ -834,24 +871,34 @@ export default function DesignStudioV2(){
           const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,{method:"POST",body:fd});
           const upResult=await upResp.json();
           cloudinaryUrl=upResult.secure_url||null;
+          console.log("[remix] Step 11 done: uploaded to",cloudinaryUrl);
         }
-      }catch(e){console.error("Cloudinary upload error:",e);}
+      }catch(e){console.error("[remix] Cloudinary upload error:",e);}
+
       if(cloudinaryUrl){
+        setExportStatus("Saving to database...");
         try{
+          console.log("[remix] Step 12: saving to design_exports");
           const supabase=(await import("@/lib/supabase/client")).createClient();
           const{data:{user}}=await supabase.auth.getUser();
-          if(user){
-            await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});
-          }
-        }catch(e){console.error("design_exports save error:",e);}
+          if(user){await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});}
+          console.log("[remix] Step 12 done: saved to DB");
+        }catch(e){console.error("[remix] DB save error:",e);}
       }
-      // Download locally too
+
+      setExportStatus("Downloading...");
       const downloadUrl=URL.createObjectURL(outputBlob);
       const link=document.createElement("a");link.download=`remix-${remixSize}-${Date.now()}.mp4`;link.href=downloadUrl;link.click();
       URL.revokeObjectURL(downloadUrl);
-      setExportProgress(100);notify(cloudinaryUrl?"Remix exported & saved!":"Remix exported!");
-      setTimeout(()=>{setExportProgress(0);setExporting(false);},1500);return;
-    }catch(err:any){console.error("Remix export error:",err);notify("Remix export failed: "+(err.message||"Unknown error"));}
+      setExportProgress(100);setExportStatus("Done!");
+      notify(cloudinaryUrl?"Remix exported & saved!":"Remix exported!");
+      setTimeout(()=>{setExportProgress(0);setExporting(false);setExportStatus("");},2000);return;
+    }catch(err:any){
+      console.error("[remix] Export failed at status:",exportStatus,"error:",err);
+      notify("Export failed: "+(err.message||"Unknown error"));
+      setExportStatus("Failed: "+(err.message||"Unknown error"));
+      setTimeout(()=>{setExportStatus("");},5000);
+    }
     setExportProgress(0);setExporting(false);
   };
 
@@ -906,7 +953,7 @@ export default function DesignStudioV2(){
         {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
         <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
         <div style={{position:"absolute",top:16,left:16,padding:"5px 12px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:12,color:"#fff",fontWeight:600,fontFamily:"var(--sf)",maxWidth:"60%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",zIndex:4}}>{currentClip.label}</div>
-        {remixBranding&&isLensSubscriber&&<div data-branding-card style={{display:"none",position:"absolute",top:0,left:0}}><BrandingCardTemplate orientation={currentRemixSize} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div>}
+        {remixBranding&&isLensSubscriber&&<div data-branding-card style={{display:"none",position:"absolute",top:0,left:0}}><BrandingCardTemplate orientation={BRAND_ORIENTATIONS[0]} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div>}
       </div>;
     }
     if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
@@ -1270,6 +1317,7 @@ export default function DesignStudioV2(){
                   {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</>:isRemixMode?<><Film size={14}/>Export Remix</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
                 </span>
               </button>
+              {exporting&&exportStatus&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,marginTop:6,lineHeight:1.4,fontFamily:"var(--sf)"}}>{exportStatus}</p>}
             </>}
           </Section>
           <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="video-remix"?[{n:"Clips",i:"\ud83c\udfac"},{n:"Music",i:"\ud83c\udfb5"},{n:"Branding",i:"\ud83d\udc64"},{n:"Timeline",i:"\u23f1\ufe0f"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
