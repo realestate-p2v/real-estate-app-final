@@ -794,14 +794,28 @@ export default function DesignStudioV2(){
       for(let i=0;i<remixClips.length;i++){
         setExportStatus(`Downloading clip ${i+1} of ${remixClips.length}...`);
         setExportProgress(8+Math.round((i/remixClips.length)*22));
-        console.log(`[remix] Step 5: downloading clip ${i+1}/${remixClips.length}: ${remixClips[i].sourceUrl.slice(0,80)}...`);
-        // Use fetch+arrayBuffer instead of fetchFile — fetchFile returns 0 bytes on cross-origin Cloudinary URLs
+        const clipUrl=remixClips[i].sourceUrl;
+        console.log(`[remix] Step 5: downloading clip ${i+1}/${remixClips.length}: ${clipUrl.slice(0,80)}...`);
         try{
-          const resp=await fetch(remixClips[i].sourceUrl);
+          // Add fl_attachment to Cloudinary URLs to get CORS-friendly response
+          let fetchUrl=clipUrl;
+          if(fetchUrl.includes("cloudinary.com")&&fetchUrl.includes("/upload/")){
+            fetchUrl=fetchUrl.replace("/upload/","/upload/fl_attachment/");
+          }
+          const resp=await fetch(fetchUrl);
+          if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
           const ab=await resp.arrayBuffer();
-          await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab));
-          console.log(`[remix] Step 5: clip ${i+1} written (${ab.byteLength} bytes)`);
-          if(ab.byteLength===0)console.error(`[remix] WARNING: clip ${i+1} is 0 bytes!`);
+          if(ab.byteLength<1000){
+            console.error(`[remix] WARNING: clip ${i+1} is only ${ab.byteLength} bytes — likely CORS blocked`);
+            // Fallback: try without fl_attachment
+            const resp2=await fetch(clipUrl,{mode:"cors"});
+            const ab2=await resp2.arrayBuffer();
+            await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab2));
+            console.log(`[remix] Step 5: clip ${i+1} written via fallback (${ab2.byteLength} bytes)`);
+          }else{
+            await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab));
+            console.log(`[remix] Step 5: clip ${i+1} written (${ab.byteLength} bytes)`);
+          }
         }catch(e){console.error(`[remix] Failed to download clip ${i+1}:`,e);notify(`Failed to download clip ${i+1}`);setExporting(false);setExportProgress(0);setExportStatus("");return;}
       }
 
