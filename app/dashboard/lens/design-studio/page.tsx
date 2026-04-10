@@ -381,7 +381,11 @@ export default function DesignStudioV2(){
   const[remixPlayingIdx,setRemixPlayingIdx]=useState(0);
   const[remixPlaybackTime,setRemixPlaybackTime]=useState(0);
   const remixVideoRef=useRef<HTMLVideoElement|null>(null);
+  const remixVideoRefB=useRef<HTMLVideoElement|null>(null);
   const remixTimerRef=useRef<number|null>(null);
+  const remixTimeRef=useRef(0);
+  const remixIdxRef=useRef(0);
+  const remixActiveVideo=useRef<"A"|"B">("A");
   // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
@@ -547,41 +551,89 @@ export default function DesignStudioV2(){
   const remixTotalDuration=remixClips.reduce((sum,c)=>sum+(c.trimEnd-c.trimStart)/c.speed,0);
   const isClipOnTimeline=(url:string)=>remixClips.some(c=>c.sourceUrl===url);
 
-  // Remix clip durations for timeline
   const remixClipDurations=remixClips.map(c=>(c.trimEnd-c.trimStart)/c.speed);
   const remixClipStarts=remixClipDurations.reduce<number[]>((acc,d,i)=>{acc.push(i===0?0:acc[i-1]+remixClipDurations[i-1]);return acc;},[]);
 
+  const getActiveVideo=()=>remixActiveVideo.current==="A"?remixVideoRef.current:remixVideoRefB.current;
+  const getInactiveVideo=()=>remixActiveVideo.current==="A"?remixVideoRefB.current:remixVideoRef.current;
+
+  const playClipOnVideo=(v:HTMLVideoElement,clip:RemixClip)=>{
+    v.src=clip.sourceUrl;v.currentTime=clip.trimStart;v.playbackRate=clip.speed;
+    v.style.opacity="1";v.style.zIndex="2";
+    v.play().catch(()=>{});
+  };
+
+  const preloadNextClip=(idx:number)=>{
+    const next=remixClips[idx+1];if(!next)return;
+    const inv=getInactiveVideo();if(!inv)return;
+    inv.src=next.sourceUrl;inv.currentTime=next.trimStart;inv.playbackRate=next.speed;
+    inv.style.opacity="0";inv.style.zIndex="1";
+    inv.load();
+  };
+
   const startRemixPlayback=()=>{
     if(remixClips.length===0)return;
+    remixTimeRef.current=0;remixIdxRef.current=0;
     setRemixPlaying(true);setRemixPlayingIdx(0);setRemixPlaybackTime(0);
-    const v=remixVideoRef.current;if(v){v.src=remixClips[0].sourceUrl;v.currentTime=remixClips[0].trimStart;v.playbackRate=remixClips[0].speed;v.play().catch(()=>{});}
+    remixActiveVideo.current="A";
+    const v=remixVideoRef.current;
+    if(v){playClipOnVideo(v,remixClips[0]);preloadNextClip(0);}
+    const vb=remixVideoRefB.current;if(vb){vb.style.opacity="0";vb.style.zIndex="1";}
     if(remixTimerRef.current)cancelAnimationFrame(remixTimerRef.current);
     let lastT=performance.now();
+    const clips=remixClips;const starts=[...remixClipStarts];const durs=[...remixClipDurations];const total=remixTotalDuration;
     const tick=()=>{
       const now=performance.now();const dt=(now-lastT)/1000;lastT=now;
-      setRemixPlaybackTime(prev=>{const next=prev+dt;if(next>=remixTotalDuration){stopRemixPlayback();return 0;}return next;});
+      remixTimeRef.current+=dt;
+      const t=remixTimeRef.current;
+      if(t>=total){stopRemixPlayback();return;}
+      // Find which clip we should be on
+      let targetIdx=remixIdxRef.current;
+      for(let i=targetIdx;i<clips.length;i++){
+        if(t>=starts[i]&&t<starts[i]+durs[i]){targetIdx=i;break;}
+        if(i===clips.length-1)targetIdx=i;
+      }
+      if(targetIdx!==remixIdxRef.current){
+        remixIdxRef.current=targetIdx;
+        // Swap A/B
+        const inv=getInactiveVideo();
+        if(inv){
+          inv.style.opacity="1";inv.style.zIndex="2";
+          inv.currentTime=clips[targetIdx].trimStart;inv.playbackRate=clips[targetIdx].speed;
+          inv.play().catch(()=>{});
+        }
+        const prev=getActiveVideo();
+        if(prev){prev.style.opacity="0";prev.style.zIndex="1";prev.pause();}
+        remixActiveVideo.current=remixActiveVideo.current==="A"?"B":"A";
+        preloadNextClip(targetIdx);
+        setRemixPlayingIdx(targetIdx);
+      }
+      setRemixPlaybackTime(t);
       remixTimerRef.current=requestAnimationFrame(tick);
     };
     remixTimerRef.current=requestAnimationFrame(tick);
   };
+
   const stopRemixPlayback=()=>{
     setRemixPlaying(false);
-    const v=remixVideoRef.current;if(v)v.pause();
+    const va=remixVideoRef.current;if(va)va.pause();
+    const vb=remixVideoRefB.current;if(vb)vb.pause();
     if(remixTimerRef.current){cancelAnimationFrame(remixTimerRef.current);remixTimerRef.current=null;}
   };
-  const toggleRemixPlayback=()=>{if(remixPlaying)stopRemixPlayback();else startRemixPlayback();};
 
-  // Advance to next clip when current finishes
-  useEffect(()=>{
-    if(!remixPlaying||remixClips.length===0)return;
-    let targetIdx=0;
-    for(let i=0;i<remixClips.length;i++){if(remixPlaybackTime>=remixClipStarts[i])targetIdx=i;}
-    if(targetIdx!==remixPlayingIdx){
-      setRemixPlayingIdx(targetIdx);
-      const c=remixClips[targetIdx];const v=remixVideoRef.current;
-      if(v){v.src=c.sourceUrl;v.currentTime=c.trimStart;v.playbackRate=c.speed;v.play().catch(()=>{});}
-    }
-  },[remixPlaybackTime]);
+  const seekRemixTo=(t:number)=>{
+    remixTimeRef.current=t;setRemixPlaybackTime(t);
+    let idx=0;for(let i=0;i<remixClips.length;i++){if(t>=remixClipStarts[i])idx=i;}
+    remixIdxRef.current=idx;setRemixPlayingIdx(idx);
+    const c=remixClips[idx];
+    remixActiveVideo.current="A";
+    const va=remixVideoRef.current;const vb=remixVideoRefB.current;
+    if(va){va.src=c.sourceUrl;va.currentTime=c.trimStart+(t-remixClipStarts[idx])*c.speed;va.playbackRate=c.speed;va.style.opacity="1";va.style.zIndex="2";if(remixPlaying)va.play().catch(()=>{});}
+    if(vb){vb.style.opacity="0";vb.style.zIndex="1";vb.pause();}
+    preloadNextClip(idx);
+  };
+
+  const toggleRemixPlayback=()=>{if(remixPlaying)stopRemixPlayback();else startRemixPlayback();};
 
   useEffect(()=>{return()=>{if(remixTimerRef.current)cancelAnimationFrame(remixTimerRef.current);};},[]);
 
@@ -795,14 +847,13 @@ export default function DesignStudioV2(){
       if(hasVideoOrders===false)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:20,fontFamily:"var(--sf)",padding:40,textAlign:"center" as const}}><div style={{width:100,height:100,borderRadius:24,background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.15))",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={40} color="rgba(99,102,241,0.5)"/></div><p style={{fontSize:22,color:"rgba(255,255,255,0.7)",fontWeight:700,margin:0}}>No Videos Yet</p><p style={{fontSize:14,color:"rgba(255,255,255,0.35)",margin:0,maxWidth:400,lineHeight:1.6}}>Order a listing video to unlock Video Remix. Buy the clips once, remix them forever.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,var(--sa),#a855f7)",color:"#fff",fontSize:13,fontWeight:700,textDecoration:"none"}}>Order a Video</a></div>;
       if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,border:"2px dashed rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={48} color="rgba(255,255,255,0.12)"/></div><p style={{fontSize:18,color:"rgba(255,255,255,0.3)",fontWeight:600,margin:0}}>Add clips from the left panel to start remixing</p></div>;
       const currentClip=remixClips[remixPlayingIdx]||remixClips[0];
-      const nextClip=remixClips[remixPlayingIdx+1]||null;
       return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",position:"relative",overflow:"hidden"}}>
-        <video ref={remixVideoRef} src={currentClip.sourceUrl} poster={currentClip.thumbnail||undefined} muted playsInline style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-        {nextClip&&<video src={nextClip.sourceUrl} muted preload="auto" playsInline style={{display:"none"}}/>}
-        {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)"}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
-        {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer"}}/>}
-        <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)"}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
-        <div style={{position:"absolute",top:16,left:16,padding:"5px 12px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:12,color:"#fff",fontWeight:600,fontFamily:"var(--sf)",maxWidth:"60%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentClip.label}</div>
+        <video ref={remixVideoRef} poster={currentClip.thumbnail||undefined} muted playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",transition:"opacity 0.15s",zIndex:2}}/>
+        <video ref={remixVideoRefB} muted playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0,transition:"opacity 0.15s",zIndex:1}}/>
+        {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",zIndex:5}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
+        {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
+        <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
+        <div style={{position:"absolute",top:16,left:16,padding:"5px 12px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:12,color:"#fff",fontWeight:600,fontFamily:"var(--sf)",maxWidth:"60%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",zIndex:4}}>{currentClip.label}</div>
         {remixBranding&&isLensSubscriber&&<div data-branding-card style={{display:"none",position:"absolute",top:0,left:0}}><BrandingCardTemplate orientation={currentRemixSize} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div>}
       </div>;
     }
@@ -1102,12 +1153,7 @@ export default function DesignStudioV2(){
               <div style={{display:"flex",gap:3,height:20,borderRadius:6,overflow:"hidden",position:"relative",cursor:"pointer"}} onClick={e=>{
                 const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
                 const pct=(e.clientX-rect.left)/rect.width;
-                const t=pct*remixTotalDuration;
-                setRemixPlaybackTime(t);
-                let idx=0;for(let i=0;i<remixClips.length;i++){if(t>=remixClipStarts[i])idx=i;}
-                setRemixPlayingIdx(idx);
-                const c=remixClips[idx];const v=remixVideoRef.current;
-                if(v){v.src=c.sourceUrl;v.currentTime=c.trimStart+(t-remixClipStarts[idx])*c.speed;if(remixPlaying)v.play().catch(()=>{});}
+                seekRemixTo(pct*remixTotalDuration);
               }}>
                 {remixClips.map((c,i)=><div key={c.id} style={{flex:remixClipDurations[i],height:"100%",backgroundColor:TC[i%TC.length],opacity:i===remixPlayingIdx?1:0.45,borderRadius:4,transition:"opacity 0.15s",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:9,fontWeight:800,color:"#fff",textShadow:"0 1px 3px rgba(0,0,0,0.6)",letterSpacing:"0.02em"}}>{i+1}</span></div>)}
                 {remixTotalDuration>0&&<div style={{position:"absolute",top:-3,left:`${(remixPlaybackTime/remixTotalDuration)*100}%`,width:4,height:26,backgroundColor:"#fff",borderRadius:3,boxShadow:"0 0 8px rgba(255,255,255,0.7)",transition:remixPlaying?"left 0.1s linear":"none",zIndex:2,marginLeft:-2}}/>}
@@ -1116,7 +1162,7 @@ export default function DesignStudioV2(){
               <div style={{display:"flex",alignItems:"center",gap:12}}>
                 <button onClick={toggleRemixPlayback} style={{width:36,height:36,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 2px 8px rgba(99,102,241,0.3)"}}>{remixPlaying?<span style={{display:"flex",gap:3}}><span style={{width:4,height:14,backgroundColor:"#fff",borderRadius:1}}/><span style={{width:4,height:14,backgroundColor:"#fff",borderRadius:1}}/></span>:<Play size={16} color="#fff" style={{marginLeft:2}}/>}</button>
                 <span style={{fontSize:13,fontWeight:700,color:"var(--st)",fontFamily:"var(--sf)",minWidth:80}}>{Math.round(remixPlaybackTime)}s <span style={{color:"var(--std)",fontWeight:500}}>/ {Math.round(remixTotalDuration)}s</span></span>
-                <div style={{flex:1,display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap" as const}}>{remixClips.map((c,i)=><div key={c.id} onClick={()=>{setRemixPlayingIdx(i);setRemixPlaybackTime(remixClipStarts[i]);const v=remixVideoRef.current;if(v){v.src=c.sourceUrl;v.currentTime=c.trimStart;if(remixPlaying){v.playbackRate=c.speed;v.play().catch(()=>{});}}}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,cursor:"pointer",background:i===remixPlayingIdx?"rgba(255,255,255,0.1)":"none",transition:"background 0.15s"}}><div style={{width:8,height:8,borderRadius:"50%",backgroundColor:TC[i%TC.length],flexShrink:0}}/><span style={{fontSize:10,fontWeight:600,color:i===remixPlayingIdx?"var(--st)":"var(--std)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:80}}>{c.label}</span></div>)}</div>
+                <div style={{flex:1,display:"flex",gap:6,alignItems:"center",justifyContent:"center",flexWrap:"wrap" as const}}>{remixClips.map((c,i)=><div key={c.id} onClick={()=>seekRemixTo(remixClipStarts[i])} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,cursor:"pointer",background:i===remixPlayingIdx?"rgba(255,255,255,0.1)":"none",transition:"background 0.15s"}}><div style={{width:8,height:8,borderRadius:"50%",backgroundColor:TC[i%TC.length],flexShrink:0}}/><span style={{fontSize:10,fontWeight:600,color:i===remixPlayingIdx?"var(--st)":"var(--std)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:80}}>{c.label}</span></div>)}</div>
                 <span style={{fontSize:11,color:"var(--std)",fontWeight:600,flexShrink:0}}>{remixClips.length} clip{remixClips.length!==1?"s":""}</span>
               </div>
             </div>;
