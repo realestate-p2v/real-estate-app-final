@@ -534,8 +534,28 @@ export default function DesignStudioV2(){
 
   // ─── Remix helpers ───────────────────────────────────────────────────────
   const addClipToRemix=(sourceUrl:string,thumbnail:string|null,label:string)=>{
-    const newClip:RemixClip={id:String(Date.now())+Math.random().toString(36).slice(2,6),sourceUrl,thumbnail,label,duration:15,trimStart:0,trimEnd:15,speed:1,order:remixClips.length};
-    setRemixClips(prev=>[...prev,newClip]);
+    const clipId=String(Date.now())+Math.random().toString(36).slice(2,6);
+    // Probe actual duration
+    const probe=document.createElement("video");
+    probe.preload="metadata";probe.muted=true;probe.src=sourceUrl;
+    probe.onloadedmetadata=()=>{
+      const dur=probe.duration&&isFinite(probe.duration)?probe.duration:6;
+      setRemixClips(prev=>{
+        const existing=prev.find(c=>c.id===clipId);
+        if(existing)return prev.map(c=>c.id===clipId?{...c,duration:dur,trimEnd:dur}:c);
+        return[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:dur,trimStart:0,trimEnd:dur,speed:1,order:prev.length}];
+      });
+      probe.remove();
+    };
+    probe.onerror=()=>{
+      setRemixClips(prev=>{
+        if(prev.find(c=>c.id===clipId))return prev;
+        return[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:6,trimStart:0,trimEnd:6,speed:1,order:prev.length}];
+      });
+      probe.remove();
+    };
+    // Add immediately with placeholder duration, update when metadata loads
+    setRemixClips(prev=>[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:6,trimStart:0,trimEnd:6,speed:1,order:prev.length}]);
   };
   const removeClipFromRemix=(id:string)=>setRemixClips(prev=>prev.filter(c=>c.id!==id).map((c,i)=>({...c,order:i})));
   const moveClipInRemix=(id:string,dir:-1|1)=>{
