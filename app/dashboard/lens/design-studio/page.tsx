@@ -419,8 +419,10 @@ export default function DesignStudioV2(){
       try{
         const supabase=(await import("@/lib/supabase/client")).createClient();
         const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-        const{data:subData}=await supabase.from("subscriptions").select("status").eq("user_id",user.id).in("status",["active","trialing"]).limit(1);
-        setIsLensSubscriber((subData||[]).length>0);
+        // Subscription check — same as hero: admin emails + lens_usage.is_subscriber
+        const ADMIN_EMAILS=["realestatephoto2video@gmail.com"];
+        if(user.email&&ADMIN_EMAILS.includes(user.email)){setIsLensSubscriber(true);}
+        else{const{data:usageCheck}=await supabase.from("lens_usage").select("is_subscriber").eq("user_id",user.id).single();if(usageCheck?.is_subscriber)setIsLensSubscriber(true);}
         const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
