@@ -761,7 +761,10 @@ export default function DesignStudioV2(){
       console.log("[remix] Step 4 done: FFmpeg loaded");
 
       setExportProgress(8);
-      const outW=currentRemixSize.width,outH=currentRemixSize.height;
+      const isMobile=typeof window!=="undefined"&&(window.innerWidth<850||/iPhone|iPad|Android/i.test(navigator.userAgent));
+      let outW=currentRemixSize.width,outH=currentRemixSize.height;
+      if(isMobile&&outW>1280){const ratio=1280/outW;outW=1280;outH=Math.round(currentRemixSize.height*ratio);outH=outH%2===0?outH:outH+1;}
+      console.log(`[remix] Output: ${outW}x${outH} (mobile: ${isMobile})`);
 
       for(let i=0;i<remixClips.length;i++){
         setExportStatus(`Downloading clip ${i+1} of ${remixClips.length}...`);
@@ -845,7 +848,8 @@ export default function DesignStudioV2(){
       }else{
         cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
       }
-      cmdArgs.push("-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+      // Use ultrafast preset — fast is too slow for browser WASM especially mobile
+      cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
 
       console.log("[remix] Step 9: executing FFmpeg command");
       console.log("[remix] filter_complex:",filterStr);
@@ -903,13 +907,18 @@ export default function DesignStudioV2(){
   };
 
   const handleExport = async () => {
-    setExporting(true);
+    // Warn mobile users about video export limitations
+    if((isRemixMode||isVideoMode)&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
+      const proceed=window.confirm("Video encoding works best on desktop browsers. Mobile devices may run out of memory on longer videos.\n\nProceed anyway?");
+      if(!proceed)return;
+    }
+    setExporting(true);setExportStatus("");
     try {
       if (isRemixMode) { await exportRemix(); return; }
       else if (isVideoMode) { await exportVideo(); return; }
       else { await exportImage(); }
     } catch (err: any) { console.error("Export error:", err); notify(err?.message || "Export failed. Try again."); }
-    setExporting(false); setExportProgress(0);
+    setExporting(false); setExportProgress(0); setExportStatus("");
   };
 
   const handleExportPdf = async () => {
@@ -1328,8 +1337,18 @@ export default function DesignStudioV2(){
       {mobilePanel&&<div onClick={()=>setMobilePanel(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:28}}/>}
       <div className="mob-nav">
         {currentPanels.map(p=>(<button key={p.id} className={mobilePanel===p.id?"ac":""} onClick={()=>{if(mobilePanel===p.id){setMobilePanel(null);}else{setLeftPanel(p.id);setMobilePanel(p.id);}}}><p.icon size={18}/><span>{p.label}</span></button>))}
-        <button onClick={handleExport}><Download size={18}/><span>Export</span></button>
+        <button onClick={handleExport} disabled={exporting}>{exporting?<Loader2 size={18} className="animate-spin"/>:<Download size={18}/>}<span>{exporting?(exportProgress>0?`${exportProgress}%`:"..."):"Export"}</span></button>
       </div>
+
+      {/* Export status overlay — visible on all screens during export */}
+      {exporting&&exportStatus&&<div style={{position:"fixed",bottom:70,left:8,right:8,zIndex:999,padding:"12px 16px",borderRadius:14,background:"var(--ss)",border:"1px solid var(--sbr)",boxShadow:"0 -4px 24px rgba(0,0,0,0.4)",display:"flex",alignItems:"center",gap:10,fontFamily:"var(--sf)"}}>
+        <Loader2 size={16} color="var(--sa)" className="animate-spin" style={{flexShrink:0}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</p>
+          <p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>{exportStatus}</p>
+        </div>
+        {exportProgress>0&&<div style={{width:40,height:40,borderRadius:"50%",background:`conic-gradient(var(--sa) ${exportProgress*3.6}deg, var(--sbr) 0deg)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:32,height:32,borderRadius:"50%",background:"var(--ss)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"var(--st)"}}>{exportProgress}%</div></div>}
+      </div>}
 
       {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
     </div></>
