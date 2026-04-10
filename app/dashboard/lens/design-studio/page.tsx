@@ -812,51 +812,84 @@ export default function DesignStudioV2(){
         }catch(e){console.error("[remix] Branding capture error:",e);}
       }
 
-      setExportProgress(35);setExportStatus("Building video filter...");
-      console.log("[remix] Step 8: building filter_complex");
-      const filterParts:string[]=[];
-      const concatInputs:string[]=[];
-      let inputIdx=0;
-      const inputArgs:string[]=[];
+      setExportProgress(35);setExportStatus("Building video...");
+      console.log("[remix] Step 8: building command, isMobile:",isMobile);
+      const totalDur=remixTotalDuration+(false?10:0); // branding disabled on mobile for now
 
-      if(hasBranding){
-        inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
-        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
-        concatInputs.push("[vintro]");inputIdx++;
-      }
-      for(let i=0;i<remixClips.length;i++){
-        inputArgs.push("-i",`clip_${i}.mp4`);
-        const c=remixClips[i];
-        const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
-        filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
-        concatInputs.push(`[v${i}]`);inputIdx++;
-      }
-      if(hasBranding){
-        inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
-        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
-        concatInputs.push("[voutro]");inputIdx++;
-      }
-      const nSegments=concatInputs.length;
-      filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
-      const totalDur=remixTotalDuration+(hasBranding?10:0);
-      let filterStr=filterParts.join(";");
-      const cmdArgs=[...inputArgs];
-      if(hasMusic){
-        cmdArgs.push("-i","music.mp3");
-        filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
-        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
+      if(isMobile){
+        // ── MOBILE PATH: trim each clip individually, then concat with copy ──
+        console.log("[remix] Mobile path: trim + concat copy");
+        setExportStatus("Trimming clips...");
+        for(let i=0;i<remixClips.length;i++){
+          const c=remixClips[i];
+          setExportStatus(`Trimming clip ${i+1} of ${remixClips.length}...`);
+          setExportProgress(35+Math.round((i/remixClips.length)*20));
+          // Trim each clip to a separate file using stream copy (no re-encode)
+          await ffmpeg.exec(["-i",`clip_${i}.mp4`,"-ss",String(c.trimStart),"-t",String(c.trimEnd-c.trimStart),"-c","copy","-y",`trimmed_${i}.mp4`]);
+          console.log(`[remix] Trimmed clip ${i+1}`);
+        }
+        // Write concat list
+        let concatList="";
+        for(let i=0;i<remixClips.length;i++){concatList+=`file 'trimmed_${i}.mp4'\n`;}
+        await ffmpeg.writeFile("concat.txt",concatList);
+        setExportProgress(58);setExportStatus("Joining clips...");
+        console.log("[remix] Concat list:",concatList);
+
+        if(hasMusic){
+          // Concat video then mix music — needs re-encode for audio mix but use copy for video
+          await ffmpeg.exec(["-f","concat","-safe","0","-i","concat.txt","-c","copy","-y","joined.mp4"]);
+          console.log("[remix] Joined clips, now mixing music");
+          setExportProgress(70);setExportStatus("Adding music...");
+          await ffmpeg.exec(["-i","joined.mp4","-i","music.mp3","-c:v","copy","-c:a","aac","-b:a","128k","-map","0:v:0","-map","1:a:0","-shortest","-movflags","+faststart","-y","output.mp4"]);
+        }else{
+          await ffmpeg.exec(["-f","concat","-safe","0","-i","concat.txt","-c","copy","-movflags","+faststart","-y","output.mp4"]);
+        }
+        console.log("[remix] Mobile encode complete");
+
       }else{
-        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
-      }
-      // Use ultrafast preset — fast is too slow for browser WASM especially mobile
-      cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+        // ── DESKTOP PATH: full filter_complex with scale/crop/concat/encode ──
+        console.log("[remix] Desktop path: full filter_complex");
+        const filterParts:string[]=[];
+        const concatInputs:string[]=[];
+        let inputIdx=0;
+        const inputArgs:string[]=[];
 
-      console.log("[remix] Step 9: executing FFmpeg command");
-      console.log("[remix] filter_complex:",filterStr);
-      console.log("[remix] full args:",cmdArgs.join(" "));
-      setExportProgress(38);setExportStatus("Encoding video... this may take a few minutes");
-      await ffmpeg.exec(cmdArgs);
-      console.log("[remix] Step 9 done: FFmpeg exec complete");
+        if(hasBranding){
+          inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
+          filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
+          concatInputs.push("[vintro]");inputIdx++;
+        }
+        for(let i=0;i<remixClips.length;i++){
+          inputArgs.push("-i",`clip_${i}.mp4`);
+          const c=remixClips[i];
+          const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
+          filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
+          concatInputs.push(`[v${i}]`);inputIdx++;
+        }
+        if(hasBranding){
+          inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
+          filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
+          concatInputs.push("[voutro]");inputIdx++;
+        }
+        const nSegments=concatInputs.length;
+        filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
+        let filterStr=filterParts.join(";");
+        const cmdArgs=[...inputArgs];
+        if(hasMusic){
+          cmdArgs.push("-i","music.mp3");
+          filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
+          cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
+        }else{
+          cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
+        }
+        cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+
+        console.log("[remix] Step 9: executing FFmpeg command");
+        console.log("[remix] filter_complex:",filterStr);
+        setExportProgress(38);setExportStatus("Encoding video... this may take a few minutes");
+        await ffmpeg.exec(cmdArgs);
+      }
+      console.log("[remix] Encoding done");
 
       setExportProgress(92);setExportStatus("Reading output...");
       const outputData=await ffmpeg.readFile("output.mp4");
@@ -1034,6 +1067,8 @@ export default function DesignStudioV2(){
       .mob-nav{display:flex;}.sct{bottom:64px;}.sc{padding-bottom:56px;}
       .toast{bottom:72px;}
     }
+    /* Hide Lensy chat widget on Design Studio */
+    #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*="lensy"],iframe[src*="lensy"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
   `;
 
   return(
