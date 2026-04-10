@@ -713,13 +713,13 @@ export default function DesignStudioV2(){
       const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
       await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm") });
       setExportProgress(5);
-      const videoData = await fetchFile(selectedVideo.url);
+      const vr=await fetch(selectedVideo.url);const videoData = new Uint8Array(await vr.arrayBuffer());
       await ffmpeg.writeFile("input.mp4", videoData);
       const musicSource = getMusicSource();
       let hasMusic = false;
       if (musicSource) {
         setExportProgress(8);
-        if (musicSource.type === "url") { await ffmpeg.writeFile("music.mp3", await fetchFile(musicSource.url)); hasMusic = true; }
+        if (musicSource.type === "url") { const mr2=await fetch(musicSource.url);await ffmpeg.writeFile("music.mp3", new Uint8Array(await mr2.arrayBuffer())); hasMusic = true; }
         else { await ffmpeg.writeFile("music.mp3", new Uint8Array(await musicSource.file.arrayBuffer())); hasMusic = true; }
       }
       setExportProgress(10);
@@ -795,9 +795,14 @@ export default function DesignStudioV2(){
         setExportStatus(`Downloading clip ${i+1} of ${remixClips.length}...`);
         setExportProgress(8+Math.round((i/remixClips.length)*22));
         console.log(`[remix] Step 5: downloading clip ${i+1}/${remixClips.length}: ${remixClips[i].sourceUrl.slice(0,80)}...`);
-        const d=await fetchFile(remixClips[i].sourceUrl);
-        await ffmpeg.writeFile(`clip_${i}.mp4`,d);
-        console.log(`[remix] Step 5: clip ${i+1} written (${(d as Uint8Array).length} bytes)`);
+        // Use fetch+arrayBuffer instead of fetchFile — fetchFile returns 0 bytes on cross-origin Cloudinary URLs
+        try{
+          const resp=await fetch(remixClips[i].sourceUrl);
+          const ab=await resp.arrayBuffer();
+          await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab));
+          console.log(`[remix] Step 5: clip ${i+1} written (${ab.byteLength} bytes)`);
+          if(ab.byteLength===0)console.error(`[remix] WARNING: clip ${i+1} is 0 bytes!`);
+        }catch(e){console.error(`[remix] Failed to download clip ${i+1}:`,e);notify(`Failed to download clip ${i+1}`);setExporting(false);setExportProgress(0);setExportStatus("");return;}
       }
 
       setExportProgress(30);
@@ -806,7 +811,7 @@ export default function DesignStudioV2(){
       if(musicSource){
         setExportStatus("Loading music track...");
         console.log("[remix] Step 6: loading music");
-        if(musicSource.type==="url"){await ffmpeg.writeFile("music.mp3",await fetchFile(musicSource.url));hasMusic=true;}
+        if(musicSource.type==="url"){const mr=await fetch(musicSource.url);await ffmpeg.writeFile("music.mp3",new Uint8Array(await mr.arrayBuffer()));hasMusic=true;}
         else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
         console.log("[remix] Step 6 done: music loaded");
       }
@@ -880,7 +885,7 @@ export default function DesignStudioV2(){
         const inputArgs:string[]=[];
 
         if(hasBranding){
-          inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
+          inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
           filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
           concatInputs.push("[vintro]");inputIdx++;
         }
@@ -892,7 +897,7 @@ export default function DesignStudioV2(){
           concatInputs.push(`[v${i}]`);inputIdx++;
         }
         if(hasBranding){
-          inputArgs.push("-loop","1","-t","5","-framerate","25","-i","brand.png");
+          inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
           filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
           concatInputs.push("[voutro]");inputIdx++;
         }
@@ -907,7 +912,7 @@ export default function DesignStudioV2(){
         }else{
           cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
         }
-        cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+        cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-r","24","-vsync","cfr","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
 
         console.log("[remix] Step 9: executing FFmpeg command");
         console.log("[remix] filter_complex:",filterStr);
