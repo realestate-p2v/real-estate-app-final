@@ -860,17 +860,16 @@ export default function DesignStudioV2(){
       let inputIdx=0;
       const inputArgs:string[]=[];
 
-      // Branding intro: brand card overlaid on darkened first frame of first clip
+      // Branding intro: brand card on first frame at 30% opacity
       if(hasBranding){
-        // Input: brand.png as 5s video
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
-        // Input: first clip (for background frame)
         inputArgs.push("-i","clip_0.mp4");
-        // Heavy blur + blend with black so frame is barely visible. Card at 70% centered.
         const introCardW=Math.round(outW*0.7);const introCardH=Math.round(outH*0.7);
         const introX=Math.round((outW-introCardW)/2);const introY=Math.round((outH-introCardH)/2);
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,gblur=sigma=25,eq=brightness=-0.6:contrast=0.5,format=yuv420p[bg_intro]`,
+          `color=black:s=${outW}x${outH}:d=5:r=24,format=yuv420p[intro_black]`,
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuva420p,colorchannelmixer=aa=0.3[intro_frame]`,
+          `[intro_black][intro_frame]overlay=0:0,format=yuv420p[bg_intro]`,
           `[${inputIdx}:v]scale=${introCardW}:${introCardH},format=yuv420p[card_intro]`,
           `[bg_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro]`
         );
@@ -886,7 +885,7 @@ export default function DesignStudioV2(){
         concatInputs.push(`[v${i}]`);inputIdx++;
       }
 
-      // Branding outro: brand card overlaid on darkened last frame of last clip
+      // Branding outro: brand card on last frame at 30% opacity
       if(hasBranding){
         const lastClipIdx=remixClips.length-1;
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
@@ -896,7 +895,9 @@ export default function DesignStudioV2(){
         const outroCardW=Math.round(outW*0.85);const outroCardH=Math.round(outH*0.85);
         const outroX=Math.round((outW-outroCardW)/2);const outroY=Math.round((outH-outroCardH)/2);
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,gblur=sigma=25,eq=brightness=-0.6:contrast=0.5,format=yuv420p[bg_outro]`,
+          `color=black:s=${outW}x${outH}:d=5:r=24,format=yuv420p[outro_black]`,
+          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuva420p,colorchannelmixer=aa=0.3[outro_frame]`,
+          `[outro_black][outro_frame]overlay=0:0,format=yuv420p[bg_outro]`,
           `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},format=yuv420p[card_outro]`,
           `[bg_outro][card_outro]overlay=${outroX}:${outroY},format=yuv420p[voutro]`
         );
@@ -1043,8 +1044,8 @@ export default function DesignStudioV2(){
 
   const css=`
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
-    :root{--sb:#0c0c10;--ss:#151519;--ss2:#1c1c22;--sbr:rgba(255,255,255,0.06);--sa:#6366f1;--sag:rgba(99,102,241,0.15);--st:#e4e4ea;--std:rgba(255,255,255,0.4);--stm:rgba(255,255,255,0.2);--suc:#10b981;--sc:#09090d;--sf:'DM Sans',-apple-system,sans-serif;--si:rgba(255,255,255,0.03);--sih:rgba(255,255,255,0.05);--sdash:rgba(255,255,255,0.10);--schk:#fff;}
-    .sr.light{--sb:#f0f1f5;--ss:#ffffff;--ss2:#f7f7f9;--sbr:rgba(0,0,0,0.08);--sa:#6366f1;--sag:rgba(99,102,241,0.10);--st:#1a1a2e;--std:rgba(0,0,0,0.45);--stm:rgba(0,0,0,0.25);--suc:#10b981;--sc:#e8e9ee;--si:rgba(0,0,0,0.03);--sih:rgba(0,0,0,0.05);--sdash:rgba(0,0,0,0.15);--schk:#ccc;}
+    :root{--sb:#0c0c10;--ss:#151519;--ss2:#1c1c22;--sbr:rgba(255,255,255,0.06);--sa:#a855f7;--sag:rgba(168,85,247,0.15);--st:#e4e4ea;--std:rgba(255,255,255,0.4);--stm:rgba(255,255,255,0.2);--suc:#10b981;--sc:#09090d;--sf:'DM Sans',-apple-system,sans-serif;--si:rgba(255,255,255,0.03);--sih:rgba(255,255,255,0.05);--sdash:rgba(255,255,255,0.10);--schk:#fff;}
+    .sr.light{--sb:#f0f1f5;--ss:#ffffff;--ss2:#f7f7f9;--sbr:rgba(0,0,0,0.08);--sa:#a855f7;--sag:rgba(168,85,247,0.10);--st:#1a1a2e;--std:rgba(0,0,0,0.45);--stm:rgba(0,0,0,0.25);--suc:#10b981;--sc:#e8e9ee;--si:rgba(0,0,0,0.03);--sih:rgba(0,0,0,0.05);--sdash:rgba(0,0,0,0.15);--schk:#ccc;}
     *{margin:0;padding:0;box-sizing:border-box;}.sr{font-family:var(--sf);background:var(--sb);color:var(--st);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;transition:background 0.3s,color 0.3s;}
     .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
     .st{height:54px;background:var(--ss);border-bottom:1px solid var(--sbr);display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;z-index:20;transition:background 0.3s;}
@@ -1103,7 +1104,7 @@ export default function DesignStudioV2(){
       .toast{bottom:72px;}
       .st{display:none!important;}
     }
-    /* Hide Lensy chat widget on Design Studio */
+    /* Hide Lensy chat widget on Video Remix */
     #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*="lensy"],iframe[src*="lensy"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
   `;
 
@@ -1113,7 +1114,7 @@ export default function DesignStudioV2(){
       {/* TOP BAR */}
       <div className="st">
         <a href="/dashboard" className="back-btn" title="Back to Dashboard"><ChevronLeft size={14}/></a>
-        <div className="slg"><div className="slm"><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
+        <div className="slg"><div className="slm" style={{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}}><Film size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Video Remix</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
         <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
           <Home size={14} color="var(--sa)"/>
@@ -1383,7 +1384,7 @@ export default function DesignStudioV2(){
 
         {/* RIGHT PANEL */}
         {showRight&&<div className="srp">
-          <div className="ph"><Settings size={14} color="var(--sa)"/>Properties<div style={{flex:1}}/><button className="bi" style={{width:26,height:26}} onClick={()=>setShowRight(false)}><X size={11}/></button></div>
+          <div className="ph"><Settings size={14} color="var(--sa)"/>Remix Settings<div style={{flex:1}}/><button className="bi" style={{width:26,height:26}} onClick={()=>setShowRight(false)}><X size={11}/></button></div>
           <Section title="Export" icon={Download}>
             {activeTab==="listing-flyer"&&<>
               <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>Print-ready US Letter. PNG for digital, PDF for print.</p>
@@ -1426,8 +1427,8 @@ export default function DesignStudioV2(){
       <div style={{position:"relative",zIndex:1,padding:"32px 24px 48px",background:"var(--sb)",borderTop:"1px solid var(--sbr)"}}>
         <div style={{maxWidth:1200,margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-            <Film size={20} color="var(--sa)"/>
-            <h2 style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0}}>Your Remixes</h2>
+            <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#7c3aed,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={16} color="#fff"/></div>
+            <div><h2 style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0}}>Your Remixes</h2><p style={{fontSize:11,color:"var(--std)",margin:0}}>All your exported remix videos</p></div>
           </div>
           <RemixLibraryGrid/>
         </div>
