@@ -762,188 +762,133 @@ export default function DesignStudioV2(){
     if(remixClips.length===0){notify("Add clips to the timeline first.");return;}
     setExporting(true);setExportProgress(0);setExportStatus("Loading video encoder...");
     try{
-      console.log("[remix] Step 1: importing ffmpeg modules");
-      setExportStatus("Loading FFmpeg modules...");
+      console.log("[remix] Starting export...");
       const{FFmpeg}=await import("@ffmpeg/ffmpeg");
-      const{toBlobURL,fetchFile}=await import("@ffmpeg/util");
-      console.log("[remix] Step 2: creating FFmpeg instance");
+      const{toBlobURL}=await import("@ffmpeg/util");
       const ffmpeg=new FFmpeg();
-      ffmpeg.on("progress",({progress:p})=>{if(p>0)setExportProgress(Math.min(40+Math.round(p*50),95));});
       ffmpeg.on("log",({message})=>{console.log("[ffmpeg]",message);});
-
-      setExportProgress(2);setExportStatus("Downloading FFmpeg WASM core...");
-      console.log("[remix] Step 3: downloading WASM core");
+      ffmpeg.on("progress",({progress:p})=>{if(p>0)setExportProgress(Math.min(40+Math.round(p*50),95));});
+      setExportProgress(2);setExportStatus("Downloading FFmpeg engine...");
       const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
       const coreJS=await toBlobURL(`${coreBase}/ffmpeg-core.js`,"text/javascript");
-      console.log("[remix] Step 3a: core JS blob ready");
       setExportProgress(3);
       const coreWASM=await toBlobURL(`${coreBase}/ffmpeg-core.wasm`,"application/wasm");
-      console.log("[remix] Step 3b: core WASM blob ready");
       setExportProgress(5);setExportStatus("Initializing FFmpeg...");
-
-      console.log("[remix] Step 4: loading FFmpeg");
       await ffmpeg.load({coreURL:coreJS,wasmURL:coreWASM});
-      console.log("[remix] Step 4 done: FFmpeg loaded");
-
+      console.log("[remix] FFmpeg loaded");
       setExportProgress(8);
-      const isMobile=typeof window!=="undefined"&&(window.innerWidth<850||/iPhone|iPad|Android/i.test(navigator.userAgent));
-      let outW=currentRemixSize.width,outH=currentRemixSize.height;
-      if(isMobile&&outW>1280){const ratio=1280/outW;outW=1280;outH=Math.round(currentRemixSize.height*ratio);outH=outH%2===0?outH:outH+1;}
-      console.log(`[remix] Output: ${outW}x${outH} (mobile: ${isMobile})`);
+      const outW=currentRemixSize.width,outH=currentRemixSize.height;
 
+      // Download clips via proxy to bypass CORS
       for(let i=0;i<remixClips.length;i++){
         setExportStatus(`Downloading clip ${i+1} of ${remixClips.length}...`);
-        setExportProgress(8+Math.round((i/remixClips.length)*22));
+        setExportProgress(8+Math.round((i/remixClips.length)*20));
         const clipUrl=remixClips[i].sourceUrl;
-        console.log(`[remix] Step 5: downloading clip ${i+1}/${remixClips.length}: ${clipUrl.slice(0,80)}...`);
-        try{
-          // Add fl_attachment to Cloudinary URLs to get CORS-friendly response
-          let fetchUrl=clipUrl;
-          if(fetchUrl.includes("cloudinary.com")&&fetchUrl.includes("/upload/")){
-            fetchUrl=fetchUrl.replace("/upload/","/upload/fl_attachment/");
-          }
-          const resp=await fetch(fetchUrl);
-          if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-          const ab=await resp.arrayBuffer();
-          if(ab.byteLength<1000){
-            console.error(`[remix] WARNING: clip ${i+1} is only ${ab.byteLength} bytes — likely CORS blocked`);
-            // Fallback: try without fl_attachment
-            const resp2=await fetch(clipUrl,{mode:"cors"});
-            const ab2=await resp2.arrayBuffer();
-            await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab2));
-            console.log(`[remix] Step 5: clip ${i+1} written via fallback (${ab2.byteLength} bytes)`);
-          }else{
-            await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab));
-            console.log(`[remix] Step 5: clip ${i+1} written (${ab.byteLength} bytes)`);
-          }
-        }catch(e){console.error(`[remix] Failed to download clip ${i+1}:`,e);notify(`Failed to download clip ${i+1}`);setExporting(false);setExportProgress(0);setExportStatus("");return;}
+        console.log(`[remix] Downloading clip ${i+1}: ${clipUrl.slice(0,80)}...`);
+        const proxyUrl=`/api/proxy-media?url=${encodeURIComponent(clipUrl)}`;
+        const resp=await fetch(proxyUrl);
+        if(!resp.ok)throw new Error(`Failed to download clip ${i+1}: HTTP ${resp.status}`);
+        const ab=await resp.arrayBuffer();
+        console.log(`[remix] Clip ${i+1}: ${ab.byteLength} bytes`);
+        if(ab.byteLength<1000)throw new Error(`Clip ${i+1} is only ${ab.byteLength} bytes`);
+        await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab));
       }
 
-      setExportProgress(30);
+      // Download music via proxy
+      setExportProgress(28);
       const musicSource=getMusicSource();
       let hasMusic=false;
       if(musicSource){
-        setExportStatus("Loading music track...");
-        console.log("[remix] Step 6: loading music");
-        if(musicSource.type==="url"){const mr=await fetch(musicSource.url);await ffmpeg.writeFile("music.mp3",new Uint8Array(await mr.arrayBuffer()));hasMusic=true;}
-        else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
-        console.log("[remix] Step 6 done: music loaded");
+        setExportStatus("Loading music...");
+        console.log("[remix] Downloading music...");
+        if(musicSource.type==="url"){
+          const mResp=await fetch(`/api/proxy-media?url=${encodeURIComponent(musicSource.url)}`);
+          if(mResp.ok){const mab=await mResp.arrayBuffer();await ffmpeg.writeFile("music.mp3",new Uint8Array(mab));hasMusic=true;console.log(`[remix] Music: ${mab.byteLength} bytes`);}
+        }else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
       }
 
+      // Capture branding card
       let hasBranding=false;
       if(remixBranding&&isLensSubscriber&&previewRef.current){
         setExportStatus("Capturing branding card...");
-        console.log("[remix] Step 7: capturing branding card");
         try{
           const html2canvas=(await import("html2canvas-pro")).default;
           const brandEl=previewRef.current.querySelector("[data-branding-card]") as HTMLElement;
           if(brandEl){
-            brandEl.style.display="block";
-            brandEl.style.position="fixed";
-            brandEl.style.top="-9999px";
-            brandEl.style.left="-9999px";
+            brandEl.style.display="block";brandEl.style.position="fixed";brandEl.style.top="-9999px";brandEl.style.left="-9999px";
             await new Promise(r=>setTimeout(r,300));
             const bc=await html2canvas(brandEl,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:1920,height:1080});
-            brandEl.style.display="none";
-            brandEl.style.position="absolute";
-            brandEl.style.top="0";
-            brandEl.style.left="0";
+            brandEl.style.display="none";brandEl.style.position="absolute";brandEl.style.top="0";brandEl.style.left="0";
             const blob=await new Promise<Blob>(r=>bc.toBlob(b=>r(b!),"image/png"));
             await ffmpeg.writeFile("brand.png",new Uint8Array(await blob.arrayBuffer()));
             hasBranding=true;
-            console.log("[remix] Step 7 done: branding card captured");
-          }else{console.log("[remix] Step 7: no branding card element found");}
+            console.log("[remix] Branding card captured");
+          }
         }catch(e){console.error("[remix] Branding capture error:",e);}
       }
 
-      setExportProgress(35);setExportStatus("Building video...");
-      console.log("[remix] Step 8: building command, isMobile:",isMobile);
-      const totalDur=remixTotalDuration+(false?10:0); // branding disabled on mobile for now
+      // Build FFmpeg command
+      setExportProgress(32);setExportStatus("Building video...");
+      console.log("[remix] Building filter_complex...");
+      const filterParts:string[]=[];
+      const concatInputs:string[]=[];
+      let inputIdx=0;
+      const inputArgs:string[]=[];
 
-      if(isMobile){
-        // ── MOBILE PATH: trim each clip individually, then concat with copy ──
-        console.log("[remix] Mobile path: trim + concat copy");
-        setExportStatus("Trimming clips...");
-        for(let i=0;i<remixClips.length;i++){
-          const c=remixClips[i];
-          setExportStatus(`Trimming clip ${i+1} of ${remixClips.length}...`);
-          setExportProgress(35+Math.round((i/remixClips.length)*20));
-          // Trim each clip to a separate file using stream copy (no re-encode)
-          await ffmpeg.exec(["-i",`clip_${i}.mp4`,"-ss",String(c.trimStart),"-t",String(c.trimEnd-c.trimStart),"-c","copy","-y",`trimmed_${i}.mp4`]);
-          console.log(`[remix] Trimmed clip ${i+1}`);
-        }
-        // Write concat list
-        let concatList="";
-        for(let i=0;i<remixClips.length;i++){concatList+=`file 'trimmed_${i}.mp4'\n`;}
-        await ffmpeg.writeFile("concat.txt",concatList);
-        setExportProgress(58);setExportStatus("Joining clips...");
-        console.log("[remix] Concat list:",concatList);
-
-        if(hasMusic){
-          // Concat video then mix music — needs re-encode for audio mix but use copy for video
-          await ffmpeg.exec(["-f","concat","-safe","0","-i","concat.txt","-c","copy","-y","joined.mp4"]);
-          console.log("[remix] Joined clips, now mixing music");
-          setExportProgress(70);setExportStatus("Adding music...");
-          await ffmpeg.exec(["-i","joined.mp4","-i","music.mp3","-c:v","copy","-c:a","aac","-b:a","128k","-map","0:v:0","-map","1:a:0","-shortest","-movflags","+faststart","-y","output.mp4"]);
-        }else{
-          await ffmpeg.exec(["-f","concat","-safe","0","-i","concat.txt","-c","copy","-movflags","+faststart","-y","output.mp4"]);
-        }
-        console.log("[remix] Mobile encode complete");
-
-      }else{
-        // ── DESKTOP PATH: full filter_complex with scale/crop/concat/encode ──
-        console.log("[remix] Desktop path: full filter_complex");
-        const filterParts:string[]=[];
-        const concatInputs:string[]=[];
-        let inputIdx=0;
-        const inputArgs:string[]=[];
-
-        if(hasBranding){
-          inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
-          filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
-          concatInputs.push("[vintro]");inputIdx++;
-        }
-        for(let i=0;i<remixClips.length;i++){
-          inputArgs.push("-i",`clip_${i}.mp4`);
-          const c=remixClips[i];
-          const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
-          filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
-          concatInputs.push(`[v${i}]`);inputIdx++;
-        }
-        if(hasBranding){
-          inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
-          filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
-          concatInputs.push("[voutro]");inputIdx++;
-        }
-        const nSegments=concatInputs.length;
-        filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
-        let filterStr=filterParts.join(";");
-        const cmdArgs=[...inputArgs];
-        if(hasMusic){
-          cmdArgs.push("-i","music.mp3");
-          filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
-          cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
-        }else{
-          cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
-        }
-        cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-r","24","-vsync","cfr","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
-
-        console.log("[remix] Step 9: executing FFmpeg command");
-        console.log("[remix] filter_complex:",filterStr);
-        setExportProgress(38);setExportStatus("Encoding video... this may take a few minutes");
-        await ffmpeg.exec(cmdArgs);
+      // Branding intro (5s)
+      if(hasBranding){
+        inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
+        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
+        concatInputs.push("[vintro]");inputIdx++;
       }
-      console.log("[remix] Encoding done");
 
-      setExportProgress(92);setExportStatus("Reading output...");
+      // All clips — trim + scale + crop
+      for(let i=0;i<remixClips.length;i++){
+        inputArgs.push("-i",`clip_${i}.mp4`);
+        const c=remixClips[i];
+        const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
+        filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
+        concatInputs.push(`[v${i}]`);inputIdx++;
+      }
+
+      // Branding outro (5s)
+      if(hasBranding){
+        inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
+        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
+        concatInputs.push("[voutro]");inputIdx++;
+      }
+
+      // Concat
+      const nSegments=concatInputs.length;
+      filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
+      const totalDur=remixTotalDuration+(hasBranding?10:0);
+      let filterStr=filterParts.join(";");
+
+      const cmdArgs=[...inputArgs];
+      if(hasMusic){
+        cmdArgs.push("-i","music.mp3");
+        filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
+        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
+      }else{
+        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
+      }
+      cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-r","24","-vsync","cfr","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+
+      console.log("[remix] Executing FFmpeg...");
+      console.log("[remix] filter:",filterStr);
+      setExportProgress(35);setExportStatus("Encoding video... this may take a minute");
+      await ffmpeg.exec(cmdArgs);
+      console.log("[remix] FFmpeg done");
+
+      setExportProgress(90);setExportStatus("Reading output...");
       const outputData=await ffmpeg.readFile("output.mp4");
       const outputBlob=new Blob([outputData],{type:"video/mp4"});
-      console.log(`[remix] Step 10: output ready (${outputBlob.size} bytes)`);
+      console.log(`[remix] Output: ${outputBlob.size} bytes`);
 
-      setExportProgress(94);setExportStatus("Uploading to cloud...");
+      // Upload to Cloudinary
+      setExportProgress(92);setExportStatus("Uploading to cloud...");
       let cloudinaryUrl:string|null=null;
       try{
-        console.log("[remix] Step 11: uploading to Cloudinary");
         const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-exports"})});
         const sigData=await sigResp.json();
         if(sigData.success){
@@ -952,21 +897,22 @@ export default function DesignStudioV2(){
           const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,{method:"POST",body:fd});
           const upResult=await upResp.json();
           cloudinaryUrl=upResult.secure_url||null;
-          console.log("[remix] Step 11 done: uploaded to",cloudinaryUrl);
+          console.log("[remix] Uploaded:",cloudinaryUrl);
         }
-      }catch(e){console.error("[remix] Cloudinary upload error:",e);}
+      }catch(e){console.error("[remix] Upload error:",e);}
 
+      // Save to DB
       if(cloudinaryUrl){
-        setExportStatus("Saving to database...");
+        setExportStatus("Saving...");
         try{
-          console.log("[remix] Step 12: saving to design_exports");
           const supabase=(await import("@/lib/supabase/client")).createClient();
           const{data:{user}}=await supabase.auth.getUser();
-          if(user){await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});}
-          console.log("[remix] Step 12 done: saved to DB");
-        }catch(e){console.error("[remix] DB save error:",e);}
+          if(user)await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});
+          console.log("[remix] Saved to DB");
+        }catch(e){console.error("[remix] DB error:",e);}
       }
 
+      // Download locally
       setExportStatus("Downloading...");
       const downloadUrl=URL.createObjectURL(outputBlob);
       const link=document.createElement("a");link.download=`remix-${remixSize}-${Date.now()}.mp4`;link.href=downloadUrl;link.click();
@@ -975,7 +921,7 @@ export default function DesignStudioV2(){
       notify(cloudinaryUrl?"Remix exported & saved!":"Remix exported!");
       setTimeout(()=>{setExportProgress(0);setExporting(false);setExportStatus("");},2000);return;
     }catch(err:any){
-      console.error("[remix] Export failed at status:",exportStatus,"error:",err);
+      console.error("[remix] Export error:",err);
       notify("Export failed: "+(err.message||"Unknown error"));
       setExportStatus("Failed: "+(err.message||"Unknown error"));
       setTimeout(()=>{setExportStatus("");},5000);
