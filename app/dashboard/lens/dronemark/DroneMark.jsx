@@ -28,7 +28,7 @@ const BROKERAGE_COLORS = [
 const ACCENT_COLORS = ["#facc15","#ef4444","#3b82f6","#22c55e","#f97316","#a855f7","#06b6d4","#ec4899","#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185d","#0e7490","#c2410c","#71717a"];
 
 const TOOLS = [
-  { id: "select", label: "Select", icon: "↖" },
+  { id: "select", label: "Grab", icon: "✋" },
   { id: "polygon", label: "Lot Lines", icon: "⬡" },
   { id: "rect", label: "Rectangle", icon: "▭" },
   { id: "line", label: "Line", icon: "╱" },
@@ -38,7 +38,7 @@ const TOOLS = [
   { id: "arrow", label: "Arrow", icon: "➤" },
 ];
 
-const TOOL_LABELS = { polygon:"Lot Lines", rect:"Rectangle", line:"Line", pin:"Pin", label:"Label", measure:"Measure", arrow:"Arrow", select:"Select" };
+const TOOL_LABELS = { polygon:"Lot Lines", rect:"Rectangle", line:"Line", pin:"Pin", label:"Label", measure:"Measure", arrow:"Arrow", select:"Grab" };
 
 /* ─── tiny components ─── */
 function PinSvg({ color, size, logo, text }) {
@@ -192,7 +192,7 @@ export default function DroneMark({ agentLogo }) {
     if (e.target.closest("[data-sid]") && tool === "select") return;
     const p = getPos(e), s = sty.current;
     if (tool === "polygon") { if (!isDrawing) { setIsDrawing(true); setDrawPts([p]); } else { const f = drawPts[0], d = Math.sqrt((p.x - f.x) ** 2 + (p.y - f.y) ** 2); if (drawPts.length >= 3 && d < 30 * (natW / 1000)) { addShape({ id: uid(), type: "polygon", points: [...drawPts], color: s.color, width: s.width, fillOpacity: s.fill }); setIsDrawing(false); setDrawPts([]); } else setDrawPts([...drawPts, p]); } }
-    else if (tool === "pin") addShape({ id: uid(), type: "pin", x: p.x, y: p.y, color: s.pinColor, size: s.pinSize, logo: s.logo, text: s.pinText });
+    else if (tool === "pin") addShape({ id: uid(), type: "pin", x: p.x, y: p.y, color: s.pinColor, size: s.pinSize, logo: s.logo });
     else if (tool === "label") { if (!s.labelText.trim()) { notify("Type label text first"); return; } addShape({ id: uid(), type: "label", x: p.x, y: p.y, text: s.labelText, fontSize: s.labelFs, color: s.labelColor, bgMode: s.labelBgMode }); }
     else if (tool === "select") setSelId(null);
   }
@@ -300,7 +300,7 @@ export default function DroneMark({ agentLogo }) {
       const dx = shape.x2 - shape.x1, dy = shape.y2 - shape.y1, dist = Math.sqrt(dx * dx + dy * dy);
       const mx = (shape.x1 + shape.x2) / 2, my = (shape.y1 + shape.y2) / 2, ang = Math.atan2(dy, dx) * 180 / Math.PI;
       const txt = shape.measureText || "";
-      const fs = Math.max(22, Math.min(40, dist * 0.08)), tL = Math.max(14, dist * 0.04), pX = -dy / dist * tL, pY = dx / dist * tL;
+      const fs = shape.measureFs || Math.max(22, Math.min(40, dist * 0.08)), tL = Math.max(14, dist * 0.04), pX = -dy / dist * tL, pY = dx / dist * tL;
       return (<g key={shape.id} data-sid={shape.id} onMouseDown={e => onShapeDown(e, shape.id)} style={{ cursor: cur }}>
         <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round" />
         <line x1={shape.x1 + pX} y1={shape.y1 + pY} x2={shape.x1 - pX} y2={shape.y1 - pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round" />
@@ -424,7 +424,7 @@ export default function DroneMark({ agentLogo }) {
         {/* left — back + title */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <a href="/dashboard/lens" style={{ ...iconBtn, width: "auto", padding: "0 12px", gap: 6, textDecoration: "none", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.45)" }}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>←</span> Lens
+            <span style={{ fontSize: 16, lineHeight: 1 }}>←</span> Back
           </a>
           <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.08)" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -595,12 +595,6 @@ export default function DroneMark({ agentLogo }) {
               <Section title="Pin Size" icon="↕" defaultOpen={true}>
                 <Slider min={80} max={400} value={isEditing && sel?.type === "pin" ? (sel.size || 200) : uiPinSize} onChange={v => { if (isEditing && sel?.type === "pin") editSel("size", v); else setPinSize(v); }} suffix="px" />
               </Section>
-              <Section title="Pin Label" icon="💬" defaultOpen={true}>
-                <input value={isEditing && sel?.type === "pin" ? (sel.text || "") : uiPinText}
-                  onChange={e => { if (isEditing && sel?.type === "pin") editSel("text", e.target.value); else setPinText(e.target.value); }}
-                  placeholder='e.g. "1500 m² lot"'
-                  style={inputStyle} />
-              </Section>
               <Section title="Logo" icon="🖼" defaultOpen={true}>
                 {sty.current.logo ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -632,7 +626,7 @@ export default function DroneMark({ agentLogo }) {
                 )}
               </Section>
               <Section title="Font Size" icon="↕" defaultOpen={true}>
-                <Slider min={14} max={80} value={isEditing && sel?.type === "label" ? (sel.fontSize || 28) : uiLabelFs} onChange={v => { if (isEditing && sel?.type === "label") editSel("fontSize", v); else setLabelFs(v); }} suffix="px" />
+                <Slider min={10} max={200} value={isEditing && sel?.type === "label" ? (sel.fontSize || 28) : uiLabelFs} onChange={v => { if (isEditing && sel?.type === "label") editSel("fontSize", v); else setLabelFs(v); }} suffix="px" />
               </Section>
               <Section title="Text Color" icon="🎨" defaultOpen={true}>
                 <ColorPicker value={isEditing && sel?.type === "label" ? (sel.color || "#ffffff") : uiLabelColor} onChange={v => { if (isEditing && sel?.type === "label") editSel("color", v); else setLabelColor(v); }} />
@@ -655,24 +649,23 @@ export default function DroneMark({ agentLogo }) {
 
           {/* ── measure settings ── */}
           {showMeasure && (
-            <Section title="Measurement Text" icon="📐" defaultOpen={true}>
-              <input value={sel.measureText || ""} onChange={e => editSel("measureText", e.target.value)} placeholder='e.g. "15 m" or "50 ft"'
-                style={inputStyle} />
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6, marginBottom: 0 }}>Type the measurement to display on the line</p>
-            </Section>
+            <>
+              <Section title="Measurement Text" icon="📐" defaultOpen={true}>
+                <input value={sel.measureText || ""} onChange={e => editSel("measureText", e.target.value)} placeholder='e.g. "15 m" or "50 ft"'
+                  style={inputStyle} />
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6, marginBottom: 0 }}>Type the measurement to display on the line</p>
+              </Section>
+              <Section title="Text Size" icon="↕" defaultOpen={true}>
+                <Slider min={14} max={120} value={sel.measureFs || 0} onChange={v => editSel("measureFs", v)} suffix="px" />
+              </Section>
+            </>
           )}
 
           {/* ── measure defaults for tool (not editing) ── */}
           {!isEditing && tool === "measure" && (
-            <>
-              <Section title="Stroke Color" icon="🎨" defaultOpen={true}>
-                <ColorPicker value={uiColor} onChange={setColor} />
-                <SwatchGrid colors={ACCENT_COLORS} current={uiColor} onSelect={setColor} />
-              </Section>
-              <Section title="Line Width" icon="━" defaultOpen={true}>
-                <Slider min={1} max={14} value={uiWidth} onChange={setWidth} suffix="px" />
-              </Section>
-            </>
+            <Section title="Measurement" icon="📐" defaultOpen={true}>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "0 0 4px", lineHeight: 1.5 }}>Draw a line on the canvas, then select it to add measurement text</p>
+            </Section>
           )}
 
           {/* spacer */}
