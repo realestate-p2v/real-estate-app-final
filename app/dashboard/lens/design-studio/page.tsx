@@ -6,8 +6,7 @@ import {
   Calendar, Play, FileText, Sparkles, Film, Music, Check, Type, Eye, Layers,
   ZoomIn, ZoomOut, LayoutTemplate, Settings, RotateCcw, Share2, Undo2, Redo2,
   ChevronLeft, ChevronRight, Paintbrush, Sun, Moon, Printer, Globe, Video,
-  Clock, ArrowUp, ArrowDown, Trash2, Lock, Crosshair, Pentagon, Minus,
-  MoveRight, Ruler,
+  Clock, ArrowUp, ArrowDown, Trash2, Lock,
 } from "lucide-react";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
@@ -16,25 +15,6 @@ function responsiveSize(base:number,text:string,maxChars:number):number{if(!text
 function darken(hex:string,pct:number):string{const n=parseInt(hex.replace("#",""),16);return `rgb(${Math.max(0,(n>>16)-Math.round(2.55*pct))},${Math.max(0,((n>>8)&0xff)-Math.round(2.55*pct))},${Math.max(0,(n&0xff)-Math.round(2.55*pct))})`;}
 function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"}};return m[id]||m["just-listed"];}
 function truncateText(text:string,max:number):string{if(!text)return text;const clean=text.replace(/\*{1,2}([^*]+)\*{1,2}/g,"$1");if(clean.length<=max)return clean;return clean.substring(0,max).trimEnd()+"\u2026";}
-const droneUid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-
-// ─── Drone Mark Types & Constants ─────────────────────────────────────────────
-interface DroneShape{id:string;type:string;points?:{x:number;y:number}[];x?:number;y?:number;x1?:number;y1?:number;x2?:number;y2?:number;color:string;style?:string;width?:number;fillOpacity?:number;text?:string;fontSize?:number;font?:string;bg?:boolean;size?:number;logo?:string|null;labelColor?:string;measureText?:string;unit?:string;}
-const DRONE_COLORS=[{hex:"#facc15",label:"Yellow"},{hex:"#ffffff",label:"White"},{hex:"#ef4444",label:"Red"},{hex:"#3b82f6",label:"Blue"},{hex:"#22c55e",label:"Green"},{hex:"#f97316",label:"Orange"},{hex:"#a855f7",label:"Purple"},{hex:"#06b6d4",label:"Cyan"},{hex:"#ec4899",label:"Pink"}];
-const DRONE_LINE_STYLES=[{id:"solid",label:"Solid"},{id:"dashed",label:"Dashed"},{id:"dotted",label:"Dotted"}];
-const DRONE_TOOLS:{id:string;label:string;icon:any}[]=[{id:"select",label:"Select",icon:Crosshair},{id:"polygon",label:"Lot Lines",icon:Pentagon},{id:"rect",label:"Rectangle",icon:LayoutTemplate},{id:"line",label:"Line",icon:Minus},{id:"pin",label:"Pin",icon:MapPin},{id:"label",label:"Label",icon:Type},{id:"measure",label:"Measure",icon:Ruler},{id:"arrow",label:"Arrow",icon:MoveRight}];
-const DRONE_FONT_OPTS=[{id:"sans",label:"Sans",family:"'Helvetica Neue', Arial, sans-serif"},{id:"serif",label:"Serif",family:"Georgia, 'Times New Roman', serif"},{id:"mono",label:"Mono",family:"'SF Mono', 'Courier New', monospace"},{id:"display",label:"Display",family:"'Trebuchet MS', sans-serif"}];
-function droneDash(st:string,w:number):string{if(st==="dashed")return `${w*4} ${w*3}`;if(st==="dotted")return `${w} ${w*2.5}`;return "none";}
-
-function DronePinTeardrop({color,size:s0,logo,text,textColor}:any){
-  const s=s0||200;const clipId=`lc-${Math.random().toString(36).slice(2,8)}`;const shadowId=`ps-${Math.random().toString(36).slice(2,8)}`;
-  return(<g><defs><filter id={shadowId} x="-50%" y="-20%" width="200%" height="200%"><feDropShadow dx="0" dy={s*0.06} stdDeviation={s*0.08} floodColor="rgba(0,0,0,0.5)"/></filter>{logo&&<clipPath id={clipId}><circle cx={s/2} cy={s*0.38} r={s*0.24}/></clipPath>}</defs>
-    <path d={`M${s/2} ${s} C${s/2} ${s} ${s*0.05} ${s*0.55} ${s*0.05} ${s*0.38} C${s*0.05} ${s*0.15} ${s*0.2} 0 ${s/2} 0 C${s*0.8} 0 ${s*0.95} ${s*0.15} ${s*0.95} ${s*0.38} C${s*0.95} ${s*0.55} ${s/2} ${s} ${s/2} ${s}Z`} fill={color} filter={`url(#${shadowId})`} stroke="rgba(0,0,0,0.15)" strokeWidth={Math.max(1,s*0.01)}/>
-    <circle cx={s/2} cy={s*0.38} r={s*0.28} fill="rgba(255,255,255,0.18)"/>
-    {logo?<image href={logo} x={s/2-s*0.24} y={s*0.38-s*0.24} width={s*0.48} height={s*0.48} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice"/>:<circle cx={s/2} cy={s*0.38} r={s*0.18} fill="rgba(255,255,255,0.35)"/>}
-    {text&&<text x={s/2} y={s+s*0.22} textAnchor="middle" fill={textColor||"#fff"} fontSize={Math.max(18,s*0.18)} fontWeight="800" fontFamily="'Helvetica Neue', Arial, sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth={Math.max(3,s*0.025)} paintOrder="stroke">{text}</text>}
-  </g>);
-}
 
 // ─── InfoBarTemplate ───────────────────────────────────────────────────────────
 function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,badgeText,badgeColor,fontFamily,barColor,accentColor}:any){
@@ -65,6 +45,7 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}><Photo/><Badge/><div style={{position:"absolute",bottom:0,left:0,right:0,height:`${100-pp}%`,backgroundColor:barColor}}><div style={{position:"absolute",top:0,left:0,right:0,height:Math.round(3*unit),backgroundColor:accent,opacity:accentColor?0.8:0.15}}/><div style={{position:"absolute",inset:0,backgroundImage:barLight?"linear-gradient(to bottom,rgba(0,0,0,0.03) 0%,transparent 40%)":"linear-gradient(to bottom,rgba(255,255,255,0.04) 0%,transparent 40%)"}}/><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:`${py}px ${px}px`,gap:Math.round(16*unit)}}><div style={{display:"flex",alignItems:"center",gap:Math.round(18*unit),flex:1,minWidth:0}}><Headshot/><div style={{minWidth:0,flex:1}}><p style={{fontSize:anF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{an}</p><p style={{fontSize:brF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(4*unit),wordBreak:"break-word" as const}}>{br}</p><p style={{fontSize:phF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(2*unit)}}>{ph}</p></div></div><div style={{width:Math.round(1.5*unit),alignSelf:"stretch",margin:`${Math.round(barH*0.12)}px 0`,backgroundColor:dc,flexShrink:0}}/><RightCol/></div>{logo&&<img src={logo} alt="" style={{position:"absolute",bottom:Math.round(20*unit),right:px,maxWidth:Math.round(barH*0.30),maxHeight:Math.round(barH*0.16),objectFit:"contain" as const}}/>}</div></div>);
 }
 
+
 // ─── OpenHouseTemplate ────────────────────────────────────────────────────────
 function OpenHouseTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,date,time,agentName,phone,brokerage,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
@@ -82,7 +63,7 @@ function OpenHouseTemplate({size,listingPhoto,videoElement,headshot,logo,address
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>{videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}<div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(to bottom,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.15) 25%,transparent 40%)"}}/><div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(to top,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.35) 20%,transparent 45%)"}}/><div style={{position:"absolute",top:0,left:0,right:0,height:isStory?"26%":"34%",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:`0 ${pad}px`,textAlign:"center" as const}}><div style={{display:"inline-flex",alignItems:"center",padding:`${Math.round((isStory?16:8)*unit)}px ${Math.round((isStory?44:24)*unit)}px`,backgroundColor:badgeBg,borderRadius:Math.round(6*unit),boxShadow:`0 ${Math.round(4*unit)}px ${Math.round(24*unit)}px ${hexToRgba(badgeBg,0.4)}`}}><span style={{fontSize:bFs,fontWeight:800,color:isLightColor(badgeBg)?"#111":"#fff",letterSpacing:"0.16em",textTransform:"uppercase" as const,lineHeight:1}}>Open House</span></div><p style={{fontSize:dFs,fontWeight:800,color:"#fff",margin:0,marginTop:Math.round(18*unit),textShadow:ts2}}>{dt}</p><p style={{fontSize:tFs,fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(6*unit),textShadow:ts2}}>{tm2}</p></div><div style={{position:"absolute",bottom:0,left:0,right:0,padding:`0 ${pad}px`}}><div style={{textAlign:"center" as const,marginBottom:Math.round(14*unit)}}><p style={{fontSize:aFs,fontWeight:700,color:"#fff",lineHeight:1.2,margin:0,textShadow:ts2}}>{ad}</p>{ad2&&<p style={{fontSize:Math.round(aFs*0.75),fontWeight:500,color:"rgba(255,255,255,0.75)",margin:0,marginTop:Math.round(4*unit),textShadow:ts2}}>{ad2}</p>}<p style={{fontSize:detFs,fontWeight:500,color:"rgba(255,255,255,0.70)",margin:0,marginTop:Math.round(6*unit),textShadow:ts2}}>{det}</p><div style={{width:Math.round(50*unit),height:Math.round(2*unit),backgroundColor:accentColor||"rgba(255,255,255,0.20)",margin:`${Math.round(10*unit)}px auto ${Math.round(8*unit)}px`,borderRadius:1,opacity:accentColor?0.7:1}}/><p style={{fontSize:pFs,fontWeight:800,color:accent,lineHeight:1.0,margin:0,textShadow:accentColor?`0 ${Math.round(2*unit)}px ${Math.round(14*unit)}px ${hexToRgba(accentColor,0.35)}`:ts2}}>{pr}</p></div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(14*unit),height:abH,padding:`0 ${Math.round(24*unit)}px`,backgroundColor:hexToRgba(barColor,0.88),borderRadius:`${Math.round(14*unit)}px ${Math.round(14*unit)}px 0 0`}}>{headshot?<img src={headshot} alt="" style={{width:hsz,height:hsz,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`${Math.round(2.5*unit)}px solid ${accentColor?hexToRgba(accentColor,0.5):"rgba(255,255,255,0.25)"}`}}/>:<div style={{width:hsz,height:hsz,borderRadius:"50%",backgroundColor:barLight?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><User style={{width:hsz*0.38,height:hsz*0.38,color:"rgba(255,255,255,0.25)"}}/></div>}<div style={{minWidth:0}}><p style={{fontSize:agFs,fontWeight:700,color:barLight?"#111827":"#fff",margin:0,whiteSpace:"nowrap"}}>{an}</p><p style={{fontSize:cFs,fontWeight:500,color:barLight?"rgba(17,24,39,0.50)":"rgba(255,255,255,0.50)",margin:0,marginTop:Math.round(2*unit)}}>{cl}</p></div>{logo&&<img src={logo} alt="" style={{maxWidth:Math.round((isStory?260:150)*unit),maxHeight:Math.round((isStory?110:64)*unit),objectFit:"contain" as const,flexShrink:0,marginLeft:"auto"}}/>}</div></div></div>);
 }
 
-// ─── YardSign components ────────────────────────────────────────────────────────
+// ─── YardSign components (compact) ────────────────────────────────────────────
 function YardSignSplitBar({width,height,headshot,logo,agentName,phone,email,brokerage,officeName,officePhone,headerText,topColor,bottomColor,fontFamily,qrDataUrl,bulletPoints}:any){
   const topH=Math.round(height*0.15),bottomH=Math.round(height*0.15),centerH=height-topH-bottomH;
   const tL=isLightColor(topColor),bL=isLightColor(bottomColor),u=width/5400;
@@ -163,7 +144,7 @@ function BrandingCardTemplate({orientation,logo,headshot,agentName,phone:ph2,ema
   return(<div style={{width:w,height:h,background:"transparent",position:"relative"}}><div style={{position:"absolute",top:inset,left:inset,right:inset,bottom:inset,borderRadius:rad,border:`${bdW}px solid ${bC}`,backgroundColor:bgColor||"#14532d",overflow:"hidden",fontFamily}}>{bgPhoto&&<><img src={bgPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",inset:0,backgroundColor:"rgba(0,0,0,0.55)"}}/></>}{!bgPhoto&&<><div style={{position:"absolute",top:-Math.round(h*0.15),right:-Math.round(w*0.02),width:Math.round(w*0.18),height:Math.round(h*0.55),backgroundColor:aBg,transform:"rotate(25deg)",opacity:0.4}}/><div style={{position:"absolute",top:Math.round(h*0.35),right:-Math.round(w*0.05),width:Math.round(w*0.15),height:Math.round(h*0.55),backgroundColor:aBg,transform:"rotate(25deg)",opacity:0.25}}/></>}<div style={{position:"relative",zIndex:1,display:"flex",alignItems:"center",width:"100%",height:"100%",padding:`${padY}px ${padX}px`}}><div style={{flex:1,display:"flex",flexDirection:"column" as const,justifyContent:"center",minWidth:0,paddingRight:Math.round(40*u)}}>{(logo||brokerage)&&<div style={{display:"flex",alignItems:"center",gap:Math.round(14*u),marginBottom:Math.round(28*u)}}>{logo&&<img src={logo} alt="" style={{maxWidth:Math.round((w-inset*2)*0.08),maxHeight:Math.round(innerH*0.14),objectFit:"contain" as const}}/>}{brokerage&&<p style={{fontSize:Math.round(h*0.038),color:cM,margin:0,fontWeight:600}}>{brokerage}</p>}</div>}<p style={{fontSize:nFs,fontWeight:900,color:cC,margin:0,lineHeight:1.05,whiteSpace:"nowrap",textTransform:"uppercase" as const}}>{nt}</p><p style={{fontSize:Math.round(h*0.048),fontWeight:500,color:cM,margin:0,marginTop:Math.round(h*0.008)}}>{tagline||"Real Estate Agent"}</p><div style={{width:Math.round(60*u),height:Math.round(5*u),backgroundColor:accent,marginTop:Math.round(h*0.035),marginBottom:Math.round(h*0.03),borderRadius:3}}/><div style={{display:"flex",flexDirection:"column" as const,gap:Math.round(h*0.018)}}>{ph2&&<p style={{fontSize:Math.round(h*0.055),color:cC,fontWeight:700,margin:0}}>{ph2}</p>}{email&&<p style={{fontSize:Math.round(h*0.046),color:cC,fontWeight:500,margin:0,opacity:0.9}}>{email}</p>}{website&&<p style={{fontSize:Math.round(h*0.042),color:cC,fontWeight:500,margin:0,opacity:0.8}}>{website}</p>}</div>{hasProp&&<div style={{marginTop:Math.round(h*0.03),paddingTop:Math.round(h*0.02),borderTop:`2px solid ${bC}`}}><div style={{display:"flex",alignItems:"baseline",gap:Math.round(16*u),flexWrap:"wrap" as const}}>{addr&&<span style={{fontSize:Math.round(h*0.040),fontWeight:600,color:cC}}>{addr}{cityState?`, ${cityState}`:""}</span>}{pr2&&<span style={{fontSize:Math.round(h*0.050),fontWeight:800,color:accent}}>${pr2}</span>}</div>{features&&<div style={{marginTop:Math.round(h*0.008),color:tM,fontSize:Math.round(h*0.032),lineHeight:1.5}}>{features.split("\n").filter(Boolean).map((f:string,i:number)=><span key={i}>{i>0?"  \u00b7  ":""}{f}</span>)}</div>}</div>}</div><div style={{flexShrink:0}}>{headshot?<div style={{padding:hBd,borderRadius:"50%",background:accentColor?`linear-gradient(135deg,${accentColor},${hexToRgba(accentColor,0.4)})`:bC,boxShadow:`0 ${Math.round(10*u)}px ${Math.round(36*u)}px rgba(0,0,0,0.25)`}}><img src={headshot} alt="" style={{width:hSz,height:hSz,objectFit:"cover",borderRadius:"50%",display:"block"}}/></div>:<div style={{width:hSz,height:hSz,borderRadius:"50%",backgroundColor:"rgba(255,255,255,0.04)",border:`${hBd}px solid ${bC}`,display:"flex",alignItems:"center",justifyContent:"center"}}><User style={{width:hSz*0.35,height:hSz*0.35,color:tM}}/></div>}</div></div></div></div>);
 }
 
-// ─── ListingFlyerTemplate ─────────────
+// ─── ListingFlyerTemplate (Task A — 2550×3300 US Letter @ 300dpi) ─────────────
 function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds,baths,sqft,description,amenities,agentName,phone,email,brokerage,listingUrl,videoUrl,stagingUrl,accentColor,fontFamily,unbranded}:any){
   const W=2550,H=3300;
   const accent=accentColor||"#1e3a5f";
@@ -180,6 +161,7 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
   const showBottomRow=photoCount>3&&bottomRow.length>0;
   const bottomPhotoH=showBottomRow?340:0;
   const totalPhotoBlockH=PHOTO_H+(showBottomRow?20+bottomPhotoH:0);
+  const heroW=Math.round(W*0.58);
   const hasUrls=!!(listingUrl||videoUrl||stagingUrl);
   const urlRows:{icon:string;label:string;url:string}[]=[];
   if(listingUrl)urlRows.push({icon:"\ud83d\udd17",label:"View full listing:",url:listingUrl});
@@ -238,24 +220,60 @@ function ListingFlyerTemplate({photos,headshot,logo,address,cityState,price,beds
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const REMIX_SIZES=[{id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},{id:"story",label:"Story/Reel",sublabel:"1080\u00d71920",width:1080,height:1920},{id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080}];
-interface RemixClip{id:string;sourceUrl:string;thumbnail:string|null;label:string;duration:number;trimStart:number;trimEnd:number;speed:number;order:number;}
-const SPEED_PRESETS=[0.5,0.75,1,1.25,1.5,2];
+const REMIX_SIZES=[
+  {id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},
+  {id:"story",label:"Story/Reel",sublabel:"1080\u00d71920",width:1080,height:1920},
+  {id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080},
+];
+interface RemixClip {
+  id: string; sourceUrl: string; thumbnail: string | null; label: string;
+  duration: number; trimStart: number; trimEnd: number; speed: number; order: number;
+}
+const SPEED_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 function LensGate({children,locked,label}:{children:ReactNode;locked:boolean;label?:string}){
   if(!locked)return<>{children}</>;
   return<div style={{position:"relative",opacity:0.45,pointerEvents:"none",userSelect:"none"}}>{children}<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}><div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:8,background:"linear-gradient(135deg,rgba(99,102,241,0.9),rgba(168,85,247,0.9))",boxShadow:"0 4px 16px rgba(99,102,241,0.35)"}}><Lock size={11} color="#fff"/><span style={{fontSize:10,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>{label||"Subscribe to Lens"}</span></div></div></div>;
 }
 
-const TEMPLATES=[{id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},{id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},{id:"price-reduced",label:"Price Reduced",icon:DollarSign,color:"#f59e0b"},{id:"just-sold",label:"Just Sold",icon:CheckCircle,color:"#ef4444"}];
-const SIZES=[{id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080},{id:"story",label:"Story",sublabel:"1080\u00d71920",width:1080,height:1920},{id:"postcard",label:"Postcard",sublabel:"1800\u00d71200",width:1800,height:1200}];
-const YARD_SIGN_SIZES=[{id:"18x24",label:"18\u00d724\"",sublabel:"Standard",width:5400,height:7200},{id:"24x36",label:"24\u00d736\"",sublabel:"Large",width:7200,height:10800}];
-const BRAND_ORIENTATIONS=[{id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},{id:"vertical",label:"Vertical",sublabel:"1080\u00d71920",width:1080,height:1920}];
-const TABS=[{id:"templates",label:"Social Content",icon:PenTool},{id:"listing-flyer",label:"Listing Flyer",icon:Printer},{id:"branding-card",label:"Branding",icon:CreditCard},{id:"yard-sign",label:"Yard Sign",icon:MapPin},{id:"property-pdf",label:"Property Sheet",icon:FileText},{id:"drone-mark",label:"Drone Mark",icon:Crosshair}];
-const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={"video-remix":[{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Media",icon:Upload},{id:"music",label:"Music",icon:Music},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],"listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],"yard-sign":[{id:"design",label:"Design",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Colors",icon:Palette}],"branding-card":[{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],"property-pdf":[{id:"text",label:"Details",icon:Type},{id:"photos",label:"Photos",icon:ImageIcon},{id:"styles",label:"Styles",icon:Palette}],"drone-mark":[{id:"tools",label:"Tools",icon:Crosshair},{id:"styles",label:"Styles",icon:Palette},{id:"layers",label:"Layers",icon:Layers}]};
+const TEMPLATES=[
+  {id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},
+  {id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},
+  {id:"price-reduced",label:"Price Reduced",icon:DollarSign,color:"#f59e0b"},
+  {id:"just-sold",label:"Just Sold",icon:CheckCircle,color:"#ef4444"},
+];
+const SIZES=[
+  {id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080},
+  {id:"story",label:"Story",sublabel:"1080\u00d71920",width:1080,height:1920},
+  {id:"postcard",label:"Postcard",sublabel:"1800\u00d71200",width:1800,height:1200},
+];
+const YARD_SIGN_SIZES=[
+  {id:"18x24",label:"18\u00d724\"",sublabel:"Standard",width:5400,height:7200},
+  {id:"24x36",label:"24\u00d736\"",sublabel:"Large",width:7200,height:10800},
+];
+const BRAND_ORIENTATIONS=[
+  {id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},
+  {id:"vertical",label:"Vertical",sublabel:"1080\u00d71920",width:1080,height:1920},
+];
+const TABS=[
+  {id:"video-remix",label:"Video Remix",icon:Film},
+];
+const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={
+  "video-remix":[{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],
+  templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],
+  "listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],
+  "yard-sign":[{id:"design",label:"Design",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Colors",icon:Palette}],
+  "branding-card":[{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],
+  "property-pdf":[{id:"text",label:"Details",icon:Type},{id:"photos",label:"Photos",icon:ImageIcon},{id:"styles",label:"Styles",icon:Palette}],
+};
 const BROKERAGE_COLORS=[{hex:"#b40101",label:"KW Red"},{hex:"#666666",label:"KW Gray"},{hex:"#003399",label:"CB Blue"},{hex:"#012169",label:"CB Navy"},{hex:"#003da5",label:"RM Blue"},{hex:"#dc1c2e",label:"RM Red"},{hex:"#b5985a",label:"C21 Gold"},{hex:"#1c1c1c",label:"C21 Black"},{hex:"#000000",label:"CMP Black"},{hex:"#333333",label:"CMP Dark"},{hex:"#002349",label:"SIR Blue"},{hex:"#1a1a1a",label:"SIR Black"},{hex:"#552448",label:"BH Purple"},{hex:"#2d1a33",label:"BH Dark"},{hex:"#1c3f6e",label:"EXP Blue"},{hex:"#006341",label:"HH Green"},{hex:"#003d28",label:"HH Dk Green"},{hex:"#4c8c2b",label:"BHG Green"},{hex:"#d4272e",label:"EXT Red"},{hex:"#e31937",label:"ERA Red"},{hex:"#273691",label:"ERA Blue"},{hex:"#a02021",label:"RF Red"},{hex:"#ffffff",label:"White"}];
 const ACCENT_COLORS=["#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185d","#0e7490","#c2410c","#71717a","#ffffff","#000000"];
-const FONT_OPTIONS=[{id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},{id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},{id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},{id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"}];
+const FONT_OPTIONS=[
+  {id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},
+  {id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},
+  {id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},
+  {id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"},
+];
 const YARD_DESIGNS=[{id:"split-bar",label:"Split Bar",desc:"Top & bottom bars"},{id:"sidebar",label:"Sidebar",desc:"Vertical side accent"},{id:"top-heavy",label:"Top Heavy",desc:"Large header block"}];
 const DEMO_PHOTOS=["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80","https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80","https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80"];
 const AMENITY_SUGGESTIONS=["Pool","Garage","A/C","Solar","Smart Home","Ocean View","Mountain View","Fireplace","Hot Tub","EV Charger","Guest Suite","Home Office","Chef's Kitchen","Walk-in Closet","Hardwood Floors","Updated Kitchen","New Roof","Cul-de-Sac","Corner Lot","No HOA"];
@@ -281,14 +299,60 @@ function SwatchGrid({colors,current,onSelect,showLabels}:{colors:any[];current:s
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+
+function RemixLibraryGrid(){
+  const[remixes,setRemixes]=useState<any[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[viewModal,setViewModal]=useState<any>(null);
+  const[deleteConfirm,setDeleteConfirm]=useState<string|null>(null);
+  const[deleting,setDeleting]=useState(false);
+  useEffect(()=>{
+    (async()=>{
+      const supabase=(await import("@/lib/supabase/client")).createClient();
+      const{data:{user}}=await supabase.auth.getUser();
+      if(!user){setLoading(false);return;}
+      const{data}=await supabase.from("design_exports").select("*").eq("user_id",user.id).eq("template_type","video_remix").order("created_at",{ascending:false});
+      setRemixes(data||[]);
+      setLoading(false);
+    })();
+  },[]);
+  const handleDelete=async(id:string)=>{
+    setDeleting(true);
+    try{
+      const supabase=(await import("@/lib/supabase/client")).createClient();
+      await supabase.from("design_exports").delete().eq("id",id);
+      setRemixes(prev=>prev.filter(r=>r.id!==id));
+      if(viewModal?.id===id)setViewModal(null);
+    }catch(e){console.error("Delete failed:",e);}
+    setDeleting(false);setDeleteConfirm(null);
+  };
+  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 0"}}><Loader2 size={24} className="animate-spin" color="var(--std)"/></div>;
+  if(remixes.length===0)return<div style={{textAlign:"center",padding:"48px 0",borderRadius:16,border:"2px dashed var(--sbr)",background:"rgba(255,255,255,0.01)"}}><Film size={40} color="rgba(255,255,255,0.1)" style={{margin:"0 auto 12px"}}/><p style={{fontSize:14,color:"var(--std)",margin:0}}>No remixes exported yet</p><p style={{fontSize:12,color:"var(--std)",margin:"4px 0 0",opacity:0.6}}>Use the editor above to create your first remix</p></div>;
+  return<>
+    {/* Delete confirmation modal */}
+    {deleteConfirm&&<div onClick={()=>setDeleteConfirm(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)"}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:380,width:"90%",textAlign:"center"}}><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Trash2 size={22} color="#ef4444"/></div><h3 style={{fontSize:16,fontWeight:700,color:"var(--st)",margin:"0 0 8px"}}>Delete this remix?</h3><p style={{fontSize:13,color:"var(--std)",margin:"0 0 20px"}}>This will permanently remove the remix from your library. The file will still be available on Cloudinary.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>setDeleteConfirm(null)} style={{padding:"8px 20px",borderRadius:99,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button><button onClick={()=>handleDelete(deleteConfirm)} disabled={deleting} style={{padding:"8px 20px",borderRadius:99,border:"none",background:"#ef4444",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:deleting?0.6:1}}>{deleting?"Deleting...":"Delete"}</button></div></div></div>}
+    {/* View modal */}
+    {viewModal&&<div onClick={()=>setViewModal(null)} style={{position:"fixed",inset:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",padding:16}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",width:"100%",maxWidth:800,maxHeight:"90vh",overflow:"hidden",boxShadow:"0 24px 48px rgba(0,0,0,0.4)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderBottom:"1px solid var(--sbr)"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"rgba(124,58,237,0.15)",padding:"2px 8px",borderRadius:99}}>Video Remix</span><span style={{fontSize:11,color:"var(--std)"}}>{new Date(viewModal.created_at).toLocaleDateString()}</span></div><button onClick={()=>setViewModal(null)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><X size={18} color="var(--std)"/></button></div><div style={{background:"#000"}}><video src={viewModal.export_url||viewModal.overlay_video_url} controls autoPlay playsInline style={{width:"100%",maxHeight:"60vh",objectFit:"contain"}}/></div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderTop:"1px solid var(--sbr)"}}><div style={{display:"flex",alignItems:"center",gap:12}}><a href={((viewModal.export_url||viewModal.overlay_video_url)||"").replace("/upload/","/upload/fl_attachment/")} download style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sa)",color:"#fff",fontWeight:700,fontSize:13,padding:"8px 16px",borderRadius:99,textDecoration:"none"}}><Download size={14}/>Download</a></div><button onClick={()=>{setViewModal(null);setDeleteConfirm(viewModal.id);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"none",border:"1px solid rgba(239,68,68,0.3)",color:"#ef4444",fontWeight:600,fontSize:12,padding:"6px 14px",borderRadius:99,cursor:"pointer"}}><Trash2 size={13}/>Delete</button></div></div></div>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+      {remixes.map(r=>{
+        const dl=r.export_url||r.overlay_video_url;
+        let thumb:string|null=null;
+        if(dl?.includes("cloudinary.com")&&dl.includes("/video/upload/"))thumb=dl.replace("/video/upload/","/video/upload/so_1,w_500,h_280,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i,".jpg");
+        return<div key={r.id} style={{borderRadius:12,border:"1px solid var(--sbr)",overflow:"hidden",background:"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.2s",position:"relative"}} onClick={()=>setViewModal(r)}><div style={{aspectRatio:"16/9",position:"relative",background:"#000"}}>{thumb?<img src={thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={32} color="rgba(255,255,255,0.1)"/></div>}<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}} className="group-hover-show"><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="#fff" style={{marginLeft:2}}/></div></div></div><div style={{padding:12}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"rgba(124,58,237,0.15)",padding:"2px 8px",borderRadius:99}}>Video Remix</span><span style={{fontSize:10,fontWeight:700,color:"#0891b2",background:"rgba(8,145,178,0.15)",padding:"2px 8px",borderRadius:99}}>MP4</span></div><button onClick={e=>{e.stopPropagation();setDeleteConfirm(r.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:4,opacity:0.4,transition:"opacity 0.2s"}} onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0.4")}><Trash2 size={14} color="#ef4444"/></button></div><p style={{fontSize:11,color:"var(--std)",margin:"8px 0 0"}}>{new Date(r.created_at).toLocaleDateString()}</p><div style={{display:"flex",alignItems:"center",gap:12,marginTop:8,paddingTop:8,borderTop:"1px solid var(--sbr)"}}><span style={{fontSize:11,fontWeight:600,color:"var(--sa)"}}>Watch</span><a href={dl?.includes("/upload/")?dl.replace("/upload/","/upload/fl_attachment/"):dl} download onClick={e=>e.stopPropagation()} style={{fontSize:11,fontWeight:600,color:"var(--std)",textDecoration:"none"}}>Download</a></div></div></div>;
+      })}
+    </div>
+  </>;
+}
+
 export default function DesignStudioV2(){
-  const[activeTab,setActiveTab]=useState("templates");
+  const[activeTab,setActiveTab]=useState("video-remix");
   const[leftPanel,setLeftPanel]=useState("templates");
   const[selectedTemplate,setSelectedTemplate]=useState("just-listed");
   const[selectedSize,setSelectedSize]=useState("square");
   const[zoom,setZoom]=useState(100);
   const[selectedPropertyId,setSelectedPropertyId]=useState<string|null>(null);
   const[userProperties,setUserProperties]=useState<any[]>([]);
+  // Shared
   const[listingPhoto,setListingPhoto]=useState<string|null>(null);
   const[headshot,setHeadshot]=useState<string|null>(null);
   const[logo,setLogo]=useState<string|null>(null);
@@ -299,6 +363,7 @@ export default function DesignStudioV2(){
   const[agentEmail,setAgentEmail]=useState("");const[brokerage,setBrokerage]=useState("");
   const[barColor,setBarColor]=useState("#111827");const[accentColor,setAccentColor]=useState("");const[fontId,setFontId]=useState("sans");
   const[savedCompanyColors,setSavedCompanyColors]=useState<string[]>([]);
+  // Media
   const[mediaMode,setMediaMode]=useState<"image"|"video">("image");
   const[selectedVideo,setSelectedVideo]=useState<any>(null);
   const[overlayMusic,setOverlayMusic]=useState("");const[musicExpanded,setMusicExpanded]=useState(false);
@@ -308,16 +373,19 @@ export default function DesignStudioV2(){
   const[musicVibeFilter,setMusicVibeFilter]=useState("");
   const audioRef=useRef<HTMLAudioElement|null>(null);
   const[userVideos,setUserVideos]=useState<any[]>([]);const[loadingVideos,setLoadingVideos]=useState(false);
+  // Yard sign
   const[yardDesign,setYardDesign]=useState("split-bar");const[yardSignSize,setYardSignSize]=useState("18x24");
   const[yardHeaderText,setYardHeaderText]=useState("FOR SALE");
   const[yardTopColor,setYardTopColor]=useState("#dc1c2e");const[yardBottomColor,setYardBottomColor]=useState("#003da5");
   const[yardSidebarColor,setYardSidebarColor]=useState("#1c1c1c");const[yardMainBgColor,setYardMainBgColor]=useState("#ffffff");
   const[yardWebsite,setYardWebsite]=useState("");const[yardOfficeName,setYardOfficeName]=useState("");const[yardOfficePhone,setYardOfficePhone]=useState("");
   const[yardBullet1,setYardBullet1]=useState("");const[yardBullet2,setYardBullet2]=useState("");const[yardBullet3,setYardBullet3]=useState("");
+  // PDF
   const[pdfAddress,setPdfAddress]=useState("");const[pdfCityStateZip,setPdfCityStateZip]=useState("");
   const[pdfPrice,setPdfPrice]=useState("");const[pdfBeds,setPdfBeds]=useState("");const[pdfBaths,setPdfBaths]=useState("");const[pdfSqft,setPdfSqft]=useState("");
   const[pdfDescription,setPdfDescription]=useState("");const[pdfFeatures,setPdfFeatures]=useState("");
   const[pdfPhotos,setPdfPhotos]=useState<string[]>([]);const[pdfPreviewPage,setPdfPreviewPage]=useState(0);const[pdfAccentColor,setPdfAccentColor]=useState("#0e7490");
+  // Branding
   const[brandHeadshot,setBrandHeadshot]=useState<string|null>(null);const[brandLogo,setBrandLogo]=useState<string|null>(null);
   const[brandBgPhoto,setBrandBgPhoto]=useState<string|null>(null);
   const[brandAgentName,setBrandAgentName]=useState("");const[brandPhone,setBrandPhone]=useState("");
@@ -327,6 +395,7 @@ export default function DesignStudioV2(){
   const[brandPrice,setBrandPrice]=useState("");const[brandFeatures,setBrandFeatures]=useState("");
   const[brandBgColor,setBrandBgColor]=useState("#14532d");const[brandAccentColor,setBrandAccentColor]=useState("");
   const[brandOrientation,setBrandOrientation]=useState("landscape");const[brandFont,setBrandFont]=useState("serif");
+  // ── Listing Flyer ──
   const[flyerPhotos,setFlyerPhotos]=useState<string[]>([]);
   const[flyerAddress,setFlyerAddress]=useState("");const[flyerCityState,setFlyerCityState]=useState("");
   const[flyerPrice,setFlyerPrice]=useState("");const[flyerBeds,setFlyerBeds]=useState("");
@@ -339,6 +408,7 @@ export default function DesignStudioV2(){
   const[flyerAccentColor,setFlyerAccentColor]=useState("#1e3a5f");
   const[flyerFont,setFlyerFont]=useState("sans");
   const[flyerUnbranded,setFlyerUnbranded]=useState(false);
+  // Video Remix
   const[remixClips,setRemixClips]=useState<RemixClip[]>([]);
   const[remixSize,setRemixSize]=useState("landscape");
   const[remixBranding,setRemixBranding]=useState(true);
@@ -346,6 +416,7 @@ export default function DesignStudioV2(){
   const[remixClipSources,setRemixClipSources]=useState<{orderId:string;address:string;date:string;clips:{url:string;thumbnail:string|null;label:string}[]}[]>([]);
   const[loadingRemixClips,setLoadingRemixClips]=useState(false);
   const[isLensSubscriber,setIsLensSubscriber]=useState(false);
+  const[savedBrandingCardUrl,setSavedBrandingCardUrl]=useState<string|null>(null);
   const[hasVideoOrders,setHasVideoOrders]=useState<boolean|null>(null);
   const[remixPlaying,setRemixPlaying]=useState(false);
   const[remixPlayingIdx,setRemixPlayingIdx]=useState(0);
@@ -355,62 +426,11 @@ export default function DesignStudioV2(){
   const remixTimeRef=useRef(0);
   const remixIdxRef=useRef(0);
   const remixDragging=useRef(false);
+  // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[exportStatus,setExportStatus]=useState("");const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
   const[mobilePanel,setMobilePanel]=useState<string|null>(null);
   const previewRef=useRef<HTMLDivElement>(null);
-
-  // ─── Drone Mark State ─────────────────────────────────────────────────────
-  const[dronePhoto,setDronePhoto]=useState<string|null>(null);
-  const[dronePhotoNatural,setDronePhotoNatural]=useState({w:1920,h:1080});
-  const[droneTool,setDroneTool]=useState("select");
-  const[droneShapes,setDroneShapes]=useState<DroneShape[]>([]);
-  const[droneSelectedId,setDroneSelectedId]=useState<string|null>(null);
-  const[droneDrawingPts,setDroneDrawingPts]=useState<{x:number;y:number}[]>([]);
-  const[droneIsDrawing,setDroneIsDrawing]=useState(false);
-  const[droneLineColor,setDroneLineColor_]=useState("#ffffff");
-  const[droneLineStyle,setDroneLineStyle_]=useState("solid");
-  const[droneLineWidth,setDroneLineWidth_]=useState(4);
-  const[droneFillOpacity,setDroneFillOpacity_]=useState(0.12);
-  const[dronePinColor,setDronePinColor_]=useState("#ffffff");
-  const[dronePinSize,setDronePinSize_]=useState(200);
-  const[droneLabelText,setDroneLabelText_]=useState("");
-  const[droneLabelFontSize,setDroneLabelFontSize_]=useState(28);
-  const[droneLabelFont,setDroneLabelFont_]=useState("sans");
-  const[droneLabelColor,setDroneLabelColor_]=useState("#ffffff");
-  const[droneLabelBg,setDroneLabelBg_]=useState(true);
-  const[droneLogo,setDroneLogo]=useState<string|null>(null);
-  const[dronePinText,setDronePinText_]=useState("");
-  const[droneShowGrid,setDroneShowGrid]=useState(false);
-  const[droneSnapGrid,setDroneSnapGrid]=useState(false);
-  const[droneMeasureUnit,setDroneMeasureUnit_]=useState("m");
-  // Mutable style bag — always up-to-date, no closure issues
-  const ds=useRef({color:"#ffffff",style:"solid",width:4,fill:0.12,pinColor:"#ffffff",pinSize:200,pinText:"",labelText:"",labelFs:28,labelFont:"sans",labelColor:"#ffffff",labelBg:true,logo:null as string|null,unit:"m"});
-  const setDroneLineColor=(v:string)=>{ds.current.color=v;setDroneLineColor_(v);};
-  const setDroneLineStyle=(v:string)=>{ds.current.style=v;setDroneLineStyle_(v);};
-  const setDroneLineWidth=(v:number)=>{ds.current.width=v;setDroneLineWidth_(v);};
-  const setDroneFillOpacity=(v:number)=>{ds.current.fill=v;setDroneFillOpacity_(v);};
-  const setDronePinColor=(v:string)=>{ds.current.pinColor=v;setDronePinColor_(v);};
-  const setDronePinSize=(v:number)=>{ds.current.pinSize=v;setDronePinSize_(v);};
-  const setDronePinText=(v:string)=>{ds.current.pinText=v;setDronePinText_(v);};
-  const setDroneLabelText=(v:string)=>{ds.current.labelText=v;setDroneLabelText_(v);};
-  const setDroneLabelFontSize=(v:number)=>{ds.current.labelFs=v;setDroneLabelFontSize_(v);};
-  const setDroneLabelFont=(v:string)=>{ds.current.labelFont=v;setDroneLabelFont_(v);};
-  const setDroneLabelColor=(v:string)=>{ds.current.labelColor=v;setDroneLabelColor_(v);};
-  const setDroneLabelBg=(v:boolean)=>{ds.current.labelBg=v;setDroneLabelBg_(v);};
-  const setDroneMeasureUnit=(v:string)=>{ds.current.unit=v;setDroneMeasureUnit_(v);};
-  const[droneZoom,setDroneZoom]=useState(100);
-  const[droneHistory,setDroneHistory]=useState<DroneShape[][]>([[]]);
-  const[droneHistIdx,setDroneHistIdx]=useState(0);
-  const[droneDragging,setDroneDragging]=useState<{shapeId:string;handleIndex?:number}|null>(null);
-  const[droneDragStart,setDroneDragStart]=useState<{x:number;y:number}|null>(null);
-  const[droneRectStart,setDroneRectStart]=useState<{x:number;y:number}|null>(null);
-  const[droneRectCur,setDroneRectCur]=useState<{x:number;y:number}|null>(null);
-  const[droneLineStart,setDroneLineStart]=useState<{x:number;y:number}|null>(null);
-  const[droneLineCur,setDroneLineCur]=useState<{x:number;y:number}|null>(null);
-  const droneSvgRef=useRef<SVGSVGElement>(null);
-  const droneFileRef=useRef<HTMLInputElement>(null);
-  const droneLogoRef=useRef<HTMLInputElement>(null);
 
   const currentSize=SIZES.find(s=>s.id===selectedSize)!;
   const currentYardSize=YARD_SIGN_SIZES.find(s=>s.id===yardSignSize)!;
@@ -423,9 +443,8 @@ export default function DesignStudioV2(){
   const currentPanels=LEFT_PANELS[activeTab]||LEFT_PANELS.templates;
   const isVideoMode=activeTab==="templates"&&mediaMode==="video"&&!!selectedVideo;
   const isRemixMode=activeTab==="video-remix";
-  const isDroneMode=activeTab==="drone-mark";
 
-  useEffect(()=>{setLeftPanel(currentPanels[0].id);},[activeTab]);
+  useEffect(()=>{setLeftPanel(currentPanels[0].id);if(activeTab==="video-remix")loadUserVideos();},[activeTab]);
 
   useEffect(()=>{
     if(typeof window==="undefined")return;
@@ -435,45 +454,124 @@ export default function DesignStudioV2(){
     if(pid)setSelectedPropertyId(pid);
   },[]);
 
+  // Load profile + properties + subscription status
   useEffect(()=>{
     (async()=>{
       try{
         const supabase=(await import("@/lib/supabase/client")).createClient();
         const{data:{user}}=await supabase.auth.getUser();if(!user)return;
+        // Subscription check — same as hero: admin emails + lens_usage.is_subscriber
         const ADMIN_EMAILS=["realestatephoto2video@gmail.com"];
         if(user.email&&ADMIN_EMAILS.includes(user.email)){setIsLensSubscriber(true);}
         else{const{data:usageCheck}=await supabase.from("lens_usage").select("is_subscriber").eq("user_id",user.id).single();if(usageCheck?.is_subscriber)setIsLensSubscriber(true);}
-        const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
+        const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors,saved_branding_cards").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
-          if(data.saved_logo_url){setLogo(data.saved_logo_url);setBrandLogo(data.saved_logo_url);setDroneLogo(data.saved_logo_url);}
+          if(data.saved_logo_url){setLogo(data.saved_logo_url);setBrandLogo(data.saved_logo_url);}
           if(data.saved_agent_name){setAgentName(data.saved_agent_name);setBrandAgentName(data.saved_agent_name);}
           if(data.saved_phone){setPhone(data.saved_phone);setBrandPhone(data.saved_phone);}
           if(data.saved_email){setAgentEmail(data.saved_email);setBrandEmail(data.saved_email);}
           if(data.saved_company){setBrokerage(data.saved_company);setBrandBrokerage(data.saved_company);}
           if(data.saved_website){setBrandWebsite(data.saved_website);}
-          const cc=Array.isArray(data.saved_company_colors)?data.saved_company_colors:[];
+          // Load first saved branding card
+          const bc=Array.isArray(data.saved_branding_cards)&&data.saved_branding_cards.length>0?data.saved_branding_cards[0]:null;
+          if(bc)setSavedBrandingCardUrl(bc);
+          const cc = Array.isArray(data.saved_company_colors) ? data.saved_company_colors : [];
           setSavedCompanyColors(cc);
-          if(cc.length>=1){setBarColor(cc[0]);setFlyerAccentColor(cc[0]);setBrandBgColor(cc[0]);setYardTopColor(cc[0]);setYardSidebarColor(cc[0]);setPdfAccentColor(cc[0]);}
-          if(cc.length>=2){setAccentColor(cc[1]);setBrandAccentColor(cc[1]);setYardBottomColor(cc[1]);}
+          if(cc.length >= 1){setBarColor(cc[0]);setFlyerAccentColor(cc[0]);setBrandBgColor(cc[0]);setYardTopColor(cc[0]);setYardSidebarColor(cc[0]);setPdfAccentColor(cc[0]);}
+          if(cc.length >= 2){setAccentColor(cc[1]);setBrandAccentColor(cc[1]);setYardBottomColor(cc[1]);}
+          // Also check design_exports for branding cards if none saved in profile
+          if(!bc){
+            const{data:bcExports}=await supabase.from("design_exports").select("export_url").eq("user_id",user.id).in("template_type",["branding_card","branding-card"]).order("created_at",{ascending:false}).limit(1);
+            if(bcExports&&bcExports.length>0&&bcExports[0].export_url)setSavedBrandingCardUrl(bcExports[0].export_url);
+          }
         }
         const{data:props}=await supabase.from("agent_properties").select("id,address,address_normalized,city,state,bedrooms,bathrooms,sqft,price,special_features,amenities,website_slug,website_published,website_curated").eq("user_id",user.id).is("merged_into_id",null).order("updated_at",{ascending:false});
         if(props)setUserProperties(props);
+        if(selectedPropertyId){const prop=(props||[]).find((p:any)=>p.id===selectedPropertyId);if(prop)_fillFlyerFromProperty(prop,user.id,supabase);}
       }catch(err){console.error("Profile load error:",err);}
     })();
   },[]);
 
-  const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
+  const _fillFlyerFromProperty=async(prop:any,userId:string,supabase:any)=>{
+    setFlyerAddress(prop.address||"");
+    const cs=[prop.city,prop.state].filter(Boolean).join(", ");
+    setFlyerCityState(cs);
+    if(prop.bedrooms)setFlyerBeds(String(prop.bedrooms));
+    if(prop.bathrooms)setFlyerBaths(String(prop.bathrooms));
+    if(prop.sqft)setFlyerSqft(String(prop.sqft));
+    if(prop.price)setFlyerPrice(String(prop.price));
+    if(prop.amenities?.length)setFlyerAmenities(prop.amenities);
+    let photos:string[]=[];
+    const curated=prop.website_curated?.photos||[];
+    if(curated.length)photos=curated.slice(0,7);
+    if(photos.length<5){
+      try{
+        const{data:orders}=await supabase.from("orders").select("photos").eq("user_id",userId).ilike("property_address",`%${(prop.address||"").substring(0,15)}%`);
+        for(const o of(orders||[])){const urls=(o.photos||[]).map((p:any)=>p.secure_url||p.url).filter(Boolean);photos=[...photos,...urls];if(photos.length>=7)break;}
+        photos=[...new Set(photos)].slice(0,7);
+      }catch{}
+    }
+    if(photos.length)setFlyerPhotos(photos);
+    if(prop.website_published&&prop.website_slug)setFlyerListingUrl(`https://${prop.website_slug}.p2v.homes`);
+    try{
+      const propAddr=(prop.address||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+      const{data:descs}=await supabase.from("lens_descriptions").select("description,property_data").eq("user_id",userId).order("created_at",{ascending:false}).limit(10);
+      const match=(descs||[]).find((d:any)=>{const pd=d.property_data;if(!pd)return false;const dAddr=(pd.address||pd.property_address||"").toLowerCase().replace(/[^a-z0-9]/g,"");return dAddr&&(dAddr.includes(propAddr)||propAddr.includes(dAddr));});
+      if(match?.description)setFlyerDescription(match.description);
+    }catch{}
+  };
 
-  // ─── Video & Music helpers ──────────────────────────────────────────────────
+  const handleSelectProperty=(id:string)=>{
+    if(id==="__new__"){
+      setSelectedPropertyId(null);
+      setAddress("");setAddressLine2("");setBeds("");setBaths("");setSqft("");setPrice("");
+      setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");
+      setBrandAddress("");setBrandCityState("");setBrandPrice("");setBrandFeatures("");
+      setFlyerAddress("");setFlyerCityState("");setFlyerBeds("");setFlyerBaths("");setFlyerSqft("");setFlyerPrice("");setFlyerDescription("");setFlyerAmenities([]);setFlyerPhotos([]);setFlyerListingUrl("");setFlyerVideoUrl("");setFlyerStagingUrl("");
+      return;
+    }
+    const prop=userProperties.find((p:any)=>p.id===id);if(!prop)return;
+    setSelectedPropertyId(prop.id);setAddress(prop.address||"");
+    const cs=[prop.city,prop.state].filter(Boolean).join(", ");
+    setAddressLine2(cs);setPdfAddress(prop.address||"");setBrandAddress(prop.address||"");setPdfCityStateZip(cs);setBrandCityState(cs);
+    if(prop.bedrooms){const b=prop.bedrooms.toString();setBeds(b);setPdfBeds(b);}
+    if(prop.bathrooms){const b=prop.bathrooms.toString();setBaths(b);setPdfBaths(b);}
+    if(prop.sqft){const s=prop.sqft.toString();setSqft(s);setPdfSqft(s);}
+    if(prop.price){const p=prop.price.toString();setPrice(p);setPdfPrice(p);setBrandPrice(p);}
+    if(prop.special_features?.length>0){const features=prop.special_features.join("\n");setPdfFeatures(features);setBrandFeatures(features);}
+    (async()=>{
+      try{
+        const supabase=(await import("@/lib/supabase/client")).createClient();
+        const{data:{user:u}}=await supabase.auth.getUser();if(!u)return;
+        await _fillFlyerFromProperty(prop,u.id,supabase);
+        const{data:descs}=await supabase.from("lens_descriptions").select("description,property_data").eq("user_id",u.id).order("created_at",{ascending:false}).limit(10);
+        const propAddr=(prop.address||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+        if(!propAddr||!descs||descs.length===0)return;
+        const match=descs.find((d:any)=>{const pd=d.property_data;if(!pd)return false;const dAddr=(pd.address||pd.property_address||"").toLowerCase().replace(/[^a-z0-9]/g,"");if(!dAddr)return false;return dAddr.includes(propAddr)||propAddr.includes(dAddr);});
+        if(match?.description)setPdfDescription(match.description);
+      }catch{}
+    })();
+  };
+
   const loadUserVideos=async()=>{
     if(userVideos.length>0)return;setLoadingVideos(true);
     try{
       const supabase=(await import("@/lib/supabase/client")).createClient();
       const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-      const{data:orders}=await supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,photos,created_at,property_address").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false});
+      const{data:orders}=await supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,clip_urls,photos,created_at,property_address").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false});
       const vids=(orders||[]).filter((o:any)=>o.unbranded_delivery_url||o.delivery_url);
-      setUserVideos(vids.map((o:any)=>({orderId:o.order_id,url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,address:o.property_address||"Property",date:new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})})));
+      setHasVideoOrders(vids.length>0);
+      setUserVideos(vids.map((o:any)=>({orderId:o.order_id,url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,hasUnbranded:!!o.unbranded_delivery_url,date:new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})})));
+      const sources=vids.map((o:any)=>{
+        const clipData:any[]=Array.isArray(o.clip_urls)?o.clip_urls:[];
+        const addr=o.property_address||"Unknown Property";
+        const dt=new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+        const orderThumb=o.photos?.[0]?.secure_url||null;
+        if(clipData.length>0){return{orderId:o.order_id,address:addr,date:dt,clips:clipData.sort((a:any,b:any)=>(a.position||0)-(b.position||0)).map((c:any)=>({url:c.url,thumbnail:c.photo_url||null,label:c.description||`Clip ${c.position||"?"}`}))};}
+        return{orderId:o.order_id,address:addr,date:dt,clips:[{url:o.unbranded_delivery_url||o.delivery_url,thumbnail:orderThumb,label:"Full Video"}]};
+      });
+      setRemixClipSources(sources);
     }catch(err){console.error("Video load error:",err);}
     setLoadingVideos(false);
   };
@@ -482,389 +580,420 @@ export default function DesignStudioV2(){
   const fetchMusicTracks=async(vibe:string="")=>{setLoadingMusic(true);try{const resp=await fetch(`/api/generate-music?library=true&vibe=${vibe}`);const data=await resp.json();setMusicTracks(data.tracks||[]);}catch(e){console.error(e);}setLoadingMusic(false);};
   const handlePlayTrack=(trackId:string,url:string)=>{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}if(playingTrackId===trackId){setPlayingTrackId(null);return;}const audio=new Audio(url);audio.play().catch(()=>{});audio.onended=()=>setPlayingTrackId(null);audioRef.current=audio;setPlayingTrackId(trackId);};
   useEffect(()=>{return()=>{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}};},[]);
-  const getMusicSource=():({type:"url";url:string}|null)=>{if(selectedMusicTrack)return{type:"url",url:selectedMusicTrack.url};return null;};
 
-  const exportVideo=async()=>{
-    if(!selectedVideo?.url||!previewRef.current){notify("Select a video first.");return;}
-    setExporting(true);setExportProgress(0);setExportStatus("Loading encoder...");
-    try{
-      const{FFmpeg}=await import("@ffmpeg/ffmpeg");
-      const{toBlobURL,fetchFile}=await import("@ffmpeg/util");
-      const ffmpeg=new FFmpeg();
-      ffmpeg.on("progress",({progress:p})=>setExportProgress(Math.min(Math.round(p*100),99)));
-      setExportProgress(2);setExportStatus("Downloading FFmpeg...");
-      const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-      await ffmpeg.load({coreURL:await toBlobURL(`${coreBase}/ffmpeg-core.js`,"text/javascript"),wasmURL:await toBlobURL(`${coreBase}/ffmpeg-core.wasm`,"application/wasm")});
-      setExportProgress(5);setExportStatus("Loading video...");
-      await ffmpeg.writeFile("input.mp4",await fetchFile(selectedVideo.url));
-      const musicSource=getMusicSource();
-      let hasMusic=false;
-      if(musicSource){setExportProgress(8);setExportStatus("Loading music...");await ffmpeg.writeFile("music.mp3",await fetchFile(musicSource.url));hasMusic=true;}
-      setExportProgress(10);setExportStatus("Capturing overlay...");
-      const html2canvas=(await import("html2canvas-pro")).default;
-      const el=previewRef.current.querySelector("[data-export-target]") as HTMLElement;
-      if(!el)throw new Error("Export target not found");
-      const videoEls=el.querySelectorAll("video");videoEls.forEach(v=>{(v as HTMLElement).style.opacity="0";});
-      const placeholders=el.querySelectorAll("[data-video-area]");placeholders.forEach(p=>{(p as HTMLElement).style.opacity="0";});
-      const{restore}=prepareForExport(el);
-      const overlayCanvas=await html2canvas(el,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:rawW,height:rawH});
-      restore();
-      videoEls.forEach(v=>{(v as HTMLElement).style.opacity="1";});
-      placeholders.forEach(p=>{(p as HTMLElement).style.opacity="1";});
-      const overlayBlob=await new Promise<Blob>(r=>overlayCanvas.toBlob(b=>r(b!),"image/png"));
-      await ffmpeg.writeFile("overlay.png",new Uint8Array(await overlayBlob.arrayBuffer()));
-      setExportProgress(15);setExportStatus("Encoding video...");
-      const outW=currentSize.width,outH=currentSize.height;
-      const photoPercent=selectedTemplate==="open-house"?100:selectedSize==="postcard"?55:58;
-      const photoH=Math.round(outH*photoPercent/100);
-      if(hasMusic){
-        await ffmpeg.exec(["-i","input.mp4","-i","overlay.png","-i","music.mp3","-t","119","-filter_complex",`[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:119,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`,"-map","[vout]","-map","[aout]","-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-y","output.mp4"]);
-      }else{
-        await ffmpeg.exec(["-i","input.mp4","-i","overlay.png","-t","119","-filter_complex",`[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`,"-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-y","output.mp4"]);
-      }
-      setExportProgress(95);setExportStatus("Downloading...");
-      const outputData=await ffmpeg.readFile("output.mp4");
-      const outputBlob=new Blob([outputData],{type:"video/mp4"});
-      const link=document.createElement("a");link.download=`listing-video-${Date.now()}.mp4`;link.href=URL.createObjectURL(outputBlob);link.click();
-      URL.revokeObjectURL(link.href);
-      setExportProgress(100);notify("Video exported!");
-      setTimeout(()=>{setExportProgress(0);setExporting(false);setExportStatus("");},1500);return;
-    }catch(err:any){console.error("Video export error:",err);notify("Export failed: "+(err.message||"Unknown error"));}
-    setExportProgress(0);setExporting(false);setExportStatus("");
-  };
+  const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
-  // ─── Drone Mark Handlers ──────────────────────────────────────────────────
-  const dronePushHistory=useCallback((ns:DroneShape[])=>{
-    setDroneHistory(h=>{const trimmed=h.slice(0,droneHistIdx+1);return[...trimmed,ns];});
-    setDroneHistIdx(i=>i+1);
-  },[droneHistIdx]);
-
-  const droneUndo=()=>{if(droneHistIdx>0){setDroneHistIdx(i=>i-1);setDroneShapes(droneHistory[droneHistIdx-1]);}};
-  const droneRedo=()=>{if(droneHistIdx<droneHistory.length-1){setDroneHistIdx(i=>i+1);setDroneShapes(droneHistory[droneHistIdx+1]);}};
-  const droneAddShape=(s:DroneShape)=>{setDroneShapes(prev=>{const ns=[...prev,s];dronePushHistory(ns);return ns;});};
-  const droneUpdateShape=(id:string,u:Partial<DroneShape>)=>{setDroneShapes(prev=>{const ns=prev.map(s=>s.id===id?{...s,...u}:s);dronePushHistory(ns);return ns;});};
-  const droneUpdateLive=(id:string,u:Partial<DroneShape>)=>{setDroneShapes(prev=>prev.map(s=>s.id===id?{...s,...u}:s));};
-  const droneDeleteShape=(id:string)=>{setDroneShapes(prev=>{const ns=prev.filter(s=>s.id!==id);dronePushHistory(ns);return ns;});if(droneSelectedId===id)setDroneSelectedId(null);};
-  const droneDuplicateShape=(id:string)=>{setDroneShapes(prev=>{const s=prev.find(sh=>sh.id===id);if(!s)return prev;const n:any={...s,id:droneUid()};if(n.points)n.points=n.points.map((p:any)=>({x:p.x+30,y:p.y+30}));if(n.x!==undefined){n.x+=30;if(n.y!==undefined)n.y+=30;}if(n.x1!==undefined){n.x1+=30;if(n.y1!==undefined)n.y1+=30;if(n.x2!==undefined)n.x2+=30;if(n.y2!==undefined)n.y2+=30;}const ns=[...prev,n];dronePushHistory(ns);return ns;});};
-
-  const droneGetPos=(e:React.MouseEvent)=>{
-    const svg=droneSvgRef.current;if(!svg)return{x:0,y:0};
-    const rect=svg.getBoundingClientRect();
-    let x=(e.clientX-rect.left)*(dronePhotoNatural.w/rect.width);
-    let y=(e.clientY-rect.top)*(dronePhotoNatural.h/rect.height);
-    if(droneSnapGrid){x=Math.round(x/20)*20;y=Math.round(y/20)*20;}
-    return{x,y};
-  };
-
-  const droneCanvasClick=(e:React.MouseEvent)=>{
-    if((e.target as Element).closest("[data-handle]"))return;
-    if((e.target as Element).closest("[data-shape-id]")&&droneTool==="select")return;
-    const pos=droneGetPos(e);
-    const sty=ds.current;
-    if(droneTool==="polygon"){
-      if(!droneIsDrawing){setDroneIsDrawing(true);setDroneDrawingPts([pos]);}
-      else{
-        const first=droneDrawingPts[0];
-        const dist=Math.sqrt((pos.x-first.x)**2+(pos.y-first.y)**2);
-        if(droneDrawingPts.length>=3&&dist<30*(dronePhotoNatural.w/1000)){
-          droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});
-          setDroneIsDrawing(false);setDroneDrawingPts([]);
-        }else{setDroneDrawingPts([...droneDrawingPts,pos]);}
-      }
-    }else if(droneTool==="pin"){
-      droneAddShape({id:droneUid(),type:"pin",x:pos.x,y:pos.y,color:sty.pinColor,size:sty.pinSize,logo:sty.logo,text:sty.pinText,labelColor:sty.labelColor});
-    }else if(droneTool==="label"){
-      if(!sty.labelText.trim()){notify("Enter label text first");return;}
-      droneAddShape({id:droneUid(),type:"label",x:pos.x,y:pos.y,text:sty.labelText,fontSize:sty.labelFs,font:sty.labelFont,color:sty.labelColor,bg:sty.labelBg});
-    }else if(droneTool==="select"){setDroneSelectedId(null);}
-  };
-
-  const droneMouseDown=(e:React.MouseEvent)=>{
-    const pos=droneGetPos(e);
-    if(droneTool==="rect"){setDroneRectStart(pos);setDroneRectCur(pos);}
-    else if(droneTool==="line"||droneTool==="measure"||droneTool==="arrow"){setDroneLineStart(pos);setDroneLineCur(pos);}
-  };
-
-  const droneMouseMove=(e:React.MouseEvent)=>{
-    const pos=droneGetPos(e);
-    if(droneTool==="rect"&&droneRectStart){setDroneRectCur(pos);}
-    else if((droneTool==="line"||droneTool==="measure"||droneTool==="arrow")&&droneLineStart){setDroneLineCur(pos);}
-    else if(droneDragging&&droneDragStart){
-      const dx=pos.x-droneDragStart.x,dy=pos.y-droneDragStart.y;
-      const shape=droneShapes.find(s=>s.id===droneDragging.shapeId);if(!shape)return;
-      if(droneDragging.handleIndex!==undefined){
-        if((shape.type==="polygon"||shape.type==="rect-shape")&&shape.points){
-          const np=[...shape.points];np[droneDragging.handleIndex]={x:pos.x,y:pos.y};droneUpdateLive(droneDragging.shapeId,{points:np});
-        }else if(shape.type==="line-shape"||shape.type==="measure"||shape.type==="arrow"){
-          if(droneDragging.handleIndex===0)droneUpdateLive(droneDragging.shapeId,{x1:pos.x,y1:pos.y});
-          else droneUpdateLive(droneDragging.shapeId,{x2:pos.x,y2:pos.y});
-        }
-      }else{
-        if(shape.type==="polygon"||shape.type==="rect-shape")droneUpdateLive(droneDragging.shapeId,{points:shape.points!.map(p=>({x:p.x+dx,y:p.y+dy}))});
-        else if(shape.type==="line-shape"||shape.type==="measure"||shape.type==="arrow")droneUpdateLive(droneDragging.shapeId,{x1:(shape.x1||0)+dx,y1:(shape.y1||0)+dy,x2:(shape.x2||0)+dx,y2:(shape.y2||0)+dy});
-        else droneUpdateLive(droneDragging.shapeId,{x:(shape.x||0)+dx,y:(shape.y||0)+dy});
-      }
-      setDroneDragStart(pos);
-    }
-    if(droneTool==="polygon"&&droneIsDrawing)setDroneLineCur(pos);
-  };
-
-  const droneMouseUp=(e:React.MouseEvent)=>{
-    const pos=droneGetPos(e);
-    const sty=ds.current;
-    if(droneTool==="rect"&&droneRectStart){
-      const x1=Math.min(droneRectStart.x,pos.x),y1=Math.min(droneRectStart.y,pos.y),x2=Math.max(droneRectStart.x,pos.x),y2=Math.max(droneRectStart.y,pos.y);
-      if(Math.abs(x2-x1)>10&&Math.abs(y2-y1)>10)droneAddShape({id:droneUid(),type:"rect-shape",points:[{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});
-      setDroneRectStart(null);setDroneRectCur(null);
-    }else if((droneTool==="line"||droneTool==="arrow")&&droneLineStart){
-      const dist=Math.sqrt((pos.x-droneLineStart.x)**2+(pos.y-droneLineStart.y)**2);
-      if(dist>10)droneAddShape({id:droneUid(),type:droneTool==="arrow"?"arrow":"line-shape",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.color,style:sty.style,width:sty.width});
-      setDroneLineStart(null);setDroneLineCur(null);
-    }else if(droneTool==="measure"&&droneLineStart){
-      const dist=Math.sqrt((pos.x-droneLineStart.x)**2+(pos.y-droneLineStart.y)**2);
-      if(dist>10)droneAddShape({id:droneUid(),type:"measure",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.color,style:sty.style,width:sty.width,measureText:"",unit:sty.unit});
-      setDroneLineStart(null);setDroneLineCur(null);
-    }
-    if(droneDragging){setDroneShapes(prev=>{dronePushHistory([...prev]);return prev;});setDroneDragging(null);setDroneDragStart(null);}
-  };
-
-  const droneShapeMouseDown=(e:React.MouseEvent,id:string)=>{e.stopPropagation();if(droneTool==="select"){setDroneSelectedId(id);setDroneDragging({shapeId:id});setDroneDragStart(droneGetPos(e));}};
-  const droneHandleMouseDown=(e:React.MouseEvent,shapeId:string,handleIndex:number)=>{e.stopPropagation();setDroneSelectedId(shapeId);setDroneDragging({shapeId,handleIndex});setDroneDragStart(droneGetPos(e));};
-
-  const droneDblClick=()=>{if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>=3){const sty=ds.current;droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});setDroneIsDrawing(false);setDroneDrawingPts([]);}};
-  const droneCancelDrawing=()=>{setDroneIsDrawing(false);setDroneDrawingPts([]);setDroneRectStart(null);setDroneRectCur(null);setDroneLineStart(null);setDroneLineCur(null);};
-
-  const dronePhotoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{setDronePhotoNatural({w:img.naturalWidth,h:img.naturalHeight});setDronePhoto(url);setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);};img.src=url;};
-  const droneLogoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=(ev)=>{const v=ev.target?.result as string;ds.current.logo=v;setDroneLogo(v);};reader.readAsDataURL(f);};
-
-  useEffect(()=>{
-    if(!isDroneMode)return;
-    const handler=(e:KeyboardEvent)=>{
-      if(e.key==="Escape")droneCancelDrawing();
-      if((e.key==="Delete"||e.key==="Backspace")&&droneSelectedId&&!(e.target as Element)?.closest("input,textarea")){e.preventDefault();droneDeleteShape(droneSelectedId);}
-      if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();droneUndo();}
-      if((e.metaKey||e.ctrlKey)&&e.key==="y"){e.preventDefault();droneRedo();}
+  // ─── Remix helpers ───────────────────────────────────────────────────────
+  const addClipToRemix=(sourceUrl:string,thumbnail:string|null,label:string)=>{
+    const clipId=String(Date.now())+Math.random().toString(36).slice(2,6);
+    // Probe actual duration
+    const probe=document.createElement("video");
+    probe.preload="metadata";probe.muted=true;probe.src=sourceUrl;
+    probe.onloadedmetadata=()=>{
+      const dur=probe.duration&&isFinite(probe.duration)?probe.duration:6;
+      setRemixClips(prev=>{
+        const existing=prev.find(c=>c.id===clipId);
+        if(existing)return prev.map(c=>c.id===clipId?{...c,duration:dur,trimEnd:dur}:c);
+        return[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:dur,trimStart:0,trimEnd:dur,speed:1,order:prev.length}];
+      });
+      probe.remove();
     };
-    window.addEventListener("keydown",handler);
-    return()=>window.removeEventListener("keydown",handler);
-  },[isDroneMode,droneSelectedId,droneHistIdx]);
+    probe.onerror=()=>{
+      setRemixClips(prev=>{
+        if(prev.find(c=>c.id===clipId))return prev;
+        return[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:6,trimStart:0,trimEnd:6,speed:1,order:prev.length}];
+      });
+      probe.remove();
+    };
+    // Add immediately with placeholder duration, update when metadata loads
+    setRemixClips(prev=>[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:6,trimStart:0,trimEnd:6,speed:1,order:prev.length}]);
+  };
+  const removeClipFromRemix=(id:string)=>setRemixClips(prev=>prev.filter(c=>c.id!==id).map((c,i)=>({...c,order:i})));
+  const moveClipInRemix=(id:string,dir:-1|1)=>{
+    setRemixClips(prev=>{
+      const idx=prev.findIndex(c=>c.id===id);if(idx<0)return prev;
+      const ni=idx+dir;if(ni<0||ni>=prev.length)return prev;
+      const a=[...prev];[a[idx],a[ni]]=[a[ni],a[idx]];
+      return a.map((c,i)=>({...c,order:i}));
+    });
+  };
+  const updateRemixClip=(id:string,updates:Partial<RemixClip>)=>setRemixClips(prev=>prev.map(c=>c.id===id?{...c,...updates}:c));
+  const remixTotalDuration=remixClips.reduce((sum,c)=>sum+(c.trimEnd-c.trimStart)/c.speed,0);
+  const isClipOnTimeline=(url:string)=>remixClips.some(c=>c.sourceUrl===url);
 
-  const droneExport=async()=>{
-    if(!dronePhoto){notify("Upload a photo first");return;}
-    setDroneSelectedId(null);await new Promise(r=>setTimeout(r,50));
-    try{
-      const svgEl=droneSvgRef.current;if(!svgEl)return;
-      const canvas=document.createElement("canvas");canvas.width=dronePhotoNatural.w;canvas.height=dronePhotoNatural.h;
-      const ctx=canvas.getContext("2d")!;
-      const img=new Image();img.crossOrigin="anonymous";
-      await new Promise<void>((res,rej)=>{img.onload=()=>res();img.onerror=rej;img.src=dronePhoto!;});
-      ctx.drawImage(img,0,0,dronePhotoNatural.w,dronePhotoNatural.h);
-      const svgData=new XMLSerializer().serializeToString(svgEl);
-      const svgBlob=new Blob([svgData],{type:"image/svg+xml;charset=utf-8"});
-      const svgUrl=URL.createObjectURL(svgBlob);
-      const svgImg=new Image();
-      await new Promise<void>((res,rej)=>{svgImg.onload=()=>res();svgImg.onerror=rej;svgImg.src=svgUrl;});
-      ctx.drawImage(svgImg,0,0,dronePhotoNatural.w,dronePhotoNatural.h);URL.revokeObjectURL(svgUrl);
-      const link=document.createElement("a");link.download=`drone-edit-${Date.now()}.png`;link.href=canvas.toDataURL("image/png");link.click();
-      notify("Drone photo exported!");
-    }catch(err){console.error("Drone export failed:",err);notify("Export failed");}
+  const remixClipDurations=remixClips.map(c=>(c.trimEnd-c.trimStart)/c.speed);
+  const remixClipStarts=remixClipDurations.reduce<number[]>((acc,d,i)=>{acc.push(i===0?0:acc[i-1]+remixClipDurations[i-1]);return acc;},[]);
+
+  const idxForTime=(t:number)=>{let idx=0;for(let i=0;i<remixClips.length;i++){if(t>=remixClipStarts[i])idx=i;}return idx;};
+
+  const syncVideoToTime=(t:number,shouldPlay:boolean)=>{
+    const idx=idxForTime(t);
+    const clip=remixClips[idx];if(!clip)return;
+    const localT=(t-remixClipStarts[idx])*clip.speed+clip.trimStart;
+    remixVideosRef.current.forEach((v,id)=>{
+      if(id===clip.id){
+        v.style.opacity="1";v.style.zIndex="2";
+        v.playbackRate=clip.speed;
+        if(v.readyState>=2){v.currentTime=localT;if(shouldPlay&&v.paused)v.play().catch(()=>{});}
+        else{const h=()=>{v.currentTime=localT;if(shouldPlay)v.play().catch(()=>{});v.removeEventListener("canplay",h);};v.addEventListener("canplay",h);}
+      }else{v.style.opacity="0";v.style.zIndex="1";if(!v.paused)v.pause();}
+    });
+    if(idx!==remixIdxRef.current){remixIdxRef.current=idx;setRemixPlayingIdx(idx);}
   };
 
-  const droneSelected=droneShapes.find(s=>s.id===droneSelectedId);
-  const droneHandleR=Math.max(10,Math.min(16,dronePhotoNatural.w*0.007));
-
-  // ─── Drone Shape Renderer ─────────────────────────────────────────────────
-  const renderDroneShape=(shape:DroneShape)=>{
-    const isSel=shape.id===droneSelectedId;
-    const cs={cursor:droneTool==="select"?"move":"default"} as React.CSSProperties;
-    if(shape.type==="polygon"||shape.type==="rect-shape"){
-      const pts=shape.points!.map(p=>`${p.x},${p.y}`).join(" ");
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        <polygon points={pts} fill={hexToRgba(shape.color,shape.fillOpacity||0)} stroke={shape.color} strokeWidth={shape.width} strokeDasharray={droneDash(shape.style||"solid",shape.width||4)} strokeLinejoin="round" strokeLinecap="round"/>
-        <polygon points={pts} fill="transparent" stroke="transparent" strokeWidth={Math.max(24,(shape.width||4)+16)}/>
-        {isSel&&shape.points!.map((p,i)=>(<circle key={i} data-handle="true" cx={p.x} cy={p.y} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,i)}/>))}
-      </g>);
-    }
-    if(shape.type==="line-shape"||shape.type==="arrow"){
-      const mId=`arr-${shape.id}`;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        {shape.type==="arrow"&&<defs><marker id={mId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={shape.color}/></marker></defs>}
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={shape.color} strokeWidth={shape.width} strokeDasharray={droneDash(shape.style||"solid",shape.width||4)} strokeLinecap="round" markerEnd={shape.type==="arrow"?`url(#${mId})`:undefined}/>
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke="transparent" strokeWidth={Math.max(24,(shape.width||4)+16)}/>
-        {isSel&&<><circle data-handle="true" cx={shape.x1} cy={shape.y1} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,0)}/><circle data-handle="true" cx={shape.x2} cy={shape.y2} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,1)}/></>}
-      </g>);
-    }
-    if(shape.type==="measure"){
-      const dx=(shape.x2||0)-(shape.x1||0),dy=(shape.y2||0)-(shape.y1||0),dist=Math.sqrt(dx*dx+dy*dy);
-      const mx=((shape.x1||0)+(shape.x2||0))/2,my=((shape.y1||0)+(shape.y2||0))/2;
-      const angle=Math.atan2(dy,dx)*180/Math.PI;
-      const txt=shape.measureText||`${Math.round(dist/10)} ${shape.unit||"m"}`;
-      const fs=Math.max(22,Math.min(40,dist*0.08));
-      const tL=Math.max(14,dist*0.04),pX=-dy/dist*tL,pY=dx/dist*tL;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round"/>
-        <line x1={(shape.x1||0)+pX} y1={(shape.y1||0)+pY} x2={(shape.x1||0)-pX} y2={(shape.y1||0)-pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round"/>
-        <line x1={(shape.x2||0)+pX} y1={(shape.y2||0)+pY} x2={(shape.x2||0)-pX} y2={(shape.y2||0)-pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round"/>
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke="transparent" strokeWidth={Math.max(24,(shape.width||4)+16)}/>
-        <g transform={`translate(${mx}, ${my-8})`}><text x={0} y={0} textAnchor="middle" fill={shape.color} fontSize={fs} fontWeight="800" fontFamily="'Helvetica Neue', Arial, sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="4" paintOrder="stroke" transform={angle>90||angle<-90?`rotate(${angle+180})`:`rotate(${angle})`}>{txt}</text></g>
-        {isSel&&<><circle data-handle="true" cx={shape.x1} cy={shape.y1} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,0)}/><circle data-handle="true" cx={shape.x2} cy={shape.y2} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,1)}/></>}
-      </g>);
-    }
-    if(shape.type==="pin"){
-      const s=shape.size||200;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} transform={`translate(${(shape.x||0)-s/2}, ${(shape.y||0)-s})`} style={cs}>
-        <DronePinTeardrop color={shape.color} size={s} logo={shape.logo} text={shape.text} textColor={shape.labelColor}/>
-        {isSel&&<rect x={-6} y={-6} width={s+12} height={s+12} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={8}/>}
-      </g>);
-    }
-    if(shape.type==="label"){
-      const ff=DRONE_FONT_OPTS.find(f=>f.id===shape.font)?.family||DRONE_FONT_OPTS[0].family;
-      const fs=shape.fontSize||28;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        {shape.bg&&<rect x={(shape.x||0)-6} y={(shape.y||0)-fs-4} width={(shape.text||"").length*fs*0.62+24} height={fs+16} fill="rgba(0,0,0,0.55)" rx={6}/>}
-        <text x={(shape.x||0)+6} y={shape.y} fill={shape.color} fontSize={fs} fontWeight="700" fontFamily={ff} stroke={shape.bg?"none":"rgba(0,0,0,0.5)"} strokeWidth={shape.bg?0:4} paintOrder="stroke">{shape.text}</text>
-        {isSel&&<rect x={(shape.x||0)-10} y={(shape.y||0)-fs-10} width={(shape.text||"").length*fs*0.62+32} height={fs+28} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={6}/>}
-      </g>);
-    }
-    return null;
+  const startRemixPlayback=()=>{
+    if(remixClips.length===0)return;
+    const t=remixTimeRef.current;
+    if(t>=remixTotalDuration){remixTimeRef.current=0;setRemixPlaybackTime(0);}
+    setRemixPlaying(true);
+    syncVideoToTime(remixTimeRef.current,true);
+    if(remixTimerRef.current)cancelAnimationFrame(remixTimerRef.current);
+    let lastT=performance.now();const total=remixTotalDuration;
+    const tick=()=>{
+      const now=performance.now();const dt=(now-lastT)/1000;lastT=now;
+      if(remixDragging.current){remixTimerRef.current=requestAnimationFrame(tick);return;}
+      remixTimeRef.current+=dt;
+      const t=remixTimeRef.current;
+      if(t>=total){remixTimeRef.current=total;setRemixPlaybackTime(total);stopRemixPlayback();return;}
+      const newIdx=idxForTime(t);
+      if(newIdx!==remixIdxRef.current)syncVideoToTime(t,true);
+      setRemixPlaybackTime(t);
+      remixTimerRef.current=requestAnimationFrame(tick);
+    };
+    remixTimerRef.current=requestAnimationFrame(tick);
   };
 
-  const renderDronePreview=()=>{
-    const parts:React.ReactNode[]=[];
-    const sty=ds.current;
-    if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>0){
-      parts.push(<g key="pp"><polyline points={droneDrawingPts.map(p=>`${p.x},${p.y}`).join(" ")} fill="none" stroke={sty.color} strokeWidth={sty.width} strokeDasharray={droneDash(sty.style,sty.width)} strokeLinejoin="round" strokeLinecap="round"/>{droneDrawingPts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={6} fill={i===0?"#fff":sty.color} stroke={i===0?sty.color:"#fff"} strokeWidth={2}/>)}{droneLineCur&&<line x1={droneDrawingPts[droneDrawingPts.length-1].x} y1={droneDrawingPts[droneDrawingPts.length-1].y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.color} strokeWidth={sty.width} strokeDasharray="8 6" opacity={0.5}/>}</g>);
-    }
-    if(droneTool==="rect"&&droneRectStart&&droneRectCur){
-      const x=Math.min(droneRectStart.x,droneRectCur.x),y=Math.min(droneRectStart.y,droneRectCur.y);
-      parts.push(<rect key="rp" x={x} y={y} width={Math.abs(droneRectCur.x-droneRectStart.x)} height={Math.abs(droneRectCur.y-droneRectStart.y)} fill={hexToRgba(sty.color,sty.fill)} stroke={sty.color} strokeWidth={sty.width} strokeDasharray={droneDash(sty.style,sty.width)}/>);
-    }
-    if((droneTool==="line"||droneTool==="arrow"||droneTool==="measure")&&droneLineStart&&droneLineCur){
-      parts.push(<line key="lp" x1={droneLineStart.x} y1={droneLineStart.y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.color} strokeWidth={sty.width} strokeDasharray="8 6" opacity={0.6}/>);
-      if(droneTool==="measure"){const dx=droneLineCur.x-droneLineStart.x,dy=droneLineCur.y-droneLineStart.y,dist=Math.sqrt(dx*dx+dy*dy);parts.push(<text key="mp" x={(droneLineStart.x+droneLineCur.x)/2} y={(droneLineStart.y+droneLineCur.y)/2-12} textAnchor="middle" fill={sty.color} fontSize={24} fontWeight="800" fontFamily="'Helvetica Neue', sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="3" paintOrder="stroke">{Math.round(dist/10)} {sty.unit}</text>);}
-    }
-    return parts;
+  const stopRemixPlayback=()=>{
+    setRemixPlaying(false);
+    if(remixTimerRef.current){cancelAnimationFrame(remixTimerRef.current);remixTimerRef.current=null;}
+    remixVideosRef.current.forEach(v=>{if(!v.paused)v.pause();});
   };
 
-  // ─── Export Helpers ──────────────────────────────────────────────────────────
-  const getPreviewDims=useCallback(()=>{
-    let w:number,h:number;
-    if(isDroneMode){w=dronePhotoNatural.w;h=dronePhotoNatural.h;}
-    else if(activeTab==="video-remix"){w=currentRemixSize.width;h=currentRemixSize.height;}
-    else if(activeTab==="yard-sign"){w=currentYardSize.width;h=currentYardSize.height;}
-    else if(activeTab==="property-pdf"){w=2550;h=3300;}
-    else if(activeTab==="branding-card"){w=currentBrandOr.width;h=currentBrandOr.height;}
-    else if(activeTab==="listing-flyer"){w=2550;h=3300;}
-    else{w=currentSize.width;h=currentSize.height;}
-    const maxW=580,maxH=560;const s=Math.min(maxW/w,maxH/h,1)*((isDroneMode?droneZoom:zoom)/100);
-    return{scale:s,pW:w*s,pH:h*s,rawW:w,rawH:h};
-  },[activeTab,currentSize,currentYardSize,currentBrandOr,currentRemixSize,zoom,droneZoom,dronePhotoNatural,isDroneMode]);
-  const{scale,pW,pH,rawW,rawH}=getPreviewDims();
-
-  const prepareForExport=(el:HTMLElement):{restore:()=>void}=>{
-    const parent=el.parentElement as HTMLElement;
-    const st=el.style.transform,so=parent?.style.overflow,sw=parent?.style.width,sh=parent?.style.height;
-    el.style.transform="none";
-    if(parent){parent.style.overflow="visible";parent.style.width=`${rawW}px`;parent.style.height=`${rawH}px`;}
-    return{restore:()=>{el.style.transform=st;if(parent){parent.style.overflow=so||"";parent.style.width=sw||"";parent.style.height=sh||"";}}};
+  const seekRemixTo=(t:number)=>{
+    const clamped=Math.max(0,Math.min(t,remixTotalDuration));
+    remixTimeRef.current=clamped;setRemixPlaybackTime(clamped);
+    syncVideoToTime(clamped,remixPlaying);
   };
 
-  const exportImage=async()=>{
-    if(!previewRef.current)return;
-    const html2canvas=(await import("html2canvas-pro")).default;
-    const el=previewRef.current.querySelector("[data-export-target]") as HTMLElement;
-    if(!el)return;
-    const{restore}=prepareForExport(el);
-    const canvas=await html2canvas(el,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:rawW,height:rawH});
+  const toggleRemixPlayback=()=>{if(remixPlaying)stopRemixPlayback();else startRemixPlayback();};
+
+  useEffect(()=>{return()=>{if(remixTimerRef.current)cancelAnimationFrame(remixTimerRef.current);};},[]);
+  // When clips change, reset playback
+  useEffect(()=>{remixTimeRef.current=0;setRemixPlaybackTime(0);remixIdxRef.current=0;setRemixPlayingIdx(0);if(remixPlaying)stopRemixPlayback();},[remixClips.length]);
+
+  // ─── Export helpers ───────────────────────────────────────────────────────
+  const prepareForExport = (el: HTMLElement): { restore: () => void } => {
+    const parent = el.parentElement as HTMLElement;
+    const st = el.style.transform, so = parent?.style.overflow, sw = parent?.style.width, sh = parent?.style.height;
+    el.style.transform = "none";
+    if (parent) { parent.style.overflow = "visible"; parent.style.width = `${rawW}px`; parent.style.height = `${rawH}px`; }
+    return { restore: () => { el.style.transform = st; if (parent) { parent.style.overflow = so || ""; parent.style.width = sw || ""; parent.style.height = sh || ""; } } };
+  };
+
+  const exportImage = async () => {
+    if (!previewRef.current) return;
+    const html2canvas = (await import("html2canvas-pro")).default;
+    const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+    if (!el) return;
+    const { restore } = prepareForExport(el);
+    const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
     restore();
-    const link=document.createElement("a");link.download=`listing-${selectedTemplate}-${Date.now()}.png`;link.href=canvas.toDataURL("image/png");link.click();
+    const link = document.createElement("a");
+    link.download = `listing-${selectedTemplate}-${Date.now()}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
     notify("Image exported!");
   };
 
-  const exportPdf=async()=>{
-    if(!previewRef.current)return;
-    const html2canvas=(await import("html2canvas-pro")).default;
-    const{jsPDF}=await import("jspdf");
-    const pdf=new jsPDF({orientation:"portrait",unit:"in",format:"letter"});
-    const el=previewRef.current.querySelector("[data-export-target]") as HTMLElement;
-    if(!el)return;
-    const{restore}=prepareForExport(el);
-    const canvas=await html2canvas(el,{scale:1,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:rawW,height:rawH});
+  const exportPdf = async () => {
+    if (!previewRef.current) return;
+    const html2canvas = (await import("html2canvas-pro")).default;
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
+    const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+    if (!el) return;
+    const { restore } = prepareForExport(el);
+    const canvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: rawW, height: rawH });
     restore();
-    pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",0,0,8.5,11);
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 8.5, 11);
     pdf.save(`listing-flyer-${Date.now()}.pdf`);
     notify("PDF exported!");
   };
 
-  const handleExport=async()=>{
-    if(isVideoMode&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
-      const ok=window.confirm("Video encoding works best on desktop. Mobile may run out of memory.\n\nProceed?");
-      if(!ok)return;
+  const getMusicSource = (): { type: "url"; url: string } | { type: "file"; file: File } | null => {
+    if (selectedMusicTrack) return { type: "url", url: selectedMusicTrack.url };
+    return null;
+  };
+
+  const exportVideo = async () => {
+    if (!selectedVideo?.url || !previewRef.current) { notify("Please select a video first."); return; }
+    setExporting(true); setExportProgress(0);
+    try {
+      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+      const { toBlobURL, fetchFile } = await import("@ffmpeg/util");
+      const ffmpeg = new FFmpeg();
+      ffmpeg.on("progress", ({ progress: p }) => setExportProgress(Math.min(Math.round(p * 100), 99)));
+      setExportProgress(2);
+      const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      await ffmpeg.load({ coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"), wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm") });
+      setExportProgress(5);
+      const vr=await fetch(selectedVideo.url);const videoData = new Uint8Array(await vr.arrayBuffer());
+      await ffmpeg.writeFile("input.mp4", videoData);
+      const musicSource = getMusicSource();
+      let hasMusic = false;
+      if (musicSource) {
+        setExportProgress(8);
+        if (musicSource.type === "url") { const mr2=await fetch(musicSource.url);await ffmpeg.writeFile("music.mp3", new Uint8Array(await mr2.arrayBuffer())); hasMusic = true; }
+        else { await ffmpeg.writeFile("music.mp3", new Uint8Array(await musicSource.file.arrayBuffer())); hasMusic = true; }
+      }
+      setExportProgress(10);
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const el = previewRef.current.querySelector("[data-export-target]") as HTMLElement;
+      if (!el) throw new Error("Export target not found");
+      const videoEls = el.querySelectorAll("video");
+      videoEls.forEach(v => { (v as HTMLElement).style.opacity = "0"; });
+      const placeholders = el.querySelectorAll("[data-video-area]");
+      placeholders.forEach(p => { (p as HTMLElement).style.opacity = "0"; });
+      const { restore } = prepareForExport(el);
+      const overlayCanvas = await html2canvas(el, { scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, width: rawW, height: rawH });
+      restore();
+      videoEls.forEach(v => { (v as HTMLElement).style.opacity = "1"; });
+      placeholders.forEach(p => { (p as HTMLElement).style.opacity = "1"; });
+      const overlayBlob = await new Promise<Blob>(resolve => overlayCanvas.toBlob(b => resolve(b!), "image/png"));
+      await ffmpeg.writeFile("overlay.png", new Uint8Array(await overlayBlob.arrayBuffer()));
+      setExportProgress(15);
+      const outW = currentSize.width, outH = currentSize.height;
+      const photoPercent = selectedTemplate === "open-house" ? 100 : selectedSize === "postcard" ? 55 : 58;
+      const photoH = Math.round(outH * photoPercent / 100);
+      if (hasMusic) {
+        await ffmpeg.exec(["-i","input.mp4","-i","overlay.png","-i","music.mp3","-t","119","-filter_complex",`[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0[vout];[0:a]volume=0.3[orig];[2:a]volume=0.85,atrim=0:119,apad[mus];[orig][mus]amix=inputs=2:duration=shortest[aout]`,"-map","[vout]","-map","[aout]","-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-y","output.mp4"]);
+      } else {
+        await ffmpeg.exec(["-i","input.mp4","-i","overlay.png","-t","119","-filter_complex",`[0:v]scale=${outW}:${photoH}:force_original_aspect_ratio=increase,crop=${outW}:${photoH},pad=${outW}:${outH}:0:0:black[bg];[bg][1:v]overlay=0:0`,"-c:v","libx264","-preset","fast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart","-y","output.mp4"]);
+      }
+      setExportProgress(95);
+      const outputData = await ffmpeg.readFile("output.mp4");
+      const outputBlob = new Blob([outputData], { type: "video/mp4" });
+      const downloadUrl = URL.createObjectURL(outputBlob);
+      const link = document.createElement("a"); link.download = `listing-video-${Date.now()}.mp4`; link.href = downloadUrl; link.click();
+      URL.revokeObjectURL(downloadUrl);
+      setExportProgress(100); notify("Video exported!");
+      setTimeout(() => { setExportProgress(0); setExporting(false); }, 1500); return;
+    } catch (err: any) { console.error("Video export error:", err); notify("Video export failed: " + (err.message || "Unknown error")); }
+    setExportProgress(0); setExporting(false);
+  };
+
+  const exportRemix = async () => {
+    if(remixClips.length===0){notify("Add clips to the timeline first.");return;}
+    setExporting(true);setExportProgress(0);setExportStatus("Loading video encoder...");
+    try{
+      console.log("[remix] Starting export...");
+      const{FFmpeg}=await import("@ffmpeg/ffmpeg");
+      const{toBlobURL}=await import("@ffmpeg/util");
+      const ffmpeg=new FFmpeg();
+      ffmpeg.on("log",({message})=>{console.log("[ffmpeg]",message);});
+      ffmpeg.on("progress",({progress:p})=>{if(p>0)setExportProgress(Math.min(40+Math.round(p*50),95));});
+      setExportProgress(2);setExportStatus("Downloading FFmpeg engine...");
+      const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      const coreJS=await toBlobURL(`${coreBase}/ffmpeg-core.js`,"text/javascript");
+      setExportProgress(3);
+      const coreWASM=await toBlobURL(`${coreBase}/ffmpeg-core.wasm`,"application/wasm");
+      setExportProgress(5);setExportStatus("Initializing FFmpeg...");
+      await ffmpeg.load({coreURL:coreJS,wasmURL:coreWASM});
+      console.log("[remix] FFmpeg loaded");
+      setExportProgress(8);
+      const outW=currentRemixSize.width,outH=currentRemixSize.height;
+
+      // Download clips via proxy to bypass CORS
+      for(let i=0;i<remixClips.length;i++){
+        setExportStatus(`Downloading clip ${i+1} of ${remixClips.length}...`);
+        setExportProgress(8+Math.round((i/remixClips.length)*20));
+        const clipUrl=remixClips[i].sourceUrl;
+        console.log(`[remix] Downloading clip ${i+1}: ${clipUrl.slice(0,80)}...`);
+        const proxyUrl=`/api/proxy-media?url=${encodeURIComponent(clipUrl)}`;
+        const resp=await fetch(proxyUrl);
+        if(!resp.ok)throw new Error(`Failed to download clip ${i+1}: HTTP ${resp.status}`);
+        const ab=await resp.arrayBuffer();
+        console.log(`[remix] Clip ${i+1}: ${ab.byteLength} bytes`);
+        if(ab.byteLength<1000)throw new Error(`Clip ${i+1} is only ${ab.byteLength} bytes`);
+        await ffmpeg.writeFile(`clip_${i}.mp4`,new Uint8Array(ab));
+      }
+
+      // Download music via proxy
+      setExportProgress(28);
+      const musicSource=getMusicSource();
+      let hasMusic=false;
+      if(musicSource){
+        setExportStatus("Loading music...");
+        console.log("[remix] Downloading music...");
+        if(musicSource.type==="url"){
+          const mResp=await fetch(`/api/proxy-media?url=${encodeURIComponent(musicSource.url)}`);
+          if(mResp.ok){const mab=await mResp.arrayBuffer();await ffmpeg.writeFile("music.mp3",new Uint8Array(mab));hasMusic=true;console.log(`[remix] Music: ${mab.byteLength} bytes`);}
+        }else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
+      }
+
+      // Use saved branding card from profile/exports — skip html2canvas entirely
+      let hasBranding=false;
+      let brandPngReady=false;
+      if(remixBranding&&isLensSubscriber&&savedBrandingCardUrl){
+        setExportStatus("Loading branding card...");
+        console.log("[remix] Loading saved branding card:",savedBrandingCardUrl.slice(0,80));
+        try{
+          const brandResp=await fetch(`/api/proxy-media?url=${encodeURIComponent(savedBrandingCardUrl)}`);
+          if(brandResp.ok){
+            const brandAb=await brandResp.arrayBuffer();
+            if(brandAb.byteLength>1000){
+              await ffmpeg.writeFile("brand.png",new Uint8Array(brandAb));
+              hasBranding=true;brandPngReady=true;
+              console.log(`[remix] Branding card loaded: ${brandAb.byteLength} bytes`);
+            }else{console.error("[remix] Branding card too small:",brandAb.byteLength);}
+          }
+        }catch(e){console.error("[remix] Branding card download error:",e);}
+      }else if(remixBranding&&isLensSubscriber){
+        console.log("[remix] No saved branding card URL found — skipping branding");
+      }
+
+      // Build FFmpeg command
+      setExportProgress(32);setExportStatus("Building video...");
+      console.log("[remix] Building filter_complex...");
+      const filterParts:string[]=[];
+      const concatInputs:string[]=[];
+      let inputIdx=0;
+      const inputArgs:string[]=[];
+
+      // Branding intro: brand card on first frame at 30% opacity
+      if(hasBranding){
+        inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
+        inputArgs.push("-i","clip_0.mp4");
+        const introCardW=Math.round(outW*0.7);const introCardH=Math.round(outH*0.7);
+        const introX=Math.round((outW-introCardW)/2);const introY=Math.round((outH-introCardH)/2);
+        filterParts.push(
+          `color=black:s=${outW}x${outH}:d=5:r=24,format=yuv420p[intro_black]`,
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuva420p,colorchannelmixer=aa=0.3[intro_frame]`,
+          `[intro_black][intro_frame]overlay=0:0,format=yuv420p[bg_intro]`,
+          `[${inputIdx}:v]scale=${introCardW}:${introCardH},format=yuv420p[card_intro]`,
+          `[bg_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro]`
+        );
+        concatInputs.push("[vintro]");inputIdx+=2;
+      }
+
+      // All clips — trim + scale + crop
+      for(let i=0;i<remixClips.length;i++){
+        inputArgs.push("-i",`clip_${i}.mp4`);
+        const c=remixClips[i];
+        const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
+        filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
+        concatInputs.push(`[v${i}]`);inputIdx++;
+      }
+
+      // Branding outro: brand card on last frame at 30% opacity
+      if(hasBranding){
+        const lastClipIdx=remixClips.length-1;
+        inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
+        inputArgs.push("-i",`clip_${lastClipIdx}.mp4`);
+        const lastClip=remixClips[lastClipIdx];
+        const outroTrimStart=Math.max(0,lastClip.trimEnd-0.042);
+        const outroCardW=Math.round(outW*0.85);const outroCardH=Math.round(outH*0.85);
+        const outroX=Math.round((outW-outroCardW)/2);const outroY=Math.round((outH-outroCardH)/2);
+        filterParts.push(
+          `color=black:s=${outW}x${outH}:d=5:r=24,format=yuv420p[outro_black]`,
+          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuva420p,colorchannelmixer=aa=0.3[outro_frame]`,
+          `[outro_black][outro_frame]overlay=0:0,format=yuv420p[bg_outro]`,
+          `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},format=yuv420p[card_outro]`,
+          `[bg_outro][card_outro]overlay=${outroX}:${outroY},format=yuv420p[voutro]`
+        );
+        concatInputs.push("[voutro]");inputIdx+=2;
+      }
+
+      // Concat
+      const nSegments=concatInputs.length;
+      filterParts.push(`${concatInputs.join("")}concat=n=${nSegments}:v=1:a=0[vout]`);
+      const totalDur=remixTotalDuration+(hasBranding?10:0);
+      let filterStr=filterParts.join(";");
+
+      const cmdArgs=[...inputArgs];
+      if(hasMusic){
+        cmdArgs.push("-i","music.mp3");
+        filterStr+=`;[${inputIdx}:a]volume=0.85,atrim=0:${Math.ceil(totalDur)},apad,afade=t=out:st=${Math.max(0,totalDur-3)}:d=3[aout]`;
+        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]","-map","[aout]");
+      }else{
+        cmdArgs.push("-filter_complex",filterStr,"-map","[vout]");
+      }
+      cmdArgs.push("-c:v","libx264","-preset","ultrafast","-crf","28","-pix_fmt","yuv420p","-r","24","-vsync","cfr","-c:a","aac","-b:a","128k","-movflags","+faststart","-t",String(Math.ceil(totalDur)),"-y","output.mp4");
+
+      console.log("[remix] Executing FFmpeg...");
+      console.log("[remix] filter:",filterStr);
+      setExportProgress(35);setExportStatus("Encoding video... this may take a minute");
+      await ffmpeg.exec(cmdArgs);
+      console.log("[remix] FFmpeg done");
+
+      setExportProgress(90);setExportStatus("Reading output...");
+      const outputData=await ffmpeg.readFile("output.mp4");
+      const outputBlob=new Blob([outputData],{type:"video/mp4"});
+      console.log(`[remix] Output: ${outputBlob.size} bytes`);
+
+      // Upload to Cloudinary
+      setExportProgress(92);setExportStatus("Uploading to cloud...");
+      let cloudinaryUrl:string|null=null;
+      try{
+        const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-exports"})});
+        const sigData=await sigResp.json();
+        if(sigData.success){
+          const{signature,timestamp,cloudName,apiKey,folder:folderPath}=sigData.data;
+          const fd=new FormData();fd.append("file",outputBlob,`remix-${Date.now()}.mp4`);fd.append("api_key",apiKey);fd.append("timestamp",timestamp.toString());fd.append("signature",signature);fd.append("folder",folderPath);fd.append("resource_type","video");
+          const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,{method:"POST",body:fd});
+          const upResult=await upResp.json();
+          cloudinaryUrl=upResult.secure_url||null;
+          console.log("[remix] Uploaded:",cloudinaryUrl);
+        }
+      }catch(e){console.error("[remix] Upload error:",e);}
+
+      // Save to DB
+      if(cloudinaryUrl){
+        setExportStatus("Saving...");
+        try{
+          const supabase=(await import("@/lib/supabase/client")).createClient();
+          const{data:{user}}=await supabase.auth.getUser();
+          if(user)await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});
+          console.log("[remix] Saved to DB");
+        }catch(e){console.error("[remix] DB error:",e);}
+      }
+
+      // Download locally
+      setExportStatus("Downloading...");
+      const downloadUrl=URL.createObjectURL(outputBlob);
+      const link=document.createElement("a");link.download=`remix-${remixSize}-${Date.now()}.mp4`;link.href=downloadUrl;link.click();
+      URL.revokeObjectURL(downloadUrl);
+      setExportProgress(100);setExportStatus("Done!");
+      notify(cloudinaryUrl?"Remix exported & saved!":"Remix exported!");
+      setTimeout(()=>{setExportProgress(0);setExporting(false);setExportStatus("");},2000);return;
+    }catch(err:any){
+      console.error("[remix] Export error:",err);
+      notify("Export failed: "+(err.message||"Unknown error"));
+      setExportStatus("Failed: "+(err.message||"Unknown error"));
+      setTimeout(()=>{setExportStatus("");},5000);
+    }
+    setExportProgress(0);setExporting(false);
+  };
+
+  const handleExport = async () => {
+    // Warn mobile users about video export limitations
+    if((isRemixMode||isVideoMode)&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
+      const proceed=window.confirm("Video encoding works best on desktop browsers. Mobile devices may run out of memory on longer videos.\n\nProceed anyway?");
+      if(!proceed)return;
     }
     setExporting(true);setExportStatus("");
-    try{
-      if(isDroneMode){await droneExport();}
-      else if(isVideoMode){await exportVideo();}
-      else{await exportImage();}
-    }catch(err:any){console.error("Export error:",err);notify(err?.message||"Export failed.");}
-    setExporting(false);setExportProgress(0);setExportStatus("");
+    try {
+      if (isRemixMode) { await exportRemix(); return; }
+      else if (isVideoMode) { await exportVideo(); return; }
+      else { await exportImage(); }
+    } catch (err: any) { console.error("Export error:", err); notify(err?.message || "Export failed. Try again."); }
+    setExporting(false); setExportProgress(0); setExportStatus("");
   };
 
-  const handleExportPdf=async()=>{
+  const handleExportPdf = async () => {
     setExporting(true);
-    try{await exportPdf();}catch(err:any){console.error("PDF export error:",err);notify(err?.message||"PDF export failed.");}
+    try { await exportPdf(); } catch (err: any) { console.error("PDF export error:", err); notify(err?.message || "PDF export failed. Try again."); }
     setExporting(false);
-  };
-
-  const handleSelectProperty=(id:string)=>{
-    if(id==="__new__"){
-      setSelectedPropertyId(null);setAddress("");setAddressLine2("");setBeds("");setBaths("");setSqft("");setPrice("");
-      setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");
-      setBrandAddress("");setBrandCityState("");setBrandPrice("");setBrandFeatures("");
-      setFlyerAddress("");setFlyerCityState("");setFlyerBeds("");setFlyerBaths("");setFlyerSqft("");setFlyerPrice("");setFlyerDescription("");setFlyerAmenities([]);setFlyerPhotos([]);setFlyerListingUrl("");
-      return;
-    }
-    const prop=userProperties.find((p:any)=>p.id===id);if(!prop)return;
-    setSelectedPropertyId(prop.id);
-    const addr=prop.address||"";
-    const cs=[prop.city,prop.state].filter(Boolean).join(", ");
-    // Listing Graphics
-    setAddress(addr);setAddressLine2(cs);
-    if(prop.bedrooms){const b=prop.bedrooms.toString();setBeds(b);setFlyerBeds(b);setPdfBeds(b);}
-    if(prop.bathrooms){const b=prop.bathrooms.toString();setBaths(b);setFlyerBaths(b);setPdfBaths(b);}
-    if(prop.sqft){const s=prop.sqft.toString();setSqft(s);setFlyerSqft(s);setPdfSqft(s);}
-    if(prop.price){const p=prop.price.toString();setPrice(p);setFlyerPrice(p);setPdfPrice(p);setBrandPrice(p);}
-    // Listing Flyer
-    setFlyerAddress(addr);setFlyerCityState(cs);
-    if(prop.amenities?.length)setFlyerAmenities(prop.amenities);
-    if(prop.website_published&&prop.website_slug)setFlyerListingUrl(`https://${prop.website_slug}.p2v.homes`);
-    // Property PDF
-    setPdfAddress(addr);setPdfCityStateZip(cs);
-    if(prop.special_features?.length>0){const features=prop.special_features.join("\n");setPdfFeatures(features);setBrandFeatures(features);}
-    // Branding
-    setBrandAddress(addr);setBrandCityState(cs);
-    // Load photos & description from orders
-    (async()=>{
-      try{
-        const supabase=(await import("@/lib/supabase/client")).createClient();
-        const{data:{user:u}}=await supabase.auth.getUser();if(!u)return;
-        // Photos from orders
-        let photos:string[]=[];
-        const curated=prop.website_curated?.photos||[];
-        if(curated.length)photos=curated.slice(0,7);
-        if(photos.length<5){
-          const{data:orders}=await supabase.from("orders").select("photos").eq("user_id",u.id).ilike("property_address",`%${(addr).substring(0,15)}%`);
-          for(const o of(orders||[])){const urls=(o.photos||[]).map((p:any)=>p.secure_url||p.url).filter(Boolean);photos=[...photos,...urls];if(photos.length>=7)break;}
-          photos=[...new Set(photos)].slice(0,7);
-        }
-        if(photos.length){setFlyerPhotos(photos);if(photos.length<=25)setPdfPhotos(photos);}
-        // Description from lens_descriptions
-        const propAddr=addr.toLowerCase().replace(/[^a-z0-9]/g,"");
-        const{data:descs}=await supabase.from("lens_descriptions").select("description,property_data").eq("user_id",u.id).order("created_at",{ascending:false}).limit(10);
-        const match=(descs||[]).find((d:any)=>{const pd=d.property_data;if(!pd)return false;const dAddr=(pd.address||pd.property_address||"").toLowerCase().replace(/[^a-z0-9]/g,"");return dAddr&&(dAddr.includes(propAddr)||propAddr.includes(dAddr));});
-        if(match?.description){setFlyerDescription(match.description);setPdfDescription(match.description);}
-      }catch(err){console.error("Property fill error:",err);}
-    })();
   };
 
   const pdfFLines=pdfFeatures?pdfFeatures.split("\n").filter(Boolean).length:0;
@@ -876,13 +1005,37 @@ export default function DesignStudioV2(){
   const pdfPhotosAfterP1=Math.max(0,pdfPhotos.length-3);
   const pdfTotalPages=pdfHasOverflow?2+Math.ceil(Math.max(0,pdfPhotosAfterP1-pdfPage2Slots)/6):1+Math.ceil(pdfPhotosAfterP1/6);
 
+  const getPreviewDims=useCallback(()=>{
+    let w:number,h:number;
+    if(activeTab==="video-remix"){w=currentRemixSize.width;h=currentRemixSize.height;}
+    else if(activeTab==="yard-sign"){w=currentYardSize.width;h=currentYardSize.height;}
+    else if(activeTab==="property-pdf"){w=2550;h=3300;}
+    else if(activeTab==="branding-card"){w=currentBrandOr.width;h=currentBrandOr.height;}
+    else if(activeTab==="listing-flyer"){w=2550;h=3300;}
+    else{w=currentSize.width;h=currentSize.height;}
+    const maxW=580,maxH=560;const s=Math.min(maxW/w,maxH/h,1)*(zoom/100);
+    return{scale:s,pW:w*s,pH:h*s,rawW:w,rawH:h};
+  },[activeTab,currentSize,currentYardSize,currentBrandOr,currentRemixSize,zoom]);
+  const{scale,pW,pH,rawW,rawH}=getPreviewDims();
+
+  const videoPreviewEl=(mediaMode==="video"&&selectedVideo?.url)?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;
+
   const renderPreview=()=>{
-    if(activeTab==="drone-mark"){
-      if(!dronePhoto)return<div style={{width:1920,height:1080,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(239,68,68,0.08))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🛩</div><p style={{fontSize:20,fontWeight:800,color:"rgba(255,255,255,0.7)"}}>Drone Mark</p><p style={{fontSize:13,color:"rgba(255,255,255,0.35)",maxWidth:380,lineHeight:1.7,textAlign:"center" as const}}>Upload a drone photo, then draw lot lines, drop branded pins, and add dimension labels.</p><button onClick={()=>droneFileRef.current?.click()} style={{padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,#f59e0b,#ef4444)",color:"#fff",border:"none",cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"var(--sf)"}}>📷 Upload Photo</button><input ref={droneFileRef} type="file" accept="image/*" style={{display:"none"}} onChange={dronePhotoUpload}/></div>;
-      return<div style={{width:dronePhotoNatural.w,height:dronePhotoNatural.h,position:"relative"}}><img src={dronePhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} crossOrigin="anonymous" draggable={false}/><svg ref={droneSvgRef} viewBox={`0 0 ${dronePhotoNatural.w} ${dronePhotoNatural.h}`} style={{position:"absolute",inset:0,width:"100%",height:"100%",cursor:droneTool==="select"?"default":"crosshair"}} onClick={droneCanvasClick} onMouseDown={droneMouseDown} onMouseMove={droneMouseMove} onMouseUp={droneMouseUp} onDoubleClick={droneDblClick}>{droneShowGrid&&<g opacity={0.08}>{Array.from({length:Math.floor(dronePhotoNatural.w/100)},(_,i)=><line key={`v${i}`} x1={(i+1)*100} y1={0} x2={(i+1)*100} y2={dronePhotoNatural.h} stroke="#fff" strokeWidth={1}/>)}{Array.from({length:Math.floor(dronePhotoNatural.h/100)},(_,i)=><line key={`h${i}`} x1={0} y1={(i+1)*100} x2={dronePhotoNatural.w} y2={(i+1)*100} stroke="#fff" strokeWidth={1}/>)}</g>}{droneShapes.map(renderDroneShape)}{renderDronePreview()}</svg></div>;
+    if(activeTab==="video-remix"){
+      if(hasVideoOrders===false)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:20,fontFamily:"var(--sf)",padding:40,textAlign:"center" as const}}><div style={{width:100,height:100,borderRadius:24,background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.15))",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={40} color="rgba(99,102,241,0.5)"/></div><p style={{fontSize:22,color:"rgba(255,255,255,0.7)",fontWeight:700,margin:0}}>No Videos Yet</p><p style={{fontSize:14,color:"rgba(255,255,255,0.35)",margin:0,maxWidth:400,lineHeight:1.6}}>Order a listing video to unlock Video Remix. Buy the clips once, remix them forever.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,var(--sa),#a855f7)",color:"#fff",fontSize:13,fontWeight:700,textDecoration:"none"}}>Order a Video</a></div>;
+      if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,border:"2px dashed rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={48} color="rgba(255,255,255,0.12)"/></div><p style={{fontSize:18,color:"rgba(255,255,255,0.3)",fontWeight:600,margin:0}}>Add clips from the left panel to start remixing</p></div>;
+      const currentClip=remixClips[remixPlayingIdx]||remixClips[0];
+      return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",position:"relative",overflow:"hidden"}}>
+        {remixClips.map((clip,i)=><video key={clip.id} ref={el=>{if(el){remixVideosRef.current.set(clip.id,el);}else remixVideosRef.current.delete(clip.id);}} src={clip.sourceUrl} muted playsInline preload="auto" onLoadedData={e=>{const v=e.target as HTMLVideoElement;if(v.currentTime<0.01)v.currentTime=clip.trimStart;}} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:i===remixPlayingIdx?1:0,zIndex:i===remixPlayingIdx?2:1,transition:"opacity 0.12s ease"}}/>)}
+        {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",zIndex:5}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
+        {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
+        <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
+        <div style={{position:"absolute",top:16,left:16,padding:"5px 12px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:12,color:"#fff",fontWeight:600,fontFamily:"var(--sf)",maxWidth:"60%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",zIndex:4}}>{currentClip.label}</div>
+        {remixBranding&&isLensSubscriber&&<div data-branding-card style={{display:"none",position:"absolute",top:0,left:0}}><BrandingCardTemplate orientation={BRAND_ORIENTATIONS[0]} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div>}
+      </div>;
     }
     if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
-    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
+    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"?videoPreviewEl:undefined;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
     if(activeTab==="yard-sign"){const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};if(yardDesign==="sidebar")return<YardSignSidebar{...ys}website={yardWebsite}sidebarColor={yardSidebarColor}mainBgColor={yardMainBgColor}/>;if(yardDesign==="top-heavy")return<YardSignTopHeavy{...ys}topColor={yardTopColor}bottomColor={yardBottomColor}/>;return<YardSignSplitBar{...ys}officeName={yardOfficeName}officePhone={yardOfficePhone}topColor={yardTopColor}bottomColor={yardBottomColor}/>;}
     if(activeTab==="property-pdf")return<PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={fontFamily}/>;
     if(activeTab==="branding-card")return<BrandingCardTemplate orientation={currentBrandOr} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} website={brandWebsite} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={brandFontFamily}/>;
@@ -891,9 +1044,11 @@ export default function DesignStudioV2(){
 
   const css=`
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
-    :root{--sb:#0c0c10;--ss:#151519;--ss2:#1c1c22;--sbr:rgba(255,255,255,0.06);--sa:#6366f1;--sag:rgba(99,102,241,0.15);--st:#e4e4ea;--std:rgba(255,255,255,0.4);--stm:rgba(255,255,255,0.2);--suc:#10b981;--sc:#09090d;--sf:'DM Sans',-apple-system,sans-serif;--si:rgba(255,255,255,0.03);--sih:rgba(255,255,255,0.05);--sdash:rgba(255,255,255,0.10);--schk:#fff;}
-    *{margin:0;padding:0;box-sizing:border-box;}.sr{font-family:var(--sf);background:var(--sb);color:var(--st);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;}
-    .st{height:54px;background:var(--ss);border-bottom:1px solid var(--sbr);display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;z-index:20;}
+    :root{--sb:#0c0c10;--ss:#151519;--ss2:#1c1c22;--sbr:rgba(255,255,255,0.06);--sa:#a855f7;--sag:rgba(168,85,247,0.15);--st:#e4e4ea;--std:rgba(255,255,255,0.4);--stm:rgba(255,255,255,0.2);--suc:#10b981;--sc:#09090d;--sf:'DM Sans',-apple-system,sans-serif;--si:rgba(255,255,255,0.03);--sih:rgba(255,255,255,0.05);--sdash:rgba(255,255,255,0.10);--schk:#fff;}
+    .sr.light{--sb:#f0f1f5;--ss:#ffffff;--ss2:#f7f7f9;--sbr:rgba(0,0,0,0.08);--sa:#a855f7;--sag:rgba(168,85,247,0.10);--st:#1a1a2e;--std:rgba(0,0,0,0.45);--stm:rgba(0,0,0,0.25);--suc:#10b981;--sc:#e8e9ee;--si:rgba(0,0,0,0.03);--sih:rgba(0,0,0,0.05);--sdash:rgba(0,0,0,0.15);--schk:#ccc;}
+    *{margin:0;padding:0;box-sizing:border-box;}.sr{font-family:var(--sf);background:var(--sb);color:var(--st);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;transition:background 0.3s,color 0.3s;}
+    .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
+    .st{height:54px;background:var(--ss);border-bottom:1px solid var(--sbr);display:flex;align-items:center;padding:0 14px;gap:6px;flex-shrink:0;z-index:20;transition:background 0.3s;}
     .slg{display:flex;align-items:center;gap:9px;padding-right:18px;border-right:1px solid var(--sbr);margin-right:6px;}
     .slm{width:30px;height:30px;background:linear-gradient(135deg,var(--sa),#a855f7);border-radius:8px;display:flex;align-items:center;justify-content:center;}
     .stb{display:flex;gap:1px;background:var(--si);border-radius:9px;padding:3px;}
@@ -901,60 +1056,82 @@ export default function DesignStudioV2(){
     .stbi:hover{color:var(--st);background:var(--sih);}.stbi.ac{color:#fff;background:var(--sa);box-shadow:0 2px 8px rgba(99,102,241,0.3);}
     .ssp{flex:1;}.sac{display:flex;align-items:center;gap:6px;}
     .bi{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:var(--sf);}.bi:hover{background:var(--sih);color:var(--st);}
-    .bx{padding:7px 22px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--sa),#7c3aed);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all 0.2s;box-shadow:0 2px 12px rgba(99,102,241,0.3);font-family:var(--sf);}.bx:hover{transform:translateY(-1px);}.bx:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
-    .sb{flex:1;display:flex;overflow:hidden;}.slr{width:68px;background:var(--ss);border-right:1px solid var(--sbr);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px;flex-shrink:0;}
+    .bx{padding:7px 22px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--sa),#7c3aed);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all 0.2s;box-shadow:0 2px 12px rgba(99,102,241,0.3);font-family:var(--sf);}.bx:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(99,102,241,0.4);}.bx:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+    .sb{height:85vh;display:flex;overflow:hidden;}.slr{width:68px;background:var(--ss);border-right:1px solid var(--sbr);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px;flex-shrink:0;transition:background 0.3s;}
     .rb{width:54px;padding:9px 0;border-radius:9px;border:none;background:none;color:var(--std);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all 0.15s;font-family:var(--sf);}.rb span{font-size:9px;font-weight:600;}.rb:hover{background:var(--sih);color:var(--st);}.rb.ac{background:var(--sag);color:var(--sa);}
-    .slp{width:310px;background:var(--ss);border-right:1px solid var(--sbr);overflow-y:auto;flex-shrink:0;}.slp::-webkit-scrollbar{width:4px;}.slp::-webkit-scrollbar-thumb{background:rgba(128,128,128,0.3);border-radius:4px;}
-    .ph{padding:16px 20px 12px;font-size:14px;font-weight:800;letter-spacing:-0.02em;border-bottom:1px solid var(--sbr);display:flex;align-items:center;gap:7px;position:sticky;top:0;background:var(--ss);z-index:5;}
-    .sc{flex:1;background:var(--sc);display:flex;flex-direction:column;position:relative;overflow:hidden;}
+    .slp{width:310px;background:var(--ss);border-right:1px solid var(--sbr);overflow-y:auto;flex-shrink:0;transition:background 0.3s;}.slp::-webkit-scrollbar{width:4px;}.slp::-webkit-scrollbar-thumb{background:rgba(128,128,128,0.3);border-radius:4px;}
+    .ph{padding:16px 20px 12px;font-size:14px;font-weight:800;letter-spacing:-0.02em;border-bottom:1px solid var(--sbr);display:flex;align-items:center;gap:7px;position:sticky;top:0;background:var(--ss);z-index:5;transition:background 0.3s;}
+    .sc{flex:1;background:var(--sc);display:flex;flex-direction:column;position:relative;overflow:hidden;transition:background 0.3s;}
     .scb{position:absolute;inset:0;opacity:0.025;background-image:linear-gradient(45deg,var(--schk) 25%,transparent 25%),linear-gradient(-45deg,var(--schk) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--schk) 75%),linear-gradient(-45deg,transparent 75%,var(--schk) 75%);background-size:28px 28px;background-position:0 0,0 14px,14px -14px,-14px 0px;}
+    .sr.light .scb{opacity:0.4;}
     .scc{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
-    .spf{border-radius:6px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 20px 60px rgba(0,0,0,0.5);}
-    .sct{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--ss);border-radius:10px;border:1px solid var(--sbr);box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:10;}
-    .zd{font-size:11px;font-weight:700;color:var(--std);min-width:40px;text-align:center;}.td{width:1px;height:18px;background:var(--sbr);margin:0 3px;}
+    .spf{border-radius:6px;overflow:hidden;box-shadow:0 0 0 1px rgba(128,128,128,0.1),0 20px 60px rgba(0,0,0,0.15);transition:all 0.3s;}
+    .sr:not(.light) .spf{box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 20px 60px rgba(0,0,0,0.5);}
+    .sct{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--ss);border-radius:10px;border:1px solid var(--sbr);box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:10;transition:background 0.3s;}
+    .sr:not(.light) .sct{box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+    .zd{font-size:11px;font-weight:700;color:var(--std);min-width:40px;text-align:center;user-select:none;}.td{width:1px;height:18px;background:var(--sbr);margin:0 3px;}
     .sp{padding:4px 10px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);font-size:10px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:var(--sf);}.sp:hover{background:var(--sih);color:var(--st);}.sp.ac{background:var(--sa);color:#fff;border-color:var(--sa);}
+    .srp{width:280px;background:var(--ss);border-left:1px solid var(--sbr);overflow-y:auto;flex-shrink:0;transition:background 0.3s;}.srp::-webkit-scrollbar{width:4px;}.srp::-webkit-scrollbar-thumb{background:rgba(128,128,128,0.3);border-radius:4px;}
     .fl{font-size:10px;font-weight:700;color:var(--std);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;display:block;}
     .fi{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;transition:all 0.15s;}.fi:focus{border-color:var(--sa);box-shadow:0 0 0 3px var(--sag);}.fi::placeholder{color:var(--stm);}
     .fg{margin-bottom:12px;}.fr{display:flex;gap:7px;}
     .fo{padding:9px 12px;border-radius:9px;border:1px solid var(--sbr);background:none;cursor:pointer;transition:all 0.15s;text-align:left;width:100%;margin-bottom:5px;font-family:var(--sf);}.fo:hover{background:var(--sih);}.fo.ac{border-color:var(--sa);background:var(--sag);}
     .tg{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
-    .tc{border-radius:10px;border:2px solid var(--sbr);background:var(--si);cursor:pointer;transition:all 0.2s;overflow:hidden;padding:12px;text-align:center;font-family:var(--sf);}.tc:hover{border-color:rgba(128,128,128,0.2);}.tc.ac{border-color:var(--sa);background:var(--sag);}
+    .tc{border-radius:10px;border:2px solid var(--sbr);background:var(--si);cursor:pointer;transition:all 0.2s;overflow:hidden;padding:12px;text-align:center;font-family:var(--sf);}.tc:hover{border-color:rgba(128,128,128,0.2);background:var(--sih);}.tc.ac{border-color:var(--sa);background:var(--sag);}
     .tiw{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;}
     .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:10px 22px;background:var(--suc);color:#fff;font-size:12px;font-weight:700;border-radius:10px;box-shadow:0 8px 32px rgba(16,185,129,0.3);z-index:100;animation:ti 0.3s ease;font-family:var(--sf);}
     @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
     .animate-spin{animation:spin 1s linear infinite;}@keyframes spin{to{transform:rotate(360deg);}}
+    .rb:not(.ac){animation:sidebarNudge 7s ease-in-out infinite;}.rb:nth-child(2):not(.ac){animation-delay:1s;}.rb:nth-child(3):not(.ac){animation-delay:2s;}.rb:nth-child(4):not(.ac){animation-delay:3s;}
+    @keyframes sidebarNudge{0%,90%,100%{transform:scale(1);opacity:1;}93%{transform:scale(1.08);opacity:1;}96%{transform:scale(0.97);opacity:0.8;}}
     .group:hover .ghov{opacity:1!important;}
-    .ta{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;resize:none;}.ta:focus{border-color:var(--sa);}
+    .ta{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;resize:none;transition:all 0.15s;}.ta:focus{border-color:var(--sa);box-shadow:0 0 0 3px var(--sag);}
     .ps{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;appearance:none;cursor:pointer;}.ps:focus{border-color:var(--sa);}
+    .thm-toggle{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:var(--std);}.thm-toggle:hover{background:var(--sih);color:var(--st);}
     .am-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--sbr);background:var(--si);cursor:pointer;font-size:11px;font-weight:600;color:var(--std);transition:all 0.15s;font-family:var(--sf);}.am-chip:hover{background:var(--sih);color:var(--st);}.am-chip.ac{border-color:var(--sa);background:var(--sag);color:var(--sa);}
-    .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
-    .drone-swatch{width:26px;height:26px;border-radius:6px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);transition:all 0.15s;}
-    .drone-swatch.active{border:2px solid #fff;box-shadow:0 0 0 2px var(--sa);}
-    .drone-pill{flex:1;padding:6px 0;border-radius:6px;border:1px solid var(--sbr);background:none;color:var(--std);font-size:10px;font-weight:600;cursor:pointer;font-family:var(--sf);text-align:center;}
-    .drone-pill:hover{background:var(--sih);color:var(--st);}
-    .drone-pill.active{border-color:var(--sa);background:var(--sag);color:var(--sa);}
-    .drone-layer{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:7px;background:rgba(255,255,255,0.02);border:1px solid var(--sbr);margin-bottom:4px;cursor:pointer;transition:all .15s;}
-    .drone-layer:hover{background:rgba(255,255,255,0.04);}
-    .drone-layer.active{border-color:var(--sa);background:var(--sag);}
-    #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*='lensy'],iframe[src*='lensy']{display:none!important;visibility:hidden!important;}
+    @media(max-width:1100px){.slp{width:260px;}.srp{width:240px;}}
+    .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--ss);border-top:1px solid var(--sbr);z-index:25;padding:0 8px;align-items:center;justify-content:space-around;gap:2px;}
+    .mob-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--std);cursor:pointer;padding:6px 0;border-radius:8px;font-family:var(--sf);transition:all 0.15s;}
+    .mob-nav button span{font-size:9px;font-weight:600;}.mob-nav button.ac{color:var(--sa);background:var(--sag);}
+    @media(max-width:850px){
+      .slr{display:none;}.srp{display:none;}
+      .slp{position:fixed;left:0;right:0;bottom:56px;width:100%;max-height:60vh;z-index:30;border-right:none;border-top:1px solid var(--sbr);border-radius:16px 16px 0 0;overflow-y:auto;background:var(--ss);box-shadow:0 -8px 32px rgba(0,0,0,0.3);visibility:hidden;opacity:0;transform:translateY(20px);transition:all 0.25s ease;pointer-events:none;}
+      .slp.mob-open{visibility:visible;opacity:1;transform:translateY(0);pointer-events:auto;}
+      .st{padding:0 8px;gap:4px;height:48px;overflow-x:auto;overflow-y:hidden;}
+      .stbi{padding:5px 10px;font-size:11px;}.slg{display:none;}
+      .sac .bi{width:30px;height:30px;}.bx{padding:6px 14px;font-size:11px;}
+      .mob-nav{display:flex;}.sct{bottom:64px;}.sc{padding-bottom:56px;}
+      .toast{bottom:72px;}
+      .st{display:none!important;}
+    }
+    /* Hide Lensy chat widget on Video Remix */
+    #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*="lensy"],iframe[src*="lensy"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
   `;
-
 
   return(
     <><style>{css}</style>
-    <div className="sr">
+    <div className={`sr ${theme==="light"?"light":""}`}>
+      {/* TOP BAR */}
       <div className="st">
-        <a href="/dashboard" className="back-btn" title="Back"><ChevronLeft size={14}/></a>
-        <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:"1px solid var(--sbr)",marginRight:6}}><div style={{width:30,height:30,background:"linear-gradient(135deg,var(--sa),#a855f7)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
+        <a href="/dashboard" className="back-btn" title="Back to Dashboard"><ChevronLeft size={14}/></a>
+        <div className="slg"><div className="slm" style={{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}}><Film size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Video Remix</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
-        <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}><Home size={14} color="var(--sa)"/><select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}><option value="">Select property...</option>{userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}<option value="__new__">{"\uff0b"} Enter manually</option></select></div>
+        <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
+          <Home size={14} color="var(--sa)"/>
+          <select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}>
+            <option value="">Select property...</option>
+            {userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}
+            <option value="__new__">{"\uff0b"} Enter manually</option>
+          </select>
+        </div>
         <div className="ssp"/>
         <div className="sac">
-          <button className="bi" title="Undo" onClick={isDroneMode?droneUndo:undefined}><Undo2 size={15}/></button>
-          <button className="bi" title="Redo" onClick={isDroneMode?droneRedo:undefined}><Redo2 size={15}/></button>
+          <button className="bi" title="Undo"><Undo2 size={15}/></button>
+          <button className="bi" title="Redo"><Redo2 size={15}/></button>
           <div className="td"/>
-          <button className="bx" onClick={handleExport} disabled={exporting} style={isDroneMode?{background:"linear-gradient(135deg,#f59e0b,#ef4444)"}:activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
-            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:isDroneMode?<><Download size={14}/>Export PNG</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+          <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
+          <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isRemixMode?{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
+            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isRemixMode?<><Film size={14}/>Export Remix</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
           </button>
         </div>
       </div>
@@ -962,128 +1139,185 @@ export default function DesignStudioV2(){
       <div className="sb">
         <div className="slr">{currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}</div>
 
-        <div className="slp">
+        <div className={`slp ${mobilePanel?"mob-open":""}`}>
 
-          {/* ── DRONE MARK PANELS ── */}
-          {isDroneMode&&leftPanel==="tools"&&<>
-            <div className="ph"><Crosshair size={15} color="var(--sa)"/>Drone Tools</div>
+          {/* ── LISTING FLYER PANELS ── */}
+          {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<>
+            <div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({flyerPhotos.length}/7)</div>
             <div style={{padding:14}}>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,marginBottom:14}}>
-                {DRONE_TOOLS.map(t=><button key={t.id} onClick={()=>{setDroneTool(t.id);droneCancelDrawing();if(t.id==="pin"||t.id==="label")}} style={{padding:"8px 0",borderRadius:8,border:droneTool===t.id?"1px solid var(--sa)":"1px solid var(--sbr)",background:droneTool===t.id?"var(--sag)":"none",color:droneTool===t.id?"var(--sa)":"var(--std)",cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,fontFamily:"var(--sf)",fontSize:9,fontWeight:600}}><t.icon size={16}/>{t.label}</button>)}
+              <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2-3 stack right. Photos 4-7 fill bottom row.</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                {flyerPhotos.map((url,i)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i===0?"Hero":i<3?`R${i}`:`B${i-2}`}</div><button className="ghov" onClick={()=>setFlyerPhotos(p=>p.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}
+                {flyerPhotos.length<7&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).slice(0,7-flyerPhotos.length).forEach(f=>setFlyerPhotos(p=>[...p,URL.createObjectURL(f)]));e.target.value="";}}/></label>}
               </div>
-              {droneIsDrawing&&droneTool==="polygon"&&<div style={{padding:"8px 10px",borderRadius:8,background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.15)",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><Pentagon size={12} color="var(--sa)"/><span style={{fontSize:10,color:"var(--sa)",fontWeight:600}}>{droneDrawingPts.length} pts \u00b7 Click to add \u00b7 Double-click to finish</span></div>}
-              <div style={{marginTop:8}}><UploadZone label={dronePhoto?"Replace Photo":"Upload Drone Photo"} imageUrl={dronePhoto} onUpload={f=>{const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{setDronePhotoNatural({w:img.naturalWidth,h:img.naturalHeight});setDronePhoto(url);setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);};img.src=url;}} onClear={()=>setDronePhoto(null)} uploading={false}/></div>
-              <div style={{marginTop:10,display:"flex",gap:6}}>
-                <button onClick={droneUndo} disabled={droneHistIdx<=0} className="sp" style={{flex:1,opacity:droneHistIdx>0?1:0.4}}>\u21a9 Undo</button>
-                <button onClick={droneRedo} disabled={droneHistIdx>=droneHistory.length-1} className="sp" style={{flex:1,opacity:droneHistIdx<droneHistory.length-1?1:0.4}}>\u21aa Redo</button>
-              </div>
-              <Section title="Canvas" icon={Settings} defaultOpen={false}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><span style={{fontSize:12,fontWeight:700}}>Show Grid</span><button onClick={()=>setDroneShowGrid(!droneShowGrid)} style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:droneShowGrid?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:droneShowGrid?21:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",marginTop:8}}><span style={{fontSize:12,fontWeight:700}}>Snap to Grid</span><button onClick={()=>setDroneSnapGrid(!droneSnapGrid)} style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:droneSnapGrid?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:droneSnapGrid?21:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div>
-              </Section>
+              <div style={{marginTop:16}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div>
             </div>
           </>}
 
-
-          {isDroneMode&&leftPanel==="styles"&&<>
-            <div className="ph"><Palette size={15} color="var(--sa)"/>Drone Styles</div>
-            <Section title="Line Color" icon={Paintbrush}>
-              <ColorPicker value={droneLineColor} onChange={v=>setDroneLineColor(v)}/>
-              <div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={droneLineColor} onSelect={v=>setDroneLineColor(v)} showLabels/></div>
-              <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={droneLineColor} onSelect={v=>setDroneLineColor(v)}/></div>
+          {activeTab==="listing-flyer"&&leftPanel==="text"&&<>
+            <div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div>
+            <Section title="Address & Price" icon={Home}>
+              <div className="fg"><label className="fl">Street Address</label><input className="fi" value={flyerAddress} onChange={e=>setFlyerAddress(e.target.value)} placeholder="123 Main Street"/></div>
+              <div className="fg"><label className="fl">City, State</label><input className="fi" value={flyerCityState} onChange={e=>setFlyerCityState(e.target.value)} placeholder="Austin, TX"/></div>
+              <div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={flyerPrice} onChange={e=>setFlyerPrice(e.target.value)} placeholder="425,000"/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={flyerBeds} onChange={e=>setFlyerBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={flyerBaths} onChange={e=>setFlyerBaths(e.target.value)}/></div></div>
+              <div className="fg"><label className="fl">Sq Ft</label><input className="fi" value={flyerSqft} onChange={e=>setFlyerSqft(e.target.value)}/></div>
             </Section>
-            <Section title="Line Width" icon={Minus}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <input type="range" min={1} max={14} value={droneLineWidth} onChange={e=>setDroneLineWidth(Number(e.target.value))} style={{flex:1,accentColor:"var(--sa)"}}/>
-                <span style={{fontSize:12,fontWeight:700,color:"var(--st)",minWidth:32,textAlign:"right" as const}}>{droneLineWidth}px</span>
-              </div>
-            </Section>
-            <Section title="Fill Opacity" icon={Layers}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <input type="range" min={0} max={80} value={Math.round(droneFillOpacity*100)} onChange={e=>setDroneFillOpacity(Number(e.target.value)/100)} style={{flex:1,accentColor:"var(--sa)"}}/>
-                <span style={{fontSize:12,fontWeight:700,color:"var(--st)",minWidth:32,textAlign:"right" as const}}>{Math.round(droneFillOpacity*100)}%</span>
-              </div>
-              <p style={{fontSize:10,color:"var(--std)",marginTop:6}}>Applies to polygon and rectangle fills</p>
-            </Section>
-            <Section title="Pin Color" icon={MapPin} defaultOpen={false}>
-              <ColorPicker value={dronePinColor} onChange={v=>setDronePinColor(v)}/>
-              <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={dronePinColor} onSelect={v=>setDronePinColor(v)}/></div>
-            </Section>
+            <Section title="Description" icon={FileText} defaultOpen={false}><p style={{fontSize:10,color:"var(--std)",marginBottom:8,lineHeight:1.5}}>Shown on flyer (truncated to ~320 chars)</p><textarea className="ta" rows={5} value={flyerDescription} onChange={e=>setFlyerDescription(e.target.value)} placeholder="Stunning 3-bed home with modern finishes..."/></Section>
+            <Section title="Amenities" icon={Sparkles}><p style={{fontSize:10,color:"var(--std)",marginBottom:8,lineHeight:1.5}}>Select or add custom amenity pills</p><div style={{display:"flex",flexWrap:"wrap" as const,gap:6,marginBottom:10}}>{AMENITY_SUGGESTIONS.map(a=><button key={a} className={`am-chip ${flyerAmenities.includes(a)?"ac":""}`} onClick={()=>setFlyerAmenities(prev=>prev.includes(a)?prev.filter(x=>x!==a):[...prev,a])}>{flyerAmenities.includes(a)&&<Check size={10}/>}{a}</button>)}</div><input className="fi" placeholder="Add custom + Enter" onKeyDown={e=>{if(e.key==="Enter"){const v=(e.target as HTMLInputElement).value.trim();if(v&&!flyerAmenities.includes(v))setFlyerAmenities(p=>[...p,v]);(e.target as HTMLInputElement).value="";}}}/></Section>
+            <Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></Section>
           </>}
 
-          {isDroneMode&&leftPanel==="layers"&&<>
-            <div className="ph"><Layers size={15} color="var(--sa)"/>Layers ({droneShapes.length})</div>
-            <div style={{padding:"10px 14px"}}>
-              {droneShapes.length===0?<p style={{fontSize:11,color:"var(--std)",textAlign:"center" as const,padding:"20px 0",lineHeight:1.7}}>No annotations yet. Use the tools to start drawing.</p>
-              :[...droneShapes].reverse().map(shape=>{
-                const icons:Record<string,string>={polygon:"\u2b21","rect-shape":"\u25ad","line-shape":"\u2571",arrow:"\u27a4",measure:"\ud83d\udcd0",pin:"\ud83d\udccd",label:"T"};
-                const names:Record<string,string>={polygon:"Lot Lines","rect-shape":"Rectangle","line-shape":"Line",arrow:"Arrow",measure:"Measure",pin:"Pin",label:"Label"};
-                return(<div key={shape.id} className={`drone-layer ${droneSelectedId===shape.id?"active":""}`} onClick={()=>{setDroneSelectedId(shape.id);setDroneTool("select");}}>
-                  <span style={{fontSize:14,flexShrink:0}}>{icons[shape.type]||"\u2022"}</span>
-                  <span style={{flex:1,fontSize:11,fontWeight:600,color:"var(--st)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{names[shape.type]||shape.type}{shape.text?` \u00b7 ${shape.text.slice(0,15)}`:""}{shape.measureText?` \u00b7 ${shape.measureText}`:""}</span>
-                  <div style={{display:"flex",gap:3}}>
-                    <button onClick={e=>{e.stopPropagation();droneDuplicateShape(shape.id);}} style={{width:22,height:22,borderRadius:5,border:"none",background:"none",color:"var(--std)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}} title="Duplicate">\u29c9</button>
-                    <button onClick={e=>{e.stopPropagation();droneDeleteShape(shape.id);}} style={{width:22,height:22,borderRadius:5,border:"none",background:"none",color:"var(--std)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}} title="Delete">\u2715</button>
-                  </div>
-                </div>);
-              })}
-            </div>
-            <div style={{padding:"12px 14px",borderTop:"1px solid var(--sbr)"}}>
-              <p style={{fontSize:10,fontWeight:700,color:"var(--std)",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:8}}>Shortcuts</p>
-              <div style={{display:"flex",flexDirection:"column" as const,gap:4}}>
-                {[["Esc","Cancel drawing"],["Del","Delete selected"],["\u2318Z","Undo"],["\u2318Y","Redo"],["Dbl-click","Finish polygon"],["Drag handle","Reshape"]].map(([k,d],i)=>(
-                  <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}><span style={{fontSize:9,fontWeight:700,color:"var(--sa)",background:"var(--sag)",padding:"2px 6px",borderRadius:4,fontFamily:"monospace"}}>{k}</span><span style={{fontSize:10,color:"var(--std)"}}>{d}</span></div>
-                ))}
-              </div>
-              {droneShapes.length>0&&<button onClick={()=>{setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);setDroneSelectedId(null);}} className="sp" style={{width:"100%",marginTop:12,color:"#ef4444",borderColor:"rgba(239,68,68,0.3)"}}>\ud83d\uddd1 Clear All</button>}
+          {activeTab==="listing-flyer"&&leftPanel==="urls"&&<>
+            <div className="ph"><Globe size={15} color="var(--sa)"/>URLs & Links</div>
+            <div style={{padding:14}}>
+              <p style={{fontSize:11,color:"var(--std)",marginBottom:14,lineHeight:1.6}}>Each URL you fill in appears at the bottom of the flyer. Leave blank to hide.</p>
+              <Section title="Listing URL" icon={Globe}><div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udd17"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>View full listing</span></div><input className="fi" value={flyerListingUrl} onChange={e=>setFlyerListingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes"/></Section>
+              <Section title="Video Tour URL" icon={Video} defaultOpen={false}><div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83c\udfac"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>Watch the video tour</span></div><input className="fi" value={flyerVideoUrl} onChange={e=>setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..."/></Section>
+              <Section title="Virtual Staging URL" icon={ImageIcon} defaultOpen={false}><div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",marginBottom:8}}><span style={{fontSize:14}}>{"\ud83d\udecb\ufe0f"}</span><span style={{fontSize:10,color:"var(--std)",fontWeight:600,flex:1}}>See the staged rooms</span></div><input className="fi" value={flyerStagingUrl} onChange={e=>setFlyerStagingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes#staging"/></Section>
             </div>
           </>}
 
-          {/* ── ORIGINAL PANELS (non-drone tabs) ── */}
-          {!isDroneMode&&<>
-            {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({flyerPhotos.length}/7)</div><div style={{padding:14}}><p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2-3 stack right. Photos 4-7 fill bottom row.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{flyerPhotos.map((url:string,i:number)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i===0?"Hero":i<3?`R${i}`:`B${i-2}`}</div><button className="ghov" onClick={()=>setFlyerPhotos((p:string[])=>p.filter((_:string,idx:number)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}{flyerPhotos.length<7&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).slice(0,7-flyerPhotos.length).forEach(f=>setFlyerPhotos((p:string[])=>[...p,URL.createObjectURL(f)]));e.target.value="";}}/></label>}</div><div style={{marginTop:16}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></div></>}
-            {activeTab==="listing-flyer"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div><Section title="Address & Price" icon={Home}><div className="fg"><label className="fl">Street Address</label><input className="fi" value={flyerAddress} onChange={e=>setFlyerAddress(e.target.value)} placeholder="123 Main Street"/></div><div className="fg"><label className="fl">City, State</label><input className="fi" value={flyerCityState} onChange={e=>setFlyerCityState(e.target.value)} placeholder="Austin, TX"/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={flyerPrice} onChange={e=>setFlyerPrice(e.target.value)} placeholder="425,000"/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={flyerBeds} onChange={e=>setFlyerBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={flyerBaths} onChange={e=>setFlyerBaths(e.target.value)}/></div></div><div className="fg"><label className="fl">Sq Ft</label><input className="fi" value={flyerSqft} onChange={e=>setFlyerSqft(e.target.value)}/></div></Section><Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={5} value={flyerDescription} onChange={e=>setFlyerDescription(e.target.value)} placeholder="Property description..."/></Section><Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></Section></>}
-            {activeTab==="listing-flyer"&&leftPanel==="urls"&&<><div className="ph"><Globe size={15} color="var(--sa)"/>URLs & Links</div><div style={{padding:14}}><Section title="Listing URL" icon={Globe}><input className="fi" value={flyerListingUrl} onChange={e=>setFlyerListingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes"/></Section><Section title="Video Tour URL" icon={Video} defaultOpen={false}><input className="fi" value={flyerVideoUrl} onChange={e=>setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..."/></Section><Section title="Virtual Staging URL" icon={ImageIcon} defaultOpen={false}><input className="fi" value={flyerStagingUrl} onChange={e=>setFlyerStagingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes#staging"/></Section></div></>}
-            {activeTab==="listing-flyer"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Flyer Styles</div><Section title="Branding" icon={Eye}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Unbranded Mode</p></div><button onClick={()=>setFlyerUnbranded(!flyerUnbranded)} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:flyerUnbranded?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:flyerUnbranded?23:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div></Section><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Accent Color" icon={Paintbrush}><ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/><div style={{marginTop:10}}><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div></Section></>}
-            {activeTab==="templates"&&leftPanel==="templates"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Templates</div><div style={{padding:14}}><div className="tg">{TEMPLATES.map(t=><button key={t.id} className={`tc ${selectedTemplate===t.id?"ac":""}`} onClick={()=>setSelectedTemplate(t.id)}><div className="tiw" style={{background:`${t.color}20`}}><t.icon size={18} color={t.color}/></div><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{t.label}</div></button>)}</div></div></>}
-            {activeTab==="templates"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Media</div><div style={{padding:14}}>
-              {/* Image / Video toggle */}
-              <div style={{display:"flex",gap:3,marginBottom:14}}><button className={`sp ${mediaMode==="image"?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>{setMediaMode("image");setSelectedVideo(null);}}><ImageIcon size={12} style={{display:"inline",verticalAlign:"middle",marginRight:4}}/>Photo</button><button className={`sp ${mediaMode==="video"?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>{setMediaMode("video");loadUserVideos();}}><Film size={12} style={{display:"inline",verticalAlign:"middle",marginRight:4}}/>Video</button></div>
-              {mediaMode==="image"?<>
-                <UploadZone label="Listing Photo" imageUrl={listingPhoto} onUpload={f=>setListingPhoto(URL.createObjectURL(f))} onClear={()=>setListingPhoto(null)} uploading={false}/>
-                <div style={{marginTop:12}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url:string,i:number)=><div key={i} onClick={()=>setListingPhoto(url)} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>)}</div></div>
-              </>:<>
-                {/* Video library */}
-                {selectedVideo&&<div style={{marginBottom:12,borderRadius:10,overflow:"hidden",border:"2px solid var(--sa)",position:"relative"}}><video src={selectedVideo.url} style={{width:"100%",aspectRatio:"16/9",objectFit:"cover"}} muted playsInline/><div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 10px",background:"linear-gradient(transparent,rgba(0,0,0,0.7))"}}><p style={{fontSize:10,color:"#fff",fontWeight:600,margin:0}}>{selectedVideo.address}</p></div><button onClick={()=>setSelectedVideo(null)} style={{position:"absolute",top:6,right:6,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,0.7)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><X size={10} color="#fff"/></button></div>}
-                {loadingVideos?<div style={{display:"flex",justifyContent:"center",padding:"20px 0"}}><Loader2 size={18} color="var(--std)" className="animate-spin"/></div>
-                :userVideos.length===0?<div style={{padding:"20px 0",textAlign:"center" as const}}><Film size={28} color="var(--std)"/><p style={{fontSize:11,color:"var(--std)",margin:0,marginTop:8,lineHeight:1.6}}>No listing videos found. Order one from the dashboard to use video backgrounds.</p></div>
-                :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>{userVideos.map((v:any,i:number)=><button key={i} onClick={()=>setSelectedVideo(v)} style={{position:"relative",borderRadius:8,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",padding:0,fontFamily:"var(--sf)"}}><div style={{aspectRatio:"16/9",backgroundColor:"rgba(255,255,255,0.04)",overflow:"hidden"}}>{v.thumbnail?<img src={v.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={20} color="rgba(255,255,255,0.15)"/></div>}</div><div style={{padding:"4px 6px"}}><p style={{fontSize:9,fontWeight:600,color:"var(--st)",margin:0,textAlign:"left"}}>{v.address?.slice(0,25)}</p><p style={{fontSize:8,color:"var(--std)",margin:0,textAlign:"left"}}>{v.date}</p></div>{selectedVideo?.orderId===v.orderId&&<div style={{position:"absolute",top:4,right:4,width:16,height:16,borderRadius:"50%",backgroundColor:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={8} color="#fff"/></div>}</button>)}</div>}
+          {activeTab==="listing-flyer"&&leftPanel==="styles"&&<>
+            <div className="ph"><Palette size={15} color="var(--sa)"/>Flyer Styles</div>
+            <Section title="Branding" icon={Eye}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Unbranded Mode</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>Hide agent bar &amp; branding</p></div><button onClick={()=>setFlyerUnbranded(!flyerUnbranded)} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:flyerUnbranded?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:flyerUnbranded?23:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div></Section>
+            <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
+            <Section title="Accent Color" icon={Paintbrush}><ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/><div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div><div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor}/></div></Section>
+          </>}
+
+          {/* ── TEMPLATES PANELS ── */}
+          {activeTab==="templates"&&leftPanel==="templates"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Templates</div><div style={{padding:14}}><div className="tg">{TEMPLATES.map(t=><button key={t.id} className={`tc ${selectedTemplate===t.id?"ac":""}`} onClick={()=>setSelectedTemplate(t.id)}><div className="tiw" style={{background:`${t.color}20`}}><t.icon size={18} color={t.color}/></div><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{t.label}</div></button>)}</div></div></>}
+
+          {activeTab==="templates"&&leftPanel==="uploads"&&<>
+            <div className="ph"><Upload size={15} color="var(--sa)"/>Media</div>
+            <div style={{padding:14}}>
+              <div style={{display:"flex",gap:3,padding:3,background:"rgba(255,255,255,0.04)",borderRadius:10,marginBottom:14}}>
+                <button onClick={()=>{setMediaMode("image");setSelectedVideo(null);}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="image"?"var(--sa)":"none",color:mediaMode==="image"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="image"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><ImageIcon size={14}/>Image</button>
+                <button onClick={()=>{setMediaMode("video");setListingPhoto(null);loadUserVideos();}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"8px 0",borderRadius:8,border:"none",background:mediaMode==="video"?"var(--sa)":"none",color:mediaMode==="video"?"#fff":"var(--std)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)",boxShadow:mediaMode==="video"?"0 2px 8px rgba(99,102,241,0.3)":"none"}}><Play size={14}/>Video</button>
+              </div>
+              {mediaMode==="image"&&<><UploadZone label="Listing Photo" imageUrl={listingPhoto} onUpload={f=>setListingPhoto(URL.createObjectURL(f))} onClear={()=>setListingPhoto(null)} uploading={false}/><div style={{marginTop:12}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url,i)=><div key={i} onClick={()=>setListingPhoto(url)} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>)}</div></div></>}
+              {mediaMode==="video"&&<>
+                <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Film size={13} color="#f59e0b"/><span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Video exports limited to 119s</span></div>
+                <span className="fl">Your Videos</span>
+                {loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>:userVideos.length===0?<div style={{padding:"20px 0",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)"}}><p style={{fontSize:11,color:"var(--std)",margin:0}}>No completed videos found.</p></div>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6,maxHeight:220,overflowY:"auto" as const}}>{userVideos.map((v:any)=>(<button key={v.orderId} onClick={()=>{setSelectedVideo(v);if(v.thumbnail)setListingPhoto(v.thumbnail);}} style={{position:"relative",borderRadius:10,overflow:"hidden",border:selectedVideo?.orderId===v.orderId?"2px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",textAlign:"left" as const,transition:"all 0.2s",padding:0,boxShadow:selectedVideo?.orderId===v.orderId?"0 0 0 2px var(--sag)":"none",fontFamily:"var(--sf)"}}>{v.thumbnail?<img src={v.thumbnail} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover" as const,display:"block"}}/>:<div style={{width:"100%",aspectRatio:"16/9",background:"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="rgba(255,255,255,0.2)"/></div>}<div style={{padding:"6px 8px"}}><p style={{fontSize:10,fontWeight:700,color:"var(--st)",margin:0}}>Order {v.orderId?.slice(0,8)}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{v.date}{v.hasUnbranded?" \u00b7 Unbranded":""}</p></div>{selectedVideo?.orderId===v.orderId&&<div style={{position:"absolute",top:6,right:6,width:20,height:20,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={12} color="#fff"/></div>}</button>))}</div>}
+                <div style={{marginTop:16,borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:14}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><span className="fl" style={{margin:0}}>{"\ud83c\udfb5"} Music for Export</span>{selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}</div>
+                  {selectedMusicTrack&&(<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}><Music size={12} color="var(--sa)"/><span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span><button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span></button></div>)}
+                  <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>{[{key:"",label:"All"},{key:"upbeat_modern",label:"Upbeat"},{key:"chill_tropical",label:"Chill"},{key:"energetic_pop",label:"Energy"},{key:"elegant_classical",label:"Elegant"},{key:"warm_acoustic",label:"Acoustic"},{key:"bold_cinematic",label:"Cinematic"},{key:"smooth_jazz",label:"Jazz"},{key:"ambient",label:"Ambient"}].map(v=>(<button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)",transition:"all 0.15s"}}>{v.label}</button>))}</div>
+                  {loadingMusic?(<div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>):(<div style={{maxHeight:180,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>{musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}><button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button></p>}{musicTracks.map(t=>(<div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}><button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span></button><span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span><span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>{selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}</div>))}</div>)}
+                </div>
               </>}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div>
-            </div></>}
-            {activeTab==="templates"&&leftPanel==="music"&&<><div className="ph"><Music size={15} color="var(--sa)"/>Music</div><div style={{padding:14}}>
-              {!isVideoMode&&<div style={{padding:"8px 10px",borderRadius:8,background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.15)",marginBottom:12,display:"flex",alignItems:"center",gap:6}}><Film size={12} color="#f59e0b"/><span style={{fontSize:10,color:"#f59e0b",fontWeight:600}}>Select a video in Media tab first to add music</span></div>}
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><span className="fl" style={{margin:0}}>🎵 Background Music</span>{selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}</div>
-              {selectedMusicTrack&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}><Music size={12} color="var(--sa)"/><span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span><button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span></button></div>}
-              <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>{VIBES.map(v=><button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}>{v.label}</button>)}</div>
-              {loadingMusic?<div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>:<div style={{maxHeight:400,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>{musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}><button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button></p>}{musicTracks.map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}><button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span></button><span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span><span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>{selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}</div>)}</div>}
-            </div></>}
-            {activeTab==="templates"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Details</div><Section title="Property" icon={Home}><div className="fg"><label className="fl">Street Address</label><input className="fi" value={address} onChange={e=>setAddress(e.target.value)} placeholder="8043 Villas la Colina"/></div><div className="fg"><label className="fl">City, State</label><input className="fi" value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} placeholder="Ocotal, Guanacaste"/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={beds} onChange={e=>setBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={baths} onChange={e=>setBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={sqft} onChange={e=>setSqft(e.target.value)}/></div></div><div className="fg"><label className="fl">Price</label><input className="fi" value={price} onChange={e=>setPrice(e.target.value)}/></div>{selectedTemplate==="open-house"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Date</label><input className="fi" value={date} onChange={e=>setDate(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Time</label><input className="fi" value={time} onChange={e=>setTime(e.target.value)}/></div></div>}</Section><Section title="Agent" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></div></Section></>}
-            {activeTab==="templates"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/><div style={{marginTop:10}}><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section><Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section></>}
-            {activeTab==="yard-sign"&&leftPanel==="design"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Yard Sign Design</div><div style={{padding:14}}><div className="tg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>{YARD_DESIGNS.map(d=><button key={d.id} className={`tc ${yardDesign===d.id?"ac":""}`} onClick={()=>setYardDesign(d.id)}><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{d.label}</div><div style={{fontSize:9,color:"var(--std)",marginTop:2}}>{d.desc}</div></button>)}</div><div style={{marginTop:14}}><span className="fl">Sign Size</span><div className="fr" style={{marginTop:4}}>{YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}</div></div></div></>}
-            {activeTab==="yard-sign"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></>}
-            {activeTab==="yard-sign"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Sign Details</div><Section title="Header & Agent" icon={User}><div className="fg"><label className="fl">Header Text</label><input className="fi" value={yardHeaderText} onChange={e=>setYardHeaderText(e.target.value)}/></div><div className="fg"><label className="fl">Agent Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></Section></>}
-            {activeTab==="yard-sign"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Colors</div>{yardDesign==="split-bar"&&<><Section title="Top Bar" icon={Paintbrush}><ColorPicker value={yardTopColor} onChange={setYardTopColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardTopColor} onSelect={setYardTopColor} showLabels/></div></Section><Section title="Bottom Bar" icon={Paintbrush}><ColorPicker value={yardBottomColor} onChange={setYardBottomColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardBottomColor} onSelect={setYardBottomColor} showLabels/></div></Section></>}{yardDesign==="sidebar"&&<><Section title="Sidebar" icon={Paintbrush}><ColorPicker value={yardSidebarColor} onChange={setYardSidebarColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardSidebarColor} onSelect={setYardSidebarColor} showLabels/></div></Section><Section title="Main Bg" icon={Paintbrush}><ColorPicker value={yardMainBgColor} onChange={setYardMainBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardMainBgColor} onSelect={setYardMainBgColor} showLabels/></div></Section></>}{yardDesign==="top-heavy"&&<><Section title="Top" icon={Paintbrush}><ColorPicker value={yardTopColor} onChange={setYardTopColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardTopColor} onSelect={setYardTopColor} showLabels/></div></Section><Section title="Bottom" icon={Paintbrush}><ColorPicker value={yardBottomColor} onChange={setYardBottomColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardBottomColor} onSelect={setYardBottomColor} showLabels/></div></Section></>}</>}
-            {activeTab==="property-pdf"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div><Section title="Address & Price" icon={MapPin}><div className="fg"><label className="fl">Address</label><input className="fi" value={pdfAddress} onChange={e=>setPdfAddress(e.target.value)}/></div><div className="fg"><label className="fl">City, State, Zip</label><input className="fi" value={pdfCityStateZip} onChange={e=>setPdfCityStateZip(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={pdfPrice} onChange={e=>setPdfPrice(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={pdfBeds} onChange={e=>setPdfBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={pdfBaths} onChange={e=>setPdfBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">SqFt</label><input className="fi" value={pdfSqft} onChange={e=>setPdfSqft(e.target.value)}/></div></div></Section><Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={6} value={pdfDescription} onChange={e=>setPdfDescription(e.target.value)}/></Section><Section title="Features" icon={Sparkles}><textarea className="ta" rows={6} value={pdfFeatures} onChange={e=>setPdfFeatures(e.target.value)} placeholder="One per line..."/></Section></>}
-            {activeTab==="property-pdf"&&leftPanel==="photos"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({pdfPhotos.length}/25)</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{pdfPhotos.map((url:string,i:number)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><button className="ghov" onClick={()=>setPdfPhotos((p:string[])=>p.filter((_:string,idx:number)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0}}><X size={10}/></button></div>))}{pdfPhotos.length<25&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).forEach(f=>setPdfPhotos((p:string[])=>[...p,URL.createObjectURL(f)]));e.target.value="";}}/></label>}</div></div></>}
-            {activeTab==="property-pdf"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Accent</div><Section title="Color" icon={Paintbrush}><ColorPicker value={pdfAccentColor} onChange={setPdfAccentColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} showLabels/></div></Section></>}
-            {activeTab==="branding-card"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={brandHeadshot} onUpload={f=>setBrandHeadshot(URL.createObjectURL(f))} onClear={()=>setBrandHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={brandLogo} onUpload={f=>setBrandLogo(URL.createObjectURL(f))} onClear={()=>setBrandLogo(null)} uploading={false} compact/></div><div style={{marginTop:10}}><UploadZone label="Background Photo" imageUrl={brandBgPhoto} onUpload={f=>setBrandBgPhoto(URL.createObjectURL(f))} onClear={()=>setBrandBgPhoto(null)} uploading={false}/></div></div></>}
-            {activeTab==="branding-card"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Card Details</div><Section title="Agent" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={brandAgentName} onChange={e=>setBrandAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={brandPhone} onChange={e=>setBrandPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={brandEmail} onChange={e=>setBrandEmail(e.target.value)}/></div></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brandBrokerage} onChange={e=>setBrandBrokerage(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Tagline</label><input className="fi" value={brandTagline} onChange={e=>setBrandTagline(e.target.value)}/></div></div><div className="fg"><label className="fl">Website</label><input className="fi" value={brandWebsite} onChange={e=>setBrandWebsite(e.target.value)}/></div></Section></>}
-            {activeTab==="branding-card"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${brandFont===f.id?"ac":""}`} onClick={()=>setBrandFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Bg Color" icon={Paintbrush}><ColorPicker value={brandBgColor} onChange={setBrandBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={brandBgColor} onSelect={setBrandBgColor} showLabels/></div></Section><Section title="Accent" icon={Sparkles} defaultOpen={false}><ColorPicker value={brandAccentColor||"#ffffff"} onChange={setBrandAccentColor}/>{brandAccentColor&&<button onClick={()=>setBrandAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={brandAccentColor} onSelect={setBrandAccentColor}/></div></Section><Section title="Orientation" icon={Layers}><div className="fr">{BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}</div></Section></>}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/></div>
+            </div>
           </>}
 
+          {activeTab==="templates"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Details</div>
+            <Section title="Property" icon={Home}><div className="fg"><label className="fl">Street Address</label><input className="fi" value={address} onChange={e=>setAddress(e.target.value)} placeholder="8043 Villas la Colina"/></div><div className="fg"><label className="fl">City, State</label><input className="fi" value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} placeholder="Ocotal, Guanacaste"/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={beds} onChange={e=>setBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={baths} onChange={e=>setBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={sqft} onChange={e=>setSqft(e.target.value)}/></div></div><div className="fg"><label className="fl">Price</label><input className="fi" value={price} onChange={e=>setPrice(e.target.value)}/></div>{selectedTemplate==="open-house"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Date</label><input className="fi" value={date} onChange={e=>setDate(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Time</label><input className="fi" value={time} onChange={e=>setTime(e.target.value)}/></div></div>}</Section>
+            <Section title="Agent" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></div></Section>
+          </>}
+
+          {activeTab==="templates"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div>
+            <Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section>
+            <Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/><div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section>
+            <Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section>
+          </>}
+
+          {/* ── VIDEO REMIX PANELS ── */}
+          {activeTab==="video-remix"&&leftPanel==="clips"&&<>
+            <div className="ph"><Film size={15} color="var(--sa)"/>Your Clips</div>
+            <div style={{padding:14}}>
+              {loadingRemixClips||loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>
+              :remixClipSources.length===0?<div style={{padding:"24px 0",textAlign:"center" as const}}>
+                {hasVideoOrders===false?<><Film size={28} color="var(--std)"/><p style={{fontSize:12,color:"var(--std)",margin:0,marginTop:8,lineHeight:1.6}}>Order a listing video to start remixing clips into social content.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:12,padding:"7px 18px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none"}}>Order a Video</a></>:<><p style={{fontSize:11,color:"var(--std)",margin:0,marginBottom:8}}>No completed videos found.</p><button onClick={()=>loadUserVideos()} className="bx" style={{margin:"0 auto",fontSize:11,padding:"6px 16px"}}>Reload</button></>}
+              </div>
+              :<div style={{display:"flex",flexDirection:"column" as const,gap:16}}>
+                {remixClipSources.map(src=>(
+                  <div key={src.orderId}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><span style={{fontSize:13}}>{"\ud83d\udce6"}</span><div><p style={{fontSize:11,fontWeight:700,color:"var(--st)",margin:0}}>Order {src.orderId.slice(0,8)} {"\u00b7"} {src.date}</p><p style={{fontSize:10,color:"var(--std)",margin:0}}>{src.address}</p></div></div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                      {src.clips.map((clip,ci)=>{const onTL=isClipOnTimeline(clip.url);return<button key={ci} onClick={()=>{if(onTL){removeClipFromRemix(remixClips.find(c=>c.sourceUrl===clip.url)?.id||"");}else{addClipToRemix(clip.url,clip.thumbnail,`${src.address.slice(0,20)} \u00b7 ${clip.label}`);}}} style={{position:"relative",borderRadius:8,overflow:"hidden",border:onTL?"1px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",padding:0,fontFamily:"var(--sf)",opacity:onTL?0.85:1,transition:"all 0.15s"}}><div style={{aspectRatio:"16/9",backgroundColor:"rgba(255,255,255,0.04)",overflow:"hidden"}}>{clip.thumbnail?<img src={clip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={20} color="rgba(255,255,255,0.15)"/></div>}</div><div style={{padding:"4px 6px"}}><p style={{fontSize:9,fontWeight:600,color:"var(--st)",margin:0,textAlign:"left"}}>{clip.label}</p></div>{onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={10} color="#fff"/></div>}{!onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:700}}>+</div>}</button>;})}
+                    </div>
+                  </div>
+                ))}
+              </div>}
+              <div style={{marginTop:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/></div>
+            </div>
+          </>}
+
+          {activeTab==="video-remix"&&leftPanel==="timeline"&&<>
+            <div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Timeline</div>
+            <div style={{padding:14}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid var(--sbr)"}}><span style={{fontSize:12,fontWeight:700,color:"var(--st)"}}>{remixClips.length} clip{remixClips.length!==1?"s":""}</span><span style={{fontSize:12,fontWeight:700,color:remixTotalDuration>119?"#f59e0b":"var(--sa)"}}>{Math.round(remixTotalDuration)}s total</span></div>
+              {remixTotalDuration>119&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",borderRadius:8,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.2)",marginBottom:12}}><Clock size={12} color="#f59e0b"/><span style={{fontSize:10,color:"#f59e0b",fontWeight:600}}>Total exceeds 2 min. Export may be slow or fail.</span></div>}
+              {remixClips.length===0?<div style={{padding:"24px 0",textAlign:"center" as const,border:"2px dashed var(--sbr)",borderRadius:10}}><Film size={24} color="var(--std)"/><p style={{fontSize:11,color:"var(--std)",margin:0,marginTop:8}}>No clips added yet</p></div>
+              :<div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+                {remixClips.map((clip,idx)=>{const isExp=expandedClipId===clip.id;const effDur=(clip.trimEnd-clip.trimStart)/clip.speed;
+                  return<div key={clip.id} style={{borderRadius:10,border:"1px solid var(--sbr)",background:"rgba(255,255,255,0.02)",overflow:"hidden"}}>
+                    <button onClick={()=>setExpandedClipId(isExp?null:clip.id)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textAlign:"left" as const}}>
+                      <span style={{fontSize:12,fontWeight:800,color:"var(--sa)",width:20,flexShrink:0}}>{idx+1}.</span>
+                      <div style={{width:36,height:24,borderRadius:4,overflow:"hidden",flexShrink:0,backgroundColor:"rgba(255,255,255,0.06)"}}>{clip.thumbnail?<img src={clip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={12} color="rgba(255,255,255,0.2)"/></div>}</div>
+                      <div style={{flex:1,minWidth:0}}><p style={{fontSize:11,fontWeight:600,color:"var(--st)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{clip.label}</p><p style={{fontSize:9,color:"var(--std)",margin:0}}>{effDur.toFixed(1)}s{clip.speed!==1?` @ ${clip.speed}\u00d7`:""}</p></div>
+                      <ChevronDown size={12} color="var(--std)" style={{transform:isExp?"rotate(180deg)":"none",transition:"transform 0.2s"}}/>
+                    </button>
+                    {isExp&&<div style={{padding:"0 12px 12px"}}>
+                      <div style={{marginBottom:10}}><label className="fl">Trim Start: {clip.trimStart.toFixed(1)}s</label><input type="range" min={0} max={clip.duration} step={0.5} value={clip.trimStart} onChange={e=>{const v=parseFloat(e.target.value);if(v<clip.trimEnd-1)updateRemixClip(clip.id,{trimStart:v});}} style={{width:"100%",accentColor:"var(--sa)"}}/></div>
+                      <div style={{marginBottom:10}}><label className="fl">Trim End: {clip.trimEnd.toFixed(1)}s</label><input type="range" min={0} max={clip.duration} step={0.5} value={clip.trimEnd} onChange={e=>{const v=parseFloat(e.target.value);if(v>clip.trimStart+1)updateRemixClip(clip.id,{trimEnd:v});}} style={{width:"100%",accentColor:"var(--sa)"}}/></div>
+                      <div style={{marginBottom:10}}><label className="fl">Speed</label><div style={{display:"flex",flexWrap:"wrap" as const,gap:4}}>{SPEED_PRESETS.map(s=><button key={s} onClick={()=>updateRemixClip(clip.id,{speed:s})} style={{padding:"4px 10px",borderRadius:6,border:clip.speed===s?"1px solid var(--sa)":"1px solid var(--sbr)",background:clip.speed===s?"var(--sag)":"none",color:clip.speed===s?"var(--sa)":"var(--std)",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}>{s}{"\u00d7"}</button>)}</div></div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>moveClipInRemix(clip.id,-1)} disabled={idx===0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"6px 0",borderRadius:6,border:"1px solid var(--sbr)",background:"none",color:idx===0?"var(--stm)":"var(--std)",fontSize:10,fontWeight:600,cursor:idx===0?"not-allowed":"pointer",fontFamily:"var(--sf)"}}><ArrowUp size={11}/>Up</button>
+                        <button onClick={()=>moveClipInRemix(clip.id,1)} disabled={idx===remixClips.length-1} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"6px 0",borderRadius:6,border:"1px solid var(--sbr)",background:"none",color:idx===remixClips.length-1?"var(--stm)":"var(--std)",fontSize:10,fontWeight:600,cursor:idx===remixClips.length-1?"not-allowed":"pointer",fontFamily:"var(--sf)"}}><ArrowDown size={11}/>Down</button>
+                        <button onClick={()=>removeClipFromRemix(clip.id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"6px 0",borderRadius:6,border:"1px solid rgba(239,68,68,0.3)",background:"rgba(239,68,68,0.08)",color:"#ef4444",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}><Trash2 size={11}/>Remove</button>
+                      </div>
+                    </div>}
+                  </div>;})}
+              </div>}
+            </div>
+          </>}
+
+          {activeTab==="video-remix"&&leftPanel==="music"&&<>
+            <div className="ph"><Music size={15} color="var(--sa)"/>Music</div>
+            <div style={{padding:14}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><span className="fl" style={{margin:0}}>{"\ud83c\udfb5"} Background Music</span>{selectedMusicTrack&&<button onClick={()=>setSelectedMusicTrack(null)} style={{fontSize:9,color:"var(--std)",background:"none",border:"none",cursor:"pointer",fontFamily:"var(--sf)",textDecoration:"underline"}}>Clear</button>}</div>
+              {selectedMusicTrack&&(<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:"rgba(99,102,241,0.1)",border:"1px solid var(--sa)",marginBottom:10}}><Music size={12} color="var(--sa)"/><span style={{fontSize:11,fontWeight:600,color:"var(--sa)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{selectedMusicTrack.name}</span><button onClick={e=>{e.stopPropagation();handlePlayTrack(selectedMusicTrack.id,selectedMusicTrack.url);}} style={{width:20,height:20,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:"#fff",fontWeight:700}}>{playingTrackId===selectedMusicTrack.id?"\u25a0":"\u25b6"}</span></button></div>)}
+              <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginBottom:8}}>{[{key:"",label:"All"},{key:"upbeat_modern",label:"Upbeat"},{key:"chill_tropical",label:"Chill"},{key:"energetic_pop",label:"Energy"},{key:"elegant_classical",label:"Elegant"},{key:"warm_acoustic",label:"Acoustic"},{key:"bold_cinematic",label:"Cinematic"},{key:"smooth_jazz",label:"Jazz"},{key:"ambient",label:"Ambient"}].map(v=>(<button key={v.key} onClick={()=>{setMusicVibeFilter(v.key);fetchMusicTracks(v.key);}} style={{padding:"3px 8px",borderRadius:6,border:musicVibeFilter===v.key?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.1)",background:musicVibeFilter===v.key?"var(--sag)":"none",color:musicVibeFilter===v.key?"var(--sa)":"var(--std)",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)",transition:"all 0.15s"}}>{v.label}</button>))}</div>
+              {loadingMusic?<div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>:<div style={{maxHeight:400,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>{musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}><button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button></p>}{musicTracks.map(t=>(<div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}><button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700,marginLeft:playingTrackId===t.id?0:"1px"}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span></button><span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span><span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>{selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}</div>))}</div>}
+            </div>
+          </>}
+
+          {activeTab==="video-remix"&&leftPanel==="styles"&&<>
+            <div className="ph"><Palette size={15} color="var(--sa)"/>Remix Styles</div>
+            <LensGate locked={!isLensSubscriber}><Section title="Branding Overlay" icon={CreditCard}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",marginBottom:8}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Show Branding</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>3s intro &amp; outro frames</p></div><button onClick={()=>setRemixBranding(!remixBranding)} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:remixBranding?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative",transition:"background 0.2s",flexShrink:0}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:remixBranding?23:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div>{remixBranding&&<><p style={{fontSize:10,color:"var(--std)",lineHeight:1.5,margin:0,padding:"6px 8px",borderRadius:6,background:"rgba(255,255,255,0.03)",marginBottom:10}}>Your branding card appears as a 3-second intro and outro frame.</p><div style={{borderRadius:10,overflow:"hidden",border:"1px solid var(--sbr)",boxShadow:"0 4px 16px rgba(0,0,0,0.2)"}}><div style={{transform:"scale(0.14)",transformOrigin:"top left",width:1920,height:1080}}><BrandingCardTemplate orientation={BRAND_ORIENTATIONS[0]} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div></div><div style={{width:"100%",height:0,marginTop:Math.round(1080*0.14)}}/></>}</Section></LensGate>
+            <LensGate locked={!isLensSubscriber} label="Lens: Auto-fill Profile"><Section title="Saved Profile" icon={User} defaultOpen={false}><p style={{fontSize:10,color:"var(--std)",lineHeight:1.5,margin:0}}>Lens subscribers get branding auto-filled from their saved profile.</p></Section></LensGate>
+            <Section title="Output Size" icon={Layers}><div style={{display:"flex",gap:4}}>{REMIX_SIZES.map(s=><button key={s.id} className={`sp ${remixSize===s.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const,fontSize:10}} onClick={()=>setRemixSize(s.id)}><div style={{fontWeight:700}}>{s.label}</div><div style={{fontSize:8,color:"var(--std)",marginTop:2}}>{s.sublabel}</div></button>)}</div></Section>
+            <LensGate locked={!isLensSubscriber} label="Lens: Font Styles"><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section></LensGate>
+            {!isLensSubscriber&&<div style={{margin:"12px 20px",padding:"14px 16px",borderRadius:10,background:"linear-gradient(135deg,rgba(99,102,241,0.12),rgba(168,85,247,0.08))",border:"1px solid rgba(99,102,241,0.2)"}}><p style={{fontSize:12,fontWeight:700,color:"var(--sa)",margin:0}}>Unlock Full Remix</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:4,lineHeight:1.6}}>Subscribe to Lens for branded intro/outro, auto-filled profile, premium templates, and more.</p><a href="/dashboard/lens" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:10,padding:"7px 16px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none",boxShadow:"0 2px 12px rgba(99,102,241,0.3)"}}><Sparkles size={12}/>Subscribe to Lens</a></div>}
+            <div style={{padding:"12px 20px"}}><div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 12px",borderRadius:8,background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.15)"}}><Clock size={13} color="#f59e0b"/><p style={{fontSize:10,color:"#f59e0b",fontWeight:500,margin:0,lineHeight:1.5}}>Video export runs in your browser. May take 5-20 min. Keep this tab open.</p></div></div>
+          </>}
+
+          {/* ── YARD SIGN PANELS ── */}
+          {activeTab==="yard-sign"&&leftPanel==="design"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Yard Sign Design</div><div style={{padding:14}}><div className="tg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>{YARD_DESIGNS.map(d=><button key={d.id} className={`tc ${yardDesign===d.id?"ac":""}`} onClick={()=>setYardDesign(d.id)}><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{d.label}</div><div style={{fontSize:9,color:"var(--std)",marginTop:2}}>{d.desc}</div></button>)}</div><div style={{marginTop:14}}><span className="fl">Sign Size</span><div className="fr" style={{marginTop:4}}>{YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}</div></div></div></>}
+          {activeTab==="yard-sign"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></>}
+          {activeTab==="yard-sign"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Sign Details</div>
+            <Section title="Header & Agent" icon={User}><div className="fg"><label className="fl">Header Text</label><input className="fi" value={yardHeaderText} onChange={e=>setYardHeaderText(e.target.value)}/></div><div className="fg"><label className="fl">Agent Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div>{yardDesign==="split-bar"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Office Name</label><input className="fi" value={yardOfficeName} onChange={e=>setYardOfficeName(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Office Phone</label><input className="fi" value={yardOfficePhone} onChange={e=>setYardOfficePhone(e.target.value)}/></div></div>}{yardDesign==="sidebar"&&<div className="fg"><label className="fl">Website</label><input className="fi" value={yardWebsite} onChange={e=>setYardWebsite(e.target.value)} placeholder="www.janesmith.com"/></div>}</Section>
+            <Section title="Property Highlights" icon={Home}><div className="fg"><input className="fi" value={yardBullet1} onChange={e=>setYardBullet1(e.target.value)} placeholder="e.g. 3 BDR / 2 BTH"/></div><div className="fg"><input className="fi" value={yardBullet2} onChange={e=>setYardBullet2(e.target.value)} placeholder="e.g. Pool & Spa"/></div><div className="fg"><input className="fi" value={yardBullet3} onChange={e=>setYardBullet3(e.target.value)} placeholder="e.g. Ocean View"/></div></Section>
+          </>}
+          {activeTab==="yard-sign"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Colors</div>
+            {yardDesign==="split-bar"&&<><Section title="Top Bar" icon={Paintbrush}><ColorPicker value={yardTopColor} onChange={setYardTopColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardTopColor} onSelect={setYardTopColor} showLabels/></div></Section><Section title="Bottom Bar" icon={Paintbrush}><ColorPicker value={yardBottomColor} onChange={setYardBottomColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardBottomColor} onSelect={setYardBottomColor} showLabels/></div></Section></>}
+            {yardDesign==="sidebar"&&<><Section title="Sidebar Color" icon={Paintbrush}><ColorPicker value={yardSidebarColor} onChange={setYardSidebarColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardSidebarColor} onSelect={setYardSidebarColor} showLabels/></div></Section><Section title="Main Bg" icon={Paintbrush}><ColorPicker value={yardMainBgColor} onChange={setYardMainBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardMainBgColor} onSelect={setYardMainBgColor} showLabels/></div></Section></>}
+            {yardDesign==="top-heavy"&&<><Section title="Top Section" icon={Paintbrush}><ColorPicker value={yardTopColor} onChange={setYardTopColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardTopColor} onSelect={setYardTopColor} showLabels/></div></Section><Section title="Bottom Section" icon={Paintbrush}><ColorPicker value={yardBottomColor} onChange={setYardBottomColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={yardBottomColor} onSelect={setYardBottomColor} showLabels/></div></Section></>}
+          </>}
+
+          {/* ── PDF PANELS ── */}
+          {activeTab==="property-pdf"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div><Section title="Address & Price" icon={MapPin}><div className="fg"><label className="fl">Address</label><input className="fi" value={pdfAddress} onChange={e=>setPdfAddress(e.target.value)}/></div><div className="fg"><label className="fl">City, State, Zip</label><input className="fi" value={pdfCityStateZip} onChange={e=>setPdfCityStateZip(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={pdfPrice} onChange={e=>setPdfPrice(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={pdfBeds} onChange={e=>setPdfBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={pdfBaths} onChange={e=>setPdfBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={pdfSqft} onChange={e=>setPdfSqft(e.target.value)}/></div></div></Section><Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={6} value={pdfDescription} onChange={e=>setPdfDescription(e.target.value)} placeholder="Property description..."/></Section><Section title="Key Features" icon={Sparkles}><textarea className="ta" rows={6} value={pdfFeatures} onChange={e=>setPdfFeatures(e.target.value)} placeholder="One feature per line..."/></Section></>}
+          {activeTab==="property-pdf"&&leftPanel==="photos"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({pdfPhotos.length}/25)</div><div style={{padding:14}}><p style={{fontSize:11,color:"var(--std)",marginBottom:10}}>First 3 on page 1. Rest fill grids.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{pdfPhotos.map((url,i)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i<3?("\u2605"+(i+1)):i+1}</div><button className="ghov" onClick={()=>setPdfPhotos(p=>p.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}{pdfPhotos.length<25&&(<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).forEach(f=>{setPdfPhotos(p=>[...p,URL.createObjectURL(f)]);});e.target.value="";}}/></label>)}</div></div></>}
+          {activeTab==="property-pdf"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Accent Color</div><Section title="Color" icon={Paintbrush}><ColorPicker value={pdfAccentColor} onChange={setPdfAccentColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor} showLabels/></div><div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={pdfAccentColor} onSelect={setPdfAccentColor}/></div></Section></>}
+
+          {/* ── BRANDING PANELS ── */}
+          {activeTab==="branding-card"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={brandHeadshot} onUpload={f=>setBrandHeadshot(URL.createObjectURL(f))} onClear={()=>setBrandHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={brandLogo} onUpload={f=>setBrandLogo(URL.createObjectURL(f))} onClear={()=>setBrandLogo(null)} uploading={false} compact/></div><div style={{marginTop:10}}><UploadZone label="Background Photo (optional)" imageUrl={brandBgPhoto} onUpload={f=>setBrandBgPhoto(URL.createObjectURL(f))} onClear={()=>setBrandBgPhoto(null)} uploading={false}/></div></div></>}
+          {activeTab==="branding-card"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Card Details</div><Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={brandAgentName} onChange={e=>setBrandAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={brandPhone} onChange={e=>setBrandPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={brandEmail} onChange={e=>setBrandEmail(e.target.value)}/></div></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brandBrokerage} onChange={e=>setBrandBrokerage(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Tagline</label><input className="fi" value={brandTagline} onChange={e=>setBrandTagline(e.target.value)}/></div></div><div className="fg"><label className="fl">Website</label><input className="fi" value={brandWebsite} onChange={e=>setBrandWebsite(e.target.value)}/></div></Section><Section title="Property (optional)" icon={Home} defaultOpen={false}><div className="fg"><label className="fl">Address</label><input className="fi" value={brandAddress} onChange={e=>setBrandAddress(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">City, State</label><input className="fi" value={brandCityState} onChange={e=>setBrandCityState(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={brandPrice} onChange={e=>setBrandPrice(e.target.value)}/></div></div><div className="fg"><label className="fl">Features</label><textarea className="ta" rows={3} value={brandFeatures} onChange={e=>setBrandFeatures(e.target.value)}/></div></Section></>}
+          {activeTab==="branding-card"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${brandFont===f.id?"ac":""}`} onClick={()=>setBrandFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Background Color" icon={Paintbrush}><ColorPicker value={brandBgColor} onChange={setBrandBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={brandBgColor} onSelect={setBrandBgColor} showLabels/></div></Section><Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={brandAccentColor||"#ffffff"} onChange={setBrandAccentColor}/>{brandAccentColor&&<button onClick={()=>setBrandAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={brandAccentColor} onSelect={setBrandAccentColor}/></div></Section><Section title="Orientation" icon={Layers}><div className="fr">{BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}</div></Section></>}
         </div>
 
+        {/* CANVAS */}
         <div className="sc">
           <div className="scb"/>
           <div className="scc">
@@ -1091,24 +1325,116 @@ export default function DesignStudioV2(){
               <div data-export-target="true" style={{width:rawW,height:rawH,transform:`scale(${scale})`,transformOrigin:"top left"}}>{renderPreview()}</div>
             </div>
           </div>
+          {/* Remix timeline — YouTube Studio style */}
+          {isRemixMode&&remixClips.length>0&&(()=>{
+            const TC=["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16"];
+            const pct=remixTotalDuration>0?(remixPlaybackTime/remixTotalDuration)*100:0;
+            const formatT=(s:number)=>{const m=Math.floor(s/60);const sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,"0")}`;};
+            const handleScrub=(e:React.MouseEvent|MouseEvent,el:HTMLElement)=>{
+              const rect=el.getBoundingClientRect();const x=Math.max(0,Math.min(e.clientX-rect.left,rect.width));
+              seekRemixTo((x/rect.width)*remixTotalDuration);
+            };
+            const onMouseDown=(e:React.MouseEvent)=>{
+              remixDragging.current=true;
+              const el=e.currentTarget as HTMLElement;
+              handleScrub(e,el);
+              const onMove=(ev:MouseEvent)=>handleScrub(ev,el);
+              const onUp=()=>{remixDragging.current=false;window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
+              window.addEventListener("mousemove",onMove);window.addEventListener("mouseup",onUp);
+            };
+            return<div style={{position:"absolute",bottom:52,left:0,right:0,zIndex:12,background:"var(--ss)",borderTop:"1px solid var(--sbr)",padding:"0"}}>
+              {/* Clip track */}
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px 6px"}}>
+                <button onClick={toggleRemixPlayback} style={{width:40,height:40,borderRadius:"50%",background:"var(--sa)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 2px 10px rgba(99,102,241,0.35)"}}>{remixPlaying?<span style={{display:"flex",gap:3}}><span style={{width:4,height:16,backgroundColor:"#fff",borderRadius:1}}/><span style={{width:4,height:16,backgroundColor:"#fff",borderRadius:1}}/></span>:<Play size={18} color="#fff" style={{marginLeft:2}}/>}</button>
+                <span style={{fontSize:13,fontWeight:700,color:"var(--st)",fontFamily:"monospace",minWidth:90}}>{formatT(remixPlaybackTime)} <span style={{color:"var(--std)",fontWeight:400}}>/ {formatT(remixTotalDuration)}</span></span>
+                <div style={{flex:1}}/>
+                <span style={{fontSize:11,color:"var(--std)",fontWeight:600}}>{remixClips.length} clip{remixClips.length!==1?"s":""}</span>
+              </div>
+              {/* Scrubber bar */}
+              <div style={{padding:"0 16px 4px",cursor:"pointer"}} onMouseDown={onMouseDown}>
+                <div style={{position:"relative",height:36,display:"flex",gap:2,alignItems:"stretch",borderRadius:6,overflow:"hidden"}}>
+                  {remixClips.map((c,i)=><div key={c.id} style={{flex:remixClipDurations[i],display:"flex",flexDirection:"column" as const,justifyContent:"center",position:"relative",backgroundColor:TC[i%TC.length],opacity:i===remixPlayingIdx?1:0.5,transition:"opacity 0.15s",overflow:"hidden",borderRight:i<remixClips.length-1?"2px solid var(--ss)":"none"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4,padding:"0 8px",minWidth:0}}>
+                      {c.thumbnail&&<img src={c.thumbnail} alt="" style={{width:24,height:16,objectFit:"cover",borderRadius:2,flexShrink:0}}/>}
+                      <span style={{fontSize:9,fontWeight:700,color:"#fff",textShadow:"0 1px 2px rgba(0,0,0,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</span>
+                    </div>
+                  </div>)}
+                  {/* Playhead */}
+                  <div style={{position:"absolute",top:0,bottom:0,left:`${pct}%`,width:3,backgroundColor:"#fff",zIndex:3,boxShadow:"0 0 8px rgba(255,255,255,0.8),-1px 0 0 rgba(0,0,0,0.3),1px 0 0 rgba(0,0,0,0.3)",pointerEvents:"none"}}>
+                    <div style={{position:"absolute",top:-4,left:-5,width:13,height:13,borderRadius:"50%",backgroundColor:"#fff",boxShadow:"0 0 6px rgba(0,0,0,0.4)"}}/>
+                  </div>
+                </div>
+              </div>
+            </div>;
+          })()}
           <div className="sct">
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(Math.max(50,zoom-10))}><ZoomOut size={13}/></button>
             <div className="zd">{zoom}%</div>
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(Math.min(200,zoom+10))}><ZoomIn size={13}/></button>
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(100)}><RotateCcw size={13}/></button>
             <div className="td"/>
-            {isDroneMode&&dronePhoto&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>{dronePhotoNatural.w}\u00d7{dronePhotoNatural.h} \u00b7 {droneShapes.length} obj</span>}
+            {activeTab==="video-remix"&&<>{REMIX_SIZES.map(s=><button key={s.id} className={`sp ${remixSize===s.id?"ac":""}`} onClick={()=>setRemixSize(s.id)}>{s.label}</button>)}<div className="td"/><span style={{fontSize:11,fontWeight:600,color:remixTotalDuration>119?"#f59e0b":"var(--std)",padding:"0 4px"}}>{Math.round(remixTotalDuration)}s</span></>}
             {activeTab==="templates"&&SIZES.map(s=><button key={s.id} className={`sp ${selectedSize===s.id?"ac":""}`} onClick={()=>setSelectedSize(s.id)}>{s.label}</button>)}
-            {activeTab==="listing-flyer"&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>US Letter 8.5\u00d711\"</span>}
+            {activeTab==="listing-flyer"&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>US Letter 8.5{"\u00d7"}11"</span>}
             {activeTab==="yard-sign"&&YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}
             {activeTab==="property-pdf"&&pdfTotalPages>1&&<><button className="bi" style={{width:28,height:28}} onClick={()=>setPdfPreviewPage(Math.max(0,pdfPreviewPage-1))}><ChevronLeft size={13}/></button><span className="zd">Pg {pdfPreviewPage+1}/{pdfTotalPages}</span><button className="bi" style={{width:28,height:28}} onClick={()=>setPdfPreviewPage(Math.min(pdfTotalPages-1,pdfPreviewPage+1))}><ChevronRight size={13}/></button></>}
             {activeTab==="branding-card"&&BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}
           </div>
         </div>
+
+        {/* RIGHT PANEL */}
+        {showRight&&<div className="srp">
+          <div className="ph"><Settings size={14} color="var(--sa)"/>Remix Settings<div style={{flex:1}}/><button className="bi" style={{width:26,height:26}} onClick={()=>setShowRight(false)}><X size={11}/></button></div>
+          <Section title="Export" icon={Download}>
+            {activeTab==="listing-flyer"&&<>
+              <p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>Print-ready US Letter. PNG for digital, PDF for print.</p>
+              <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}} onClick={handleExport} disabled={exporting}>{exporting?<><Loader2 size={14} className="animate-spin"/>Exporting...</>:<><Printer size={14}/>Download PNG</>}</button>
+              <button className="bi" style={{width:"100%",marginTop:6,fontSize:11,fontWeight:600,justifyContent:"center",gap:6,height:36}} onClick={handleExportPdf} disabled={exporting}><FileText size={13}/>Download PDF (Print)</button>
+            </>}
+            {activeTab!=="listing-flyer"&&<>
+              <button className="bx" style={{width:"100%",justifyContent:"center",padding:"11px 0",background:isRemixMode?"linear-gradient(135deg,#7c3aed,#ec4899)":isVideoMode?"linear-gradient(135deg,#7c3aed,#6366f1)":undefined,position:"relative",overflow:"hidden"}} onClick={handleExport} disabled={exporting}>
+                {exporting&&exportProgress>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${exportProgress}%`,background:"rgba(255,255,255,0.15)",transition:"width 0.3s ease"}}/>}
+                <span style={{position:"relative",display:"flex",alignItems:"center",gap:7}}>
+                  {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</>:isRemixMode?<><Film size={14}/>Export Remix</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+                </span>
+              </button>
+              {exporting&&exportStatus&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,marginTop:6,lineHeight:1.4,fontFamily:"var(--sf)"}}>{exportStatus}</p>}
+            </>}
+          </Section>
+          <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="video-remix"?[{n:"Clips",i:"\ud83c\udfac"},{n:"Music",i:"\ud83c\udfb5"},{n:"Branding",i:"\ud83d\udc64"},{n:"Timeline",i:"\u23f1\ufe0f"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
+        </div>}
       </div>
 
-      {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
-      {exporting&&exportStatus&&<div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",padding:"12px 20px",borderRadius:12,background:"var(--ss)",border:"1px solid var(--sbr)",boxShadow:"0 8px 32px rgba(0,0,0,0.4)",display:"flex",alignItems:"center",gap:10,fontFamily:"var(--sf)",zIndex:101}}><Loader2 size={14} color="var(--sa)" className="animate-spin"/><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>{exportStatus}</p></div>{exportProgress>0&&<div style={{width:36,height:36,borderRadius:"50%",background:`conic-gradient(var(--sa) ${exportProgress*3.6}deg, var(--sbr) 0deg)`,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:28,borderRadius:"50%",background:"var(--ss)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"var(--st)"}}>{exportProgress}%</div></div>}</div>}
+      {/* MOBILE NAV */}
+      {mobilePanel&&<div onClick={()=>setMobilePanel(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:28}}/>}
+      <div className="mob-nav">
+        {currentPanels.map(p=>(<button key={p.id} className={mobilePanel===p.id?"ac":""} onClick={()=>{if(mobilePanel===p.id){setMobilePanel(null);}else{setLeftPanel(p.id);setMobilePanel(p.id);}}}><p.icon size={18}/><span>{p.label}</span></button>))}
+        <button onClick={handleExport} disabled={exporting}>{exporting?<Loader2 size={18} className="animate-spin"/>:<Download size={18}/>}<span>{exporting?(exportProgress>0?`${exportProgress}%`:"..."):"Export"}</span></button>
+      </div>
+
+      {/* Export status overlay — visible on all screens during export */}
+      {exporting&&exportStatus&&<div style={{position:"fixed",bottom:70,left:8,right:8,zIndex:999,padding:"12px 16px",borderRadius:14,background:"var(--ss)",border:"1px solid var(--sbr)",boxShadow:"0 -4px 24px rgba(0,0,0,0.4)",display:"flex",alignItems:"center",gap:10,fontFamily:"var(--sf)"}}>
+        <Loader2 size={16} color="var(--sa)" className="animate-spin" style={{flexShrink:0}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</p>
+          <p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>{exportStatus}</p>
+        </div>
+        {exportProgress>0&&<div style={{width:40,height:40,borderRadius:"50%",background:`conic-gradient(var(--sa) ${exportProgress*3.6}deg, var(--sbr) 0deg)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:32,height:32,borderRadius:"50%",background:"var(--ss)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"var(--st)"}}>{exportProgress}%</div></div>}
+      </div>}
+
+      
+      {/* ═══ REMIX LIBRARY ═══ */}
+      <div style={{position:"relative",zIndex:1,padding:"32px 24px 48px",background:"var(--sb)",borderTop:"1px solid var(--sbr)"}}>
+        <div style={{maxWidth:1200,margin:"0 auto"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+            <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#7c3aed,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={16} color="#fff"/></div>
+            <div><h2 style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0}}>Your Remixes</h2><p style={{fontSize:11,color:"var(--std)",margin:0}}>All your exported remix videos</p></div>
+          </div>
+          <RemixLibraryGrid/>
+        </div>
+      </div>
+
+{notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
     </div></>
   );
 }
