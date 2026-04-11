@@ -41,10 +41,10 @@ const TOOLS = [
 const TOOL_LABELS = { polygon:"Lot Lines", rect:"Rectangle", line:"Line", pin:"Pin", label:"Label", measure:"Measure", arrow:"Arrow", select:"Grab" };
 
 /* ─── tiny components ─── */
-function PinSvg({ color, size, logo, text }) {
+function PinSvg({ color, size, logo, text, shapeId }) {
   const s = size || 200;
-  const clipId = useRef("pc" + uid()).current;
-  const filtId = useRef("pf" + uid()).current;
+  const clipId = `pc-${shapeId}`;
+  const filtId = `pf-${shapeId}`;
   return (
     <g>
       <defs>
@@ -167,7 +167,31 @@ export default function DroneMark({ agentLogo }) {
   function setLabelColor(v) { sty.current.labelColor = v; setUiLabelColor(v); }
   function setLabelBgMode(v) { sty.current.labelBgMode = v; setUiLabelBgMode(v); }
 
-  useEffect(() => { if (agentLogo) { sty.current.logo = agentLogo; setUiLogoKey(k => k + 1); } }, [agentLogo]);
+  useEffect(() => {
+    if (!agentLogo) return;
+    // Convert URL to base64 so it inlines in SVG for export
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+        const dataUrl = c.toDataURL("image/png");
+        sty.current.logo = dataUrl;
+        setUiLogoKey(k => k + 1);
+      } catch (e) {
+        // CORS failed, use URL directly as fallback
+        sty.current.logo = agentLogo;
+        setUiLogoKey(k => k + 1);
+      }
+    };
+    img.onerror = () => {
+      sty.current.logo = agentLogo;
+      setUiLogoKey(k => k + 1);
+    };
+    img.src = agentLogo;
+  }, [agentLogo]);
 
   const svgRef = useRef(null);
   const fileRef = useRef(null);
@@ -237,17 +261,42 @@ export default function DroneMark({ agentLogo }) {
       let outW = natW, outH = natH;
       if (outW > MAX_W) { const s = MAX_W / outW; outW = MAX_W; outH = Math.round(outH * s); }
       if (outH > MAX_H) { const s = MAX_H / outH; outH = MAX_H; outW = Math.round(outW * s); }
+      const expScale = outW / natW;
       const canvas = document.createElement("canvas"); canvas.width = outW; canvas.height = outH;
       const ctx = canvas.getContext("2d");
-      const img = new Image(); img.crossOrigin = "anonymous";
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = photo; });
-      ctx.drawImage(img, 0, 0, outW, outH);
-      const svgData = new XMLSerializer().serializeToString(svg);
+      // 1. Draw photo
+      const bgImg = new Image(); bgImg.crossOrigin = "anonymous";
+      await new Promise((res, rej) => { bgImg.onload = res; bgImg.onerror = rej; bgImg.src = photo; });
+      ctx.drawImage(bgImg, 0, 0, outW, outH);
+      // 2. Clone SVG, remove <image> elements (they break in SVG-as-image context)
+      const svgClone = svg.cloneNode(true);
+      svgClone.querySelectorAll("image").forEach(el => el.remove());
+      const svgData = new XMLSerializer().serializeToString(svgClone);
       const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
       const svgUrl = URL.createObjectURL(svgBlob);
       const svgImg = new Image();
       await new Promise((res, rej) => { svgImg.onload = res; svgImg.onerror = rej; svgImg.src = svgUrl; });
       ctx.drawImage(svgImg, 0, 0, outW, outH); URL.revokeObjectURL(svgUrl);
+      // 3. Draw pin logos directly on canvas
+      for (const shape of shapes) {
+        if (shape.type === "pin" && shape.logo) {
+          const sz = shape.size || 200;
+          const logoImg = new Image(); logoImg.crossOrigin = "anonymous";
+          try {
+            await new Promise((res, rej) => { logoImg.onload = res; logoImg.onerror = rej; logoImg.src = shape.logo; });
+            const cx = ((shape.x || 0)) * expScale;
+            const cy = ((shape.y || 0) - sz + sz * 0.38) * expScale;
+            const r = sz * 0.24 * expScale;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.clip();
+            const imgW = sz * 0.48 * expScale;
+            ctx.drawImage(logoImg, cx - r, cy - r, imgW, imgW);
+            ctx.restore();
+          } catch (e) { /* skip broken logos */ }
+        }
+      }
       const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.82));
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a"); link.download = `drone-${Date.now()}.jpg`; link.href = url; link.click();
@@ -321,7 +370,7 @@ export default function DroneMark({ agentLogo }) {
     if (shape.type === "pin") {
       const sz = shape.size || 200;
       return (<g key={shape.id} data-sid={shape.id} onMouseDown={e => onShapeDown(e, shape.id)} transform={`translate(${(shape.x || 0) - sz / 2},${(shape.y || 0) - sz})`} style={{ cursor: cur }}>
-        <PinSvg color={shape.color} size={sz} logo={shape.logo} text={shape.text} />
+        <PinSvg color={shape.color} size={sz} logo={shape.logo} text={shape.text} shapeId={shape.id} />
         {isSel && <rect x={-6} y={-6} width={sz + 12} height={sz + 12} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={8} />}
       </g>);
     }
