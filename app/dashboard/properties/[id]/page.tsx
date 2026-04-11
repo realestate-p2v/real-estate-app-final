@@ -36,6 +36,7 @@ import {
   Phone,
   User,
   MessageSquare,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BookingCalendar from "@/components/booking-calendar";
@@ -135,6 +136,28 @@ function timeAgo(dateStr: string): string {
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day}d ago`;
   return `${Math.floor(day / 30)}mo ago`;
+}
+
+function extractPublicId(cloudinaryUrl: string): string | null {
+  if (!cloudinaryUrl) return null;
+  try {
+    const match = cloudinaryUrl.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
+    return match ? match[1] : null;
+  } catch { return null; }
+}
+
+async function deleteFromCloudinary(url: string, resourceType: string = "image"): Promise<boolean> {
+  const publicId = extractPublicId(url);
+  if (!publicId) return false;
+  try {
+    const res = await fetch("/api/cloudinary-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ public_id: publicId, resource_type: resourceType }),
+    });
+    const data = await res.json();
+    return data.success;
+  } catch { return false; }
 }
 
 function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
@@ -372,6 +395,20 @@ export default function SinglePropertyPage() {
   if (loading) return <div className="min-h-screen bg-background"><Navigation /><div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div></div>;
   if (!property) return null;
 
+  const handleDeleteExport = async (exp: any) => {
+    const ok = window.confirm("Delete this export? This will permanently remove it from cloud storage.");
+    if (!ok) return;
+    try {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      if (exp.export_url && exp.export_url.includes("cloudinary")) {
+        const rt = exp.template_type?.startsWith("video_remix") ? "video" : "image";
+        await deleteFromCloudinary(exp.export_url, rt);
+      }
+      await supabase.from("design_exports").delete().eq("id", exp.id);
+      setExports(prev => prev.filter(e => e.id !== exp.id));
+    } catch (e) { console.error("Delete export failed:", e); }
+  };
+
   const qs = buildPropertyParams(property);
   const inp = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50";
 
@@ -390,8 +427,8 @@ export default function SinglePropertyPage() {
   const pubLiveUrl = `https://${pubSlug}.p2v.homes`;
   const heroThumb = orderPhotos[0]?.secure_url ? (orderPhotos[0].secure_url.includes("/upload/") ? orderPhotos[0].secure_url.replace("/upload/", "/upload/w_800,h_450,c_fill,q_auto/") : orderPhotos[0].secure_url) : null;
   const unreadShowings = showingRequests.filter((r) => !r.read).length;
-  const nonRemixExports = exports.filter((e: any) => e.template_type !== "video_remix");
-  const remixExports = exports.filter((e: any) => e.template_type === "video_remix");
+  const nonRemixExports = exports.filter((e: any) => !e.template_type?.startsWith("video_remix"));
+  const remixExports = exports.filter((e: any) => e.template_type?.startsWith("video_remix"));
 
   return (
     <div className="min-h-screen bg-background">
@@ -425,7 +462,7 @@ export default function SinglePropertyPage() {
             <div className="bg-card rounded-2xl border border-border w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${exportModal.template_type === "video_remix" ? "text-purple-700 bg-purple-100" : "text-orange-700 bg-orange-100"}`}>{tl[exportModal.template_type] || exportModal.template_type}</span>
+                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${exportModal.template_type?.startsWith("video_remix") ? "text-purple-700 bg-purple-100" : "text-orange-700 bg-orange-100"}`}>{tl[exportModal.template_type] || exportModal.template_type}</span>
                   <p className="text-xs text-muted-foreground">{new Date(exportModal.created_at).toLocaleDateString()}</p>
                 </div>
                 <button onClick={() => setExportModal(null)} className="p-2 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
@@ -602,7 +639,7 @@ export default function SinglePropertyPage() {
                     </button>
                     <div className="p-3 flex items-center justify-between">
                       <div><div className="flex items-center gap-1.5"><span className="text-[10px] font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">Video Remix</span><span className="text-[10px] font-semibold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded-full">MP4</span></div><p className="text-xs text-muted-foreground mt-1.5">{new Date(remix.created_at).toLocaleDateString()}</p></div>
-                      <div className="flex items-center gap-2"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">Watch</a><a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a></div>
+                      <div className="flex items-center gap-2"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">Watch</a><a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a><button onClick={() => handleDeleteExport(remix)} className="text-[10px] font-semibold text-red-500 hover:text-red-400 ml-1 flex items-center gap-0.5"><Trash2 className="h-3 w-3" /></button></div>
                     </div>
                   </div>
                 );
@@ -633,7 +670,7 @@ export default function SinglePropertyPage() {
                 return (
                   <div key={exp.id} className="rounded-xl bg-muted/30 border border-border overflow-hidden">
                     {thumb ? <button onClick={() => setExportModal(exp)} className="block w-full text-left"><div className="aspect-[4/3] relative bg-muted"><img src={thumb} alt={tl[exp.template_type] || "Export"} className="w-full h-full object-cover" />{exp.export_format === "mp4" && <div className="absolute inset-0 flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center"><Play className="h-4 w-4 text-white ml-0.5" /></div></div>}</div></button> : <button onClick={() => setExportModal(exp)} className="block w-full"><div className="aspect-[4/3] bg-muted flex items-center justify-center"><PenTool className="h-8 w-8 text-muted-foreground/30" /></div></button>}
-                    <div className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">{tl[exp.template_type] || exp.template_type}</span>{exp.export_format && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"}`}>{fl[exp.export_format] || exp.export_format.toUpperCase()}</span>}</div><p className="text-xs text-muted-foreground mt-1.5">{new Date(exp.created_at).toLocaleDateString()}</p>{dl && <div className="flex items-center gap-2 mt-1.5"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">{exp.export_format === "mp4" ? "Watch" : "View"}</a><a href={dl.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a></div>}</div>
+                    <div className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><span className="text-[10px] font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">{tl[exp.template_type] || exp.template_type}</span>{exp.export_format && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${exp.export_format === "mp4" ? "bg-cyan-100 text-cyan-700" : "bg-muted text-muted-foreground"}`}>{fl[exp.export_format] || exp.export_format.toUpperCase()}</span>}</div><p className="text-xs text-muted-foreground mt-1.5">{new Date(exp.created_at).toLocaleDateString()}</p>{dl && <div className="flex items-center gap-2 mt-1.5"><a href={dl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-accent hover:text-accent/80">{exp.export_format === "mp4" ? "Watch" : "View"}</a><a href={dl.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-[10px] font-semibold text-muted-foreground hover:text-foreground">Download</a><button onClick={() => handleDeleteExport(exp)} className="text-[10px] font-semibold text-red-500 hover:text-red-400 ml-1 flex items-center gap-0.5"><Trash2 className="h-3 w-3" /></button></div>}</div>
                   </div>
                 );
               })}
