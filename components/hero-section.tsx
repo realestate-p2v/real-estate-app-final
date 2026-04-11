@@ -100,12 +100,12 @@ export function HeroSection() {
     init();
   }, []);
 
-  // Redirect subscribers to the dashboard — that IS their homepage now
+  // NEW: any logged-in user redirects to dashboard
   useEffect(() => {
-    if (!isLoading && isSubscriber) {
+    if (!isLoading && isLoggedIn) {
       router.push("/dashboard");
     }
-  }, [isLoading, isSubscriber, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   if (isLoading) {
     return (
@@ -116,8 +116,8 @@ export function HeroSection() {
     );
   }
 
-  // Subscriber — show nothing while redirecting
-  if (isSubscriber) {
+  // Show spinner while redirecting (for ANY logged-in user now)
+  if (isLoggedIn) {
     return (
       <>
         <style dangerouslySetInnerHTML={{ __html: heroStyles }} />
