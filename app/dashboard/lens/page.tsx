@@ -42,7 +42,7 @@ const launcherStyles = `
     opacity: 0;
     animation: launcher-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
-\`;
+`;
 
 interface PublishedWebsite {
   id: string;
