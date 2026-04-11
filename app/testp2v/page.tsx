@@ -108,7 +108,7 @@ export default function DroneMark({ agentLogo }) {
   useEffect(() => { if (agentLogo) sty.current.logo = agentLogo; }, [agentLogo]);
 
   // Style setters — write to ref AND trigger UI update
-  const setColor = (v) => { sty.current.color = v; setUiColor(v); };
+  const setColor = (v) => { sty.current.color = v; setUiColor(v); console.log("[DroneMark] setColor:", v, "ref now:", sty.current.color); };
   const setWidth = (v) => { sty.current.width = v; setUiWidth(v); };
   const setFill = (v) => { sty.current.fill = v / 100; setUiFill(v); };
   const setPinColor = (v) => { sty.current.pinColor = v; setUiPinColor(v); };
@@ -150,6 +150,7 @@ export default function DroneMark({ agentLogo }) {
     if (e.target.closest("[data-sid]") && tool === "select") return;
     const p = getPos(e);
     const s = sty.current; // ← always fresh
+    console.log("[DroneMark] onCanvasClick: sty.current =", JSON.stringify({color:s.color, width:s.width, fill:s.fill}));
 
     if (tool === "polygon") {
       if (!isDrawing) { setIsDrawing(true); setDrawPts([p]); }
@@ -157,11 +158,13 @@ export default function DroneMark({ agentLogo }) {
         const f = drawPts[0];
         const d = Math.sqrt((p.x - f.x) ** 2 + (p.y - f.y) ** 2);
         if (drawPts.length >= 3 && d < 30 * (natW / 1000)) {
+          console.log("[DroneMark] Adding polygon with color:", s.color);
           addShape({ id: uid(), type: "polygon", points: [...drawPts], color: s.color, width: s.width, fillOpacity: s.fill, style: "solid" });
           setIsDrawing(false); setDrawPts([]);
         } else { setDrawPts([...drawPts, p]); }
       }
     } else if (tool === "pin") {
+      console.log("[DroneMark] Adding pin with color:", s.pinColor, "logo:", s.logo ? "YES" : "NO");
       addShape({ id: uid(), type: "pin", x: p.x, y: p.y, color: s.pinColor, size: s.pinSize, logo: s.logo, text: s.pinText });
     } else if (tool === "label") {
       if (!s.labelText.trim()) { notify("Enter label text first"); return; }
@@ -200,6 +203,7 @@ export default function DroneMark({ agentLogo }) {
   const onMouseUp = (e) => {
     const p = getPos(e);
     const s = sty.current;
+    console.log("[DroneMark] onMouseUp: sty.current =", JSON.stringify({color:s.color, width:s.width, fill:s.fill}));
     if (tool === "rect" && rectStart) {
       const x1 = Math.min(rectStart.x, p.x), y1 = Math.min(rectStart.y, p.y);
       const x2 = Math.max(rectStart.x, p.x), y2 = Math.max(rectStart.y, p.y);
