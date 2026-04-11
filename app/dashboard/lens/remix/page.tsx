@@ -16,6 +16,67 @@ function darken(hex:string,pct:number):string{const n=parseInt(hex.replace("#","
 function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"}};return m[id]||m["just-listed"];}
 function truncateText(text:string,max:number):string{if(!text)return text;const clean=text.replace(/\*{1,2}([^*]+)\*{1,2}/g,"$1");if(clean.length<=max)return clean;return clean.substring(0,max).trimEnd()+"\u2026";}
 
+function extractPublicId(cloudinaryUrl: string): string | null {
+  if (!cloudinaryUrl) return null;
+  try {
+    const match = cloudinaryUrl.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
+    return match ? match[1] : null;
+  } catch { return null; }
+}
+
+async function deleteFromCloudinary(url: string, resourceType: string = "image"): Promise<boolean> {
+  const publicId = extractPublicId(url);
+  if (!publicId) return false;
+  try {
+    const res = await fetch("/api/cloudinary-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ public_id: publicId, resource_type: resourceType }),
+    });
+    const data = await res.json();
+    return data.success;
+  } catch { return false; }
+}
+
+function extractAllUrls(obj: any): string[] {
+  if (!obj) return [];
+  if (typeof obj === "string") return obj.startsWith("http") ? [obj] : [];
+  if (Array.isArray(obj)) return obj.flatMap(extractAllUrls);
+  if (typeof obj === "object") return Object.values(obj).flatMap(extractAllUrls);
+  return [];
+}
+
+async function saveExportWithOverwrite(
+  supabase: any,
+  userId: string,
+  propertyId: string | null,
+  templateType: string,
+  newUrl: string,
+  extraData?: Record<string, any>
+) {
+  let query = supabase
+    .from("design_exports")
+    .select("id, export_url")
+    .eq("user_id", userId)
+    .eq("template_type", templateType);
+  if (propertyId) { query = query.eq("property_id", propertyId); }
+  else { query = query.is("property_id", null); }
+  const { data: existing } = await query;
+  for (const old of (existing || [])) {
+    if (old.export_url && old.export_url.includes("cloudinary")) {
+      const rt = templateType.startsWith("video_remix") ? "video" : "image";
+      await deleteFromCloudinary(old.export_url, rt);
+    }
+    await supabase.from("design_exports").delete().eq("id", old.id);
+  }
+  const { data, error } = await supabase
+    .from("design_exports")
+    .insert({ user_id: userId, property_id: propertyId, template_type: templateType, export_url: newUrl, ...(extraData || {}) })
+    .select()
+    .single();
+  return { data, error };
+}
+
 // ─── InfoBarTemplate ───────────────────────────────────────────────────────────
 function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,badgeText,badgeColor,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
@@ -311,7 +372,7 @@ function RemixLibraryGrid(){
       const supabase=(await import("@/lib/supabase/client")).createClient();
       const{data:{user}}=await supabase.auth.getUser();
       if(!user){setLoading(false);return;}
-      const{data}=await supabase.from("design_exports").select("*").eq("user_id",user.id).eq("template_type","video_remix").order("created_at",{ascending:false});
+      const{data}=await supabase.from("design_exports").select("*").eq("user_id",user.id).like("template_type","video_remix%").order("created_at",{ascending:false});
       setRemixes(data||[]);
       setLoading(false);
     })();
@@ -320,6 +381,10 @@ function RemixLibraryGrid(){
     setDeleting(true);
     try{
       const supabase=(await import("@/lib/supabase/client")).createClient();
+      const item=remixes.find(r=>r.id===id);
+      if(item?.export_url&&item.export_url.includes("cloudinary")){
+        await deleteFromCloudinary(item.export_url,"video");
+      }
       await supabase.from("design_exports").delete().eq("id",id);
       setRemixes(prev=>prev.filter(r=>r.id!==id));
       if(viewModal?.id===id)setViewModal(null);
@@ -330,7 +395,7 @@ function RemixLibraryGrid(){
   if(remixes.length===0)return<div style={{textAlign:"center",padding:"48px 0",borderRadius:16,border:"2px dashed var(--sbr)",background:"rgba(255,255,255,0.01)"}}><Film size={40} color="rgba(255,255,255,0.1)" style={{margin:"0 auto 12px"}}/><p style={{fontSize:14,color:"var(--std)",margin:0}}>No remixes exported yet</p><p style={{fontSize:12,color:"var(--std)",margin:"4px 0 0",opacity:0.6}}>Use the editor above to create your first remix</p></div>;
   return<>
     {/* Delete confirmation modal */}
-    {deleteConfirm&&<div onClick={()=>setDeleteConfirm(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)"}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:380,width:"90%",textAlign:"center"}}><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Trash2 size={22} color="#ef4444"/></div><h3 style={{fontSize:16,fontWeight:700,color:"var(--st)",margin:"0 0 8px"}}>Delete this remix?</h3><p style={{fontSize:13,color:"var(--std)",margin:"0 0 20px"}}>This will permanently remove the remix from your library. The file will still be available on Cloudinary.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>setDeleteConfirm(null)} style={{padding:"8px 20px",borderRadius:99,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button><button onClick={()=>handleDelete(deleteConfirm)} disabled={deleting} style={{padding:"8px 20px",borderRadius:99,border:"none",background:"#ef4444",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:deleting?0.6:1}}>{deleting?"Deleting...":"Delete"}</button></div></div></div>}
+    {deleteConfirm&&<div onClick={()=>setDeleteConfirm(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)"}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:380,width:"90%",textAlign:"center"}}><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Trash2 size={22} color="#ef4444"/></div><h3 style={{fontSize:16,fontWeight:700,color:"var(--st)",margin:"0 0 8px"}}>Delete this remix?</h3><p style={{fontSize:13,color:"var(--std)",margin:"0 0 20px"}}>This will permanently delete the remix and its cloud storage file. This cannot be undone.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>setDeleteConfirm(null)} style={{padding:"8px 20px",borderRadius:99,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button><button onClick={()=>handleDelete(deleteConfirm)} disabled={deleting} style={{padding:"8px 20px",borderRadius:99,border:"none",background:"#ef4444",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:deleting?0.6:1}}>{deleting?"Deleting...":"Delete"}</button></div></div></div>}
     {/* View modal */}
     {viewModal&&<div onClick={()=>setViewModal(null)} style={{position:"fixed",inset:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",padding:16}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",width:"100%",maxWidth:800,maxHeight:"90vh",overflow:"hidden",boxShadow:"0 24px 48px rgba(0,0,0,0.4)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderBottom:"1px solid var(--sbr)"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"rgba(124,58,237,0.15)",padding:"2px 8px",borderRadius:99}}>Video Remix</span><span style={{fontSize:11,color:"var(--std)"}}>{new Date(viewModal.created_at).toLocaleDateString()}</span></div><button onClick={()=>setViewModal(null)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><X size={18} color="var(--std)"/></button></div><div style={{background:"#000"}}><video src={viewModal.export_url||viewModal.overlay_video_url} controls autoPlay playsInline style={{width:"100%",maxHeight:"60vh",objectFit:"contain"}}/></div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderTop:"1px solid var(--sbr)"}}><div style={{display:"flex",alignItems:"center",gap:12}}><a href={((viewModal.export_url||viewModal.overlay_video_url)||"").replace("/upload/","/upload/fl_attachment/")} download style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sa)",color:"#fff",fontWeight:700,fontSize:13,padding:"8px 16px",borderRadius:99,textDecoration:"none"}}><Download size={14}/>Download</a></div><button onClick={()=>{setViewModal(null);setDeleteConfirm(viewModal.id);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"none",border:"1px solid rgba(239,68,68,0.3)",color:"#ef4444",fontWeight:600,fontSize:12,padding:"6px 14px",borderRadius:99,cursor:"pointer"}}><Trash2 size={13}/>Delete</button></div></div></div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
@@ -966,7 +1031,7 @@ export default function DesignStudioV2(){
         try{
           const supabase=(await import("@/lib/supabase/client")).createClient();
           const{data:{user}}=await supabase.auth.getUser();
-          if(user)await supabase.from("design_exports").insert({user_id:user.id,property_id:selectedPropertyId||null,template_type:"video_remix",export_url:cloudinaryUrl,export_format:"mp4",overlay_video_url:cloudinaryUrl});
+          if(user)await saveExportWithOverwrite(supabase,user.id,selectedPropertyId||null,`video_remix_${remixSize}`,cloudinaryUrl,{export_format:"mp4",overlay_video_url:cloudinaryUrl});
           console.log("[remix] Saved to DB");
         }catch(e){console.error("[remix] DB error:",e);}
       }
