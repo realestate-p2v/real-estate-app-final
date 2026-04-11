@@ -401,6 +401,7 @@ export default function DesignStudioV2(){
   const[remixClipSources,setRemixClipSources]=useState<{orderId:string;address:string;date:string;clips:{url:string;thumbnail:string|null;label:string}[]}[]>([]);
   const[loadingRemixClips,setLoadingRemixClips]=useState(false);
   const[isLensSubscriber,setIsLensSubscriber]=useState(false);
+  const[savedBrandingCardUrl,setSavedBrandingCardUrl]=useState<string|null>(null);
   const[hasVideoOrders,setHasVideoOrders]=useState<boolean|null>(null);
   const[remixPlaying,setRemixPlaying]=useState(false);
   const[remixPlayingIdx,setRemixPlayingIdx]=useState(0);
@@ -448,7 +449,7 @@ export default function DesignStudioV2(){
         const ADMIN_EMAILS=["realestatephoto2video@gmail.com"];
         if(user.email&&ADMIN_EMAILS.includes(user.email)){setIsLensSubscriber(true);}
         else{const{data:usageCheck}=await supabase.from("lens_usage").select("is_subscriber").eq("user_id",user.id).single();if(usageCheck?.is_subscriber)setIsLensSubscriber(true);}
-        const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
+        const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors,saved_branding_cards").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
           if(data.saved_logo_url){setLogo(data.saved_logo_url);setBrandLogo(data.saved_logo_url);}
@@ -457,10 +458,18 @@ export default function DesignStudioV2(){
           if(data.saved_email){setAgentEmail(data.saved_email);setBrandEmail(data.saved_email);}
           if(data.saved_company){setBrokerage(data.saved_company);setBrandBrokerage(data.saved_company);}
           if(data.saved_website){setBrandWebsite(data.saved_website);}
+          // Load first saved branding card
+          const bc=Array.isArray(data.saved_branding_cards)&&data.saved_branding_cards.length>0?data.saved_branding_cards[0]:null;
+          if(bc)setSavedBrandingCardUrl(bc);
           const cc = Array.isArray(data.saved_company_colors) ? data.saved_company_colors : [];
           setSavedCompanyColors(cc);
           if(cc.length >= 1){setBarColor(cc[0]);setFlyerAccentColor(cc[0]);setBrandBgColor(cc[0]);setYardTopColor(cc[0]);setYardSidebarColor(cc[0]);setPdfAccentColor(cc[0]);}
           if(cc.length >= 2){setAccentColor(cc[1]);setBrandAccentColor(cc[1]);setYardBottomColor(cc[1]);}
+          // Also check design_exports for branding cards if none saved in profile
+          if(!bc){
+            const{data:bcExports}=await supabase.from("design_exports").select("export_url").eq("user_id",user.id).in("template_type",["branding_card","branding-card"]).order("created_at",{ascending:false}).limit(1);
+            if(bcExports&&bcExports.length>0&&bcExports[0].export_url)setSavedBrandingCardUrl(bcExports[0].export_url);
+          }
         }
         const{data:props}=await supabase.from("agent_properties").select("id,address,address_normalized,city,state,bedrooms,bathrooms,sqft,price,special_features,amenities,website_slug,website_published,website_curated").eq("user_id",user.id).is("merged_into_id",null).order("updated_at",{ascending:false});
         if(props)setUserProperties(props);
@@ -807,55 +816,25 @@ export default function DesignStudioV2(){
         }else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
       }
 
-      // Capture branding card — upload to Cloudinary then download via proxy for reliable FFmpeg input
+      // Use saved branding card from profile/exports — skip html2canvas entirely
       let hasBranding=false;
       let brandPngReady=false;
-      if(remixBranding&&isLensSubscriber&&previewRef.current){
-        setExportStatus("Capturing branding card...");
+      if(remixBranding&&isLensSubscriber&&savedBrandingCardUrl){
+        setExportStatus("Loading branding card...");
+        console.log("[remix] Loading saved branding card:",savedBrandingCardUrl.slice(0,80));
         try{
-          const html2canvas=(await import("html2canvas-pro")).default;
-          const brandEl=previewRef.current.querySelector("[data-branding-card]") as HTMLElement;
-          if(brandEl){
-            // Render at full resolution offscreen
-            const origStyles={display:brandEl.style.display,position:brandEl.style.position,top:brandEl.style.top,left:brandEl.style.left,width:brandEl.style.width,height:brandEl.style.height};
-            brandEl.style.display="block";brandEl.style.position="fixed";brandEl.style.top="-9999px";brandEl.style.left="-9999px";brandEl.style.width="1920px";brandEl.style.height="1080px";
-            await new Promise(r=>setTimeout(r,500));
-            const bc=await html2canvas(brandEl,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:1920,height:1080});
-            // Restore
-            brandEl.style.display=origStyles.display;brandEl.style.position=origStyles.position;brandEl.style.top=origStyles.top;brandEl.style.left=origStyles.left;brandEl.style.width=origStyles.width;brandEl.style.height=origStyles.height;
-            const blob=await new Promise<Blob>(r=>bc.toBlob(b=>r(b!),"image/png"));
-            console.log(`[remix] Branding card captured: ${blob.size} bytes`);
-            
-            // Upload to Cloudinary so we can download via proxy
-            let brandUrl:string|null=null;
-            try{
-              const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-branding"})});
-              const sigData=await sigResp.json();
-              if(sigData.success){
-                const{signature,timestamp,cloudName,apiKey,folder:fp}=sigData.data;
-                const fd=new FormData();fd.append("file",blob,"brand.png");fd.append("api_key",apiKey);fd.append("timestamp",timestamp.toString());fd.append("signature",signature);fd.append("folder",fp);
-                const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`,{method:"POST",body:fd});
-                const upResult=await upResp.json();
-                brandUrl=upResult.secure_url||null;
-                console.log("[remix] Branding card uploaded:",brandUrl);
-              }
-            }catch(e){console.error("[remix] Brand upload error:",e);}
-            
-            if(brandUrl){
-              // Download via proxy to write to FFmpeg filesystem
-              const brandResp=await fetch(`/api/proxy-media?url=${encodeURIComponent(brandUrl)}`);
-              const brandAb=await brandResp.arrayBuffer();
+          const brandResp=await fetch(`/api/proxy-media?url=${encodeURIComponent(savedBrandingCardUrl)}`);
+          if(brandResp.ok){
+            const brandAb=await brandResp.arrayBuffer();
+            if(brandAb.byteLength>1000){
               await ffmpeg.writeFile("brand.png",new Uint8Array(brandAb));
-              console.log(`[remix] Brand PNG written: ${brandAb.byteLength} bytes`);
-              brandPngReady=true;hasBranding=true;
-            }else{
-              // Fallback: write blob directly (may work on some browsers)
-              await ffmpeg.writeFile("brand.png",new Uint8Array(await blob.arrayBuffer()));
-              brandPngReady=true;hasBranding=true;
-              console.log("[remix] Brand PNG written directly from blob");
-            }
+              hasBranding=true;brandPngReady=true;
+              console.log(`[remix] Branding card loaded: ${brandAb.byteLength} bytes`);
+            }else{console.error("[remix] Branding card too small:",brandAb.byteLength);}
           }
-        }catch(e){console.error("[remix] Branding capture error:",e);}
+        }catch(e){console.error("[remix] Branding card download error:",e);}
+      }else if(remixBranding&&isLensSubscriber){
+        console.log("[remix] No saved branding card URL found — skipping branding");
       }
 
       // Build FFmpeg command
@@ -866,17 +845,17 @@ export default function DesignStudioV2(){
       let inputIdx=0;
       const inputArgs:string[]=[];
 
-      // Branding intro: brand card overlaid on first frame of first clip (matches pipeline)
+      // Branding intro: brand card overlaid on darkened first frame of first clip
       if(hasBranding){
-        // Input 0: brand.png as 5s video
+        // Input: brand.png as 5s video
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
-        // Input 1: first clip (for background frame)
+        // Input: first clip (for background frame)
         inputArgs.push("-i","clip_0.mp4");
-        // Extract first frame, scale to output, darken, then overlay branding card
+        // Extract first frame, scale, darken to 40% brightness, loop for 5s, overlay brand card on top
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=0:end=0.1,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuv420p,colorbalance=bs=-0.3:gs=-0.3:rs=-0.3[bg_intro]`,
-          `[${inputIdx}:v]scale=${outW}:${outH},format=yuva420p[card_intro]`,
-          `[bg_intro][card_intro]overlay=0:0:format=auto,format=yuv420p[vintro]`
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.4,format=yuv420p[bg_intro]`,
+          `[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[card_intro]`,
+          `[bg_intro][card_intro]overlay=0:0,format=yuv420p[vintro]`
         );
         concatInputs.push("[vintro]");inputIdx+=2;
       }
@@ -890,16 +869,17 @@ export default function DesignStudioV2(){
         concatInputs.push(`[v${i}]`);inputIdx++;
       }
 
-      // Branding outro: brand card overlaid on last frame of last clip
+      // Branding outro: brand card overlaid on darkened last frame of last clip
       if(hasBranding){
         const lastClipIdx=remixClips.length-1;
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
         inputArgs.push("-i",`clip_${lastClipIdx}.mp4`);
         const lastClip=remixClips[lastClipIdx];
+        const outroTrimStart=Math.max(0,lastClip.trimEnd-0.042);
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=${Math.max(0,lastClip.trimEnd-0.1)}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuv420p,colorbalance=bs=-0.3:gs=-0.3:rs=-0.3[bg_outro]`,
-          `[${inputIdx}:v]scale=${outW}:${outH},format=yuva420p[card_outro]`,
-          `[bg_outro][card_outro]overlay=0:0:format=auto,format=yuv420p[voutro]`
+          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.4,format=yuv420p[bg_outro]`,
+          `[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[card_outro]`,
+          `[bg_outro][card_outro]overlay=0:0,format=yuv420p[voutro]`
         );
         concatInputs.push("[voutro]");inputIdx+=2;
       }
