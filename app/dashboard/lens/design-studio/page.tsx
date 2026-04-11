@@ -6,33 +6,17 @@ import {
   Calendar, Play, FileText, Sparkles, Film, Music, Check, Type, Eye, Layers,
   ZoomIn, ZoomOut, LayoutTemplate, Settings, RotateCcw, Share2, Undo2, Redo2,
   ChevronLeft, ChevronRight, Paintbrush, Sun, Moon, Printer, Globe, Video,
-  Clock, ArrowUp, ArrowDown, Trash2, Lock, Crosshair, Pentagon, Minus,
-  MoveRight, Ruler,
+  Clock, ArrowUp, ArrowDown, Trash2, Lock,
 } from "lucide-react";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
 function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
 function responsiveSize(base:number,text:string,maxChars:number):number{if(!text||text.length<=maxChars)return base;return Math.max(base*0.5,Math.round(base*Math.max(maxChars/text.length,0.55)));}
 function darken(hex:string,pct:number):string{const n=parseInt(hex.replace("#",""),16);return `rgb(${Math.max(0,(n>>16)-Math.round(2.55*pct))},${Math.max(0,((n>>8)&0xff)-Math.round(2.55*pct))},${Math.max(0,(n&0xff)-Math.round(2.55*pct))})`;}
-function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"},"coming-soon":{text:"COMING SOON",color:"#7c3aed"},"under-contract":{text:"UNDER CONTRACT",color:"#0891b2"},"new-price":{text:"NEW PRICE",color:"#16a34a"},"back-on-market":{text:"BACK ON MARKET",color:"#ea580c"},"sold-overlay":{text:"JUST SOLD",color:"#d97706"},"listed-overlay":{text:"JUST LISTED",color:"#2563eb"}};return m[id]||m["just-listed"];}
+function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"},"magazine-cover":{text:"JUST LISTED",color:"#2563eb"},"split-diagonal":{text:"JUST LISTED",color:"#2563eb"},"stamp-listed":{text:"JUST LISTED",color:"#2563eb"},"stamp-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"cinematic-listed":{text:"JUST LISTED",color:"#2563eb"},"cinematic-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"bold-frame":{text:"PRICE REDUCED",color:"#dc2626"}};return m[id]||m["just-listed"];}
 function truncateText(text:string,max:number):string{if(!text)return text;const clean=text.replace(/\*{1,2}([^*]+)\*{1,2}/g,"$1");if(clean.length<=max)return clean;return clean.substring(0,max).trimEnd()+"\u2026";}
-const droneUid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
-// ─── Drone Mark Types & Constants ─────────────────────────────────────────────
-interface DroneShape{id:string;type:string;points?:{x:number;y:number}[];x?:number;y?:number;x1?:number;y1?:number;x2?:number;y2?:number;color:string;style?:string;width?:number;fillOpacity?:number;text?:string;fontSize?:number;font?:string;bg?:boolean;size?:number;logo?:string|null;labelColor?:string;measureText?:string;unit?:string;}
-const DRONE_TOOLS:{id:string;label:string;icon:any}[]=[{id:"select",label:"Select",icon:Crosshair},{id:"polygon",label:"Lot Lines",icon:Pentagon},{id:"rect",label:"Rectangle",icon:LayoutTemplate},{id:"line",label:"Line",icon:Minus},{id:"pin",label:"Pin",icon:MapPin},{id:"label",label:"Label",icon:Type},{id:"measure",label:"Measure",icon:Ruler},{id:"arrow",label:"Arrow",icon:MoveRight}];
-const DRONE_FONT_OPTS=[{id:"sans",label:"Sans",family:"'Helvetica Neue', Arial, sans-serif"},{id:"serif",label:"Serif",family:"Georgia, 'Times New Roman', serif"},{id:"mono",label:"Mono",family:"'SF Mono', 'Courier New', monospace"},{id:"display",label:"Display",family:"'Trebuchet MS', sans-serif"}];
-function droneDash(st:string,w:number):string{if(st==="dashed")return `${w*4} ${w*3}`;if(st==="dotted")return `${w} ${w*2.5}`;return "none";}
 
-function DronePinTeardrop({color,size:s0,logo,text,textColor}:any){
-  const s=s0||200;const clipId=`lc-${Math.random().toString(36).slice(2,8)}`;const shadowId=`ps-${Math.random().toString(36).slice(2,8)}`;
-  return(<g><defs><filter id={shadowId} x="-50%" y="-20%" width="200%" height="200%"><feDropShadow dx="0" dy={s*0.06} stdDeviation={s*0.08} floodColor="rgba(0,0,0,0.5)"/></filter>{logo&&<clipPath id={clipId}><circle cx={s/2} cy={s*0.38} r={s*0.24}/></clipPath>}</defs>
-    <path d={`M${s/2} ${s} C${s/2} ${s} ${s*0.05} ${s*0.55} ${s*0.05} ${s*0.38} C${s*0.05} ${s*0.15} ${s*0.2} 0 ${s/2} 0 C${s*0.8} 0 ${s*0.95} ${s*0.15} ${s*0.95} ${s*0.38} C${s*0.95} ${s*0.55} ${s/2} ${s} ${s/2} ${s}Z`} fill={color} filter={`url(#${shadowId})`} stroke="rgba(0,0,0,0.15)" strokeWidth={Math.max(1,s*0.01)}/>
-    <circle cx={s/2} cy={s*0.38} r={s*0.28} fill="rgba(255,255,255,0.18)"/>
-    {logo?<image href={logo} x={s/2-s*0.24} y={s*0.38-s*0.24} width={s*0.48} height={s*0.48} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice"/>:<circle cx={s/2} cy={s*0.38} r={s*0.18} fill="rgba(255,255,255,0.35)"/>}
-    {text&&<text x={s/2} y={s+s*0.22} textAnchor="middle" fill={textColor||"#fff"} fontSize={Math.max(18,s*0.18)} fontWeight="800" fontFamily="'Helvetica Neue', Arial, sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth={Math.max(3,s*0.025)} paintOrder="stroke">{text}</text>}
-  </g>);
-}
 
 // ─── InfoBarTemplate ───────────────────────────────────────────────────────────
 function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,badgeText,badgeColor,fontFamily,barColor,accentColor}:any){
@@ -63,40 +47,174 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}><Photo/><Badge/><div style={{position:"absolute",bottom:0,left:0,right:0,height:`${100-pp}%`,backgroundColor:barColor}}><div style={{position:"absolute",top:0,left:0,right:0,height:Math.round(3*unit),backgroundColor:accent,opacity:accentColor?0.8:0.15}}/><div style={{position:"absolute",inset:0,backgroundImage:barLight?"linear-gradient(to bottom,rgba(0,0,0,0.03) 0%,transparent 40%)":"linear-gradient(to bottom,rgba(255,255,255,0.04) 0%,transparent 40%)"}}/><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",padding:`${py}px ${px}px`,gap:Math.round(16*unit)}}><div style={{display:"flex",alignItems:"center",gap:Math.round(18*unit),flex:1,minWidth:0}}><Headshot/><div style={{minWidth:0,flex:1}}><p style={{fontSize:anF,fontWeight:700,color:tp,lineHeight:1.15,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{an}</p><p style={{fontSize:brF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(4*unit),wordBreak:"break-word" as const}}>{br}</p><p style={{fontSize:phF,fontWeight:500,color:ts,lineHeight:1.3,margin:0,marginTop:Math.round(2*unit)}}>{ph}</p></div></div><div style={{width:Math.round(1.5*unit),alignSelf:"stretch",margin:`${Math.round(barH*0.12)}px 0`,backgroundColor:dc,flexShrink:0}}/><RightCol/></div>{logo&&<img src={logo} alt="" style={{position:"absolute",bottom:Math.round(20*unit),right:px,maxWidth:Math.round(barH*0.30),maxHeight:Math.round(barH*0.16),objectFit:"contain" as const}}/>}</div></div>);
 }
 
-// ─── OverlayTemplate ─────────────────────────────────────────────────────────
-function OverlayTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,website,fontFamily,accentColor}:any){
+// ─── MagazineCoverTemplate ───────────────────────────────────────────────────
+function MagazineCoverTemplate({size,listingPhoto,videoElement,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,accentColor}:any){
+  const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
+  const accent=accentColor||"#ffffff";
+  const ad=address||"123 Main Street";const ad2=addressLine2||"";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"";
+  const pr=price?`$${price}`:"$000,000";
+  const brand=[agentName,phone].filter(Boolean).join("  \u00b7  ")||"";
+  const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.7)`;
+  const prFs=Math.round((isStory?120:isPostcard?90:80)*unit);
+  const adFs=responsiveSize(Math.round((isStory?42:isPostcard?30:26)*unit),ad,22);
+  const detFs=Math.round((isStory?28:isPostcard?20:18)*unit);
+  const badgeFs=Math.round((isStory?22:isPostcard?16:14)*unit);
+  const brandFs=Math.round((isStory?24:isPostcard?16:14)*unit);
+  const pad=Math.round(48*unit);
+  return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
+    {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#0f0f1a"}}/>}
+    <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,0,0,0.15) 0%,rgba(0,0,0,0.2) 30%,rgba(0,0,0,0.75) 70%,rgba(0,0,0,0.9) 100%)"}}/>
+    <div style={{position:"absolute",top:pad,left:pad}}><div style={{display:"inline-flex",padding:`${Math.round(6*unit)}px ${Math.round(16*unit)}px`,backgroundColor:"rgba(255,255,255,0.12)",backdropFilter:"blur(8px)",borderRadius:Math.round(4*unit),border:"1px solid rgba(255,255,255,0.15)"}}><span style={{fontSize:badgeFs,fontWeight:800,color:"#fff",letterSpacing:"0.2em",textTransform:"uppercase" as const}}>Just Listed</span></div></div>
+    <div style={{position:"absolute",bottom:0,left:0,right:0,padding:`0 ${pad}px ${Math.round(24*unit)}px`,display:"flex",flexDirection:"column" as const,alignItems:"flex-start",gap:Math.round(6*unit)}}>
+      <p style={{fontSize:adFs,fontWeight:600,color:"rgba(255,255,255,0.85)",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
+      {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.45)",margin:0,letterSpacing:"0.1em",textShadow:ts}}>{det}</p>}
+      <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,marginTop:Math.round(4*unit),lineHeight:0.95,letterSpacing:"-0.03em",textShadow:`0 ${Math.round(4*unit)}px ${Math.round(20*unit)}px rgba(0,0,0,0.5)`}}>{pr}</p>
+      <div style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:Math.round(12*unit),paddingTop:Math.round(12*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+        <p style={{fontSize:brandFs,fontWeight:500,color:"rgba(255,255,255,0.5)",margin:0}}>{brand}</p>
+        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round((isStory?50:35)*unit),maxWidth:Math.round((isStory?160:110)*unit),objectFit:"contain" as const}}/>}
+      </div>
+    </div>
+  </div>);
+}
+
+// ─── SplitDiagonalTemplate ───────────────────────────────────────────────────
+function SplitDiagonalTemplate({size,listingPhoto,videoElement,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+  const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
+  const accent=accentColor||"#ffffff";const barLight=isLightColor(barColor);
+  const tp=barLight?"#111827":"#ffffff",ts2=barLight?"rgba(17,24,39,0.5)":"rgba(255,255,255,0.5)";
+  const ad=address||"123 Main Street";const ad2=addressLine2||"";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
+  const pr=price?`$${price}`:"$000,000";
+  const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const split=isStory?40:35;
+  const badgeFs=Math.round((isStory?44:isPostcard?30:26)*unit);
+  const adFs=responsiveSize(Math.round((isStory?38:isPostcard?26:22)*unit),ad,18);
+  const detFs=Math.round((isStory?26:isPostcard?18:16)*unit);
+  const prFs=Math.round((isStory?72:isPostcard?50:44)*unit);
+  const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const pad=Math.round(40*unit);
+  return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
+    <div style={{position:"absolute",inset:0,backgroundColor:barColor}}/>
+    <div style={{position:"absolute",inset:0,clipPath:`polygon(${split}% 0, 100% 0, 100% 100%, ${split-15}% 100%)`}}>
+      {videoElement?<div data-video-area style={{width:"100%",height:"100%",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1a1a2e"}}/>}
+    </div>
+    <div style={{position:"absolute",top:0,left:0,width:`${split+5}%`,height:"100%",display:"flex",flexDirection:"column" as const,justifyContent:"center",padding:`${pad}px ${Math.round(30*unit)}px ${pad}px ${pad}px`,gap:Math.round(14*unit)}}>
+      <p style={{fontSize:badgeFs,fontWeight:900,color:accent,letterSpacing:"0.12em",textTransform:"uppercase" as const,lineHeight:1.1,margin:0}}>JUST<br/>LISTED</p>
+      <div style={{width:Math.round(50*unit),height:Math.round(3*unit),backgroundColor:accent,borderRadius:2,opacity:0.7}}/>
+      <p style={{fontSize:adFs,fontWeight:700,color:tp,lineHeight:1.2,margin:0}}>{ad}</p>
+      {ad2&&<p style={{fontSize:Math.round(adFs*0.8),fontWeight:500,color:ts2,margin:0}}>{ad2}</p>}
+      {det&&<p style={{fontSize:detFs,fontWeight:400,color:ts2,margin:0,letterSpacing:"0.06em"}}>{det}</p>}
+      <p style={{fontSize:prFs,fontWeight:900,color:accent,lineHeight:1,margin:0,marginTop:Math.round(6*unit)}}>{pr}</p>
+      <div style={{marginTop:"auto",display:"flex",alignItems:"center",gap:Math.round(10*unit)}}>
+        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(35*unit),maxWidth:Math.round(100*unit),objectFit:"contain" as const}}/>}
+        <p style={{fontSize:brandFs,fontWeight:500,color:ts2,margin:0}}>{brand}</p>
+      </div>
+    </div>
+  </div>);
+}
+
+// ─── StampTemplate ───────────────────────────────────────────────────────────
+function StampTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,logo,fontFamily,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||badgeColor||"#ffffff";
-  const ad=address||"123 Main Street",ad2=addressLine2||"";
-  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"";
-  const pr=price?`$${price}`:"";
-  const brandLine=[agentName,phone,brokerage].filter(Boolean).join("  \u00b7  ")||"";
-  const ws=website||"";
-  const badgeFs=Math.round((isStory?72:isPostcard?48:40)*unit);
-  const adFs=responsiveSize(Math.round((isStory?48:isPostcard?32:28)*unit),ad,20);
-  const detFs=Math.round((isStory?36:isPostcard?24:20)*unit);
-  const prFs=Math.round((isStory?64:isPostcard?42:36)*unit);
-  const brandFs=Math.round((isStory?28:isPostcard?18:16)*unit);
-  const pad=Math.round(48*unit);
-  const ts=`0 ${Math.round(2*unit)}px ${Math.round(12*unit)}px rgba(0,0,0,0.6)`;
+  const ad=address||"123 Main Street";const ad2=addressLine2||"";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
+  const pr=price?`$${price}`:"$000,000";
+  const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.6)`;
+  const stampW=Math.round((isStory?340:isPostcard?280:260)*unit);
+  const stampH=Math.round((isStory?160:isPostcard?120:110)*unit);
+  const stampFs=Math.round((isStory?38:isPostcard?28:24)*unit);
+  const adFs=responsiveSize(Math.round((isStory?40:isPostcard?28:24)*unit),ad,20);
+  const detFs=Math.round((isStory?26:isPostcard?18:16)*unit);
+  const prFs=Math.round((isStory?64:isPostcard?44:38)*unit);
+  const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const pad=Math.round(44*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
-    {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}
-    <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,0,0,0.1) 0%,rgba(0,0,0,0.25) 40%,rgba(0,0,0,0.7) 100%)"}}/>
-    <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column" as const,justifyContent:"center",alignItems:"center",padding:`0 ${pad}px`,textAlign:"center" as const}}>
-      <div style={{flex:1,display:"flex",flexDirection:"column" as const,justifyContent:"center",alignItems:"center",gap:Math.round(12*unit)}}>
-        <p style={{fontSize:badgeFs,fontWeight:900,color:"#fff",lineHeight:1.05,margin:0,textTransform:"uppercase" as const,letterSpacing:"0.06em",textShadow:ts}}>{badgeText}</p>
-        <div style={{width:Math.round(60*unit),height:Math.round(3*unit),backgroundColor:accent,borderRadius:2,opacity:0.8}}/>
-        <p style={{fontSize:adFs,fontWeight:600,color:"rgba(255,255,255,0.9)",lineHeight:1.2,margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
-        {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.6)",margin:0,letterSpacing:"0.08em",textShadow:ts}}>{det}</p>}
-        {pr&&<p style={{fontSize:prFs,fontWeight:800,color:accent,lineHeight:1,margin:0,marginTop:Math.round(4*unit),textShadow:`0 ${Math.round(2*unit)}px ${Math.round(14*unit)}px ${hexToRgba(accent,0.35)}`}}>{pr}</p>}
+    {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#0f0f1a"}}/>}
+    <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.7) 100%)"}}/>
+    <div style={{position:"absolute",top:Math.round(30*unit),right:Math.round(30*unit),transform:"rotate(-12deg)",width:stampW,height:stampH,border:`${Math.round(4*unit)}px solid ${badgeColor}`,borderRadius:Math.round(8*unit),display:"flex",alignItems:"center",justifyContent:"center",backgroundColor:hexToRgba(badgeColor,0.15),backdropFilter:"blur(4px)"}}><span style={{fontSize:stampFs,fontWeight:900,color:badgeColor,letterSpacing:"0.14em",textTransform:"uppercase" as const,textAlign:"center" as const,lineHeight:1.2,textShadow:`0 1px 4px ${hexToRgba(badgeColor,0.3)}`}}>{badgeText}</span></div>
+    <div style={{position:"absolute",bottom:0,left:0,right:0,padding:`0 ${pad}px ${Math.round(24*unit)}px`,display:"flex",flexDirection:"column" as const,gap:Math.round(6*unit)}}>
+      <div style={{width:Math.round(60*unit),height:Math.round(2*unit),backgroundColor:accent,borderRadius:1,opacity:0.6,marginBottom:Math.round(4*unit)}}/>
+      <p style={{fontSize:adFs,fontWeight:700,color:"#fff",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
+      {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.5)",margin:0,letterSpacing:"0.08em",textShadow:ts}}>{det}</p>}
+      <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,lineHeight:1,textShadow:ts}}>{pr}</p>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:Math.round(8*unit),paddingTop:Math.round(8*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+        <p style={{fontSize:brandFs,fontWeight:500,color:"rgba(255,255,255,0.45)",margin:0}}>{brand}</p>
+        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(35*unit),maxWidth:Math.round(110*unit),objectFit:"contain" as const}}/>}
       </div>
-      <div style={{width:"100%",padding:`${Math.round(16*unit)}px 0 ${Math.round(20*unit)}px`,display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(16*unit)}}>
-        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round((isStory?80:50)*unit),maxWidth:Math.round((isStory?200:140)*unit),objectFit:"contain" as const}}/>}
-        <div style={{display:"flex",flexDirection:"column" as const,alignItems:logo?"flex-start":"center",gap:Math.round(2*unit)}}>
-          {brandLine&&<p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.7)",margin:0,textShadow:ts}}>{brandLine}</p>}
-          {ws&&<p style={{fontSize:Math.round(brandFs*0.9),fontWeight:400,color:"rgba(255,255,255,0.45)",margin:0,textShadow:ts}}>{ws}</p>}
-        </div>
+    </div>
+  </div>);
+}
+
+// ─── CinematicTemplate ───────────────────────────────────────────────────────
+function CinematicTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,logo,fontFamily,accentColor}:any){
+  const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
+  const accent=accentColor||"#ffffff";
+  const barPct=isStory?14:16;
+  const barH=Math.round(h*barPct/100);
+  const ad=address||"123 Main Street";const ad2=addressLine2||"";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
+  const pr=price?`$${price}`:"$000,000";
+  const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const badgeFs=Math.round((isStory?24:isPostcard?16:14)*unit);
+  const adFs=responsiveSize(Math.round((isStory?30:isPostcard?20:18)*unit),ad,24);
+  const prFs=Math.round((isStory?52:isPostcard?36:32)*unit);
+  const detFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const pad=Math.round(36*unit);
+  return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily,backgroundColor:"#000"}}>
+    <div style={{position:"absolute",top:barH,left:0,right:0,bottom:barH,overflow:"hidden"}}>
+      {videoElement?<div data-video-area style={{width:"100%",height:"100%",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1a1a2e"}}/>}
+      <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 60px rgba(0,0,0,0.4)"}}/>
+    </div>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:barH,backgroundColor:"#000",display:"flex",alignItems:"center",justifyContent:"space-between",padding:`0 ${pad}px`}}>
+      <div style={{display:"inline-flex",padding:`${Math.round(5*unit)}px ${Math.round(14*unit)}px`,backgroundColor:badgeColor,borderRadius:Math.round(3*unit)}}><span style={{fontSize:badgeFs,fontWeight:800,color:isLightColor(badgeColor)?"#111":"#fff",letterSpacing:"0.14em",textTransform:"uppercase" as const}}>{badgeText}</span></div>
+      <p style={{fontSize:adFs,fontWeight:600,color:"rgba(255,255,255,0.8)",margin:0}}>{ad}{ad2?` \u00b7 ${ad2}`:""}</p>
+    </div>
+    <div style={{position:"absolute",bottom:0,left:0,right:0,height:barH,backgroundColor:"#000",display:"flex",alignItems:"center",justifyContent:"space-between",padding:`0 ${pad}px`}}>
+      <div>
+        <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,lineHeight:1}}>{pr}</p>
+        {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.4)",margin:0,marginTop:Math.round(2*unit),letterSpacing:"0.06em"}}>{det}</p>}
       </div>
+      <div style={{display:"flex",alignItems:"center",gap:Math.round(12*unit)}}>
+        <p style={{fontSize:brandFs,fontWeight:500,color:"rgba(255,255,255,0.45)",margin:0,textAlign:"right" as const}}>{brand}</p>
+        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(barH*0.5),maxWidth:Math.round(120*unit),objectFit:"contain" as const}}/>}
+      </div>
+    </div>
+  </div>);
+}
+
+// ─── BoldFrameTemplate ───────────────────────────────────────────────────────
+function BoldFrameTemplate({size,listingPhoto,videoElement,address,addressLine2,beds,baths,sqft,price,agentName,phone,logo,fontFamily,barColor,accentColor}:any){
+  const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
+  const frameColor=accentColor||barColor||"#dc2626";
+  const frameW=Math.round((isStory?50:isPostcard?40:44)*unit);
+  const ad=address||"123 Main Street";const ad2=addressLine2||"";
+  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
+  const pr=price?`$${price}`:"$000,000";
+  const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.6)`;
+  const badgeFs=Math.round((isStory?24:isPostcard?18:16)*unit);
+  const prFs=Math.round((isStory?96:isPostcard?68:60)*unit);
+  const adFs=responsiveSize(Math.round((isStory?36:isPostcard?24:22)*unit),ad,20);
+  const detFs=Math.round((isStory?24:isPostcard?16:14)*unit);
+  const brandFs=Math.round((isStory?20:isPostcard?14:12)*unit);
+  return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily,backgroundColor:frameColor}}>
+    <div style={{position:"absolute",top:frameW,left:frameW,right:frameW,bottom:frameW,overflow:"hidden",borderRadius:Math.round(4*unit)}}>
+      {videoElement?<div data-video-area style={{width:"100%",height:"100%",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#0f0f1a"}}/>}
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,0,0,0.1) 0%,rgba(0,0,0,0.15) 40%,rgba(0,0,0,0.55) 100%)"}}/>
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:Math.round(30*unit),textAlign:"center" as const,gap:Math.round(8*unit)}}>
+        <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,lineHeight:0.95,letterSpacing:"-0.02em",textShadow:ts}}>{pr}</p>
+        <p style={{fontSize:adFs,fontWeight:600,color:"rgba(255,255,255,0.85)",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
+        {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.5)",margin:0,letterSpacing:"0.08em",textShadow:ts}}>{det}</p>}
+      </div>
+    </div>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:badgeFs,fontWeight:900,color:isLightColor(frameColor)?"#111":"#fff",letterSpacing:"0.18em",textTransform:"uppercase" as const}}>Price Reduced</span></div>
+    <div style={{position:"absolute",bottom:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(12*unit),padding:`0 ${Math.round(20*unit)}px`}}>
+      {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(frameW*0.6),maxWidth:Math.round(100*unit),objectFit:"contain" as const}}/>}
+      <p style={{fontSize:brandFs,fontWeight:600,color:isLightColor(frameColor)?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.6)",margin:0}}>{brand}</p>
     </div>
   </div>);
 }
@@ -283,12 +401,12 @@ function LensGate({children,locked,label}:{children:ReactNode;locked:boolean;lab
   return<div style={{position:"relative",opacity:0.45,pointerEvents:"none",userSelect:"none"}}>{children}<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:5}}><div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:8,background:"linear-gradient(135deg,rgba(99,102,241,0.9),rgba(168,85,247,0.9))",boxShadow:"0 4px 16px rgba(99,102,241,0.35)"}}><Lock size={11} color="#fff"/><span style={{fontSize:10,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>{label||"Subscribe to Lens"}</span></div></div></div>;
 }
 
-const TEMPLATES=[{id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},{id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},{id:"price-reduced",label:"Price Reduced",icon:DollarSign,color:"#f59e0b"},{id:"just-sold",label:"Just Sold",icon:CheckCircle,color:"#ef4444"},{id:"coming-soon",label:"Coming Soon",icon:Clock,color:"#7c3aed"},{id:"under-contract",label:"Under Contract",icon:FileText,color:"#0891b2"},{id:"new-price",label:"New Price",icon:DollarSign,color:"#16a34a"},{id:"back-on-market",label:"Back on Market",icon:RotateCcw,color:"#ea580c"},{id:"sold-overlay",label:"Sold (Bold)",icon:CheckCircle,color:"#ef4444",overlay:true},{id:"listed-overlay",label:"Listed (Bold)",icon:Home,color:"#10b981",overlay:true}];
+const TEMPLATES=[{id:"just-listed",label:"Just Listed",icon:Home,color:"#10b981"},{id:"open-house",label:"Open House",icon:Calendar,color:"#6366f1"},{id:"price-reduced",label:"Price Reduced",icon:DollarSign,color:"#f59e0b"},{id:"just-sold",label:"Just Sold",icon:CheckCircle,color:"#ef4444"},{id:"magazine-cover",label:"Listed (Magazine)",icon:Home,color:"#0ea5e9"},{id:"split-diagonal",label:"Listed (Split)",icon:Home,color:"#8b5cf6"},{id:"stamp-listed",label:"Listed (Stamp)",icon:Home,color:"#14b8a6"},{id:"stamp-reduced",label:"Reduced (Stamp)",icon:DollarSign,color:"#f97316"},{id:"cinematic-listed",label:"Listed (Cinema)",icon:Home,color:"#6366f1"},{id:"cinematic-reduced",label:"Reduced (Cinema)",icon:DollarSign,color:"#e11d48"},{id:"bold-frame",label:"Reduced (Frame)",icon:DollarSign,color:"#dc2626"}];
 const SIZES=[{id:"square",label:"Square",sublabel:"1080\u00d71080",width:1080,height:1080},{id:"story",label:"Story",sublabel:"1080\u00d71920",width:1080,height:1920},{id:"postcard",label:"Postcard",sublabel:"1800\u00d71200",width:1800,height:1200}];
 const YARD_SIGN_SIZES=[{id:"18x24",label:"18\u00d724\"",sublabel:"Standard",width:5400,height:7200},{id:"24x36",label:"24\u00d736\"",sublabel:"Large",width:7200,height:10800}];
 const BRAND_ORIENTATIONS=[{id:"landscape",label:"Landscape",sublabel:"1920\u00d71080",width:1920,height:1080},{id:"vertical",label:"Vertical",sublabel:"1080\u00d71920",width:1080,height:1920}];
-const TABS=[{id:"templates",label:"Social Content",icon:PenTool},{id:"listing-flyer",label:"Listing Flyer",icon:Printer},{id:"branding-card",label:"Branding",icon:CreditCard},{id:"yard-sign",label:"Yard Sign",icon:MapPin},{id:"property-pdf",label:"Property Sheet",icon:FileText},{id:"drone-mark",label:"Drone Mark",icon:Crosshair}];
-const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={"video-remix":[{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Media",icon:Upload},{id:"music",label:"Music",icon:Music},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],"listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],"yard-sign":[{id:"design",label:"Design",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Colors",icon:Palette}],"branding-card":[{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],"property-pdf":[{id:"text",label:"Details",icon:Type},{id:"photos",label:"Photos",icon:ImageIcon},{id:"styles",label:"Styles",icon:Palette}],"drone-mark":[{id:"tools",label:"Tools",icon:Crosshair},{id:"styles",label:"Styles",icon:Palette},{id:"layers",label:"Layers",icon:Layers}]};
+const TABS=[{id:"templates",label:"Social Content",icon:PenTool},{id:"listing-flyer",label:"Listing Flyer",icon:Printer},{id:"branding-card",label:"Branding",icon:CreditCard},{id:"yard-sign",label:"Yard Sign",icon:MapPin},{id:"property-pdf",label:"Property Sheet",icon:FileText}];
+const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={"video-remix":[{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Media",icon:Upload},{id:"music",label:"Music",icon:Music},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],"listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],"yard-sign":[{id:"design",label:"Design",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Colors",icon:Palette}],"branding-card":[{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],"property-pdf":[{id:"text",label:"Details",icon:Type},{id:"photos",label:"Photos",icon:ImageIcon},{id:"styles",label:"Styles",icon:Palette}]};
 const BROKERAGE_COLORS=[{hex:"#b40101",label:"KW Red"},{hex:"#666666",label:"KW Gray"},{hex:"#003399",label:"CB Blue"},{hex:"#012169",label:"CB Navy"},{hex:"#003da5",label:"RM Blue"},{hex:"#dc1c2e",label:"RM Red"},{hex:"#b5985a",label:"C21 Gold"},{hex:"#1c1c1c",label:"C21 Black"},{hex:"#000000",label:"CMP Black"},{hex:"#333333",label:"CMP Dark"},{hex:"#002349",label:"SIR Blue"},{hex:"#1a1a1a",label:"SIR Black"},{hex:"#552448",label:"BH Purple"},{hex:"#2d1a33",label:"BH Dark"},{hex:"#1c3f6e",label:"EXP Blue"},{hex:"#006341",label:"HH Green"},{hex:"#003d28",label:"HH Dk Green"},{hex:"#4c8c2b",label:"BHG Green"},{hex:"#d4272e",label:"EXT Red"},{hex:"#e31937",label:"ERA Red"},{hex:"#273691",label:"ERA Blue"},{hex:"#a02021",label:"RF Red"},{hex:"#ffffff",label:"White"}];
 const ACCENT_COLORS=["#b8860b","#c41e3a","#1e40af","#0d6e4f","#6b21a8","#be185d","#0e7490","#c2410c","#71717a","#ffffff","#000000"];
 const FONT_OPTIONS=[{id:"serif",label:"Classic Serif",family:"Georgia, 'Times New Roman', serif",sample:"Elegant Home"},{id:"sans",label:"Clean Sans",family:"'Helvetica Neue', Arial, sans-serif",sample:"Modern Living"},{id:"modern",label:"Modern",family:"'Trebuchet MS', 'Gill Sans', sans-serif",sample:"Fresh Start"},{id:"elegant",label:"Elegant",family:"'Palatino Linotype', 'Book Antiqua', Palatino, serif",sample:"Luxury Estate"}];
@@ -396,58 +514,6 @@ export default function DesignStudioV2(){
   const[mobilePanel,setMobilePanel]=useState<string|null>(null);
   const previewRef=useRef<HTMLDivElement>(null);
 
-  // ─── Drone Mark State ─────────────────────────────────────────────────────
-  const[dronePhoto,setDronePhoto]=useState<string|null>(null);
-  const[dronePhotoNatural,setDronePhotoNatural]=useState({w:1920,h:1080});
-  const[droneTool,setDroneTool]=useState("select");
-  const[droneShapes,setDroneShapes]=useState<DroneShape[]>([]);
-  const[droneSelectedId,setDroneSelectedId]=useState<string|null>(null);
-  const[droneDrawingPts,setDroneDrawingPts]=useState<{x:number;y:number}[]>([]);
-  const[droneIsDrawing,setDroneIsDrawing]=useState(false);
-  const[droneLineColor,setDroneLineColor_]=useState("#ffffff");
-  const[droneLineStyle,setDroneLineStyle_]=useState("solid");
-  const[droneLineWidth,setDroneLineWidth_]=useState(4);
-  const[droneFillOpacity,setDroneFillOpacity_]=useState(0.12);
-  const[dronePinColor,setDronePinColor_]=useState("#ffffff");
-  const[dronePinSize,setDronePinSize_]=useState(200);
-  const[droneLabelText,setDroneLabelText_]=useState("");
-  const[droneLabelFontSize,setDroneLabelFontSize_]=useState(28);
-  const[droneLabelFont,setDroneLabelFont_]=useState("sans");
-  const[droneLabelColor,setDroneLabelColor_]=useState("#ffffff");
-  const[droneLabelBg,setDroneLabelBg_]=useState(true);
-  const[droneLogo,setDroneLogo]=useState<string|null>(null);
-  const[dronePinText,setDronePinText_]=useState("");
-  const[droneShowGrid,setDroneShowGrid]=useState(false);
-  const[droneSnapGrid,setDroneSnapGrid]=useState(false);
-  const[droneMeasureUnit,setDroneMeasureUnit_]=useState("m");
-  // Mutable style bag — always up-to-date, no closure issues
-  const ds=useRef({color:"#ffffff",style:"solid",width:4,fill:0.12,pinColor:"#ffffff",pinSize:200,pinText:"",labelText:"",labelFs:28,labelFont:"sans",labelColor:"#ffffff",labelBg:true,logo:null as string|null,unit:"m"});
-  const setDroneLineColor=(v:string)=>{ds.current.color=v;setDroneLineColor_(v);};
-  const setDroneLineStyle=(v:string)=>{ds.current.style=v;setDroneLineStyle_(v);};
-  const setDroneLineWidth=(v:number)=>{ds.current.width=v;setDroneLineWidth_(v);};
-  const setDroneFillOpacity=(v:number)=>{ds.current.fill=v;setDroneFillOpacity_(v);};
-  const setDronePinColor=(v:string)=>{ds.current.pinColor=v;setDronePinColor_(v);};
-  const setDronePinSize=(v:number)=>{ds.current.pinSize=v;setDronePinSize_(v);};
-  const setDronePinText=(v:string)=>{ds.current.pinText=v;setDronePinText_(v);};
-  const setDroneLabelText=(v:string)=>{ds.current.labelText=v;setDroneLabelText_(v);};
-  const setDroneLabelFontSize=(v:number)=>{ds.current.labelFs=v;setDroneLabelFontSize_(v);};
-  const setDroneLabelFont=(v:string)=>{ds.current.labelFont=v;setDroneLabelFont_(v);};
-  const setDroneLabelColor=(v:string)=>{ds.current.labelColor=v;setDroneLabelColor_(v);};
-  const setDroneLabelBg=(v:boolean)=>{ds.current.labelBg=v;setDroneLabelBg_(v);};
-  const setDroneMeasureUnit=(v:string)=>{ds.current.unit=v;setDroneMeasureUnit_(v);};
-  const[droneZoom,setDroneZoom]=useState(100);
-  const[droneHistory,setDroneHistory]=useState<DroneShape[][]>([[]]);
-  const[droneHistIdx,setDroneHistIdx]=useState(0);
-  const[droneDragging,setDroneDragging]=useState<{shapeId:string;handleIndex?:number}|null>(null);
-  const[droneDragStart,setDroneDragStart]=useState<{x:number;y:number}|null>(null);
-  const[droneRectStart,setDroneRectStart]=useState<{x:number;y:number}|null>(null);
-  const[droneRectCur,setDroneRectCur]=useState<{x:number;y:number}|null>(null);
-  const[droneLineStart,setDroneLineStart]=useState<{x:number;y:number}|null>(null);
-  const[droneLineCur,setDroneLineCur]=useState<{x:number;y:number}|null>(null);
-  const droneSvgRef=useRef<SVGSVGElement>(null);
-  const droneFileRef=useRef<HTMLInputElement>(null);
-  const droneLogoRef=useRef<HTMLInputElement>(null);
-
   const currentSize=SIZES.find(s=>s.id===selectedSize)!;
   const currentYardSize=YARD_SIGN_SIZES.find(s=>s.id===yardSignSize)!;
   const currentBrandOr=BRAND_ORIENTATIONS.find(o=>o.id===brandOrientation)!;
@@ -459,7 +525,6 @@ export default function DesignStudioV2(){
   const currentPanels=LEFT_PANELS[activeTab]||LEFT_PANELS.templates;
   const isVideoMode=activeTab==="templates"&&mediaMode==="video"&&!!selectedVideo;
   const isRemixMode=activeTab==="video-remix";
-  const isDroneMode=activeTab==="drone-mark";
 
   useEffect(()=>{setLeftPanel(currentPanels[0].id);},[activeTab]);
 
@@ -482,7 +547,7 @@ export default function DesignStudioV2(){
         const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
-          if(data.saved_logo_url){setLogo(data.saved_logo_url);setBrandLogo(data.saved_logo_url);setDroneLogo(data.saved_logo_url);}
+          if(data.saved_logo_url){setLogo(data.saved_logo_url);setBrandLogo(data.saved_logo_url);}
           if(data.saved_agent_name){setAgentName(data.saved_agent_name);setBrandAgentName(data.saved_agent_name);}
           if(data.saved_phone){setPhone(data.saved_phone);setBrandPhone(data.saved_phone);}
           if(data.saved_email){setAgentEmail(data.saved_email);setBrandEmail(data.saved_email);}
@@ -569,232 +634,18 @@ export default function DesignStudioV2(){
     setExportProgress(0);setExporting(false);setExportStatus("");
   };
 
-  // ─── Drone Mark Handlers ──────────────────────────────────────────────────
-  const dronePushHistory=useCallback((ns:DroneShape[])=>{
-    setDroneHistory(h=>{const trimmed=h.slice(0,droneHistIdx+1);return[...trimmed,ns];});
-    setDroneHistIdx(i=>i+1);
-  },[droneHistIdx]);
-
-  const droneUndo=()=>{if(droneHistIdx>0){setDroneHistIdx(i=>i-1);setDroneShapes(droneHistory[droneHistIdx-1]);}};
-  const droneRedo=()=>{if(droneHistIdx<droneHistory.length-1){setDroneHistIdx(i=>i+1);setDroneShapes(droneHistory[droneHistIdx+1]);}};
-  const droneAddShape=(s:DroneShape)=>{setDroneShapes(prev=>{const ns=[...prev,s];dronePushHistory(ns);return ns;});};
-  const droneUpdateShape=(id:string,u:Partial<DroneShape>)=>{setDroneShapes(prev=>{const ns=prev.map(s=>s.id===id?{...s,...u}:s);dronePushHistory(ns);return ns;});};
-  const droneUpdateLive=(id:string,u:Partial<DroneShape>)=>{setDroneShapes(prev=>prev.map(s=>s.id===id?{...s,...u}:s));};
-  const droneDeleteShape=(id:string)=>{setDroneShapes(prev=>{const ns=prev.filter(s=>s.id!==id);dronePushHistory(ns);return ns;});if(droneSelectedId===id)setDroneSelectedId(null);};
-  const droneDuplicateShape=(id:string)=>{setDroneShapes(prev=>{const s=prev.find(sh=>sh.id===id);if(!s)return prev;const n:any={...s,id:droneUid()};if(n.points)n.points=n.points.map((p:any)=>({x:p.x+30,y:p.y+30}));if(n.x!==undefined){n.x+=30;if(n.y!==undefined)n.y+=30;}if(n.x1!==undefined){n.x1+=30;if(n.y1!==undefined)n.y1+=30;if(n.x2!==undefined)n.x2+=30;if(n.y2!==undefined)n.y2+=30;}const ns=[...prev,n];dronePushHistory(ns);return ns;});};
-
-  const droneGetPos=(e:React.MouseEvent)=>{
-    const svg=droneSvgRef.current;if(!svg)return{x:0,y:0};
-    const rect=svg.getBoundingClientRect();
-    let x=(e.clientX-rect.left)*(dronePhotoNatural.w/rect.width);
-    let y=(e.clientY-rect.top)*(dronePhotoNatural.h/rect.height);
-    if(droneSnapGrid){x=Math.round(x/20)*20;y=Math.round(y/20)*20;}
-    return{x,y};
-  };
-
-  const droneCanvasClick=(e:React.MouseEvent)=>{
-    if((e.target as Element).closest("[data-handle]"))return;
-    if((e.target as Element).closest("[data-shape-id]")&&droneTool==="select")return;
-    const pos=droneGetPos(e);
-    const sty=ds.current;
-    if(droneTool==="polygon"){
-      if(!droneIsDrawing){setDroneIsDrawing(true);setDroneDrawingPts([pos]);}
-      else{
-        const first=droneDrawingPts[0];
-        const dist=Math.sqrt((pos.x-first.x)**2+(pos.y-first.y)**2);
-        if(droneDrawingPts.length>=3&&dist<30*(dronePhotoNatural.w/1000)){
-          droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});
-          setDroneIsDrawing(false);setDroneDrawingPts([]);
-        }else{setDroneDrawingPts([...droneDrawingPts,pos]);}
-      }
-    }else if(droneTool==="pin"){
-      droneAddShape({id:droneUid(),type:"pin",x:pos.x,y:pos.y,color:sty.pinColor,size:sty.pinSize,logo:sty.logo,text:sty.pinText,labelColor:sty.labelColor});
-    }else if(droneTool==="label"){
-      if(!sty.labelText.trim()){notify("Enter label text first");return;}
-      droneAddShape({id:droneUid(),type:"label",x:pos.x,y:pos.y,text:sty.labelText,fontSize:sty.labelFs,font:sty.labelFont,color:sty.labelColor,bg:sty.labelBg});
-    }else if(droneTool==="select"){setDroneSelectedId(null);}
-  };
-
-  const droneMouseDown=(e:React.MouseEvent)=>{
-    const pos=droneGetPos(e);
-    if(droneTool==="rect"){setDroneRectStart(pos);setDroneRectCur(pos);}
-    else if(droneTool==="line"||droneTool==="measure"||droneTool==="arrow"){setDroneLineStart(pos);setDroneLineCur(pos);}
-  };
-
-  const droneMouseMove=(e:React.MouseEvent)=>{
-    const pos=droneGetPos(e);
-    if(droneTool==="rect"&&droneRectStart){setDroneRectCur(pos);}
-    else if((droneTool==="line"||droneTool==="measure"||droneTool==="arrow")&&droneLineStart){setDroneLineCur(pos);}
-    else if(droneDragging&&droneDragStart){
-      const dx=pos.x-droneDragStart.x,dy=pos.y-droneDragStart.y;
-      const shape=droneShapes.find(s=>s.id===droneDragging.shapeId);if(!shape)return;
-      if(droneDragging.handleIndex!==undefined){
-        if((shape.type==="polygon"||shape.type==="rect-shape")&&shape.points){
-          const np=[...shape.points];np[droneDragging.handleIndex]={x:pos.x,y:pos.y};droneUpdateLive(droneDragging.shapeId,{points:np});
-        }else if(shape.type==="line-shape"||shape.type==="measure"||shape.type==="arrow"){
-          if(droneDragging.handleIndex===0)droneUpdateLive(droneDragging.shapeId,{x1:pos.x,y1:pos.y});
-          else droneUpdateLive(droneDragging.shapeId,{x2:pos.x,y2:pos.y});
-        }
-      }else{
-        if(shape.type==="polygon"||shape.type==="rect-shape")droneUpdateLive(droneDragging.shapeId,{points:shape.points!.map(p=>({x:p.x+dx,y:p.y+dy}))});
-        else if(shape.type==="line-shape"||shape.type==="measure"||shape.type==="arrow")droneUpdateLive(droneDragging.shapeId,{x1:(shape.x1||0)+dx,y1:(shape.y1||0)+dy,x2:(shape.x2||0)+dx,y2:(shape.y2||0)+dy});
-        else droneUpdateLive(droneDragging.shapeId,{x:(shape.x||0)+dx,y:(shape.y||0)+dy});
-      }
-      setDroneDragStart(pos);
-    }
-    if(droneTool==="polygon"&&droneIsDrawing)setDroneLineCur(pos);
-  };
-
-  const droneMouseUp=(e:React.MouseEvent)=>{
-    const pos=droneGetPos(e);
-    const sty=ds.current;
-    if(droneTool==="rect"&&droneRectStart){
-      const x1=Math.min(droneRectStart.x,pos.x),y1=Math.min(droneRectStart.y,pos.y),x2=Math.max(droneRectStart.x,pos.x),y2=Math.max(droneRectStart.y,pos.y);
-      if(Math.abs(x2-x1)>10&&Math.abs(y2-y1)>10)droneAddShape({id:droneUid(),type:"rect-shape",points:[{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});
-      setDroneRectStart(null);setDroneRectCur(null);
-    }else if((droneTool==="line"||droneTool==="arrow")&&droneLineStart){
-      const dist=Math.sqrt((pos.x-droneLineStart.x)**2+(pos.y-droneLineStart.y)**2);
-      if(dist>10)droneAddShape({id:droneUid(),type:droneTool==="arrow"?"arrow":"line-shape",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.color,style:sty.style,width:sty.width});
-      setDroneLineStart(null);setDroneLineCur(null);
-    }else if(droneTool==="measure"&&droneLineStart){
-      const dist=Math.sqrt((pos.x-droneLineStart.x)**2+(pos.y-droneLineStart.y)**2);
-      if(dist>10)droneAddShape({id:droneUid(),type:"measure",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.color,style:sty.style,width:sty.width,measureText:"",unit:sty.unit});
-      setDroneLineStart(null);setDroneLineCur(null);
-    }
-    if(droneDragging){setDroneShapes(prev=>{dronePushHistory([...prev]);return prev;});setDroneDragging(null);setDroneDragStart(null);}
-  };
-
-  const droneShapeMouseDown=(e:React.MouseEvent,id:string)=>{e.stopPropagation();if(droneTool==="select"){setDroneSelectedId(id);setDroneDragging({shapeId:id});setDroneDragStart(droneGetPos(e));}};
-  const droneHandleMouseDown=(e:React.MouseEvent,shapeId:string,handleIndex:number)=>{e.stopPropagation();setDroneSelectedId(shapeId);setDroneDragging({shapeId,handleIndex});setDroneDragStart(droneGetPos(e));};
-
-  const droneDblClick=()=>{if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>=3){const sty=ds.current;droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});setDroneIsDrawing(false);setDroneDrawingPts([]);}};
-  const droneCancelDrawing=()=>{setDroneIsDrawing(false);setDroneDrawingPts([]);setDroneRectStart(null);setDroneRectCur(null);setDroneLineStart(null);setDroneLineCur(null);};
-
-  const dronePhotoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{setDronePhotoNatural({w:img.naturalWidth,h:img.naturalHeight});setDronePhoto(url);setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);};img.src=url;};
-  const droneLogoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=(ev)=>{const v=ev.target?.result as string;ds.current.logo=v;setDroneLogo(v);};reader.readAsDataURL(f);};
-
-  useEffect(()=>{
-    if(!isDroneMode)return;
-    const handler=(e:KeyboardEvent)=>{
-      if(e.key==="Escape")droneCancelDrawing();
-      if((e.key==="Delete"||e.key==="Backspace")&&droneSelectedId&&!(e.target as Element)?.closest("input,textarea")){e.preventDefault();droneDeleteShape(droneSelectedId);}
-      if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();droneUndo();}
-      if((e.metaKey||e.ctrlKey)&&e.key==="y"){e.preventDefault();droneRedo();}
-    };
-    window.addEventListener("keydown",handler);
-    return()=>window.removeEventListener("keydown",handler);
-  },[isDroneMode,droneSelectedId,droneHistIdx]);
-
-  const droneExport=async()=>{
-    if(!dronePhoto){notify("Upload a photo first");return;}
-    setDroneSelectedId(null);await new Promise(r=>setTimeout(r,50));
-    try{
-      const svgEl=droneSvgRef.current;if(!svgEl)return;
-      const canvas=document.createElement("canvas");canvas.width=dronePhotoNatural.w;canvas.height=dronePhotoNatural.h;
-      const ctx=canvas.getContext("2d")!;
-      const img=new Image();img.crossOrigin="anonymous";
-      await new Promise<void>((res,rej)=>{img.onload=()=>res();img.onerror=rej;img.src=dronePhoto!;});
-      ctx.drawImage(img,0,0,dronePhotoNatural.w,dronePhotoNatural.h);
-      const svgData=new XMLSerializer().serializeToString(svgEl);
-      const svgBlob=new Blob([svgData],{type:"image/svg+xml;charset=utf-8"});
-      const svgUrl=URL.createObjectURL(svgBlob);
-      const svgImg=new Image();
-      await new Promise<void>((res,rej)=>{svgImg.onload=()=>res();svgImg.onerror=rej;svgImg.src=svgUrl;});
-      ctx.drawImage(svgImg,0,0,dronePhotoNatural.w,dronePhotoNatural.h);URL.revokeObjectURL(svgUrl);
-      const link=document.createElement("a");link.download=`drone-edit-${Date.now()}.png`;link.href=canvas.toDataURL("image/png");link.click();
-      notify("Drone photo exported!");
-    }catch(err){console.error("Drone export failed:",err);notify("Export failed");}
-  };
-
-  const droneSelected=droneShapes.find(s=>s.id===droneSelectedId);
-  const droneHandleR=Math.max(10,Math.min(16,dronePhotoNatural.w*0.007));
-
-  // ─── Drone Shape Renderer ─────────────────────────────────────────────────
-  const renderDroneShape=(shape:DroneShape)=>{
-    const isSel=shape.id===droneSelectedId;
-    const cs={cursor:droneTool==="select"?"move":"default"} as React.CSSProperties;
-    if(shape.type==="polygon"||shape.type==="rect-shape"){
-      const pts=shape.points!.map(p=>`${p.x},${p.y}`).join(" ");
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        <polygon points={pts} fill={hexToRgba(shape.color,shape.fillOpacity||0)} stroke={shape.color} strokeWidth={shape.width} strokeDasharray={droneDash(shape.style||"solid",shape.width||4)} strokeLinejoin="round" strokeLinecap="round"/>
-        <polygon points={pts} fill="transparent" stroke="transparent" strokeWidth={Math.max(24,(shape.width||4)+16)}/>
-        {isSel&&shape.points!.map((p,i)=>(<circle key={i} data-handle="true" cx={p.x} cy={p.y} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,i)}/>))}
-      </g>);
-    }
-    if(shape.type==="line-shape"||shape.type==="arrow"){
-      const mId=`arr-${shape.id}`;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        {shape.type==="arrow"&&<defs><marker id={mId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={shape.color}/></marker></defs>}
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={shape.color} strokeWidth={shape.width} strokeDasharray={droneDash(shape.style||"solid",shape.width||4)} strokeLinecap="round" markerEnd={shape.type==="arrow"?`url(#${mId})`:undefined}/>
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke="transparent" strokeWidth={Math.max(24,(shape.width||4)+16)}/>
-        {isSel&&<><circle data-handle="true" cx={shape.x1} cy={shape.y1} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,0)}/><circle data-handle="true" cx={shape.x2} cy={shape.y2} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,1)}/></>}
-      </g>);
-    }
-    if(shape.type==="measure"){
-      const dx=(shape.x2||0)-(shape.x1||0),dy=(shape.y2||0)-(shape.y1||0),dist=Math.sqrt(dx*dx+dy*dy);
-      const mx=((shape.x1||0)+(shape.x2||0))/2,my=((shape.y1||0)+(shape.y2||0))/2;
-      const angle=Math.atan2(dy,dx)*180/Math.PI;
-      const txt=shape.measureText||`${Math.round(dist/10)} ${shape.unit||"m"}`;
-      const fs=Math.max(22,Math.min(40,dist*0.08));
-      const tL=Math.max(14,dist*0.04),pX=-dy/dist*tL,pY=dx/dist*tL;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round"/>
-        <line x1={(shape.x1||0)+pX} y1={(shape.y1||0)+pY} x2={(shape.x1||0)-pX} y2={(shape.y1||0)-pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round"/>
-        <line x1={(shape.x2||0)+pX} y1={(shape.y2||0)+pY} x2={(shape.x2||0)-pX} y2={(shape.y2||0)-pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round"/>
-        <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke="transparent" strokeWidth={Math.max(24,(shape.width||4)+16)}/>
-        <g transform={`translate(${mx}, ${my-8})`}><text x={0} y={0} textAnchor="middle" fill={shape.color} fontSize={fs} fontWeight="800" fontFamily="'Helvetica Neue', Arial, sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="4" paintOrder="stroke" transform={angle>90||angle<-90?`rotate(${angle+180})`:`rotate(${angle})`}>{txt}</text></g>
-        {isSel&&<><circle data-handle="true" cx={shape.x1} cy={shape.y1} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,0)}/><circle data-handle="true" cx={shape.x2} cy={shape.y2} r={droneHandleR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{cursor:"grab"}} onMouseDown={e=>droneHandleMouseDown(e,shape.id,1)}/></>}
-      </g>);
-    }
-    if(shape.type==="pin"){
-      const s=shape.size||200;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} transform={`translate(${(shape.x||0)-s/2}, ${(shape.y||0)-s})`} style={cs}>
-        <DronePinTeardrop color={shape.color} size={s} logo={shape.logo} text={shape.text} textColor={shape.labelColor}/>
-        {isSel&&<rect x={-6} y={-6} width={s+12} height={s+12} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={8}/>}
-      </g>);
-    }
-    if(shape.type==="label"){
-      const ff=DRONE_FONT_OPTS.find(f=>f.id===shape.font)?.family||DRONE_FONT_OPTS[0].family;
-      const fs=shape.fontSize||28;
-      return(<g key={shape.id} data-shape-id={shape.id} onMouseDown={e=>droneShapeMouseDown(e,shape.id)} style={cs}>
-        {shape.bg&&<rect x={(shape.x||0)-6} y={(shape.y||0)-fs-4} width={(shape.text||"").length*fs*0.62+24} height={fs+16} fill="rgba(0,0,0,0.55)" rx={6}/>}
-        <text x={(shape.x||0)+6} y={shape.y} fill={shape.color} fontSize={fs} fontWeight="700" fontFamily={ff} stroke={shape.bg?"none":"rgba(0,0,0,0.5)"} strokeWidth={shape.bg?0:4} paintOrder="stroke">{shape.text}</text>
-        {isSel&&<rect x={(shape.x||0)-10} y={(shape.y||0)-fs-10} width={(shape.text||"").length*fs*0.62+32} height={fs+28} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={6}/>}
-      </g>);
-    }
-    return null;
-  };
-
-  const renderDronePreview=()=>{
-    const parts:React.ReactNode[]=[];
-    const sty=ds.current;
-    if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>0){
-      parts.push(<g key="pp"><polyline points={droneDrawingPts.map(p=>`${p.x},${p.y}`).join(" ")} fill="none" stroke={sty.color} strokeWidth={sty.width} strokeDasharray={droneDash(sty.style,sty.width)} strokeLinejoin="round" strokeLinecap="round"/>{droneDrawingPts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={6} fill={i===0?"#fff":sty.color} stroke={i===0?sty.color:"#fff"} strokeWidth={2}/>)}{droneLineCur&&<line x1={droneDrawingPts[droneDrawingPts.length-1].x} y1={droneDrawingPts[droneDrawingPts.length-1].y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.color} strokeWidth={sty.width} strokeDasharray="8 6" opacity={0.5}/>}</g>);
-    }
-    if(droneTool==="rect"&&droneRectStart&&droneRectCur){
-      const x=Math.min(droneRectStart.x,droneRectCur.x),y=Math.min(droneRectStart.y,droneRectCur.y);
-      parts.push(<rect key="rp" x={x} y={y} width={Math.abs(droneRectCur.x-droneRectStart.x)} height={Math.abs(droneRectCur.y-droneRectStart.y)} fill={hexToRgba(sty.color,sty.fill)} stroke={sty.color} strokeWidth={sty.width} strokeDasharray={droneDash(sty.style,sty.width)}/>);
-    }
-    if((droneTool==="line"||droneTool==="arrow"||droneTool==="measure")&&droneLineStart&&droneLineCur){
-      parts.push(<line key="lp" x1={droneLineStart.x} y1={droneLineStart.y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.color} strokeWidth={sty.width} strokeDasharray="8 6" opacity={0.6}/>);
-      if(droneTool==="measure"){const dx=droneLineCur.x-droneLineStart.x,dy=droneLineCur.y-droneLineStart.y,dist=Math.sqrt(dx*dx+dy*dy);parts.push(<text key="mp" x={(droneLineStart.x+droneLineCur.x)/2} y={(droneLineStart.y+droneLineCur.y)/2-12} textAnchor="middle" fill={sty.color} fontSize={24} fontWeight="800" fontFamily="'Helvetica Neue', sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="3" paintOrder="stroke">{Math.round(dist/10)} {sty.unit}</text>);}
-    }
-    return parts;
-  };
-
   // ─── Export Helpers ──────────────────────────────────────────────────────────
   const getPreviewDims=useCallback(()=>{
     let w:number,h:number;
-    if(isDroneMode){w=dronePhotoNatural.w;h=dronePhotoNatural.h;}
-    else if(activeTab==="video-remix"){w=currentRemixSize.width;h=currentRemixSize.height;}
+    if(activeTab==="video-remix"){w=currentRemixSize.width;h=currentRemixSize.height;}
     else if(activeTab==="yard-sign"){w=currentYardSize.width;h=currentYardSize.height;}
     else if(activeTab==="property-pdf"){w=2550;h=3300;}
     else if(activeTab==="branding-card"){w=currentBrandOr.width;h=currentBrandOr.height;}
     else if(activeTab==="listing-flyer"){w=2550;h=3300;}
     else{w=currentSize.width;h=currentSize.height;}
-    const maxW=580,maxH=560;const s=Math.min(maxW/w,maxH/h,1)*((isDroneMode?droneZoom:zoom)/100);
+    const maxW=580,maxH=560;const s=Math.min(maxW/w,maxH/h,1)*(zoom/100);
     return{scale:s,pW:w*s,pH:h*s,rawW:w,rawH:h};
-  },[activeTab,currentSize,currentYardSize,currentBrandOr,currentRemixSize,zoom,droneZoom,dronePhotoNatural,isDroneMode]);
+  },[activeTab,currentSize,currentYardSize,currentBrandOr,currentRemixSize,zoom]);
   const{scale,pW,pH,rawW,rawH}=getPreviewDims();
 
   const prepareForExport=(el:HTMLElement):{restore:()=>void}=>{
@@ -839,8 +690,7 @@ export default function DesignStudioV2(){
     }
     setExporting(true);setExportStatus("");
     try{
-      if(isDroneMode){await droneExport();}
-      else if(isVideoMode){await exportVideo();}
+      if(isVideoMode){await exportVideo();}
       else{await exportImage();}
     }catch(err:any){console.error("Export error:",err);notify(err?.message||"Export failed.");}
     setExporting(false);setExportProgress(0);setExportStatus("");
@@ -913,12 +763,8 @@ export default function DesignStudioV2(){
   const pdfTotalPages=pdfHasOverflow?2+Math.ceil(Math.max(0,pdfPhotosAfterP1-pdfPage2Slots)/6):1+Math.ceil(pdfPhotosAfterP1/6);
 
   const renderPreview=()=>{
-    if(activeTab==="drone-mark"){
-      if(!dronePhoto)return<div style={{width:1920,height:1080,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(239,68,68,0.08))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🛩</div><p style={{fontSize:20,fontWeight:800,color:"rgba(255,255,255,0.7)"}}>Drone Mark</p><p style={{fontSize:13,color:"rgba(255,255,255,0.35)",maxWidth:380,lineHeight:1.7,textAlign:"center" as const}}>Upload a drone photo, then draw lot lines, drop branded pins, and add dimension labels.</p><button onClick={()=>droneFileRef.current?.click()} style={{padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,#f59e0b,#ef4444)",color:"#fff",border:"none",cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"var(--sf)"}}>📷 Upload Photo</button><input ref={droneFileRef} type="file" accept="image/*" style={{display:"none"}} onChange={dronePhotoUpload}/></div>;
-      return<div style={{width:dronePhotoNatural.w,height:dronePhotoNatural.h,position:"relative"}}><img src={dronePhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} crossOrigin="anonymous" draggable={false}/><svg ref={droneSvgRef} viewBox={`0 0 ${dronePhotoNatural.w} ${dronePhotoNatural.h}`} style={{position:"absolute",inset:0,width:"100%",height:"100%",cursor:droneTool==="select"?"default":"crosshair"}} onClick={droneCanvasClick} onMouseDown={droneMouseDown} onMouseMove={droneMouseMove} onMouseUp={droneMouseUp} onDoubleClick={droneDblClick}>{droneShowGrid&&<g opacity={0.08}>{Array.from({length:Math.floor(dronePhotoNatural.w/100)},(_,i)=><line key={`v${i}`} x1={(i+1)*100} y1={0} x2={(i+1)*100} y2={dronePhotoNatural.h} stroke="#fff" strokeWidth={1}/>)}{Array.from({length:Math.floor(dronePhotoNatural.h/100)},(_,i)=><line key={`h${i}`} x1={0} y1={(i+1)*100} x2={dronePhotoNatural.w} y2={(i+1)*100} stroke="#fff" strokeWidth={1}/>)}</g>}{droneShapes.map(renderDroneShape)}{renderDronePreview()}</svg></div>;
-    }
     if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
-    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if((TEMPLATES.find(t=>t.id===selectedTemplate) as any)?.overlay){const oBadge=getBadgeConfig(selectedTemplate);return<OverlayTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} badgeText={oBadge.text} badgeColor={oBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} website="" fontFamily={fontFamily} accentColor={accentColor}/>;}if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
+    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if(selectedTemplate==="magazine-cover")return<MagazineCoverTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} accentColor={accentColor}/>;if(selectedTemplate==="split-diagonal")return<SplitDiagonalTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="stamp-listed"||selectedTemplate==="stamp-reduced"){const sBadge=getBadgeConfig(selectedTemplate);return<StampTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} badgeText={sBadge.text} badgeColor={sBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} logo={logo} fontFamily={fontFamily} accentColor={accentColor}/>;}if(selectedTemplate==="cinematic-listed"||selectedTemplate==="cinematic-reduced"){const cBadge=getBadgeConfig(selectedTemplate);return<CinematicTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} badgeText={cBadge.text} badgeColor={cBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} logo={logo} fontFamily={fontFamily} accentColor={accentColor}/>;}if(selectedTemplate==="bold-frame")return<BoldFrameTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
     if(activeTab==="yard-sign"){const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};if(yardDesign==="sidebar")return<YardSignSidebar{...ys}website={yardWebsite}sidebarColor={yardSidebarColor}mainBgColor={yardMainBgColor}/>;if(yardDesign==="top-heavy")return<YardSignTopHeavy{...ys}topColor={yardTopColor}bottomColor={yardBottomColor}/>;return<YardSignSplitBar{...ys}officeName={yardOfficeName}officePhone={yardOfficePhone}topColor={yardTopColor}bottomColor={yardBottomColor}/>;}
     if(activeTab==="property-pdf")return<PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={fontFamily}/>;
     if(activeTab==="branding-card")return<BrandingCardTemplate orientation={currentBrandOr} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} website={brandWebsite} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={brandFontFamily}/>;
@@ -953,7 +799,7 @@ export default function DesignStudioV2(){
     .fi{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;transition:all 0.15s;}.fi:focus{border-color:var(--sa);box-shadow:0 0 0 3px var(--sag);}.fi::placeholder{color:var(--stm);}
     .fg{margin-bottom:12px;}.fr{display:flex;gap:7px;}
     .fo{padding:9px 12px;border-radius:9px;border:1px solid var(--sbr);background:none;cursor:pointer;transition:all 0.15s;text-align:left;width:100%;margin-bottom:5px;font-family:var(--sf);}.fo:hover{background:var(--sih);}.fo.ac{border-color:var(--sa);background:var(--sag);}
-    .tg{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+    .tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:7px;}
     .tc{border-radius:10px;border:2px solid var(--sbr);background:var(--si);cursor:pointer;transition:all 0.2s;overflow:hidden;padding:12px;text-align:center;font-family:var(--sf);}.tc:hover{border-color:rgba(128,128,128,0.2);}.tc.ac{border-color:var(--sa);background:var(--sag);}
     .tiw{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;}
     .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:10px 22px;background:var(--suc);color:#fff;font-size:12px;font-weight:700;border-radius:10px;box-shadow:0 8px 32px rgba(16,185,129,0.3);z-index:100;animation:ti 0.3s ease;font-family:var(--sf);}
@@ -964,9 +810,6 @@ export default function DesignStudioV2(){
     .ps{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;appearance:none;cursor:pointer;}.ps:focus{border-color:var(--sa);}
     .am-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--sbr);background:var(--si);cursor:pointer;font-size:11px;font-weight:600;color:var(--std);transition:all 0.15s;font-family:var(--sf);}.am-chip:hover{background:var(--sih);color:var(--st);}.am-chip.ac{border-color:var(--sa);background:var(--sag);color:var(--sa);}
     .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
-    .drone-layer{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:7px;background:rgba(255,255,255,0.02);border:1px solid var(--sbr);margin-bottom:4px;cursor:pointer;transition:all .15s;}
-    .drone-layer:hover{background:rgba(255,255,255,0.04);}
-    .drone-layer.active{border-color:var(--sa);background:var(--sag);}
     #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*='lensy'],iframe[src*='lensy']{display:none!important;visibility:hidden!important;}
   `;
 
@@ -981,11 +824,11 @@ export default function DesignStudioV2(){
         <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}><Home size={14} color="var(--sa)"/><select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}><option value="">Select property...</option>{userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}<option value="__new__">{"\uff0b"} Enter manually</option></select></div>
         <div className="ssp"/>
         <div className="sac">
-          <button className="bi" title="Undo" onClick={isDroneMode?droneUndo:undefined}><Undo2 size={15}/></button>
-          <button className="bi" title="Redo" onClick={isDroneMode?droneRedo:undefined}><Redo2 size={15}/></button>
+          <button className="bi" title="Undo"><Undo2 size={15}/></button>
+          <button className="bi" title="Redo"><Redo2 size={15}/></button>
           <div className="td"/>
-          <button className="bx" onClick={handleExport} disabled={exporting} style={isDroneMode?{background:"linear-gradient(135deg,#f59e0b,#ef4444)"}:activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
-            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:isDroneMode?<><Download size={14}/>Export PNG</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+          <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
+            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
           </button>
         </div>
       </div>
@@ -995,84 +838,10 @@ export default function DesignStudioV2(){
 
         <div className="slp">
 
-          {/* ── DRONE MARK PANELS ── */}
-          {isDroneMode&&leftPanel==="tools"&&<>
-            <div className="ph"><Crosshair size={15} color="var(--sa)"/>Drone Tools</div>
-            <div style={{padding:14}}>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,marginBottom:14}}>
-                {DRONE_TOOLS.map(t=><button key={t.id} onClick={()=>{setDroneTool(t.id);droneCancelDrawing();}} style={{padding:"8px 0",borderRadius:8,border:droneTool===t.id?"1px solid var(--sa)":"1px solid var(--sbr)",background:droneTool===t.id?"var(--sag)":"none",color:droneTool===t.id?"var(--sa)":"var(--std)",cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,fontFamily:"var(--sf)",fontSize:9,fontWeight:600}}><t.icon size={16}/>{t.label}</button>)}
-              </div>
-              {droneIsDrawing&&droneTool==="polygon"&&<div style={{padding:"8px 10px",borderRadius:8,background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.15)",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><Pentagon size={12} color="var(--sa)"/><span style={{fontSize:10,color:"var(--sa)",fontWeight:600}}>{droneDrawingPts.length} pts \u00b7 Click to add \u00b7 Double-click to finish</span></div>}
-              <div style={{marginTop:8}}><UploadZone label={dronePhoto?"Replace Photo":"Upload Drone Photo"} imageUrl={dronePhoto} onUpload={f=>{const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{setDronePhotoNatural({w:img.naturalWidth,h:img.naturalHeight});setDronePhoto(url);setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);};img.src=url;}} onClear={()=>setDronePhoto(null)} uploading={false}/></div>
-              <div style={{marginTop:10,display:"flex",gap:6}}>
-                <button onClick={droneUndo} disabled={droneHistIdx<=0} className="sp" style={{flex:1,opacity:droneHistIdx>0?1:0.4}}>\u21a9 Undo</button>
-                <button onClick={droneRedo} disabled={droneHistIdx>=droneHistory.length-1} className="sp" style={{flex:1,opacity:droneHistIdx<droneHistory.length-1?1:0.4}}>\u21aa Redo</button>
-              </div>
-              <Section title="Canvas" icon={Settings} defaultOpen={false}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><span style={{fontSize:12,fontWeight:700}}>Show Grid</span><button onClick={()=>setDroneShowGrid(!droneShowGrid)} style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:droneShowGrid?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:droneShowGrid?21:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",marginTop:8}}><span style={{fontSize:12,fontWeight:700}}>Snap to Grid</span><button onClick={()=>setDroneSnapGrid(!droneSnapGrid)} style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:droneSnapGrid?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:droneSnapGrid?21:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div>
-              </Section>
-            </div>
-          </>}
+          {/* ── PANELS ── */}
 
 
-          {isDroneMode&&leftPanel==="styles"&&<>
-            <div className="ph"><Palette size={15} color="var(--sa)"/>Drone Styles</div>
-            <Section title="Line Color" icon={Paintbrush}>
-              <ColorPicker value={droneLineColor} onChange={v=>setDroneLineColor(v)}/>
-              <div style={{marginTop:10}}><span className="fl">Brokerage Presets</span><SwatchGrid colors={BROKERAGE_COLORS} current={droneLineColor} onSelect={v=>setDroneLineColor(v)} showLabels/></div>
-              <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={droneLineColor} onSelect={v=>setDroneLineColor(v)}/></div>
-            </Section>
-            <Section title="Line Width" icon={Minus}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <input type="range" min={1} max={14} value={droneLineWidth} onChange={e=>setDroneLineWidth(Number(e.target.value))} style={{flex:1,accentColor:"var(--sa)"}}/>
-                <span style={{fontSize:12,fontWeight:700,color:"var(--st)",minWidth:32,textAlign:"right" as const}}>{droneLineWidth}px</span>
-              </div>
-            </Section>
-            <Section title="Fill Opacity" icon={Layers}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <input type="range" min={0} max={80} value={Math.round(droneFillOpacity*100)} onChange={e=>setDroneFillOpacity(Number(e.target.value)/100)} style={{flex:1,accentColor:"var(--sa)"}}/>
-                <span style={{fontSize:12,fontWeight:700,color:"var(--st)",minWidth:32,textAlign:"right" as const}}>{Math.round(droneFillOpacity*100)}%</span>
-              </div>
-              <p style={{fontSize:10,color:"var(--std)",marginTop:6}}>Applies to polygon and rectangle fills</p>
-            </Section>
-            <Section title="Pin Color" icon={MapPin} defaultOpen={false}>
-              <ColorPicker value={dronePinColor} onChange={v=>setDronePinColor(v)}/>
-              <div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={dronePinColor} onSelect={v=>setDronePinColor(v)}/></div>
-            </Section>
-          </>}
-
-          {isDroneMode&&leftPanel==="layers"&&<>
-            <div className="ph"><Layers size={15} color="var(--sa)"/>Layers ({droneShapes.length})</div>
-            <div style={{padding:"10px 14px"}}>
-              {droneShapes.length===0?<p style={{fontSize:11,color:"var(--std)",textAlign:"center" as const,padding:"20px 0",lineHeight:1.7}}>No annotations yet. Use the tools to start drawing.</p>
-              :[...droneShapes].reverse().map(shape=>{
-                const icons:Record<string,string>={polygon:"\u2b21","rect-shape":"\u25ad","line-shape":"\u2571",arrow:"\u27a4",measure:"\ud83d\udcd0",pin:"\ud83d\udccd",label:"T"};
-                const names:Record<string,string>={polygon:"Lot Lines","rect-shape":"Rectangle","line-shape":"Line",arrow:"Arrow",measure:"Measure",pin:"Pin",label:"Label"};
-                return(<div key={shape.id} className={`drone-layer ${droneSelectedId===shape.id?"active":""}`} onClick={()=>{setDroneSelectedId(shape.id);setDroneTool("select");}}>
-                  <span style={{fontSize:14,flexShrink:0}}>{icons[shape.type]||"\u2022"}</span>
-                  <span style={{flex:1,fontSize:11,fontWeight:600,color:"var(--st)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{names[shape.type]||shape.type}{shape.text?` \u00b7 ${shape.text.slice(0,15)}`:""}{shape.measureText?` \u00b7 ${shape.measureText}`:""}</span>
-                  <div style={{display:"flex",gap:3}}>
-                    <button onClick={e=>{e.stopPropagation();droneDuplicateShape(shape.id);}} style={{width:22,height:22,borderRadius:5,border:"none",background:"none",color:"var(--std)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}} title="Duplicate">\u29c9</button>
-                    <button onClick={e=>{e.stopPropagation();droneDeleteShape(shape.id);}} style={{width:22,height:22,borderRadius:5,border:"none",background:"none",color:"var(--std)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}} title="Delete">\u2715</button>
-                  </div>
-                </div>);
-              })}
-            </div>
-            <div style={{padding:"12px 14px",borderTop:"1px solid var(--sbr)"}}>
-              <p style={{fontSize:10,fontWeight:700,color:"var(--std)",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:8}}>Shortcuts</p>
-              <div style={{display:"flex",flexDirection:"column" as const,gap:4}}>
-                {[["Esc","Cancel drawing"],["Del","Delete selected"],["\u2318Z","Undo"],["\u2318Y","Redo"],["Dbl-click","Finish polygon"],["Drag handle","Reshape"]].map(([k,d],i)=>(
-                  <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}><span style={{fontSize:9,fontWeight:700,color:"var(--sa)",background:"var(--sag)",padding:"2px 6px",borderRadius:4,fontFamily:"monospace"}}>{k}</span><span style={{fontSize:10,color:"var(--std)"}}>{d}</span></div>
-                ))}
-              </div>
-              {droneShapes.length>0&&<button onClick={()=>{setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);setDroneSelectedId(null);}} className="sp" style={{width:"100%",marginTop:12,color:"#ef4444",borderColor:"rgba(239,68,68,0.3)"}}>\ud83d\uddd1 Clear All</button>}
-            </div>
-          </>}
-
-          {/* ── ORIGINAL PANELS (non-drone tabs) ── */}
-          {!isDroneMode&&<>
-            {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({flyerPhotos.length}/7)</div><div style={{padding:14}}><p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2-3 stack right. Photos 4-7 fill bottom row.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{flyerPhotos.map((url:string,i:number)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i===0?"Hero":i<3?`R${i}`:`B${i-2}`}</div><button className="ghov" onClick={()=>setFlyerPhotos((p:string[])=>p.filter((_:string,idx:number)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}{flyerPhotos.length<7&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).slice(0,7-flyerPhotos.length).forEach(f=>setFlyerPhotos((p:string[])=>[...p,URL.createObjectURL(f)]));e.target.value="";}}/></label>}</div><div style={{marginTop:16}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></div></>}
+          {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<><div className="ph"><ImageIcon size={15} color="var(--sa)"/>Photos ({flyerPhotos.length}/7)</div><div style={{padding:14}}><p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>First photo = hero. Photos 2-3 stack right. Photos 4-7 fill bottom row.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{flyerPhotos.map((url:string,i:number)=>(<div key={i} className="group" style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/><div style={{position:"absolute",top:2,left:2,background:"rgba(0,0,0,0.7)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{i===0?"Hero":i<3?`R${i}`:`B${i-2}`}</div><button className="ghov" onClick={()=>setFlyerPhotos((p:string[])=>p.filter((_:string,idx:number)=>idx!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}}><X size={10}/></button></div>))}{flyerPhotos.length<7&&<label style={{aspectRatio:"1",borderRadius:8,border:"2px dashed var(--sbr)",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",color:"var(--std)"}}><Upload size={16}/><span style={{fontSize:9,fontWeight:600}}>Add</span><input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{Array.from(e.target.files||[]).slice(0,7-flyerPhotos.length).forEach(f=>setFlyerPhotos((p:string[])=>[...p,URL.createObjectURL(f)]));e.target.value="";}}/></label>}</div><div style={{marginTop:16}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></div></>}
             {activeTab==="listing-flyer"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Property Details</div><Section title="Address & Price" icon={Home}><div className="fg"><label className="fl">Street Address</label><input className="fi" value={flyerAddress} onChange={e=>setFlyerAddress(e.target.value)} placeholder="123 Main Street"/></div><div className="fg"><label className="fl">City, State</label><input className="fi" value={flyerCityState} onChange={e=>setFlyerCityState(e.target.value)} placeholder="Austin, TX"/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Price</label><input className="fi" value={flyerPrice} onChange={e=>setFlyerPrice(e.target.value)} placeholder="425,000"/></div><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={flyerBeds} onChange={e=>setFlyerBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={flyerBaths} onChange={e=>setFlyerBaths(e.target.value)}/></div></div><div className="fg"><label className="fl">Sq Ft</label><input className="fi" value={flyerSqft} onChange={e=>setFlyerSqft(e.target.value)}/></div></Section><Section title="Description" icon={FileText} defaultOpen={false}><textarea className="ta" rows={5} value={flyerDescription} onChange={e=>setFlyerDescription(e.target.value)} placeholder="Property description..."/></Section><Section title="Agent Info" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></Section></>}
             {activeTab==="listing-flyer"&&leftPanel==="urls"&&<><div className="ph"><Globe size={15} color="var(--sa)"/>URLs & Links</div><div style={{padding:14}}><Section title="Listing URL" icon={Globe}><input className="fi" value={flyerListingUrl} onChange={e=>setFlyerListingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes"/></Section><Section title="Video Tour URL" icon={Video} defaultOpen={false}><input className="fi" value={flyerVideoUrl} onChange={e=>setFlyerVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..."/></Section><Section title="Virtual Staging URL" icon={ImageIcon} defaultOpen={false}><input className="fi" value={flyerStagingUrl} onChange={e=>setFlyerStagingUrl(e.target.value)} placeholder="https://yourslug.p2v.homes#staging"/></Section></div></>}
             {activeTab==="listing-flyer"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Flyer Styles</div><Section title="Branding" icon={Eye}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Unbranded Mode</p></div><button onClick={()=>setFlyerUnbranded(!flyerUnbranded)} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:flyerUnbranded?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:flyerUnbranded?23:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div></Section><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${flyerFont===f.id?"ac":""}`} onClick={()=>setFlyerFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Accent Color" icon={Paintbrush}><ColorPicker value={flyerAccentColor} onChange={setFlyerAccentColor}/><div style={{marginTop:10}}><SwatchGrid colors={BROKERAGE_COLORS} current={flyerAccentColor} onSelect={setFlyerAccentColor} showLabels/></div></Section></>}
@@ -1111,7 +880,6 @@ export default function DesignStudioV2(){
             {activeTab==="branding-card"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={brandHeadshot} onUpload={f=>setBrandHeadshot(URL.createObjectURL(f))} onClear={()=>setBrandHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={brandLogo} onUpload={f=>setBrandLogo(URL.createObjectURL(f))} onClear={()=>setBrandLogo(null)} uploading={false} compact/></div><div style={{marginTop:10}}><UploadZone label="Background Photo" imageUrl={brandBgPhoto} onUpload={f=>setBrandBgPhoto(URL.createObjectURL(f))} onClear={()=>setBrandBgPhoto(null)} uploading={false}/></div></div></>}
             {activeTab==="branding-card"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Card Details</div><Section title="Agent" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={brandAgentName} onChange={e=>setBrandAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={brandPhone} onChange={e=>setBrandPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={brandEmail} onChange={e=>setBrandEmail(e.target.value)}/></div></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brandBrokerage} onChange={e=>setBrandBrokerage(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Tagline</label><input className="fi" value={brandTagline} onChange={e=>setBrandTagline(e.target.value)}/></div></div><div className="fg"><label className="fl">Website</label><input className="fi" value={brandWebsite} onChange={e=>setBrandWebsite(e.target.value)}/></div></Section></>}
             {activeTab==="branding-card"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${brandFont===f.id?"ac":""}`} onClick={()=>setBrandFont(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Bg Color" icon={Paintbrush}><ColorPicker value={brandBgColor} onChange={setBrandBgColor}/><div style={{marginTop:8}}><SwatchGrid colors={BROKERAGE_COLORS} current={brandBgColor} onSelect={setBrandBgColor} showLabels/></div></Section><Section title="Accent" icon={Sparkles} defaultOpen={false}><ColorPicker value={brandAccentColor||"#ffffff"} onChange={setBrandAccentColor}/>{brandAccentColor&&<button onClick={()=>setBrandAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={brandAccentColor} onSelect={setBrandAccentColor}/></div></Section><Section title="Orientation" icon={Layers}><div className="fr">{BRAND_ORIENTATIONS.map(o=><button key={o.id} className={`sp ${brandOrientation===o.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setBrandOrientation(o.id)}>{o.label}</button>)}</div></Section></>}
-          </>}
 
         </div>
 
@@ -1128,7 +896,6 @@ export default function DesignStudioV2(){
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(Math.min(200,zoom+10))}><ZoomIn size={13}/></button>
             <button className="bi" style={{width:28,height:28}} onClick={()=>setZoom(100)}><RotateCcw size={13}/></button>
             <div className="td"/>
-            {isDroneMode&&dronePhoto&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>{dronePhotoNatural.w}\u00d7{dronePhotoNatural.h} \u00b7 {droneShapes.length} obj</span>}
             {activeTab==="templates"&&SIZES.map(s=><button key={s.id} className={`sp ${selectedSize===s.id?"ac":""}`} onClick={()=>setSelectedSize(s.id)}>{s.label}</button>)}
             {activeTab==="listing-flyer"&&<span style={{fontSize:11,fontWeight:600,color:"var(--std)",padding:"0 4px"}}>US Letter 8.5\u00d711\"</span>}
             {activeTab==="yard-sign"&&YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}
