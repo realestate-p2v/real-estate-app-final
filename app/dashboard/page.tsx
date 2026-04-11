@@ -584,7 +584,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ═══ QUICK-LINK BUTTONS (replaces old Stats Row + Quick Actions) ═══ */}
-        <div className={`mc-animate mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 ${publishedWebsites.length > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`} style={{ animationDelay: "0.16s" }}>
+        <div className="mc-animate mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" style={{ animationDelay: "0.16s" }}>
           <Link href="/order" className="group flex items-center gap-4 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4 transition-all hover:border-cyan-400/25 hover:bg-cyan-400/[0.08]">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20">
               <Play className="h-5 w-5 text-cyan-400" />
@@ -625,18 +625,16 @@ export default function DashboardPage() {
             </div>
             <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-indigo-400 transition-all group-hover:translate-x-0.5" />
           </button>
-          {publishedWebsites.length > 0 && (
-            <button onClick={() => document.getElementById("websites")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group flex items-center gap-4 rounded-2xl border border-sky-400/10 bg-sky-400/[0.04] p-4 transition-all hover:border-sky-400/25 hover:bg-sky-400/[0.08] text-left w-full">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 ring-1 ring-sky-400/20">
-                <Globe className="h-5 w-5 text-sky-400" />
+          <button onClick={() => document.getElementById("more-tools")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-cyan-400/15 hover:bg-white/[0.05] text-left w-full">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
+                <ChevronRight className="h-5 w-5 text-white/40" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors">Websites</p>
-                <p className="mt-0.5 text-xs text-white/40">{publishedWebsites.length} live site{publishedWebsites.length !== 1 ? "s" : ""}</p>
+                <p className="text-sm font-bold text-white/70 group-hover:text-white/90 transition-colors">More</p>
+                <p className="mt-0.5 text-xs text-white/30">Videos, drafts & more ↓</p>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-sky-400 transition-all group-hover:translate-x-0.5" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-white/15 group-hover:text-white/40 transition-all group-hover:translate-x-0.5" />
             </button>
-          )}
         </div>
 
         {/* ═══ PROPERTY WEBSITES ═══ */}
@@ -774,9 +772,9 @@ export default function DashboardPage() {
         )}
 
         {/* ═══ MORE TOOLS — Realtor & Photographer links ═══ */}
-        <div className="mc-animate mt-10" style={{ animationDelay: "0.55s" }}>
+        <div id="more-tools" className="mc-animate mt-10" style={{ animationDelay: "0.55s" }}>
           <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-4">More Tools & Resources</p>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { icon: Video, label: "My Videos", desc: "Watch, download & share", href: "/dashboard/videos" },
               { icon: FileText, label: "Saved Drafts", desc: "Resume unfinished orders", href: "/dashboard/drafts" },
@@ -793,13 +791,15 @@ export default function DashboardPage() {
               ]),
               { icon: BookOpen, label: "Photography Guide", desc: "32-page free guide", href: "/resources/photography-guide" },
             ].map((item, i) => (
-              <Link key={item.label} href={item.href} className="group flex items-center gap-3 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]">
-                <item.icon className="h-4 w-4 text-cyan-400/40 group-hover:text-cyan-400/70 transition-colors flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white/60 group-hover:text-cyan-300 transition-colors">{item.label}</p>
-                  <p className="text-[10px] text-white/25">{item.desc}</p>
+              <Link key={item.label} href={item.href} className="group flex items-center gap-3.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3.5 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] backdrop-blur-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/[0.06] ring-1 ring-cyan-400/10">
+                  <item.icon className="h-3.5 w-3.5 text-cyan-400/60 group-hover:text-cyan-400 transition-colors" />
                 </div>
-                <ChevronRight className="h-3 w-3 text-white/15 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white/70 group-hover:text-cyan-300 transition-colors">{item.label}</p>
+                  <p className="text-[10px] text-white/30">{item.desc}</p>
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-white/15 group-hover:text-cyan-400/50 transition-all group-hover:translate-x-0.5 flex-shrink-0" />
               </Link>
             ))}
           </div>
