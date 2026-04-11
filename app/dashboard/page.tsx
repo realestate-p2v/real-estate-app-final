@@ -51,6 +51,9 @@ import {
   Copy,
   MapPin,
   TrendingUp,
+  Sun,
+  Moon,
+  ChevronDown,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
@@ -184,6 +187,12 @@ export default function DashboardPage() {
 
   // Subscribe banner dismiss (resets each visit — intentional gentle reminder)
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Show all websites toggle
+  const [showAllWebsites, setShowAllWebsites] = useState(false);
+
+  // Dark/light mode
+  const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
@@ -450,6 +459,13 @@ export default function DashboardPage() {
             <p className="mt-0.5 text-sm text-white/40">P2V Lens · {isSubscriber ? "Mission Control" : "Dashboard"}</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
+            </button>
             {isSubscriber ? (
               <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 backdrop-blur-sm">
                 <Crown className="h-4 w-4 text-cyan-400" />
@@ -645,7 +661,7 @@ export default function DashboardPage() {
               <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">Manage all →</Link>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {publishedWebsites.map((site, i) => {
+              {(showAllWebsites ? publishedWebsites : publishedWebsites.slice(0, 3)).map((site, i) => {
                 const heroUrl = getHeroImage(site.website_curated);
                 const siteUrl = `${PROPERTY_SITE_BASE}/${site.website_slug}`;
                 return (
@@ -681,6 +697,15 @@ export default function DashboardPage() {
                 );
               })}
             </div>
+            {publishedWebsites.length > 3 && (
+              <button
+                onClick={() => setShowAllWebsites(!showAllWebsites)}
+                className="mt-3 flex items-center gap-1.5 mx-auto text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors"
+              >
+                {showAllWebsites ? "Show less" : `See ${publishedWebsites.length - 3} more`}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllWebsites ? "rotate-180" : ""}`} />
+              </button>
+            )}
           </div>
         )}
 
@@ -755,7 +780,12 @@ export default function DashboardPage() {
                   <div key={prop.id} className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
                     <div className="flex items-center justify-between mb-3">
                       <Link href={`/dashboard/properties/${prop.id}`} className="text-sm font-bold text-white/80 hover:text-cyan-300 transition-colors truncate">{prop.address}</Link>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/20 text-green-300" : prop.status === "sold" ? "bg-blue-400/20 text-blue-300" : "bg-white/10 text-white/40"}`}>{prop.status}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/20 text-green-300" : prop.status === "sold" ? "bg-blue-400/20 text-blue-300" : "bg-white/10 text-white/40"}`}>{prop.status}</span>
+                        <Link href={`/dashboard/properties/${prop.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-400/[0.08] border border-cyan-400/15 text-[11px] font-bold text-cyan-400 hover:bg-cyan-400/[0.15] hover:text-cyan-300 transition-all">
+                          <Edit className="h-3 w-3" />Edit Property
+                        </Link>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       <Link href={`/order?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/[0.06] border border-cyan-400/10 text-[10px] font-semibold text-cyan-400/80 hover:bg-cyan-400/[0.12] hover:text-cyan-300 transition-all"><Video className="h-3 w-3" />Order Video</Link>
