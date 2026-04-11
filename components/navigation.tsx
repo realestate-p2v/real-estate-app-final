@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, Settings, Home } from "lucide-react";
+import { Menu, X, User, LogOut, Bell, FileText, LayoutDashboard, Video, ChevronDown, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, Settings, Home, Film } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
@@ -150,6 +150,11 @@ export function Navigation() {
                         <span className="ml-auto bg-accent/10 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
                       )}
                     </Link>
+                    <Link href="/dashboard/lens/remix" onClick={() => setShowTools(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                      <Film className="h-4 w-4 text-muted-foreground" />
+                      Video Remix
+                    </Link>
 
                     {/* Separator */}
                     <div className="h-px bg-border my-1" />
@@ -260,6 +265,11 @@ export function Navigation() {
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                         <Video className="h-3.5 w-3.5 text-muted-foreground" />
                         My Videos
+                      </Link>
+                      <Link href="/dashboard/lens/remix" onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <Film className="h-3.5 w-3.5 text-muted-foreground" />
+                        Video Remix
                       </Link>
                       <Link href="/dashboard/settings" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
@@ -420,6 +430,11 @@ export function Navigation() {
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                       <Video className="h-4 w-4 text-primary-foreground/60" />
                       My Videos
+                    </Link>
+                    <Link href="/dashboard/lens/remix" onClick={() => setIsOpen(false)}
+                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                      <Film className="h-4 w-4 text-primary-foreground/60" />
+                      Video Remix
                     </Link>
                     <Link href="/dashboard/settings" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
