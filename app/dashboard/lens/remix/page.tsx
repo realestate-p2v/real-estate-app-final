@@ -851,11 +851,13 @@ export default function DesignStudioV2(){
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
         // Input: first clip (for background frame)
         inputArgs.push("-i","clip_0.mp4");
-        // Extract first frame, scale, darken to 40% brightness, loop for 5s, overlay brand card on top
+        // Extract first frame, scale, darken, blur for background. Card at 70% centered.
+        const introCardW=Math.round(outW*0.7);const introCardH=Math.round(outH*0.7);
+        const introX=Math.round((outW-introCardW)/2);const introY=Math.round((outH-introCardH)/2);
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.4,format=yuv420p[bg_intro]`,
-          `[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[card_intro]`,
-          `[bg_intro][card_intro]overlay=0:0,format=yuv420p[vintro]`
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.5:contrast=0.8,gblur=sigma=8,format=yuv420p[bg_intro]`,
+          `[${inputIdx}:v]scale=${introCardW}:${introCardH},format=yuv420p[card_intro]`,
+          `[bg_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro]`
         );
         concatInputs.push("[vintro]");inputIdx+=2;
       }
@@ -876,10 +878,12 @@ export default function DesignStudioV2(){
         inputArgs.push("-i",`clip_${lastClipIdx}.mp4`);
         const lastClip=remixClips[lastClipIdx];
         const outroTrimStart=Math.max(0,lastClip.trimEnd-0.042);
+        const outroCardW=Math.round(outW*0.85);const outroCardH=Math.round(outH*0.85);
+        const outroX=Math.round((outW-outroCardW)/2);const outroY=Math.round((outH-outroCardH)/2);
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.4,format=yuv420p[bg_outro]`,
-          `[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[card_outro]`,
-          `[bg_outro][card_outro]overlay=0:0,format=yuv420p[voutro]`
+          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.5:contrast=0.8,gblur=sigma=8,format=yuv420p[bg_outro]`,
+          `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},format=yuv420p[card_outro]`,
+          `[bg_outro][card_outro]overlay=${outroX}:${outroY},format=yuv420p[voutro]`
         );
         concatInputs.push("[voutro]");inputIdx+=2;
       }
