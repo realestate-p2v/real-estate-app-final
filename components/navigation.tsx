@@ -246,10 +246,15 @@ export function Navigation() {
                         <LayoutDashboard className="h-3.5 w-3.5 text-muted-foreground" />
                         My Dashboard
                       </Link>
-                      <Link href="/dashboard/profile" onClick={() => setShowDropdown(false)}
+                      <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        Agent Profile
+                        <Video className="h-3.5 w-3.5 text-muted-foreground" />
+                        My Videos
+                      </Link>
+                      <Link href="/dashboard/lens/remix" onClick={() => setShowDropdown(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
+                        <Film className="h-3.5 w-3.5 text-muted-foreground" />
+                        Video Remix
                       </Link>
                       <Link href="/dashboard/properties" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
@@ -261,15 +266,10 @@ export function Navigation() {
                         <Sparkles className="h-3.5 w-3.5 text-cyan-500" />
                         P2V Lens Tools
                       </Link>
-                      <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
+                      <Link href="/dashboard/profile" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        <Video className="h-3.5 w-3.5 text-muted-foreground" />
-                        My Videos
-                      </Link>
-                      <Link href="/dashboard/lens/remix" onClick={() => setShowDropdown(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        <Film className="h-3.5 w-3.5 text-muted-foreground" />
-                        Video Remix
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        Agent Profile
                       </Link>
                       <Link href="/dashboard/settings" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
@@ -411,10 +411,15 @@ export function Navigation() {
                       <LayoutDashboard className="h-4 w-4 text-primary-foreground/60" />
                       My Dashboard
                     </Link>
-                    <Link href="/dashboard/profile" onClick={() => setIsOpen(false)}
+                    <Link href="/dashboard/videos" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                      <User className="h-4 w-4 text-primary-foreground/60" />
-                      Agent Profile
+                      <Video className="h-4 w-4 text-primary-foreground/60" />
+                      My Videos
+                    </Link>
+                    <Link href="/dashboard/lens/remix" onClick={() => setIsOpen(false)}
+                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
+                      <Film className="h-4 w-4 text-primary-foreground/60" />
+                      Video Remix
                     </Link>
                     <Link href="/dashboard/properties" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
@@ -426,15 +431,10 @@ export function Navigation() {
                       <Sparkles className="h-4 w-4 text-cyan-400" />
                       P2V Lens Tools
                     </Link>
-                    <Link href="/dashboard/videos" onClick={() => setIsOpen(false)}
+                    <Link href="/dashboard/profile" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                      <Video className="h-4 w-4 text-primary-foreground/60" />
-                      My Videos
-                    </Link>
-                    <Link href="/dashboard/lens/remix" onClick={() => setIsOpen(false)}
-                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                      <Film className="h-4 w-4 text-primary-foreground/60" />
-                      Video Remix
+                      <User className="h-4 w-4 text-primary-foreground/60" />
+                      Agent Profile
                     </Link>
                     <Link href="/dashboard/settings" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
