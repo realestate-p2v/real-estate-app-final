@@ -867,9 +867,7 @@ export default function DesignStudioV2(){
         const introCardW=Math.round(outW*0.7);const introCardH=Math.round(outH*0.7);
         const introX=Math.round((outW-introCardW)/2);const introY=Math.round((outH-introCardH)/2);
         filterParts.push(
-          `color=black:s=${outW}x${outH}:d=5:r=24,format=yuv420p[intro_black]`,
-          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuva420p,colorchannelmixer=aa=0.3[intro_frame]`,
-          `[intro_black][intro_frame]overlay=0:0,format=yuv420p[bg_intro]`,
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_intro]`,
           `[${inputIdx}:v]scale=${introCardW}:${introCardH},format=yuv420p[card_intro]`,
           `[bg_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro]`
         );
@@ -895,9 +893,7 @@ export default function DesignStudioV2(){
         const outroCardW=Math.round(outW*0.85);const outroCardH=Math.round(outH*0.85);
         const outroX=Math.round((outW-outroCardW)/2);const outroY=Math.round((outH-outroCardH)/2);
         filterParts.push(
-          `color=black:s=${outW}x${outH}:d=5:r=24,format=yuv420p[outro_black]`,
-          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuva420p,colorchannelmixer=aa=0.3[outro_frame]`,
-          `[outro_black][outro_frame]overlay=0:0,format=yuv420p[bg_outro]`,
+          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_outro]`,
           `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},format=yuv420p[card_outro]`,
           `[bg_outro][card_outro]overlay=${outroX}:${outroY},format=yuv420p[voutro]`
         );
