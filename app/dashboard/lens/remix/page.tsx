@@ -807,22 +807,53 @@ export default function DesignStudioV2(){
         }else{await ffmpeg.writeFile("music.mp3",new Uint8Array(await musicSource.file.arrayBuffer()));hasMusic=true;}
       }
 
-      // Capture branding card
+      // Capture branding card — upload to Cloudinary then download via proxy for reliable FFmpeg input
       let hasBranding=false;
+      let brandPngReady=false;
       if(remixBranding&&isLensSubscriber&&previewRef.current){
         setExportStatus("Capturing branding card...");
         try{
           const html2canvas=(await import("html2canvas-pro")).default;
           const brandEl=previewRef.current.querySelector("[data-branding-card]") as HTMLElement;
           if(brandEl){
-            brandEl.style.display="block";brandEl.style.position="fixed";brandEl.style.top="-9999px";brandEl.style.left="-9999px";
-            await new Promise(r=>setTimeout(r,300));
+            // Render at full resolution offscreen
+            const origStyles={display:brandEl.style.display,position:brandEl.style.position,top:brandEl.style.top,left:brandEl.style.left,width:brandEl.style.width,height:brandEl.style.height};
+            brandEl.style.display="block";brandEl.style.position="fixed";brandEl.style.top="-9999px";brandEl.style.left="-9999px";brandEl.style.width="1920px";brandEl.style.height="1080px";
+            await new Promise(r=>setTimeout(r,500));
             const bc=await html2canvas(brandEl,{scale:1,useCORS:true,allowTaint:true,backgroundColor:null,width:1920,height:1080});
-            brandEl.style.display="none";brandEl.style.position="absolute";brandEl.style.top="0";brandEl.style.left="0";
+            // Restore
+            brandEl.style.display=origStyles.display;brandEl.style.position=origStyles.position;brandEl.style.top=origStyles.top;brandEl.style.left=origStyles.left;brandEl.style.width=origStyles.width;brandEl.style.height=origStyles.height;
             const blob=await new Promise<Blob>(r=>bc.toBlob(b=>r(b!),"image/png"));
-            await ffmpeg.writeFile("brand.png",new Uint8Array(await blob.arrayBuffer()));
-            hasBranding=true;
-            console.log("[remix] Branding card captured");
+            console.log(`[remix] Branding card captured: ${blob.size} bytes`);
+            
+            // Upload to Cloudinary so we can download via proxy
+            let brandUrl:string|null=null;
+            try{
+              const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-branding"})});
+              const sigData=await sigResp.json();
+              if(sigData.success){
+                const{signature,timestamp,cloudName,apiKey,folder:fp}=sigData.data;
+                const fd=new FormData();fd.append("file",blob,"brand.png");fd.append("api_key",apiKey);fd.append("timestamp",timestamp.toString());fd.append("signature",signature);fd.append("folder",fp);
+                const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`,{method:"POST",body:fd});
+                const upResult=await upResp.json();
+                brandUrl=upResult.secure_url||null;
+                console.log("[remix] Branding card uploaded:",brandUrl);
+              }
+            }catch(e){console.error("[remix] Brand upload error:",e);}
+            
+            if(brandUrl){
+              // Download via proxy to write to FFmpeg filesystem
+              const brandResp=await fetch(`/api/proxy-media?url=${encodeURIComponent(brandUrl)}`);
+              const brandAb=await brandResp.arrayBuffer();
+              await ffmpeg.writeFile("brand.png",new Uint8Array(brandAb));
+              console.log(`[remix] Brand PNG written: ${brandAb.byteLength} bytes`);
+              brandPngReady=true;hasBranding=true;
+            }else{
+              // Fallback: write blob directly (may work on some browsers)
+              await ffmpeg.writeFile("brand.png",new Uint8Array(await blob.arrayBuffer()));
+              brandPngReady=true;hasBranding=true;
+              console.log("[remix] Brand PNG written directly from blob");
+            }
           }
         }catch(e){console.error("[remix] Branding capture error:",e);}
       }
@@ -835,11 +866,19 @@ export default function DesignStudioV2(){
       let inputIdx=0;
       const inputArgs:string[]=[];
 
-      // Branding intro (5s)
+      // Branding intro: brand card overlaid on first frame of first clip (matches pipeline)
       if(hasBranding){
+        // Input 0: brand.png as 5s video
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
-        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[vintro]`);
-        concatInputs.push("[vintro]");inputIdx++;
+        // Input 1: first clip (for background frame)
+        inputArgs.push("-i","clip_0.mp4");
+        // Extract first frame, scale to output, darken, then overlay branding card
+        filterParts.push(
+          `[${inputIdx+1}:v]trim=start=0:end=0.1,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuv420p,colorbalance=bs=-0.3:gs=-0.3:rs=-0.3[bg_intro]`,
+          `[${inputIdx}:v]scale=${outW}:${outH},format=yuva420p[card_intro]`,
+          `[bg_intro][card_intro]overlay=0:0:format=auto,format=yuv420p[vintro]`
+        );
+        concatInputs.push("[vintro]");inputIdx+=2;
       }
 
       // All clips — trim + scale + crop
@@ -851,11 +890,18 @@ export default function DesignStudioV2(){
         concatInputs.push(`[v${i}]`);inputIdx++;
       }
 
-      // Branding outro (5s)
+      // Branding outro: brand card overlaid on last frame of last clip
       if(hasBranding){
+        const lastClipIdx=remixClips.length-1;
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
-        filterParts.push(`[${inputIdx}:v]scale=${outW}:${outH},format=yuv420p[voutro]`);
-        concatInputs.push("[voutro]");inputIdx++;
+        inputArgs.push("-i",`clip_${lastClipIdx}.mp4`);
+        const lastClip=remixClips[lastClipIdx];
+        filterParts.push(
+          `[${inputIdx+1}:v]trim=start=${Math.max(0,lastClip.trimEnd-0.1)}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,format=yuv420p,colorbalance=bs=-0.3:gs=-0.3:rs=-0.3[bg_outro]`,
+          `[${inputIdx}:v]scale=${outW}:${outH},format=yuva420p[card_outro]`,
+          `[bg_outro][card_outro]overlay=0:0:format=auto,format=yuv420p[voutro]`
+        );
+        concatInputs.push("[voutro]");inputIdx+=2;
       }
 
       // Concat
