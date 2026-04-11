@@ -88,6 +88,106 @@ const mcStyles = `
   .mc-glow-btn {
     animation: mc-glow-pulse 3s ease-in-out infinite;
   }
+
+  /* ── Light mode overrides ── */
+  .dashboard-light {
+    background: #f1f5f9 !important;
+  }
+  .dashboard-light .dl-bg-overlay { display: none !important; }
+
+  /* All white text → dark slate */
+  .dashboard-light [class*="text-white"] { color: #334155 !important; }
+  .dashboard-light h1[class*="text-white"] { color: #0f172a !important; }
+  .dashboard-light [class*="font-extrabold"][class*="text-white"] { color: #0f172a !important; }
+  .dashboard-light p[class*="text-white\\/90"],
+  .dashboard-light p[class*="font-bold"][class*="text-white"] { color: #1e293b !important; }
+
+  /* Keep accent colors readable */
+  .dashboard-light [class*="text-cyan-400"] { color: #0891b2 !important; }
+  .dashboard-light [class*="text-cyan-300"] { color: #06b6d4 !important; }
+  .dashboard-light [class*="text-emerald-400"] { color: #059669 !important; }
+  .dashboard-light [class*="text-emerald-300"] { color: #10b981 !important; }
+  .dashboard-light [class*="text-purple-400"] { color: #7c3aed !important; }
+  .dashboard-light [class*="text-purple-300"] { color: #8b5cf6 !important; }
+  .dashboard-light [class*="text-indigo-400"] { color: #4f46e5 !important; }
+  .dashboard-light [class*="text-indigo-300"] { color: #6366f1 !important; }
+  .dashboard-light [class*="text-sky-400"] { color: #0284c7 !important; }
+  .dashboard-light [class*="text-sky-300"] { color: #0ea5e9 !important; }
+  .dashboard-light [class*="text-green-400"] { color: #16a34a !important; }
+  .dashboard-light [class*="text-green-300"] { color: #22c55e !important; }
+  .dashboard-light [class*="text-blue-400"] { color: #2563eb !important; }
+  .dashboard-light [class*="text-blue-300"] { color: #3b82f6 !important; }
+  .dashboard-light [class*="text-violet-400"] { color: #7c3aed !important; }
+  .dashboard-light [class*="text-amber-400"] { color: #d97706 !important; }
+  .dashboard-light [class*="text-teal-400"] { color: #0d9488 !important; }
+  .dashboard-light [class*="text-rose-400"] { color: #e11d48 !important; }
+  .dashboard-light [class*="text-orange-400"] { color: #ea580c !important; }
+  .dashboard-light [class*="text-red-400"] { color: #dc2626 !important; }
+  .dashboard-light [class*="text-red-300"] { color: #ef4444 !important; }
+  .dashboard-light [class*="text-pink-400"] { color: #db2777 !important; }
+  .dashboard-light [class*="text-lime-400"] { color: #65a30d !important; }
+
+  /* Backgrounds → white/translucent */
+  .dashboard-light [class*="bg-white\\/"] { background-color: rgba(255,255,255,0.75) !important; }
+  .dashboard-light [class*="bg-gray-950"] { background-color: #f1f5f9 !important; }
+  .dashboard-light [class*="bg-black\\/50"] { background-color: rgba(255,255,255,0.75) !important; }
+
+  /* Borders → light gray */
+  .dashboard-light [class*="border-white\\/"] { border-color: rgba(0,0,0,0.08) !important; }
+
+  /* Colored borders — keep but lighter */
+  .dashboard-light [class*="border-cyan"] { border-color: rgba(8,145,178,0.2) !important; }
+  .dashboard-light [class*="border-emerald"] { border-color: rgba(5,150,105,0.2) !important; }
+  .dashboard-light [class*="border-purple"] { border-color: rgba(124,58,237,0.15) !important; }
+  .dashboard-light [class*="border-indigo"] { border-color: rgba(79,70,229,0.15) !important; }
+  .dashboard-light [class*="border-sky"] { border-color: rgba(2,132,199,0.15) !important; }
+  .dashboard-light [class*="border-green"] { border-color: rgba(22,163,74,0.2) !important; }
+  .dashboard-light [class*="border-blue"] { border-color: rgba(37,99,235,0.15) !important; }
+  .dashboard-light [class*="border-violet"] { border-color: rgba(124,58,237,0.15) !important; }
+  .dashboard-light [class*="border-amber"] { border-color: rgba(217,119,6,0.2) !important; }
+  .dashboard-light [class*="border-red"] { border-color: rgba(220,38,38,0.2) !important; }
+
+  /* Colored bg accents — keep but lighter */
+  .dashboard-light [class*="bg-cyan-400\\/"] { background-color: rgba(8,145,178,0.08) !important; }
+  .dashboard-light [class*="bg-cyan-500\\/"] { background-color: rgba(8,145,178,0.08) !important; }
+  .dashboard-light [class*="bg-emerald-400\\/"] { background-color: rgba(5,150,105,0.08) !important; }
+  .dashboard-light [class*="bg-purple-400\\/"] { background-color: rgba(124,58,237,0.06) !important; }
+  .dashboard-light [class*="bg-indigo-400\\/"] { background-color: rgba(79,70,229,0.06) !important; }
+  .dashboard-light [class*="bg-sky-400\\/"] { background-color: rgba(2,132,199,0.06) !important; }
+  .dashboard-light [class*="bg-green-400\\/"] { background-color: rgba(22,163,74,0.08) !important; }
+  .dashboard-light [class*="bg-blue-400\\/"] { background-color: rgba(37,99,235,0.06) !important; }
+  .dashboard-light [class*="bg-violet-400\\/"] { background-color: rgba(124,58,237,0.06) !important; }
+  .dashboard-light [class*="bg-amber-400\\/"] { background-color: rgba(217,119,6,0.08) !important; }
+  .dashboard-light [class*="bg-teal-400\\/"] { background-color: rgba(13,148,136,0.06) !important; }
+
+  /* Solid bg buttons stay solid */
+  .dashboard-light .bg-cyan-500 { background-color: #0891b2 !important; }
+  .dashboard-light .bg-cyan-500:hover,
+  .dashboard-light .bg-cyan-400 { background-color: #06b6d4 !important; }
+  .dashboard-light .bg-green-500 { background-color: #16a34a !important; }
+  .dashboard-light .bg-green-500:hover,
+  .dashboard-light .bg-green-400 { background-color: #22c55e !important; }
+
+  /* Rings */
+  .dashboard-light [class*="ring-white\\/"] { --tw-ring-color: rgba(0,0,0,0.06) !important; }
+  .dashboard-light [class*="ring-cyan"] { --tw-ring-color: rgba(8,145,178,0.15) !important; }
+  .dashboard-light [class*="ring-emerald"] { --tw-ring-color: rgba(5,150,105,0.15) !important; }
+  .dashboard-light [class*="ring-purple"] { --tw-ring-color: rgba(124,58,237,0.12) !important; }
+  .dashboard-light [class*="ring-indigo"] { --tw-ring-color: rgba(79,70,229,0.12) !important; }
+  .dashboard-light [class*="ring-blue"] { --tw-ring-color: rgba(37,99,235,0.12) !important; }
+
+  /* Cards get subtle shadow */
+  .dashboard-light .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); }
+  .dashboard-light .rounded-xl { box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+
+  /* Backdrop blur — keep but lighten */
+  .dashboard-light [class*="backdrop-blur"] { backdrop-filter: blur(8px); }
+
+  /* Mode toggle */
+  .dashboard-light .dl-mode-toggle {
+    background: rgba(0,0,0,0.04) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+  }
 `;
 
 /* ─────────────────────────────────────────────
@@ -438,15 +538,15 @@ export default function DashboardPage() {
      SHARED DARK DASHBOARD — used by both subscriber & non-subscriber
      ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-950" : "dashboard-light"}`}>
       <Navigation />
       <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
       {user && <SignupSpin userId={user.id} />}
       {!isSubscriber && <LensConversionTracker />}
 
       {/* Background */}
-      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(56,189,248,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 85% 80%, rgba(99,102,241,0.04) 0%, transparent 60%)" }} />
-      <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(56,189,248,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+      <div className="dl-bg-overlay pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(56,189,248,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 85% 80%, rgba(99,102,241,0.04) 0%, transparent 60%)" }} />
+      <div className="dl-bg-overlay pointer-events-none fixed inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(56,189,248,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
 
@@ -461,7 +561,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
+              className="dl-mode-toggle flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
               title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
