@@ -48,7 +48,7 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
 }
 
 // ─── MagazineCoverTemplate ───────────────────────────────────────────────────
-function MagazineCoverTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+function MagazineCoverTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor,brandShadow}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff";
   const ad=address||"123 Main Street";const ad2=addressLine2||"";
@@ -57,12 +57,14 @@ function MagazineCoverTemplate({size,listingPhoto,videoElement,headshot,address,
   const brand=[agentName,phone].filter(Boolean).join("  \u00b7  ")||"";
   const br=brokerage||"";
   const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.7)`;
+  const bts=brandShadow?`0 ${Math.round(2*unit)}px ${Math.round(8*unit)}px rgba(0,0,0,0.6)`:"none";
   const prFs=Math.round((isStory?120:isPostcard?90:80)*unit);
   const adFs=responsiveSize(Math.round((isStory?42:isPostcard?30:26)*unit),ad,22);
   const detFs=Math.round((isStory?28:isPostcard?20:18)*unit);
   const badgeFs=Math.round((isStory?22:isPostcard?16:14)*unit);
-  const brandFs=Math.round((isStory?24:isPostcard?16:14)*unit);
-  const hsSize=Math.round((isStory?56:isPostcard?40:36)*unit);
+  const brandFs=Math.round((isStory?42:isPostcard?30:26)*unit);
+  const hsSize=Math.round((isStory?110:isPostcard?80:72)*unit);
+  const logoH=Math.round((isStory?80:60)*unit);const logoW=Math.round((isStory?260:180)*unit);
   const pad=Math.round(48*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
     {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#0f0f1a"}}/>}
@@ -72,20 +74,20 @@ function MagazineCoverTemplate({size,listingPhoto,videoElement,headshot,address,
       <p style={{fontSize:adFs,fontWeight:600,color:"rgba(255,255,255,0.85)",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
       {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.45)",margin:0,letterSpacing:"0.1em",textShadow:ts}}>{det}</p>}
       <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,marginTop:Math.round(4*unit),lineHeight:0.95,letterSpacing:"-0.03em",textShadow:`0 ${Math.round(4*unit)}px ${Math.round(20*unit)}px rgba(0,0,0,0.5)`}}>{pr}</p>
-      <div style={{width:"100%",display:"flex",alignItems:"center",gap:Math.round(12*unit),marginTop:Math.round(12*unit),paddingTop:Math.round(12*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid rgba(255,255,255,0.2)`}}/>}
+      <div style={{width:"100%",display:"flex",alignItems:"center",gap:Math.round(16*unit),marginTop:Math.round(16*unit),paddingTop:Math.round(14*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(3*unit)}px solid rgba(255,255,255,0.25)`,boxShadow:brandShadow?"0 4px 16px rgba(0,0,0,0.5)":"none"}}/>}
         <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.7)",margin:0}}>{brand}</p>
-          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:"rgba(255,255,255,0.35)",margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
+          <p style={{fontSize:brandFs,fontWeight:700,color:"rgba(255,255,255,0.85)",margin:0,textShadow:bts}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.7),fontWeight:500,color:"rgba(255,255,255,0.5)",margin:0,marginTop:Math.round(4*unit),textShadow:bts}}>{br}</p>}
         </div>
-        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round((isStory?50:35)*unit),maxWidth:Math.round((isStory?160:110)*unit),objectFit:"contain" as const}}/>}
+        {logo&&<img src={logo} alt="" style={{maxHeight:logoH,maxWidth:logoW,objectFit:"contain" as const,filter:brandShadow?"drop-shadow(0 2px 8px rgba(0,0,0,0.5))":"none"}}/>}
       </div>
     </div>
   </div>);
 }
 
 // ─── SplitDiagonalTemplate ───────────────────────────────────────────────────
-function SplitDiagonalTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+function SplitDiagonalTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor,brandShadow}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff";const barLight=isLightColor(barColor);
   const tp=barLight?"#111827":"#ffffff",ts2=barLight?"rgba(17,24,39,0.5)":"rgba(255,255,255,0.5)";
@@ -99,8 +101,9 @@ function SplitDiagonalTemplate({size,listingPhoto,videoElement,headshot,address,
   const adFs=responsiveSize(Math.round((isStory?38:isPostcard?26:22)*unit),ad,18);
   const detFs=Math.round((isStory?26:isPostcard?18:16)*unit);
   const prFs=Math.round((isStory?72:isPostcard?50:44)*unit);
-  const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
-  const hsSize=Math.round((isStory?48:isPostcard?36:32)*unit);
+  const brandFs=Math.round((isStory?40:isPostcard?28:24)*unit);
+  const hsSize=Math.round((isStory?100:isPostcard?72:64)*unit);
+  const logoH=Math.round((isStory?70:50)*unit);const logoW=Math.round((isStory?200:140)*unit);
   const pad=Math.round(40*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
     <div style={{position:"absolute",inset:0,backgroundColor:barColor}}/>
@@ -114,20 +117,20 @@ function SplitDiagonalTemplate({size,listingPhoto,videoElement,headshot,address,
       {ad2&&<p style={{fontSize:Math.round(adFs*0.8),fontWeight:500,color:ts2,margin:0}}>{ad2}</p>}
       {det&&<p style={{fontSize:detFs,fontWeight:400,color:ts2,margin:0,letterSpacing:"0.06em"}}>{det}</p>}
       <p style={{fontSize:prFs,fontWeight:900,color:accent,lineHeight:1,margin:0,marginTop:Math.round(6*unit)}}>{pr}</p>
-      <div style={{marginTop:"auto",display:"flex",alignItems:"center",gap:Math.round(10*unit)}}>
-        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid ${barLight?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.2)"}`}}/>}
+      <div style={{marginTop:"auto",display:"flex",alignItems:"center",gap:Math.round(12*unit)}}>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(3*unit)}px solid ${barLight?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.25)"}`}}/>}
         <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:brandFs,fontWeight:600,color:tp,margin:0}}>{brand}</p>
-          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:ts2,margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
+          <p style={{fontSize:brandFs,fontWeight:700,color:tp,margin:0}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.7),fontWeight:500,color:ts2,margin:0,marginTop:Math.round(4*unit)}}>{br}</p>}
         </div>
-        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(35*unit),maxWidth:Math.round(100*unit),objectFit:"contain" as const}}/>}
+        {logo&&<img src={logo} alt="" style={{maxHeight:logoH,maxWidth:logoW,objectFit:"contain" as const}}/>}
       </div>
     </div>
   </div>);
 }
 
 // ─── StampTemplate ───────────────────────────────────────────────────────────
-function StampTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+function StampTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor,brandShadow}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||badgeColor||"#ffffff";
   const ad=address||"123 Main Street";const ad2=addressLine2||"";
@@ -136,14 +139,16 @@ function StampTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeC
   const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
   const br=brokerage||"";
   const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.6)`;
+  const bts=brandShadow?`0 ${Math.round(2*unit)}px ${Math.round(8*unit)}px rgba(0,0,0,0.6)`:"none";
   const stampW=Math.round((isStory?340:isPostcard?280:260)*unit);
   const stampH=Math.round((isStory?160:isPostcard?120:110)*unit);
   const stampFs=Math.round((isStory?38:isPostcard?28:24)*unit);
   const adFs=responsiveSize(Math.round((isStory?40:isPostcard?28:24)*unit),ad,20);
   const detFs=Math.round((isStory?26:isPostcard?18:16)*unit);
   const prFs=Math.round((isStory?64:isPostcard?44:38)*unit);
-  const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
-  const hsSize=Math.round((isStory?48:isPostcard?36:32)*unit);
+  const brandFs=Math.round((isStory?40:isPostcard?28:24)*unit);
+  const hsSize=Math.round((isStory?100:isPostcard?72:64)*unit);
+  const logoH=Math.round((isStory?70:50)*unit);const logoW=Math.round((isStory?200:140)*unit);
   const pad=Math.round(44*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
     {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#0f0f1a"}}/>}
@@ -154,20 +159,20 @@ function StampTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeC
       <p style={{fontSize:adFs,fontWeight:700,color:"#fff",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
       {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.5)",margin:0,letterSpacing:"0.08em",textShadow:ts}}>{det}</p>}
       <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,lineHeight:1,textShadow:ts}}>{pr}</p>
-      <div style={{display:"flex",alignItems:"center",gap:Math.round(10*unit),marginTop:Math.round(8*unit),paddingTop:Math.round(8*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid rgba(255,255,255,0.2)`}}/>}
+      <div style={{display:"flex",alignItems:"center",gap:Math.round(12*unit),marginTop:Math.round(10*unit),paddingTop:Math.round(10*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(3*unit)}px solid rgba(255,255,255,0.25)`,boxShadow:brandShadow?"0 4px 16px rgba(0,0,0,0.5)":"none"}}/>}
         <div style={{flex:1,minWidth:0}}>
-          <p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.6)",margin:0}}>{brand}</p>
-          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:"rgba(255,255,255,0.35)",margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
+          <p style={{fontSize:brandFs,fontWeight:700,color:"rgba(255,255,255,0.85)",margin:0,textShadow:bts}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.7),fontWeight:500,color:"rgba(255,255,255,0.5)",margin:0,marginTop:Math.round(4*unit),textShadow:bts}}>{br}</p>}
         </div>
-        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(35*unit),maxWidth:Math.round(110*unit),objectFit:"contain" as const}}/>}
+        {logo&&<img src={logo} alt="" style={{maxHeight:logoH,maxWidth:logoW,objectFit:"contain" as const,filter:brandShadow?"drop-shadow(0 2px 8px rgba(0,0,0,0.5))":"none"}}/>}
       </div>
     </div>
   </div>);
 }
 
 // ─── CinematicTemplate ───────────────────────────────────────────────────────
-function CinematicTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+function CinematicTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor,brandShadow}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff";
   const barPct=isStory?14:16;
@@ -181,8 +186,9 @@ function CinematicTemplate({size,listingPhoto,videoElement,headshot,badgeText,ba
   const adFs=responsiveSize(Math.round((isStory?30:isPostcard?20:18)*unit),ad,24);
   const prFs=Math.round((isStory?52:isPostcard?36:32)*unit);
   const detFs=Math.round((isStory?22:isPostcard?15:13)*unit);
-  const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
-  const hsSize=Math.round((isStory?44:isPostcard?32:28)*unit);
+  const brandFs=Math.round((isStory?36:isPostcard?26:22)*unit);
+  const hsSize=Math.round((isStory?80:isPostcard?60:52)*unit);
+  const logoH=Math.round((isStory?70:50)*unit);const logoW=Math.round((isStory?200:140)*unit);
   const pad=Math.round(36*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily,backgroundColor:"#000"}}>
     <div style={{position:"absolute",top:barH,left:0,right:0,bottom:barH,overflow:"hidden"}}>
@@ -198,23 +204,23 @@ function CinematicTemplate({size,listingPhoto,videoElement,headshot,badgeText,ba
         <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,lineHeight:1}}>{pr}</p>
         {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.4)",margin:0,marginTop:Math.round(2*unit),letterSpacing:"0.06em"}}>{det}</p>}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:Math.round(12*unit)}}>
+      <div style={{display:"flex",alignItems:"center",gap:Math.round(14*unit)}}>
         {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid rgba(255,255,255,0.2)`}}/>}
         <div style={{textAlign:"right" as const,flex:1}}>
-          <p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.6)",margin:0}}>{brand}</p>
-          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:"rgba(255,255,255,0.35)",margin:0,marginTop:Math.round(1*unit)}}>{br}</p>}
+          <p style={{fontSize:brandFs,fontWeight:700,color:"rgba(255,255,255,0.85)",margin:0}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.65),fontWeight:500,color:"rgba(255,255,255,0.45)",margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
         </div>
-        {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(barH*0.5),maxWidth:Math.round(120*unit),objectFit:"contain" as const}}/>}
+        {logo&&<img src={logo} alt="" style={{maxHeight:logoH,maxWidth:logoW,objectFit:"contain" as const}}/>}
       </div>
     </div>
   </div>);
 }
 
 // ─── BoldFrameTemplate ───────────────────────────────────────────────────────
-function BoldFrameTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+function BoldFrameTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor,brandShadow}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const frameColor=accentColor||barColor||"#dc2626";
-  const frameW=Math.round((isStory?50:isPostcard?40:44)*unit);
+  const frameW=Math.round((isStory?90:isPostcard?70:76)*unit);
   const ad=address||"123 Main Street";const ad2=addressLine2||"";
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
   const pr=price?`$${price}`:"$000,000";
@@ -226,8 +232,9 @@ function BoldFrameTemplate({size,listingPhoto,videoElement,headshot,address,addr
   const prFs=Math.round((isStory?96:isPostcard?68:60)*unit);
   const adFs=responsiveSize(Math.round((isStory?36:isPostcard?24:22)*unit),ad,20);
   const detFs=Math.round((isStory?24:isPostcard?16:14)*unit);
-  const brandFs=Math.round((isStory?20:isPostcard?14:12)*unit);
-  const hsSize=Math.round((isStory?36:isPostcard?28:26)*unit);
+  const brandFs=Math.round((isStory?34:isPostcard?24:20)*unit);
+  const hsSize=Math.round((isStory?64:isPostcard?50:44)*unit);
+  const logoH=Math.round((isStory?60:44)*unit);const logoW=Math.round((isStory?160:110)*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily,backgroundColor:frameColor}}>
     <div style={{position:"absolute",top:frameW,left:frameW,right:frameW,bottom:frameW,overflow:"hidden",borderRadius:Math.round(4*unit)}}>
       {videoElement?<div data-video-area style={{width:"100%",height:"100%",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#0f0f1a"}}/>}
@@ -239,12 +246,12 @@ function BoldFrameTemplate({size,listingPhoto,videoElement,headshot,address,addr
       </div>
     </div>
     <div style={{position:"absolute",top:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:badgeFs,fontWeight:900,color:frameLight?"#111":"#fff",letterSpacing:"0.18em",textTransform:"uppercase" as const}}>Price Reduced</span></div>
-    <div style={{position:"absolute",bottom:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(10*unit),padding:`0 ${Math.round(20*unit)}px`}}>
-      {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(1.5*unit)}px solid ${frameLight?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.2)"}`}}/>}
-      {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(frameW*0.6),maxWidth:Math.round(100*unit),objectFit:"contain" as const}}/>}
-      <div style={{display:"flex",flexDirection:"column" as const,alignItems:"flex-start",gap:Math.round(1*unit)}}>
-        <p style={{fontSize:brandFs,fontWeight:600,color:frameLight?"rgba(0,0,0,0.6)":"rgba(255,255,255,0.7)",margin:0}}>{brand}</p>
-        {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:frameLight?"rgba(0,0,0,0.4)":"rgba(255,255,255,0.4)",margin:0}}>{br}</p>}
+    <div style={{position:"absolute",bottom:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(12*unit),padding:`0 ${Math.round(20*unit)}px`}}>
+      {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid ${frameLight?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.25)"}`}}/>}
+      {logo&&<img src={logo} alt="" style={{maxHeight:logoH,maxWidth:logoW,objectFit:"contain" as const}}/>}
+      <div style={{display:"flex",flexDirection:"column" as const,alignItems:"flex-start",gap:Math.round(2*unit)}}>
+        <p style={{fontSize:brandFs,fontWeight:700,color:frameLight?"rgba(0,0,0,0.7)":"rgba(255,255,255,0.85)",margin:0}}>{brand}</p>
+        {br&&<p style={{fontSize:Math.round(brandFs*0.7),fontWeight:500,color:frameLight?"rgba(0,0,0,0.45)":"rgba(255,255,255,0.5)",margin:0}}>{br}</p>}
       </div>
     </div>
   </div>);
@@ -482,7 +489,7 @@ export default function DesignStudioV2(){
   const[date,setDate]=useState("");const[time,setTime]=useState("");
   const[agentName,setAgentName]=useState("");const[phone,setPhone]=useState("");
   const[agentEmail,setAgentEmail]=useState("");const[brokerage,setBrokerage]=useState("");
-  const[barColor,setBarColor]=useState("#111827");const[accentColor,setAccentColor]=useState("");const[fontId,setFontId]=useState("sans");
+  const[barColor,setBarColor]=useState("#111827");const[accentColor,setAccentColor]=useState("");const[fontId,setFontId]=useState("sans");const[brandShadow,setBrandShadow]=useState(true);
   const[savedCompanyColors,setSavedCompanyColors]=useState<string[]>([]);
   const[mediaMode,setMediaMode]=useState<"image"|"video">("image");
   const[selectedVideo,setSelectedVideo]=useState<any>(null);
@@ -795,7 +802,7 @@ export default function DesignStudioV2(){
 
   const renderPreview=()=>{
     if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
-    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if(selectedTemplate==="magazine-cover")return<MagazineCoverTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="split-diagonal")return<SplitDiagonalTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="stamp-listed"||selectedTemplate==="stamp-reduced"){const sBadge=getBadgeConfig(selectedTemplate);return<StampTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} badgeText={sBadge.text} badgeColor={sBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}if(selectedTemplate==="cinematic-listed"||selectedTemplate==="cinematic-reduced"){const cBadge=getBadgeConfig(selectedTemplate);return<CinematicTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} badgeText={cBadge.text} badgeColor={cBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}if(selectedTemplate==="bold-frame")return<BoldFrameTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
+    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if(selectedTemplate==="magazine-cover")return<MagazineCoverTemplate size={currentSize} brandShadow={brandShadow} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="split-diagonal")return<SplitDiagonalTemplate size={currentSize} brandShadow={brandShadow} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="stamp-listed"||selectedTemplate==="stamp-reduced"){const sBadge=getBadgeConfig(selectedTemplate);return<StampTemplate size={currentSize} brandShadow={brandShadow} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} badgeText={sBadge.text} badgeColor={sBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}if(selectedTemplate==="cinematic-listed"||selectedTemplate==="cinematic-reduced"){const cBadge=getBadgeConfig(selectedTemplate);return<CinematicTemplate size={currentSize} brandShadow={brandShadow} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} badgeText={cBadge.text} badgeColor={cBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}if(selectedTemplate==="bold-frame")return<BoldFrameTemplate size={currentSize} brandShadow={brandShadow} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
     if(activeTab==="yard-sign"){const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};if(yardDesign==="sidebar")return<YardSignSidebar{...ys}website={yardWebsite}sidebarColor={yardSidebarColor}mainBgColor={yardMainBgColor}/>;if(yardDesign==="top-heavy")return<YardSignTopHeavy{...ys}topColor={yardTopColor}bottomColor={yardBottomColor}/>;return<YardSignSplitBar{...ys}officeName={yardOfficeName}officePhone={yardOfficePhone}topColor={yardTopColor}bottomColor={yardBottomColor}/>;}
     if(activeTab==="property-pdf")return<PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={fontFamily}/>;
     if(activeTab==="branding-card")return<BrandingCardTemplate orientation={currentBrandOr} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} website={brandWebsite} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={brandFontFamily}/>;
@@ -900,7 +907,7 @@ export default function DesignStudioV2(){
               {loadingMusic?<div style={{display:"flex",justifyContent:"center",padding:"12px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>:<div style={{maxHeight:400,overflowY:"auto" as const,display:"flex",flexDirection:"column" as const,gap:4}}>{musicTracks.length===0&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,padding:"10px 0",margin:0}}><button onClick={()=>fetchMusicTracks("")} style={{color:"var(--sa)",background:"none",border:"none",cursor:"pointer",fontSize:10,fontFamily:"var(--sf)"}}>Load tracks</button></p>}{musicTracks.map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:8,border:selectedMusicTrack?.id===t.id?"1px solid var(--sa)":"1px solid rgba(255,255,255,0.06)",background:selectedMusicTrack?.id===t.id?"var(--sag)":"rgba(255,255,255,0.02)",cursor:"pointer"}} onClick={()=>setSelectedMusicTrack({id:t.id,url:t.file_url,name:t.display_name})}><button onClick={e=>{e.stopPropagation();handlePlayTrack(t.id,t.file_url);}} style={{width:22,height:22,borderRadius:"50%",background:playingTrackId===t.id?"var(--sa)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:8,color:playingTrackId===t.id?"#fff":"var(--std)",fontWeight:700}}>{playingTrackId===t.id?"\u25a0":"\u25b6"}</span></button><span style={{fontSize:10,fontWeight:600,color:"var(--st)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.display_name}</span><span style={{fontSize:9,color:"var(--std)",flexShrink:0}}>{t.duration_seconds}s</span>{selectedMusicTrack?.id===t.id&&<Check size={11} color="var(--sa)"/>}</div>)}</div>}
             </div></>}
             {activeTab==="templates"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Details</div><Section title="Property" icon={Home}><div className="fg"><label className="fl">Street Address</label><input className="fi" value={address} onChange={e=>setAddress(e.target.value)} placeholder="8043 Villas la Colina"/></div><div className="fg"><label className="fl">City, State</label><input className="fi" value={addressLine2} onChange={e=>setAddressLine2(e.target.value)} placeholder="Ocotal, Guanacaste"/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Beds</label><input className="fi" value={beds} onChange={e=>setBeds(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Baths</label><input className="fi" value={baths} onChange={e=>setBaths(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Sq Ft</label><input className="fi" value={sqft} onChange={e=>setSqft(e.target.value)}/></div></div><div className="fg"><label className="fl">Price</label><input className="fi" value={price} onChange={e=>setPrice(e.target.value)}/></div>{selectedTemplate==="open-house"&&<div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Date</label><input className="fi" value={date} onChange={e=>setDate(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Time</label><input className="fi" value={time} onChange={e=>setTime(e.target.value)}/></div></div>}</Section><Section title="Agent" icon={User}><div className="fg"><label className="fl">Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></div></Section></>}
-            {activeTab==="templates"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/><div style={{marginTop:10}}><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section><Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section></>}
+            {activeTab==="templates"&&leftPanel==="styles"&&<><div className="ph"><Palette size={15} color="var(--sa)"/>Styles</div><Section title="Font" icon={Type}>{FONT_OPTIONS.map(f=><button key={f.id} className={`fo ${fontId===f.id?"ac":""}`} onClick={()=>setFontId(f.id)}><div style={{fontSize:10,fontWeight:700,color:"var(--std)",fontFamily:"var(--sf)"}}>{f.label}</div><div style={{fontSize:17,color:"var(--st)",marginTop:1,fontFamily:f.family}}>{f.sample}</div></button>)}</Section><Section title="Info Bar Color" icon={Paintbrush}><ColorPicker value={barColor} onChange={setBarColor}/><div style={{marginTop:10}}><SwatchGrid colors={BROKERAGE_COLORS} current={barColor} onSelect={setBarColor} showLabels/></div></Section><Section title="Accent Color" icon={Sparkles} defaultOpen={false}><ColorPicker value={accentColor||"#ffffff"} onChange={setAccentColor}/>{accentColor&&<button onClick={()=>setAccentColor("")} style={{marginTop:6,background:"none",border:"none",color:"var(--std)",fontSize:11,cursor:"pointer",textDecoration:"underline",fontFamily:"var(--sf)"}}>Clear</button>}<div style={{marginTop:10}}><SwatchGrid colors={ACCENT_COLORS} current={accentColor} onSelect={setAccentColor}/></div></Section><Section title="Drop Shadow" icon={Eye} defaultOpen={false}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0"}}><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>Brand Shadow</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>Adds shadow behind branding text</p></div><button onClick={()=>setBrandShadow(!brandShadow)} style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:brandShadow?"var(--sa)":"rgba(255,255,255,0.12)",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:brandShadow?21:3,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></button></div></Section></>}
             {activeTab==="yard-sign"&&leftPanel==="design"&&<><div className="ph"><LayoutTemplate size={15} color="var(--sa)"/>Yard Sign Design</div><div style={{padding:14}}><div className="tg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>{YARD_DESIGNS.map(d=><button key={d.id} className={`tc ${yardDesign===d.id?"ac":""}`} onClick={()=>setYardDesign(d.id)}><div style={{fontSize:11,fontWeight:700,color:"var(--st)"}}>{d.label}</div><div style={{fontSize:9,color:"var(--std)",marginTop:2}}>{d.desc}</div></button>)}</div><div style={{marginTop:14}}><span className="fl">Sign Size</span><div className="fr" style={{marginTop:4}}>{YARD_SIGN_SIZES.map(s=><button key={s.id} className={`sp ${yardSignSize===s.id?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>setYardSignSize(s.id)}>{s.label}</button>)}</div></div></div></>}
             {activeTab==="yard-sign"&&leftPanel==="uploads"&&<><div className="ph"><Upload size={15} color="var(--sa)"/>Uploads</div><div style={{padding:14}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>setHeadshot(URL.createObjectURL(f))} onClear={()=>setHeadshot(null)} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>setLogo(URL.createObjectURL(f))} onClear={()=>setLogo(null)} uploading={false} compact/></div></div></>}
             {activeTab==="yard-sign"&&leftPanel==="text"&&<><div className="ph"><Type size={15} color="var(--sa)"/>Sign Details</div><Section title="Header & Agent" icon={User}><div className="fg"><label className="fl">Header Text</label><input className="fi" value={yardHeaderText} onChange={e=>setYardHeaderText(e.target.value)}/></div><div className="fg"><label className="fl">Agent Name</label><input className="fi" value={agentName} onChange={e=>setAgentName(e.target.value)}/></div><div className="fr"><div className="fg" style={{flex:1}}><label className="fl">Phone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)}/></div><div className="fg" style={{flex:1}}><label className="fl">Email</label><input className="fi" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)}/></div></div><div className="fg"><label className="fl">Brokerage</label><input className="fi" value={brokerage} onChange={e=>setBrokerage(e.target.value)}/></div></Section></>}
