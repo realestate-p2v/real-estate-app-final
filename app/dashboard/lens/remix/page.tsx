@@ -860,18 +860,24 @@ export default function DesignStudioV2(){
       let inputIdx=0;
       const inputArgs:string[]=[];
 
-      // Branding intro: brand card on first frame at 30% opacity
+      // Branding intro: card with drop shadow, lowered, cross dissolve into first clip
       if(hasBranding){
-        inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
+        inputArgs.push("-loop","1","-t","6","-framerate","24","-i","brand.png");
         inputArgs.push("-i","clip_0.mp4");
         const introCardW=Math.round(outW*0.7);const introCardH=Math.round(outH*0.7);
-        const introX=Math.round((outW-introCardW)/2);const introY=Math.round((outH-introCardH)/2);
+        const introX=Math.round((outW-introCardW)/2);
+        const introY=Math.round((outH-introCardH)/2+outH*0.04);
+        // Shadow: scale card slightly larger, darken to black, blur it, then overlay real card on top
+        const shX=introX+6;const shY=introY+8;
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_intro]`,
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=144:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_intro]`,
+          `[${inputIdx}:v]scale=${introCardW}:${introCardH},eq=brightness=-1:contrast=0,gblur=sigma=12,format=yuv420p[shadow_intro]`,
+          `[bg_intro][shadow_intro]overlay=${shX}:${shY},format=yuv420p[bg_sh_intro]`,
           `[${inputIdx}:v]scale=${introCardW}:${introCardH},format=yuv420p[card_intro]`,
-          `[bg_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro]`
+          `[bg_sh_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro_raw]`
         );
-        concatInputs.push("[vintro]");inputIdx+=2;
+        // Don't push to concatInputs yet — we'll xfade with first clip
+        inputIdx+=2;
       }
 
       // All clips — trim + scale + crop
@@ -880,10 +886,19 @@ export default function DesignStudioV2(){
         const c=remixClips[i];
         const speed=c.speed!==1?`,setpts=${(1/c.speed).toFixed(4)}*PTS`:"";
         filterParts.push(`[${inputIdx}:v]trim=start=${c.trimStart}:end=${c.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},format=yuv420p${speed}[v${i}]`);
-        concatInputs.push(`[v${i}]`);inputIdx++;
+        inputIdx++;
       }
 
-      // Branding outro: brand card on last frame at 30% opacity
+      // Cross dissolve from intro into first clip (1s transition)
+      if(hasBranding){
+        filterParts.push(`[vintro_raw][v0]xfade=transition=fade:duration=1:offset=5[v0x]`);
+        concatInputs.push("[v0x]");
+        for(let i=1;i<remixClips.length;i++)concatInputs.push(`[v${i}]`);
+      }else{
+        for(let i=0;i<remixClips.length;i++)concatInputs.push(`[v${i}]`);
+      }
+
+      // Branding outro: card with drop shadow, lowered
       if(hasBranding){
         const lastClipIdx=remixClips.length-1;
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
@@ -891,11 +906,15 @@ export default function DesignStudioV2(){
         const lastClip=remixClips[lastClipIdx];
         const outroTrimStart=Math.max(0,lastClip.trimEnd-0.042);
         const outroCardW=Math.round(outW*0.85);const outroCardH=Math.round(outH*0.85);
-        const outroX=Math.round((outW-outroCardW)/2);const outroY=Math.round((outH-outroCardH)/2);
+        const outroX=Math.round((outW-outroCardW)/2);
+        const outroY=Math.round((outH-outroCardH)/2+outH*0.03);
+        const oshX=outroX+6;const oshY=outroY+8;
         filterParts.push(
           `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_outro]`,
+          `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},eq=brightness=-1:contrast=0,gblur=sigma=12,format=yuv420p[shadow_outro]`,
+          `[bg_outro][shadow_outro]overlay=${oshX}:${oshY},format=yuv420p[bg_sh_outro]`,
           `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},format=yuv420p[card_outro]`,
-          `[bg_outro][card_outro]overlay=${outroX}:${outroY},format=yuv420p[voutro]`
+          `[bg_sh_outro][card_outro]overlay=${outroX}:${outroY},format=yuv420p[voutro]`
         );
         concatInputs.push("[voutro]");inputIdx+=2;
       }
