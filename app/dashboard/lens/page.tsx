@@ -200,7 +200,7 @@ export default function DashboardLensPage() {
     {
       icon: Globe,
       label: "Website Builder",
-      desc: "Single-property sites with your branding",
+      desc: "Property pages & full agent websites on your own domain",
       href: "#",
       iconColor: "text-sky-400",
       bg: "bg-sky-500/10",
@@ -365,7 +365,7 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
     { icon: Film, title: "Video Remix", description: "Remix your clips into social-ready videos with music & branding.", actionLabel: "Open Remix", actionHref: "/dashboard/lens/remix" },
     { icon: MessageSquare, title: "Description Writer", description: "MLS-ready listing copy generated from your photos & details.", actionLabel: "Write a Description", actionHref: "/dashboard/lens/descriptions" },
     { icon: PenTool, title: "Design Studio", description: "Listing graphics, flyers, yard signs, branding cards.", actionLabel: "Open Design Studio", actionHref: "/dashboard/lens/design-studio" },
-    { icon: Globe, title: "Website Builder", description: "Single-property sites with your branding.", actionLabel: "Coming Soon", actionHref: "#", badge: "COMING SOON" },
+    { icon: Globe, title: "Website Builder", description: "Property pages & full agent websites on your own domain.", actionLabel: "Coming Soon", actionHref: "#", badge: "COMING SOON" },
     { icon: ImageIcon, title: "Photo Optimizer", description: "Batch compress for MLS, Zillow, social — under 290KB.", actionLabel: "Open Photo Optimizer", actionHref: "/dashboard/lens/optimize", badge: "FREE" },
     { icon: Crosshair, title: "Drone Mark", description: "Annotate aerial photos with lot lines, branded pins & measurement labels.", actionLabel: "Open Drone Mark", actionHref: "/dashboard/lens/dronemark" },
     { icon: Camera, title: "AI Photo Coach", description: "AI-powered photo scoring & instant feedback during shoots.", actionLabel: "Start a Shoot", actionHref: "/dashboard/lens/coach" },
