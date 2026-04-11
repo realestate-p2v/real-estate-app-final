@@ -108,7 +108,6 @@ export default function DroneMark({ agentLogo }) {
   useEffect(() => { if (agentLogo) sty.current.logo = agentLogo; }, [agentLogo]);
 
   // Style setters — write to ref AND trigger UI update
-  const setColor = (v) => { sty.current.color = v; setUiColor(v); console.log("[DroneMark] setColor:", v, "ref now:", sty.current.color); };
   const setWidth = (v) => { sty.current.width = v; setUiWidth(v); };
   const setFill = (v) => { sty.current.fill = v / 100; setUiFill(v); };
   const setPinColor = (v) => { sty.current.pinColor = v; setUiPinColor(v); };
@@ -150,7 +149,6 @@ export default function DroneMark({ agentLogo }) {
     if (e.target.closest("[data-sid]") && tool === "select") return;
     const p = getPos(e);
     const s = sty.current; // ← always fresh
-    console.log("[DroneMark] onCanvasClick: sty.current =", JSON.stringify({color:s.color, width:s.width, fill:s.fill}));
 
     if (tool === "polygon") {
       if (!isDrawing) { setIsDrawing(true); setDrawPts([p]); }
@@ -158,13 +156,11 @@ export default function DroneMark({ agentLogo }) {
         const f = drawPts[0];
         const d = Math.sqrt((p.x - f.x) ** 2 + (p.y - f.y) ** 2);
         if (drawPts.length >= 3 && d < 30 * (natW / 1000)) {
-          console.log("[DroneMark] Adding polygon with color:", s.color);
           addShape({ id: uid(), type: "polygon", points: [...drawPts], color: s.color, width: s.width, fillOpacity: s.fill, style: "solid" });
           setIsDrawing(false); setDrawPts([]);
         } else { setDrawPts([...drawPts, p]); }
       }
     } else if (tool === "pin") {
-      console.log("[DroneMark] Adding pin with color:", s.pinColor, "logo:", s.logo ? "YES" : "NO");
       addShape({ id: uid(), type: "pin", x: p.x, y: p.y, color: s.pinColor, size: s.pinSize, logo: s.logo, text: s.pinText });
     } else if (tool === "label") {
       if (!s.labelText.trim()) { notify("Enter label text first"); return; }
@@ -203,7 +199,6 @@ export default function DroneMark({ agentLogo }) {
   const onMouseUp = (e) => {
     const p = getPos(e);
     const s = sty.current;
-    console.log("[DroneMark] onMouseUp: sty.current =", JSON.stringify({color:s.color, width:s.width, fill:s.fill}));
     if (tool === "rect" && rectStart) {
       const x1 = Math.min(rectStart.x, p.x), y1 = Math.min(rectStart.y, p.y);
       const x2 = Math.max(rectStart.x, p.x), y2 = Math.max(rectStart.y, p.y);
@@ -504,11 +499,14 @@ export default function DroneMark({ agentLogo }) {
             </>}
           </div>
 
-          {/* Undo/Redo */}
+          {/* Undo/Redo/Clear */}
           <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
             <button onClick={undo} disabled={histIdx <= 0} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "1px solid rgba(255,255,255,0.07)", background: "none", color: histIdx > 0 ? "#e4e4ea" : "rgba(255,255,255,0.2)", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↩ Undo</button>
             <button onClick={redo} disabled={histIdx >= hist.length - 1} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "1px solid rgba(255,255,255,0.07)", background: "none", color: histIdx < hist.length - 1 ? "#e4e4ea" : "rgba(255,255,255,0.2)", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↪ Redo</button>
           </div>
+          {shapes.length > 0 && (
+            <button onClick={() => { setShapes([]); setSelId(null); setHist([[]]); setHistIdx(0); }} style={{ width: "100%", marginTop: 6, padding: "7px 0", borderRadius: 7, border: "1px solid rgba(239,68,68,0.25)", background: "none", color: "#ef4444", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>🗑 Clear All</button>
+          )}
 
           {/* Export */}
           <button onClick={doExport} style={{
@@ -529,7 +527,7 @@ export default function DroneMark({ agentLogo }) {
             <button onClick={() => fileRef.current?.click()} style={{ marginTop: 16, padding: "10px 24px", borderRadius: 10, background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>📷 Upload Photo</button>
           </div>
         ) : (
-          <div style={{ width: dW * sc, height: dH * sc, borderRadius: 4, overflow: "hidden", boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 20px 60px rgba(0,0,0,0.5)" }}>
+          <div style={{ width: dW * sc, height: dH * sc }}>
             <div style={{ width: natW, height: natH, transform: `scale(${(dW * sc) / natW})`, transformOrigin: "top left", position: "relative" }}>
               <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} crossOrigin="anonymous" draggable={false} />
               <svg ref={svgRef} viewBox={`0 0 ${natW} ${natH}`}
