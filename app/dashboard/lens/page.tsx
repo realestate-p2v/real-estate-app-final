@@ -29,6 +29,7 @@ import {
   Eye,
   Copy,
   Check,
+  ImageIcon,
 } from "lucide-react";
 
 const PROPERTY_SITE_BASE = "/p";
@@ -197,6 +198,14 @@ export default function DashboardLensPage() {
       bg: "bg-amber-500/10",
     },
     {
+      icon: ImageIcon,
+      label: "Photo Optimizer",
+      desc: "Batch compress for MLS, Zillow, social — under 290KB",
+      href: "/dashboard/lens/optimize",
+      iconColor: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+    },
+    {
       icon: Camera,
       label: "Photo Coach",
       desc: "AI scoring & feedback for your listing photos",
@@ -308,7 +317,7 @@ export default function DashboardLensPage() {
           <div className="launcher-item mt-10" style={{ animationDelay: "0.6s" }}>
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Property Websites</p>
-              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">View all \u2192</Link>
+              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">View all →</Link>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {publishedWebsites.map((site, i) => {
@@ -324,7 +333,7 @@ export default function DashboardLensPage() {
                     <div className="border-t border-white/[0.06] px-4 py-3 flex items-center gap-3">
                       <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"><Eye className="h-3 w-3" />View Live Page</a>
                       <button onClick={() => handleCopyLink(site.website_slug)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors">{copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}</button>
-                      <Link href={`/dashboard/properties/${site.id}`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings \u2192</Link>
+                      <Link href={`/dashboard/properties/${site.id}`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings →</Link>
                     </div>
                   </div>
                 );
@@ -347,6 +356,7 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
     { icon: Film, title: "Video Remix", description: "Remix your clips into social-ready videos with music & branding.", actionLabel: "Open Remix", actionHref: "/dashboard/lens/remix" },
     { icon: PenTool, title: "Design Studio", description: "Listing graphics, flyers, yard signs, branding cards.", actionLabel: "Open Design Studio", actionHref: "/dashboard/lens/design-studio" },
     { icon: Crosshair, title: "Drone Mark", description: "Annotate aerial photos with lot lines, branded pins & measurement labels.", actionLabel: "Open Drone Mark", actionHref: "/dashboard/lens/dronemark" },
+    { icon: ImageIcon, title: "Photo Optimizer", description: "Batch compress for MLS, Zillow, social — under 290KB.", actionLabel: "Open Photo Optimizer", actionHref: "/dashboard/lens/optimize", badge: "FREE" },
     { icon: Camera, title: "AI Photo Coach", description: "AI-powered photo scoring & instant feedback during shoots.", actionLabel: "Start a Shoot", actionHref: "/dashboard/lens/coach" },
     { icon: MessageSquare, title: "Description Writer", description: "MLS-ready listing copy generated from your photos & details.", actionLabel: "Write a Description", actionHref: "/dashboard/lens/descriptions" },
     { icon: Sofa, title: "Virtual Staging", description: "Furnish empty rooms with AI \u2014 6 design styles, before/after.", actionLabel: "Stage a Room", actionHref: "/dashboard/lens/staging" },
@@ -369,7 +379,7 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mt-6">
           <div className="flex items-start gap-4">
             <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0"><Clock className="h-5 w-5 text-red-600" /></div>
-            <div className="flex-1"><h3 className="font-bold text-red-800">Your free month has ended</h3><p className="text-sm text-red-700 mt-1">Subscribe to continue using all features.</p><Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe \u2014 $27.95/mo</Link></Button></div>
+            <div className="flex-1"><h3 className="font-bold text-red-800">Your free month has ended</h3><p className="text-sm text-red-700 mt-1">Subscribe to continue using all features.</p><Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo</Link></Button></div>
           </div>
         </div>
       )}
@@ -380,7 +390,7 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-foreground">Unlock P2V Lens</h2>
             <p className="text-sm text-muted-foreground mt-1">AI photo coaching, design studio, listing descriptions, virtual staging, reports, and priority delivery.</p>
-            <div className="flex flex-wrap gap-3 mt-4"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe \u2014 $27.95/mo<ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
+            <div className="flex flex-wrap gap-3 mt-4"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo<ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
           </div>
         </div>
       </div>
@@ -390,7 +400,8 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map(({ icon: Icon, title, description, actionLabel, actionHref, badge }, i) => (
             <Link key={i} href={actionHref} className="relative bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block group">
-              {badge && <span className="absolute top-3 right-3 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{badge}</span>}
+              {badge === "PRO" && <span className="absolute top-3 right-3 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{badge}</span>}
+              {badge === "FREE" && <span className="absolute top-3 right-3 text-[10px] font-black text-green-600 bg-green-100 px-2 py-0.5 rounded-full border border-green-200">{badge}</span>}
               {!badge && <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">With Subscription</span>}
               <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center"><Icon className="h-5 w-5 text-accent" /></div>
               <h3 className="font-bold text-foreground group-hover:text-accent transition-colors">{title}</h3>
@@ -403,7 +414,7 @@ function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }
 
       <div className="bg-card rounded-2xl border border-border p-8 text-center space-y-5">
         <h2 className="text-2xl font-bold text-foreground">Your Complete Marketing Suite</h2>
-        <p className="text-muted-foreground max-w-lg mx-auto">Everything you need to market your listings \u2014 $27.95/month.</p>
+        <p className="text-muted-foreground max-w-lg mx-auto">Everything you need to market your listings — $27.95/month.</p>
         <Button asChild className="bg-accent hover:bg-accent/90 px-8 py-6 text-lg font-bold"><Link href="/lens"><Sparkles className="mr-2 h-5 w-5" />Get P2V Lens</Link></Button>
       </div>
 
