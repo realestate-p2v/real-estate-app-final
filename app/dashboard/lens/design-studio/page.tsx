@@ -368,22 +368,37 @@ export default function DesignStudioV2(){
   const[droneSelectedId,setDroneSelectedId]=useState<string|null>(null);
   const[droneDrawingPts,setDroneDrawingPts]=useState<{x:number;y:number}[]>([]);
   const[droneIsDrawing,setDroneIsDrawing]=useState(false);
-  const[droneLineColor,setDroneLineColor]=useState("#facc15");
-  const[droneLineStyle,setDroneLineStyle]=useState("solid");
-  const[droneLineWidth,setDroneLineWidth]=useState(4);
-  const[droneFillOpacity,setDroneFillOpacity]=useState(0.12);
-  const[dronePinColor,setDronePinColor]=useState("#ef4444");
-  const[dronePinSize,setDronePinSize]=useState(200);
-  const[droneLabelText,setDroneLabelText]=useState("");
-  const[droneLabelFontSize,setDroneLabelFontSize]=useState(28);
-  const[droneLabelFont,setDroneLabelFont]=useState("sans");
-  const[droneLabelColor,setDroneLabelColor]=useState("#ffffff");
-  const[droneLabelBg,setDroneLabelBg]=useState(true);
+  const[droneLineColor,setDroneLineColor_]=useState("#facc15");
+  const[droneLineStyle,setDroneLineStyle_]=useState("solid");
+  const[droneLineWidth,setDroneLineWidth_]=useState(4);
+  const[droneFillOpacity,setDroneFillOpacity_]=useState(0.12);
+  const[dronePinColor,setDronePinColor_]=useState("#ef4444");
+  const[dronePinSize,setDronePinSize_]=useState(200);
+  const[droneLabelText,setDroneLabelText_]=useState("");
+  const[droneLabelFontSize,setDroneLabelFontSize_]=useState(28);
+  const[droneLabelFont,setDroneLabelFont_]=useState("sans");
+  const[droneLabelColor,setDroneLabelColor_]=useState("#ffffff");
+  const[droneLabelBg,setDroneLabelBg_]=useState(true);
   const[droneLogo,setDroneLogo]=useState<string|null>(null);
-  const[dronePinText,setDronePinText]=useState("");
+  const[dronePinText,setDronePinText_]=useState("");
   const[droneShowGrid,setDroneShowGrid]=useState(false);
   const[droneSnapGrid,setDroneSnapGrid]=useState(false);
-  const[droneMeasureUnit,setDroneMeasureUnit]=useState("m");
+  const[droneMeasureUnit,setDroneMeasureUnit_]=useState("m");
+  // Mutable style bag — always up-to-date, no closure issues
+  const ds=useRef({color:"#facc15",style:"solid",width:4,fill:0.12,pinColor:"#ef4444",pinSize:200,pinText:"",labelText:"",labelFs:28,labelFont:"sans",labelColor:"#ffffff",labelBg:true,logo:null as string|null,unit:"m"});
+  const setDroneLineColor=(v:string)=>{ds.current.color=v;setDroneLineColor_(v);};
+  const setDroneLineStyle=(v:string)=>{ds.current.style=v;setDroneLineStyle_(v);};
+  const setDroneLineWidth=(v:number)=>{ds.current.width=v;setDroneLineWidth_(v);};
+  const setDroneFillOpacity=(v:number)=>{ds.current.fill=v;setDroneFillOpacity_(v);};
+  const setDronePinColor=(v:string)=>{ds.current.pinColor=v;setDronePinColor_(v);};
+  const setDronePinSize=(v:number)=>{ds.current.pinSize=v;setDronePinSize_(v);};
+  const setDronePinText=(v:string)=>{ds.current.pinText=v;setDronePinText_(v);};
+  const setDroneLabelText=(v:string)=>{ds.current.labelText=v;setDroneLabelText_(v);};
+  const setDroneLabelFontSize=(v:number)=>{ds.current.labelFs=v;setDroneLabelFontSize_(v);};
+  const setDroneLabelFont=(v:string)=>{ds.current.labelFont=v;setDroneLabelFont_(v);};
+  const setDroneLabelColor=(v:string)=>{ds.current.labelColor=v;setDroneLabelColor_(v);};
+  const setDroneLabelBg=(v:boolean)=>{ds.current.labelBg=v;setDroneLabelBg_(v);};
+  const setDroneMeasureUnit=(v:string)=>{ds.current.unit=v;setDroneMeasureUnit_(v);};
   const[droneZoom,setDroneZoom]=useState(100);
   const[droneHistory,setDroneHistory]=useState<DroneShape[][]>([[]]);
   const[droneHistIdx,setDroneHistIdx]=useState(0);
@@ -396,9 +411,6 @@ export default function DesignStudioV2(){
   const droneSvgRef=useRef<SVGSVGElement>(null);
   const droneFileRef=useRef<HTMLInputElement>(null);
   const droneLogoRef=useRef<HTMLInputElement>(null);
-  // Refs that always hold the latest style values — immune to stale closures
-  const droneStyleRef=useRef({lineColor:"#facc15",lineStyle:"solid",lineWidth:4,fillOpacity:0.12,pinColor:"#ef4444",pinSize:200,pinText:"",labelText:"",labelFontSize:28,labelFont:"sans",labelColor:"#ffffff",labelBg:true,logo:null as string|null,measureUnit:"m"});
-  useEffect(()=>{droneStyleRef.current={lineColor:droneLineColor,lineStyle:droneLineStyle,lineWidth:droneLineWidth,fillOpacity:droneFillOpacity,pinColor:dronePinColor,pinSize:dronePinSize,pinText:dronePinText,labelText:droneLabelText,labelFontSize:droneLabelFontSize,labelFont:droneLabelFont,labelColor:droneLabelColor,labelBg:droneLabelBg,logo:droneLogo,measureUnit:droneMeasureUnit};},[droneLineColor,droneLineStyle,droneLineWidth,droneFillOpacity,dronePinColor,dronePinSize,dronePinText,droneLabelText,droneLabelFontSize,droneLabelFont,droneLabelColor,droneLabelBg,droneLogo,droneMeasureUnit]);
 
   const currentSize=SIZES.find(s=>s.id===selectedSize)!;
   const currentYardSize=YARD_SIGN_SIZES.find(s=>s.id===yardSignSize)!;
@@ -548,14 +560,14 @@ export default function DesignStudioV2(){
     if((e.target as Element).closest("[data-handle]"))return;
     if((e.target as Element).closest("[data-shape-id]")&&droneTool==="select")return;
     const pos=droneGetPos(e);
-    const sty=droneStyleRef.current;
+    const sty=ds.current;
     if(droneTool==="polygon"){
       if(!droneIsDrawing){setDroneIsDrawing(true);setDroneDrawingPts([pos]);}
       else{
         const first=droneDrawingPts[0];
         const dist=Math.sqrt((pos.x-first.x)**2+(pos.y-first.y)**2);
         if(droneDrawingPts.length>=3&&dist<30*(dronePhotoNatural.w/1000)){
-          droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.lineColor,style:sty.lineStyle,width:sty.lineWidth,fillOpacity:sty.fillOpacity});
+          droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});
           setDroneIsDrawing(false);setDroneDrawingPts([]);
         }else{setDroneDrawingPts([...droneDrawingPts,pos]);}
       }
@@ -563,7 +575,7 @@ export default function DesignStudioV2(){
       droneAddShape({id:droneUid(),type:"pin",x:pos.x,y:pos.y,color:sty.pinColor,size:sty.pinSize,logo:sty.logo,text:sty.pinText,labelColor:sty.labelColor});
     }else if(droneTool==="label"){
       if(!sty.labelText.trim()){notify("Enter label text first");return;}
-      droneAddShape({id:droneUid(),type:"label",x:pos.x,y:pos.y,text:sty.labelText,fontSize:sty.labelFontSize,font:sty.labelFont,color:sty.labelColor,bg:sty.labelBg});
+      droneAddShape({id:droneUid(),type:"label",x:pos.x,y:pos.y,text:sty.labelText,fontSize:sty.labelFs,font:sty.labelFont,color:sty.labelColor,bg:sty.labelBg});
     }else if(droneTool==="select"){setDroneSelectedId(null);}
   };
 
@@ -599,18 +611,18 @@ export default function DesignStudioV2(){
 
   const droneMouseUp=(e:React.MouseEvent)=>{
     const pos=droneGetPos(e);
-    const sty=droneStyleRef.current;
+    const sty=ds.current;
     if(droneTool==="rect"&&droneRectStart){
       const x1=Math.min(droneRectStart.x,pos.x),y1=Math.min(droneRectStart.y,pos.y),x2=Math.max(droneRectStart.x,pos.x),y2=Math.max(droneRectStart.y,pos.y);
-      if(Math.abs(x2-x1)>10&&Math.abs(y2-y1)>10)droneAddShape({id:droneUid(),type:"rect-shape",points:[{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}],color:sty.lineColor,style:sty.lineStyle,width:sty.lineWidth,fillOpacity:sty.fillOpacity});
+      if(Math.abs(x2-x1)>10&&Math.abs(y2-y1)>10)droneAddShape({id:droneUid(),type:"rect-shape",points:[{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});
       setDroneRectStart(null);setDroneRectCur(null);
     }else if((droneTool==="line"||droneTool==="arrow")&&droneLineStart){
       const dist=Math.sqrt((pos.x-droneLineStart.x)**2+(pos.y-droneLineStart.y)**2);
-      if(dist>10)droneAddShape({id:droneUid(),type:droneTool==="arrow"?"arrow":"line-shape",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.lineColor,style:sty.lineStyle,width:sty.lineWidth});
+      if(dist>10)droneAddShape({id:droneUid(),type:droneTool==="arrow"?"arrow":"line-shape",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.color,style:sty.style,width:sty.width});
       setDroneLineStart(null);setDroneLineCur(null);
     }else if(droneTool==="measure"&&droneLineStart){
       const dist=Math.sqrt((pos.x-droneLineStart.x)**2+(pos.y-droneLineStart.y)**2);
-      if(dist>10)droneAddShape({id:droneUid(),type:"measure",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.lineColor,style:sty.lineStyle,width:sty.lineWidth,measureText:"",unit:sty.measureUnit});
+      if(dist>10)droneAddShape({id:droneUid(),type:"measure",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:sty.color,style:sty.style,width:sty.width,measureText:"",unit:sty.unit});
       setDroneLineStart(null);setDroneLineCur(null);
     }
     if(droneDragging){setDroneShapes(prev=>{dronePushHistory([...prev]);return prev;});setDroneDragging(null);setDroneDragStart(null);}
@@ -619,11 +631,11 @@ export default function DesignStudioV2(){
   const droneShapeMouseDown=(e:React.MouseEvent,id:string)=>{e.stopPropagation();if(droneTool==="select"){setDroneSelectedId(id);setDroneDragging({shapeId:id});setDroneDragStart(droneGetPos(e));setLeftPanel("style");}};
   const droneHandleMouseDown=(e:React.MouseEvent,shapeId:string,handleIndex:number)=>{e.stopPropagation();setDroneSelectedId(shapeId);setDroneDragging({shapeId,handleIndex});setDroneDragStart(droneGetPos(e));};
 
-  const droneDblClick=()=>{if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>=3){const sty=droneStyleRef.current;droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.lineColor,style:sty.lineStyle,width:sty.lineWidth,fillOpacity:sty.fillOpacity});setDroneIsDrawing(false);setDroneDrawingPts([]);}};
+  const droneDblClick=()=>{if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>=3){const sty=ds.current;droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:sty.color,style:sty.style,width:sty.width,fillOpacity:sty.fill});setDroneIsDrawing(false);setDroneDrawingPts([]);}};
   const droneCancelDrawing=()=>{setDroneIsDrawing(false);setDroneDrawingPts([]);setDroneRectStart(null);setDroneRectCur(null);setDroneLineStart(null);setDroneLineCur(null);};
 
   const dronePhotoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{setDronePhotoNatural({w:img.naturalWidth,h:img.naturalHeight});setDronePhoto(url);setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);};img.src=url;};
-  const droneLogoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=(ev)=>setDroneLogo(ev.target?.result as string);reader.readAsDataURL(f);};
+  const droneLogoUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=(ev)=>{const v=ev.target?.result as string;ds.current.logo=v;setDroneLogo(v);};reader.readAsDataURL(f);};
 
   useEffect(()=>{
     if(!isDroneMode)return;
@@ -719,17 +731,17 @@ export default function DesignStudioV2(){
 
   const renderDronePreview=()=>{
     const parts:React.ReactNode[]=[];
-    const sty=droneStyleRef.current;
+    const sty=ds.current;
     if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>0){
-      parts.push(<g key="pp"><polyline points={droneDrawingPts.map(p=>`${p.x},${p.y}`).join(" ")} fill="none" stroke={sty.lineColor} strokeWidth={sty.lineWidth} strokeDasharray={droneDash(sty.lineStyle,sty.lineWidth)} strokeLinejoin="round" strokeLinecap="round"/>{droneDrawingPts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={6} fill={i===0?"#fff":sty.lineColor} stroke={i===0?sty.lineColor:"#fff"} strokeWidth={2}/>)}{droneLineCur&&<line x1={droneDrawingPts[droneDrawingPts.length-1].x} y1={droneDrawingPts[droneDrawingPts.length-1].y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.lineColor} strokeWidth={sty.lineWidth} strokeDasharray="8 6" opacity={0.5}/>}</g>);
+      parts.push(<g key="pp"><polyline points={droneDrawingPts.map(p=>`${p.x},${p.y}`).join(" ")} fill="none" stroke={sty.color} strokeWidth={sty.width} strokeDasharray={droneDash(sty.style,sty.width)} strokeLinejoin="round" strokeLinecap="round"/>{droneDrawingPts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={6} fill={i===0?"#fff":sty.color} stroke={i===0?sty.color:"#fff"} strokeWidth={2}/>)}{droneLineCur&&<line x1={droneDrawingPts[droneDrawingPts.length-1].x} y1={droneDrawingPts[droneDrawingPts.length-1].y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.color} strokeWidth={sty.width} strokeDasharray="8 6" opacity={0.5}/>}</g>);
     }
     if(droneTool==="rect"&&droneRectStart&&droneRectCur){
       const x=Math.min(droneRectStart.x,droneRectCur.x),y=Math.min(droneRectStart.y,droneRectCur.y);
-      parts.push(<rect key="rp" x={x} y={y} width={Math.abs(droneRectCur.x-droneRectStart.x)} height={Math.abs(droneRectCur.y-droneRectStart.y)} fill={hexToRgba(sty.lineColor,sty.fillOpacity)} stroke={sty.lineColor} strokeWidth={sty.lineWidth} strokeDasharray={droneDash(sty.lineStyle,sty.lineWidth)}/>);
+      parts.push(<rect key="rp" x={x} y={y} width={Math.abs(droneRectCur.x-droneRectStart.x)} height={Math.abs(droneRectCur.y-droneRectStart.y)} fill={hexToRgba(sty.color,sty.fill)} stroke={sty.color} strokeWidth={sty.width} strokeDasharray={droneDash(sty.style,sty.width)}/>);
     }
     if((droneTool==="line"||droneTool==="arrow"||droneTool==="measure")&&droneLineStart&&droneLineCur){
-      parts.push(<line key="lp" x1={droneLineStart.x} y1={droneLineStart.y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.lineColor} strokeWidth={sty.lineWidth} strokeDasharray="8 6" opacity={0.6}/>);
-      if(droneTool==="measure"){const dx=droneLineCur.x-droneLineStart.x,dy=droneLineCur.y-droneLineStart.y,dist=Math.sqrt(dx*dx+dy*dy);parts.push(<text key="mp" x={(droneLineStart.x+droneLineCur.x)/2} y={(droneLineStart.y+droneLineCur.y)/2-12} textAnchor="middle" fill={sty.lineColor} fontSize={24} fontWeight="800" fontFamily="'Helvetica Neue', sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="3" paintOrder="stroke">{Math.round(dist/10)} {sty.measureUnit}</text>);}
+      parts.push(<line key="lp" x1={droneLineStart.x} y1={droneLineStart.y} x2={droneLineCur.x} y2={droneLineCur.y} stroke={sty.color} strokeWidth={sty.width} strokeDasharray="8 6" opacity={0.6}/>);
+      if(droneTool==="measure"){const dx=droneLineCur.x-droneLineStart.x,dy=droneLineCur.y-droneLineStart.y,dist=Math.sqrt(dx*dx+dy*dy);parts.push(<text key="mp" x={(droneLineStart.x+droneLineCur.x)/2} y={(droneLineStart.y+droneLineCur.y)/2-12} textAnchor="middle" fill={sty.color} fontSize={24} fontWeight="800" fontFamily="'Helvetica Neue', sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="3" paintOrder="stroke">{Math.round(dist/10)} {sty.unit}</text>);}
     }
     return parts;
   };
