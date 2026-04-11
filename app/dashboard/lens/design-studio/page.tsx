@@ -520,17 +520,17 @@ export default function DesignStudioV2(){
 
   // ─── Drone Mark Handlers ──────────────────────────────────────────────────
   const dronePushHistory=useCallback((ns:DroneShape[])=>{
-    setDroneHistory(h=>[...h.slice(0,droneHistIdx+1),ns]);
+    setDroneHistory(h=>{const trimmed=h.slice(0,droneHistIdx+1);return[...trimmed,ns];});
     setDroneHistIdx(i=>i+1);
   },[droneHistIdx]);
 
   const droneUndo=()=>{if(droneHistIdx>0){setDroneHistIdx(i=>i-1);setDroneShapes(droneHistory[droneHistIdx-1]);}};
   const droneRedo=()=>{if(droneHistIdx<droneHistory.length-1){setDroneHistIdx(i=>i+1);setDroneShapes(droneHistory[droneHistIdx+1]);}};
-  const droneAddShape=(s:DroneShape)=>{const ns=[...droneShapes,s];setDroneShapes(ns);dronePushHistory(ns);};
-  const droneUpdateShape=(id:string,u:Partial<DroneShape>)=>{const ns=droneShapes.map(s=>s.id===id?{...s,...u}:s);setDroneShapes(ns);dronePushHistory(ns);};
+  const droneAddShape=(s:DroneShape)=>{setDroneShapes(prev=>{const ns=[...prev,s];dronePushHistory(ns);return ns;});};
+  const droneUpdateShape=(id:string,u:Partial<DroneShape>)=>{setDroneShapes(prev=>{const ns=prev.map(s=>s.id===id?{...s,...u}:s);dronePushHistory(ns);return ns;});};
   const droneUpdateLive=(id:string,u:Partial<DroneShape>)=>{setDroneShapes(prev=>prev.map(s=>s.id===id?{...s,...u}:s));};
-  const droneDeleteShape=(id:string)=>{const ns=droneShapes.filter(s=>s.id!==id);setDroneShapes(ns);dronePushHistory(ns);if(droneSelectedId===id)setDroneSelectedId(null);};
-  const droneDuplicateShape=(id:string)=>{const s=droneShapes.find(sh=>sh.id===id);if(!s)return;const n={...s,id:droneUid()};if(n.points)n.points=n.points.map(p=>({x:p.x+30,y:p.y+30}));if(n.x!==undefined){n.x+=30;n.y!==undefined&&(n.y+=30);}if(n.x1!==undefined){n.x1+=30;n.y1!==undefined&&(n.y1+=30);n.x2!==undefined&&(n.x2+=30);n.y2!==undefined&&(n.y2+=30);}droneAddShape(n);};
+  const droneDeleteShape=(id:string)=>{setDroneShapes(prev=>{const ns=prev.filter(s=>s.id!==id);dronePushHistory(ns);return ns;});if(droneSelectedId===id)setDroneSelectedId(null);};
+  const droneDuplicateShape=(id:string)=>{setDroneShapes(prev=>{const s=prev.find(sh=>sh.id===id);if(!s)return prev;const n:any={...s,id:droneUid()};if(n.points)n.points=n.points.map((p:any)=>({x:p.x+30,y:p.y+30}));if(n.x!==undefined){n.x+=30;if(n.y!==undefined)n.y+=30;}if(n.x1!==undefined){n.x1+=30;if(n.y1!==undefined)n.y1+=30;if(n.x2!==undefined)n.x2+=30;if(n.y2!==undefined)n.y2+=30;}const ns=[...prev,n];dronePushHistory(ns);return ns;});};
 
   const droneGetPos=(e:React.MouseEvent)=>{
     const svg=droneSvgRef.current;if(!svg)return{x:0,y:0};
@@ -608,7 +608,7 @@ export default function DesignStudioV2(){
       if(dist>10)droneAddShape({id:droneUid(),type:"measure",x1:droneLineStart.x,y1:droneLineStart.y,x2:pos.x,y2:pos.y,color:droneLineColor,style:droneLineStyle,width:droneLineWidth,measureText:"",unit:droneMeasureUnit});
       setDroneLineStart(null);setDroneLineCur(null);
     }
-    if(droneDragging){dronePushHistory([...droneShapes]);setDroneDragging(null);setDroneDragStart(null);}
+    if(droneDragging){setDroneShapes(prev=>{dronePushHistory([...prev]);return prev;});setDroneDragging(null);setDroneDragStart(null);}
   };
 
   const droneShapeMouseDown=(e:React.MouseEvent,id:string)=>{e.stopPropagation();if(droneTool==="select"){setDroneSelectedId(id);setDroneDragging({shapeId:id});setDroneDragStart(droneGetPos(e));setLeftPanel("style");}};
