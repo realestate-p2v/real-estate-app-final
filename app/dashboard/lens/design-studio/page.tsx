@@ -48,19 +48,21 @@ function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,a
 }
 
 // ─── MagazineCoverTemplate ───────────────────────────────────────────────────
-function MagazineCoverTemplate({size,listingPhoto,videoElement,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,accentColor}:any){
+function MagazineCoverTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff";
   const ad=address||"123 Main Street";const ad2=addressLine2||"";
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"";
   const pr=price?`$${price}`:"$000,000";
   const brand=[agentName,phone].filter(Boolean).join("  \u00b7  ")||"";
+  const br=brokerage||"";
   const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.7)`;
   const prFs=Math.round((isStory?120:isPostcard?90:80)*unit);
   const adFs=responsiveSize(Math.round((isStory?42:isPostcard?30:26)*unit),ad,22);
   const detFs=Math.round((isStory?28:isPostcard?20:18)*unit);
   const badgeFs=Math.round((isStory?22:isPostcard?16:14)*unit);
   const brandFs=Math.round((isStory?24:isPostcard?16:14)*unit);
+  const hsSize=Math.round((isStory?56:isPostcard?40:36)*unit);
   const pad=Math.round(48*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
     {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#0f0f1a"}}/>}
@@ -70,8 +72,12 @@ function MagazineCoverTemplate({size,listingPhoto,videoElement,address,addressLi
       <p style={{fontSize:adFs,fontWeight:600,color:"rgba(255,255,255,0.85)",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
       {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.45)",margin:0,letterSpacing:"0.1em",textShadow:ts}}>{det}</p>}
       <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,marginTop:Math.round(4*unit),lineHeight:0.95,letterSpacing:"-0.03em",textShadow:`0 ${Math.round(4*unit)}px ${Math.round(20*unit)}px rgba(0,0,0,0.5)`}}>{pr}</p>
-      <div style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:Math.round(12*unit),paddingTop:Math.round(12*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-        <p style={{fontSize:brandFs,fontWeight:500,color:"rgba(255,255,255,0.5)",margin:0}}>{brand}</p>
+      <div style={{width:"100%",display:"flex",alignItems:"center",gap:Math.round(12*unit),marginTop:Math.round(12*unit),paddingTop:Math.round(12*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid rgba(255,255,255,0.2)`}}/>}
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.7)",margin:0}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:"rgba(255,255,255,0.35)",margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
+        </div>
         {logo&&<img src={logo} alt="" style={{maxHeight:Math.round((isStory?50:35)*unit),maxWidth:Math.round((isStory?160:110)*unit),objectFit:"contain" as const}}/>}
       </div>
     </div>
@@ -79,7 +85,7 @@ function MagazineCoverTemplate({size,listingPhoto,videoElement,address,addressLi
 }
 
 // ─── SplitDiagonalTemplate ───────────────────────────────────────────────────
-function SplitDiagonalTemplate({size,listingPhoto,videoElement,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
+function SplitDiagonalTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff";const barLight=isLightColor(barColor);
   const tp=barLight?"#111827":"#ffffff",ts2=barLight?"rgba(17,24,39,0.5)":"rgba(255,255,255,0.5)";
@@ -87,12 +93,14 @@ function SplitDiagonalTemplate({size,listingPhoto,videoElement,address,addressLi
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
   const pr=price?`$${price}`:"$000,000";
   const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const br=brokerage||"";
   const split=isStory?40:35;
   const badgeFs=Math.round((isStory?44:isPostcard?30:26)*unit);
   const adFs=responsiveSize(Math.round((isStory?38:isPostcard?26:22)*unit),ad,18);
   const detFs=Math.round((isStory?26:isPostcard?18:16)*unit);
   const prFs=Math.round((isStory?72:isPostcard?50:44)*unit);
   const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const hsSize=Math.round((isStory?48:isPostcard?36:32)*unit);
   const pad=Math.round(40*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
     <div style={{position:"absolute",inset:0,backgroundColor:barColor}}/>
@@ -107,21 +115,26 @@ function SplitDiagonalTemplate({size,listingPhoto,videoElement,address,addressLi
       {det&&<p style={{fontSize:detFs,fontWeight:400,color:ts2,margin:0,letterSpacing:"0.06em"}}>{det}</p>}
       <p style={{fontSize:prFs,fontWeight:900,color:accent,lineHeight:1,margin:0,marginTop:Math.round(6*unit)}}>{pr}</p>
       <div style={{marginTop:"auto",display:"flex",alignItems:"center",gap:Math.round(10*unit)}}>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid ${barLight?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.2)"}`}}/>}
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontSize:brandFs,fontWeight:600,color:tp,margin:0}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:ts2,margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
+        </div>
         {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(35*unit),maxWidth:Math.round(100*unit),objectFit:"contain" as const}}/>}
-        <p style={{fontSize:brandFs,fontWeight:500,color:ts2,margin:0}}>{brand}</p>
       </div>
     </div>
   </div>);
 }
 
 // ─── StampTemplate ───────────────────────────────────────────────────────────
-function StampTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,logo,fontFamily,accentColor}:any){
+function StampTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||badgeColor||"#ffffff";
   const ad=address||"123 Main Street";const ad2=addressLine2||"";
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
   const pr=price?`$${price}`:"$000,000";
   const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const br=brokerage||"";
   const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.6)`;
   const stampW=Math.round((isStory?340:isPostcard?280:260)*unit);
   const stampH=Math.round((isStory?160:isPostcard?120:110)*unit);
@@ -130,6 +143,7 @@ function StampTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,addr
   const detFs=Math.round((isStory?26:isPostcard?18:16)*unit);
   const prFs=Math.round((isStory?64:isPostcard?44:38)*unit);
   const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const hsSize=Math.round((isStory?48:isPostcard?36:32)*unit);
   const pad=Math.round(44*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily}}>
     {videoElement?<div data-video-area style={{position:"absolute",inset:0,overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{position:"absolute",inset:0,backgroundColor:"#0f0f1a"}}/>}
@@ -140,8 +154,12 @@ function StampTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,addr
       <p style={{fontSize:adFs,fontWeight:700,color:"#fff",margin:0,textShadow:ts}}>{ad}{ad2?` | ${ad2}`:""}</p>
       {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.5)",margin:0,letterSpacing:"0.08em",textShadow:ts}}>{det}</p>}
       <p style={{fontSize:prFs,fontWeight:900,color:"#fff",margin:0,lineHeight:1,textShadow:ts}}>{pr}</p>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:Math.round(8*unit),paddingTop:Math.round(8*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-        <p style={{fontSize:brandFs,fontWeight:500,color:"rgba(255,255,255,0.45)",margin:0}}>{brand}</p>
+      <div style={{display:"flex",alignItems:"center",gap:Math.round(10*unit),marginTop:Math.round(8*unit),paddingTop:Math.round(8*unit),borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid rgba(255,255,255,0.2)`}}/>}
+        <div style={{flex:1,minWidth:0}}>
+          <p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.6)",margin:0}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:"rgba(255,255,255,0.35)",margin:0,marginTop:Math.round(2*unit)}}>{br}</p>}
+        </div>
         {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(35*unit),maxWidth:Math.round(110*unit),objectFit:"contain" as const}}/>}
       </div>
     </div>
@@ -149,7 +167,7 @@ function StampTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,addr
 }
 
 // ─── CinematicTemplate ───────────────────────────────────────────────────────
-function CinematicTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,logo,fontFamily,accentColor}:any){
+function CinematicTemplate({size,listingPhoto,videoElement,headshot,badgeText,badgeColor,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff";
   const barPct=isStory?14:16;
@@ -158,11 +176,13 @@ function CinematicTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
   const pr=price?`$${price}`:"$000,000";
   const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const br=brokerage||"";
   const badgeFs=Math.round((isStory?24:isPostcard?16:14)*unit);
   const adFs=responsiveSize(Math.round((isStory?30:isPostcard?20:18)*unit),ad,24);
   const prFs=Math.round((isStory?52:isPostcard?36:32)*unit);
   const detFs=Math.round((isStory?22:isPostcard?15:13)*unit);
   const brandFs=Math.round((isStory?22:isPostcard?15:13)*unit);
+  const hsSize=Math.round((isStory?44:isPostcard?32:28)*unit);
   const pad=Math.round(36*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily,backgroundColor:"#000"}}>
     <div style={{position:"absolute",top:barH,left:0,right:0,bottom:barH,overflow:"hidden"}}>
@@ -179,7 +199,11 @@ function CinematicTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,
         {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.4)",margin:0,marginTop:Math.round(2*unit),letterSpacing:"0.06em"}}>{det}</p>}
       </div>
       <div style={{display:"flex",alignItems:"center",gap:Math.round(12*unit)}}>
-        <p style={{fontSize:brandFs,fontWeight:500,color:"rgba(255,255,255,0.45)",margin:0,textAlign:"right" as const}}>{brand}</p>
+        {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(2*unit)}px solid rgba(255,255,255,0.2)`}}/>}
+        <div style={{textAlign:"right" as const,flex:1}}>
+          <p style={{fontSize:brandFs,fontWeight:600,color:"rgba(255,255,255,0.6)",margin:0}}>{brand}</p>
+          {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:"rgba(255,255,255,0.35)",margin:0,marginTop:Math.round(1*unit)}}>{br}</p>}
+        </div>
         {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(barH*0.5),maxWidth:Math.round(120*unit),objectFit:"contain" as const}}/>}
       </div>
     </div>
@@ -187,7 +211,7 @@ function CinematicTemplate({size,listingPhoto,videoElement,badgeText,badgeColor,
 }
 
 // ─── BoldFrameTemplate ───────────────────────────────────────────────────────
-function BoldFrameTemplate({size,listingPhoto,videoElement,address,addressLine2,beds,baths,sqft,price,agentName,phone,logo,fontFamily,barColor,accentColor}:any){
+function BoldFrameTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const frameColor=accentColor||barColor||"#dc2626";
   const frameW=Math.round((isStory?50:isPostcard?40:44)*unit);
@@ -195,12 +219,15 @@ function BoldFrameTemplate({size,listingPhoto,videoElement,address,addressLine2,
   const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join(" \u00b7 ")||"";
   const pr=price?`$${price}`:"$000,000";
   const brand=[agentName,phone].filter(Boolean).join(" \u00b7 ")||"";
+  const br=brokerage||"";
+  const frameLight=isLightColor(frameColor);
   const ts=`0 ${Math.round(2*unit)}px ${Math.round(10*unit)}px rgba(0,0,0,0.6)`;
   const badgeFs=Math.round((isStory?24:isPostcard?18:16)*unit);
   const prFs=Math.round((isStory?96:isPostcard?68:60)*unit);
   const adFs=responsiveSize(Math.round((isStory?36:isPostcard?24:22)*unit),ad,20);
   const detFs=Math.round((isStory?24:isPostcard?16:14)*unit);
   const brandFs=Math.round((isStory?20:isPostcard?14:12)*unit);
+  const hsSize=Math.round((isStory?36:isPostcard?28:26)*unit);
   return(<div style={{position:"relative",overflow:"hidden",width:w,height:h,fontFamily,backgroundColor:frameColor}}>
     <div style={{position:"absolute",top:frameW,left:frameW,right:frameW,bottom:frameW,overflow:"hidden",borderRadius:Math.round(4*unit)}}>
       {videoElement?<div data-video-area style={{width:"100%",height:"100%",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#0f0f1a"}}/>}
@@ -211,10 +238,14 @@ function BoldFrameTemplate({size,listingPhoto,videoElement,address,addressLine2,
         {det&&<p style={{fontSize:detFs,fontWeight:400,color:"rgba(255,255,255,0.5)",margin:0,letterSpacing:"0.08em",textShadow:ts}}>{det}</p>}
       </div>
     </div>
-    <div style={{position:"absolute",top:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:badgeFs,fontWeight:900,color:isLightColor(frameColor)?"#111":"#fff",letterSpacing:"0.18em",textTransform:"uppercase" as const}}>Price Reduced</span></div>
-    <div style={{position:"absolute",bottom:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(12*unit),padding:`0 ${Math.round(20*unit)}px`}}>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:badgeFs,fontWeight:900,color:frameLight?"#111":"#fff",letterSpacing:"0.18em",textTransform:"uppercase" as const}}>Price Reduced</span></div>
+    <div style={{position:"absolute",bottom:0,left:0,right:0,height:frameW,display:"flex",alignItems:"center",justifyContent:"center",gap:Math.round(10*unit),padding:`0 ${Math.round(20*unit)}px`}}>
+      {headshot&&<img src={headshot} alt="" style={{width:hsSize,height:hsSize,borderRadius:"50%",objectFit:"cover",border:`${Math.round(1.5*unit)}px solid ${frameLight?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.2)"}`}}/>}
       {logo&&<img src={logo} alt="" style={{maxHeight:Math.round(frameW*0.6),maxWidth:Math.round(100*unit),objectFit:"contain" as const}}/>}
-      <p style={{fontSize:brandFs,fontWeight:600,color:isLightColor(frameColor)?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.6)",margin:0}}>{brand}</p>
+      <div style={{display:"flex",flexDirection:"column" as const,alignItems:"flex-start",gap:Math.round(1*unit)}}>
+        <p style={{fontSize:brandFs,fontWeight:600,color:frameLight?"rgba(0,0,0,0.6)":"rgba(255,255,255,0.7)",margin:0}}>{brand}</p>
+        {br&&<p style={{fontSize:Math.round(brandFs*0.85),fontWeight:400,color:frameLight?"rgba(0,0,0,0.4)":"rgba(255,255,255,0.4)",margin:0}}>{br}</p>}
+      </div>
     </div>
   </div>);
 }
@@ -764,7 +795,7 @@ export default function DesignStudioV2(){
 
   const renderPreview=()=>{
     if(activeTab==="listing-flyer")return<ListingFlyerTemplate photos={flyerPhotos} headshot={headshot} logo={logo} address={flyerAddress} cityState={flyerCityState} price={flyerPrice} beds={flyerBeds} baths={flyerBaths} sqft={flyerSqft} description={flyerDescription} amenities={flyerAmenities} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} listingUrl={flyerListingUrl} videoUrl={flyerVideoUrl} stagingUrl={flyerStagingUrl} accentColor={flyerAccentColor} fontFamily={flyerFontFamily} unbranded={flyerUnbranded}/>;
-    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if(selectedTemplate==="magazine-cover")return<MagazineCoverTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} accentColor={accentColor}/>;if(selectedTemplate==="split-diagonal")return<SplitDiagonalTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="stamp-listed"||selectedTemplate==="stamp-reduced"){const sBadge=getBadgeConfig(selectedTemplate);return<StampTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} badgeText={sBadge.text} badgeColor={sBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} logo={logo} fontFamily={fontFamily} accentColor={accentColor}/>;}if(selectedTemplate==="cinematic-listed"||selectedTemplate==="cinematic-reduced"){const cBadge=getBadgeConfig(selectedTemplate);return<CinematicTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} badgeText={cBadge.text} badgeColor={cBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} logo={logo} fontFamily={fontFamily} accentColor={accentColor}/>;}if(selectedTemplate==="bold-frame")return<BoldFrameTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
+    if(activeTab==="templates"){const photo=mediaMode==="video"?(selectedVideo?.thumbnail||null):listingPhoto;const vidEl=mediaMode==="video"&&selectedVideo?.url?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;if(selectedTemplate==="magazine-cover")return<MagazineCoverTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="split-diagonal")return<SplitDiagonalTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="stamp-listed"||selectedTemplate==="stamp-reduced"){const sBadge=getBadgeConfig(selectedTemplate);return<StampTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} badgeText={sBadge.text} badgeColor={sBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}if(selectedTemplate==="cinematic-listed"||selectedTemplate==="cinematic-reduced"){const cBadge=getBadgeConfig(selectedTemplate);return<CinematicTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} badgeText={cBadge.text} badgeColor={cBadge.color} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}if(selectedTemplate==="bold-frame")return<BoldFrameTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} logo={logo} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;if(selectedTemplate==="open-house")return<OpenHouseTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} date={date} time={time} agentName={agentName} phone={phone} brokerage={brokerage} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;return<InfoBarTemplate size={currentSize} listingPhoto={vidEl?null:photo} videoElement={vidEl} headshot={headshot} logo={logo} address={address} addressLine2={addressLine2} beds={beds} baths={baths} sqft={sqft} price={price} agentName={agentName} phone={phone} brokerage={brokerage} badgeText={badge.text} badgeColor={badge.color} fontFamily={fontFamily} barColor={barColor} accentColor={accentColor}/>;}
     if(activeTab==="yard-sign"){const ys={width:currentYardSize.width,height:currentYardSize.height,headshot,logo,agentName,phone,email:agentEmail,brokerage,headerText:yardHeaderText,fontFamily,qrDataUrl:null,bulletPoints:[yardBullet1,yardBullet2,yardBullet3]};if(yardDesign==="sidebar")return<YardSignSidebar{...ys}website={yardWebsite}sidebarColor={yardSidebarColor}mainBgColor={yardMainBgColor}/>;if(yardDesign==="top-heavy")return<YardSignTopHeavy{...ys}topColor={yardTopColor}bottomColor={yardBottomColor}/>;return<YardSignSplitBar{...ys}officeName={yardOfficeName}officePhone={yardOfficePhone}topColor={yardTopColor}bottomColor={yardBottomColor}/>;}
     if(activeTab==="property-pdf")return<PropertyPdfPage pageNumber={pdfPreviewPage} address={pdfAddress} cityStateZip={pdfCityStateZip} price={pdfPrice} beds={pdfBeds} baths={pdfBaths} sqft={pdfSqft} description={pdfDescription} features={pdfFeatures} photos={pdfPhotos} accentColor={pdfAccentColor} fontFamily={fontFamily}/>;
     if(activeTab==="branding-card")return<BrandingCardTemplate orientation={currentBrandOr} logo={brandLogo} headshot={brandHeadshot} agentName={brandAgentName} phone={brandPhone} email={brandEmail} brokerage={brandBrokerage} tagline={brandTagline} website={brandWebsite} address={brandAddress} cityState={brandCityState} price={brandPrice} features={brandFeatures} bgColor={brandBgColor} accentColor={brandAccentColor} bgPhoto={brandBgPhoto} fontFamily={brandFontFamily}/>;
