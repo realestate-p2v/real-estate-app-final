@@ -21,6 +21,7 @@ import {
   Lock,
   Crown,
   PenTool,
+  Crosshair,
   Film,
   Gift,
   Home,
@@ -393,6 +394,7 @@ export default function DashboardPage() {
     // Subscriber tools — no badges, no locks
     { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, remix clips, listing flyers", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20" },
+    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null },
     { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20" },
     { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
@@ -406,6 +408,7 @@ export default function DashboardPage() {
     { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, flyers, yard signs", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
     { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
+    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
     { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "/dashboard/lens/location-score", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
     { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "/dashboard/lens/value-boost", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
     // Locked tools
@@ -580,32 +583,65 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ═══ STATS ROW ═══ */}
-        <div className="mc-animate mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4" style={{ animationDelay: "0.16s" }}>
-          {[
-            { label: "Properties", value: propertyCount, icon: Home, color: "text-emerald-400" },
-            { label: "Coach Sessions", value: coachSessionCount, icon: Camera, color: "text-blue-400" },
-            { label: "Descriptions", value: descriptionCount, icon: MessageSquare, color: "text-sky-400" },
-            { label: "Photo Analyses", value: isSubscriber ? `${subscription.analysesUsed}/${subscription.analysesLimit}` : `${subscription.analysesUsed}`, icon: Sparkles, color: "text-cyan-400", isUsage: isSubscriber },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-white/35">{stat.label}</span>
-              </div>
-              <p className="text-xl font-extrabold text-white/90 sm:text-2xl">{stat.value}</p>
-              {"isUsage" in stat && stat.isUsage && (
-                <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${usagePercent > 95 ? "bg-red-400" : usagePercent > 80 ? "bg-amber-400" : "bg-cyan-400"}`} style={{ width: `${Math.max(Math.min(usagePercent, 100), 2)}%` }} />
-                </div>
-              )}
+        {/* ═══ QUICK-LINK BUTTONS (replaces old Stats Row + Quick Actions) ═══ */}
+        <div className={`mc-animate mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 ${publishedWebsites.length > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`} style={{ animationDelay: "0.16s" }}>
+          <Link href="/order" className="group flex items-center gap-4 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4 transition-all hover:border-cyan-400/25 hover:bg-cyan-400/[0.08]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20">
+              <Play className="h-5 w-5 text-cyan-400" />
             </div>
-          ))}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">Order a Video</p>
+              <p className="mt-0.5 text-xs text-white/40">From <span className="font-bold text-cyan-400">{isSubscriber ? "$4.95/clip" : "$79"}</span></p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-cyan-400 transition-all group-hover:translate-x-0.5" />
+          </Link>
+          <Link href="/dashboard/properties" className="group flex items-center gap-4 rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4 transition-all hover:border-emerald-400/25 hover:bg-emerald-400/[0.08]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20">
+              <Home className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">My Properties</p>
+              <p className="mt-0.5 text-xs text-white/40">{propertyCount > 0 ? `${propertyCount} propert${propertyCount === 1 ? "y" : "ies"}` : "Add your first"}</p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-emerald-400 transition-all group-hover:translate-x-0.5" />
+          </Link>
+          <Link href="/dashboard/videos" className="group flex items-center gap-4 rounded-2xl border border-purple-400/10 bg-purple-400/[0.04] p-4 transition-all hover:border-purple-400/25 hover:bg-purple-400/[0.08]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-400/10 ring-1 ring-purple-400/20">
+              <Video className="h-5 w-5 text-purple-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">My Videos</p>
+              <p className="mt-0.5 text-xs text-white/40">View & download</p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-purple-400 transition-all group-hover:translate-x-0.5" />
+          </Link>
+          <button onClick={() => document.getElementById("tools")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group flex items-center gap-4 rounded-2xl border border-indigo-400/10 bg-indigo-400/[0.04] p-4 transition-all hover:border-indigo-400/25 hover:bg-indigo-400/[0.08] text-left w-full">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-400/10 ring-1 ring-indigo-400/20">
+              <Zap className="h-5 w-5 text-indigo-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">Tools</p>
+              <p className="mt-0.5 text-xs text-white/40">Jump to tools ↓</p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-indigo-400 transition-all group-hover:translate-x-0.5" />
+          </button>
+          {publishedWebsites.length > 0 && (
+            <button onClick={() => document.getElementById("websites")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group flex items-center gap-4 rounded-2xl border border-sky-400/10 bg-sky-400/[0.04] p-4 transition-all hover:border-sky-400/25 hover:bg-sky-400/[0.08] text-left w-full">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 ring-1 ring-sky-400/20">
+                <Globe className="h-5 w-5 text-sky-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors">Websites</p>
+                <p className="mt-0.5 text-xs text-white/40">{publishedWebsites.length} live site{publishedWebsites.length !== 1 ? "s" : ""}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-sky-400 transition-all group-hover:translate-x-0.5" />
+            </button>
+          )}
         </div>
 
         {/* ═══ PROPERTY WEBSITES ═══ */}
         {publishedWebsites.length > 0 && (
-          <div className="mc-animate mt-8" style={{ animationDelay: "0.18s" }}>
+          <div id="websites" className="mc-animate mt-8" style={{ animationDelay: "0.18s" }}>
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Property Websites</p>
               <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">Manage all →</Link>
@@ -650,28 +686,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ═══ QUICK ACTIONS ═══ */}
-        <div className="mc-animate mt-6 grid gap-3 sm:grid-cols-2" style={{ animationDelay: "0.2s" }}>
-          <Link href="/order" className="group flex items-center gap-4 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4 sm:p-5 transition-all hover:border-cyan-400/25 hover:bg-cyan-400/[0.08]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20"><Play className="h-5 w-5 text-cyan-400" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">Order a Listing Video</p>
-              <p className="mt-0.5 text-xs text-white/40">Starting at <span className="font-bold text-cyan-400">{isSubscriber ? "$4.95/clip" : "$79"}</span></p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-cyan-400 transition-all group-hover:translate-x-0.5" />
-          </Link>
-          <Link href="/dashboard/properties" className="group flex items-center gap-4 rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4 sm:p-5 transition-all hover:border-emerald-400/25 hover:bg-emerald-400/[0.08]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20"><Home className="h-5 w-5 text-emerald-400" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">My Properties</p>
-              <p className="mt-0.5 text-xs text-white/40">{propertyCount > 0 ? `${propertyCount} propert${propertyCount === 1 ? "y" : "ies"}` : "Add your first property"}</p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-emerald-400 transition-all group-hover:translate-x-0.5" />
-          </Link>
-        </div>
-
         {/* ═══ TABS ═══ */}
-        <div className="mc-animate mt-10 flex items-center gap-1 border-b border-white/[0.06]" style={{ animationDelay: "0.24s" }}>
+        <div id="tools" className="mc-animate mt-10 flex items-center gap-1 border-b border-white/[0.06]" style={{ animationDelay: "0.24s" }}>
           {[{ id: "tools" as const, label: "Your Tools" }, { id: "coming-soon" as const, label: "Coming Soon" }].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-4 py-2.5 text-sm font-bold transition-colors relative ${activeTab === t.id ? "text-cyan-400" : "text-white/40 hover:text-white/60"}`}>
               {t.label}
@@ -806,6 +822,14 @@ export default function DashboardPage() {
                     <perk.icon className="h-3 w-3 text-cyan-400/50" />{perk.text}
                   </div>
                 ))}
+              </div>
+              {/* Photo Analyses usage inline */}
+              <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center gap-2">
+                <Sparkles className="h-3 w-3 text-cyan-400/40" />
+                <span className="text-xs text-white/30">Photo Analyses: <span className="font-bold text-white/50">{subscription.analysesUsed}/{subscription.analysesLimit}</span></span>
+                <div className="h-1 w-20 rounded-full bg-white/[0.06] overflow-hidden ml-1">
+                  <div className={`h-full rounded-full ${usagePercent > 95 ? "bg-red-400" : usagePercent > 80 ? "bg-amber-400" : "bg-cyan-400"}`} style={{ width: `${Math.max(Math.min(usagePercent, 100), 2)}%` }} />
+                </div>
               </div>
             </>
           ) : (
