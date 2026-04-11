@@ -22,6 +22,7 @@ import {
   X,
   ImageIcon,
   AlertCircle,
+  Home,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SpinWheel } from "@/components/spin-wheel";
@@ -73,6 +74,10 @@ function DescriptionWriterPageInner() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Property selector state
+  const [userProperties, setUserProperties] = useState<any[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+
   // Form state
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -106,6 +111,77 @@ function DescriptionWriterPageInner() {
   const [showSurpriseWheel, setShowSurpriseWheel] = useState(false);
   const [surprisePromoCode, setSurprisePromoCode] = useState<string | null>(null);
 
+  const handleSelectProperty = useCallback(async (id: string) => {
+    if (id === "__new__" || id === "") {
+      setSelectedPropertyId(null);
+      setPropertyData({ address: "", beds: "", baths: "", sqft: "", lotSize: "", yearBuilt: "", price: "", neighborhood: "", specialFeatures: "" });
+      setPhotoUrls([]);
+      return;
+    }
+
+    const prop = userProperties.find((p: any) => p.id === id);
+    if (!prop) return;
+    setSelectedPropertyId(prop.id);
+
+    // Fill property data
+    const cityState = [prop.city, prop.state].filter(Boolean).join(", ");
+    setPropertyData({
+      address: prop.address || "",
+      beds: prop.bedrooms?.toString() || "",
+      baths: prop.bathrooms?.toString() || "",
+      sqft: prop.sqft?.toString() || "",
+      lotSize: prop.lot_size || "",
+      yearBuilt: prop.year_built?.toString() || "",
+      price: prop.price ? `$${Number(prop.price).toLocaleString()}` : "",
+      neighborhood: cityState,
+      specialFeatures: [
+        ...(prop.special_features || []),
+        ...(prop.amenities || []),
+      ].filter(Boolean).join(", "),
+    });
+
+    // Fill photos — try curated first, then fall back to order photos
+    let photos: string[] = [];
+
+    // 1. Curated website photos
+    const curated = prop.website_curated;
+    if (curated) {
+      if (Array.isArray(curated)) {
+        photos = curated.filter((u: any) => typeof u === "string").slice(0, 10);
+      } else if (curated.photos && Array.isArray(curated.photos)) {
+        photos = curated.photos.slice(0, 10);
+      }
+    }
+
+    // 2. Fall back to order photos if curated doesn't have enough
+    if (photos.length < 3) {
+      try {
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("photos")
+          .eq("user_id", user?.id)
+          .ilike("property_address", `%${(prop.address || "").substring(0, 15)}%`)
+          .order("created_at", { ascending: false })
+          .limit(3);
+
+        for (const o of (orders || [])) {
+          const urls = (o.photos || [])
+            .map((p: any) => p.secure_url || p.url)
+            .filter(Boolean);
+          photos = [...photos, ...urls];
+          if (photos.length >= 10) break;
+        }
+        photos = [...new Set(photos)].slice(0, 10);
+      } catch (err) {
+        console.error("Failed to load order photos:", err);
+      }
+    }
+
+    if (photos.length > 0) {
+      setPhotoUrls(photos);
+    }
+  }, [userProperties, user, supabase]);
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -124,12 +200,38 @@ function DescriptionWriterPageInner() {
           setIsSubscriber(true);
         }
       }
+
+      // Fetch user properties for selector
+      if (user) {
+        const { data: props } = await supabase
+          .from("agent_properties")
+          .select("id, address, city, state, bedrooms, bathrooms, sqft, price, lot_size, year_built, special_features, amenities, website_curated")
+          .eq("user_id", user.id)
+          .is("merged_into_id", null)
+          .order("updated_at", { ascending: false });
+        if (props) setUserProperties(props);
+      }
     };
     getUser();
   }, [supabase.auth]);
 
+  // Auto-select property from URL param once properties are loaded
+  useEffect(() => {
+    if (userProperties.length === 0) return;
+    const pid = searchParams.get("propertyId");
+    if (pid) {
+      const prop = userProperties.find((p: any) => p.id === pid);
+      if (prop) {
+        handleSelectProperty(prop.id);
+      }
+    }
+  }, [userProperties, searchParams, handleSelectProperty]);
+
   // Pre-fill from URL params (property portfolio) or sessionStorage (Photo Coach)
   useEffect(() => {
+    // Skip URL param pre-fill if propertyId is present (handled by auto-select above)
+    if (searchParams.get("propertyId")) return;
+
     // URL params take priority (from property portfolio page)
     const addr = searchParams.get("address");
     if (addr) {
@@ -427,6 +529,32 @@ function DescriptionWriterPageInner() {
             <p className="text-sm text-foreground">
               <span className="font-bold">Free trial:</span> Generate your first listing description free. Subscribe to P2V Lens for unlimited access.
             </p>
+          </div>
+        )}
+
+        {/* Property Selector Dropdown */}
+        {userProperties.length > 0 && (
+          <div className="bg-card rounded-2xl border border-border p-6 mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <Home className="h-5 w-5 text-accent" />
+              <h2 className="text-lg font-bold text-foreground">Select a Property</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Choose a property to auto-fill details and photos, or enter everything manually.
+            </p>
+            <select
+              value={selectedPropertyId || ""}
+              onChange={(e) => handleSelectProperty(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            >
+              <option value="">Select property...</option>
+              {userProperties.map((p: any) => (
+                <option key={p.id} value={p.id}>
+                  {p.address}{p.city ? `, ${p.city}` : ""}
+                </option>
+              ))}
+              <option value="__new__">＋ Enter details manually</option>
+            </select>
           </div>
         )}
 
