@@ -543,7 +543,7 @@ export default function DesignStudioV2(){
     if(droneDragging){dronePushHistory([...droneShapes]);setDroneDragging(null);setDroneDragStart(null);}
   };
 
-  const droneShapeMouseDown=(e:React.MouseEvent,id:string)=>{e.stopPropagation();if(droneTool==="select"){setDroneSelectedId(id);setDroneDragging({shapeId:id});setDroneDragStart(droneGetPos(e));}};
+  const droneShapeMouseDown=(e:React.MouseEvent,id:string)=>{e.stopPropagation();if(droneTool==="select"){setDroneSelectedId(id);setDroneDragging({shapeId:id});setDroneDragStart(droneGetPos(e));setLeftPanel("style");}};
   const droneHandleMouseDown=(e:React.MouseEvent,shapeId:string,handleIndex:number)=>{e.stopPropagation();setDroneSelectedId(shapeId);setDroneDragging({shapeId,handleIndex});setDroneDragStart(droneGetPos(e));};
 
   const droneDblClick=()=>{if(droneTool==="polygon"&&droneIsDrawing&&droneDrawingPts.length>=3){droneAddShape({id:droneUid(),type:"polygon",points:[...droneDrawingPts],color:droneLineColor,style:droneLineStyle,width:droneLineWidth,fillOpacity:droneFillOpacity});setDroneIsDrawing(false);setDroneDrawingPts([]);}};
@@ -725,15 +725,54 @@ export default function DesignStudioV2(){
   };
 
   const handleSelectProperty=(id:string)=>{
-    if(id==="__new__"){setSelectedPropertyId(null);setAddress("");setAddressLine2("");setBeds("");setBaths("");setSqft("");setPrice("");return;}
+    if(id==="__new__"){
+      setSelectedPropertyId(null);setAddress("");setAddressLine2("");setBeds("");setBaths("");setSqft("");setPrice("");
+      setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");
+      setBrandAddress("");setBrandCityState("");setBrandPrice("");setBrandFeatures("");
+      setFlyerAddress("");setFlyerCityState("");setFlyerBeds("");setFlyerBaths("");setFlyerSqft("");setFlyerPrice("");setFlyerDescription("");setFlyerAmenities([]);setFlyerPhotos([]);setFlyerListingUrl("");
+      return;
+    }
     const prop=userProperties.find((p:any)=>p.id===id);if(!prop)return;
-    setSelectedPropertyId(prop.id);setAddress(prop.address||"");
+    setSelectedPropertyId(prop.id);
+    const addr=prop.address||"";
     const cs=[prop.city,prop.state].filter(Boolean).join(", ");
-    setAddressLine2(cs);
-    if(prop.bedrooms)setBeds(prop.bedrooms.toString());
-    if(prop.bathrooms)setBaths(prop.bathrooms.toString());
-    if(prop.sqft)setSqft(prop.sqft.toString());
-    if(prop.price)setPrice(prop.price.toString());
+    // Listing Graphics
+    setAddress(addr);setAddressLine2(cs);
+    if(prop.bedrooms){const b=prop.bedrooms.toString();setBeds(b);setFlyerBeds(b);setPdfBeds(b);}
+    if(prop.bathrooms){const b=prop.bathrooms.toString();setBaths(b);setFlyerBaths(b);setPdfBaths(b);}
+    if(prop.sqft){const s=prop.sqft.toString();setSqft(s);setFlyerSqft(s);setPdfSqft(s);}
+    if(prop.price){const p=prop.price.toString();setPrice(p);setFlyerPrice(p);setPdfPrice(p);setBrandPrice(p);}
+    // Listing Flyer
+    setFlyerAddress(addr);setFlyerCityState(cs);
+    if(prop.amenities?.length)setFlyerAmenities(prop.amenities);
+    if(prop.website_published&&prop.website_slug)setFlyerListingUrl(`https://${prop.website_slug}.p2v.homes`);
+    // Property PDF
+    setPdfAddress(addr);setPdfCityStateZip(cs);
+    if(prop.special_features?.length>0){const features=prop.special_features.join("\n");setPdfFeatures(features);setBrandFeatures(features);}
+    // Branding
+    setBrandAddress(addr);setBrandCityState(cs);
+    // Load photos & description from orders
+    (async()=>{
+      try{
+        const supabase=(await import("@/lib/supabase/client")).createClient();
+        const{data:{user:u}}=await supabase.auth.getUser();if(!u)return;
+        // Photos from orders
+        let photos:string[]=[];
+        const curated=prop.website_curated?.photos||[];
+        if(curated.length)photos=curated.slice(0,7);
+        if(photos.length<5){
+          const{data:orders}=await supabase.from("orders").select("photos").eq("user_id",u.id).ilike("property_address",`%${(addr).substring(0,15)}%`);
+          for(const o of(orders||[])){const urls=(o.photos||[]).map((p:any)=>p.secure_url||p.url).filter(Boolean);photos=[...photos,...urls];if(photos.length>=7)break;}
+          photos=[...new Set(photos)].slice(0,7);
+        }
+        if(photos.length){setFlyerPhotos(photos);if(photos.length<=25)setPdfPhotos(photos);}
+        // Description from lens_descriptions
+        const propAddr=addr.toLowerCase().replace(/[^a-z0-9]/g,"");
+        const{data:descs}=await supabase.from("lens_descriptions").select("description,property_data").eq("user_id",u.id).order("created_at",{ascending:false}).limit(10);
+        const match=(descs||[]).find((d:any)=>{const pd=d.property_data;if(!pd)return false;const dAddr=(pd.address||pd.property_address||"").toLowerCase().replace(/[^a-z0-9]/g,"");return dAddr&&(dAddr.includes(propAddr)||propAddr.includes(dAddr));});
+        if(match?.description){setFlyerDescription(match.description);setPdfDescription(match.description);}
+      }catch(err){console.error("Property fill error:",err);}
+    })();
   };
 
   const pdfFLines=pdfFeatures?pdfFeatures.split("\n").filter(Boolean).length:0;
@@ -838,7 +877,7 @@ export default function DesignStudioV2(){
             <div className="ph"><Crosshair size={15} color="var(--sa)"/>Drone Tools</div>
             <div style={{padding:14}}>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,marginBottom:14}}>
-                {DRONE_TOOLS.map(t=><button key={t.id} onClick={()=>{setDroneTool(t.id);droneCancelDrawing();}} style={{padding:"8px 0",borderRadius:8,border:droneTool===t.id?"1px solid var(--sa)":"1px solid var(--sbr)",background:droneTool===t.id?"var(--sag)":"none",color:droneTool===t.id?"var(--sa)":"var(--std)",cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,fontFamily:"var(--sf)",fontSize:9,fontWeight:600}}><t.icon size={16}/>{t.label}</button>)}
+                {DRONE_TOOLS.map(t=><button key={t.id} onClick={()=>{setDroneTool(t.id);droneCancelDrawing();if(t.id==="pin"||t.id==="label")setLeftPanel("style");}} style={{padding:"8px 0",borderRadius:8,border:droneTool===t.id?"1px solid var(--sa)":"1px solid var(--sbr)",background:droneTool===t.id?"var(--sag)":"none",color:droneTool===t.id?"var(--sa)":"var(--std)",cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,fontFamily:"var(--sf)",fontSize:9,fontWeight:600}}><t.icon size={16}/>{t.label}</button>)}
               </div>
               {droneIsDrawing&&droneTool==="polygon"&&<div style={{padding:"8px 10px",borderRadius:8,background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.15)",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><Pentagon size={12} color="var(--sa)"/><span style={{fontSize:10,color:"var(--sa)",fontWeight:600}}>{droneDrawingPts.length} pts \u00b7 Click to add \u00b7 Double-click to finish</span></div>}
               <div style={{marginTop:8}}><UploadZone label={dronePhoto?"Replace Photo":"Upload Drone Photo"} imageUrl={dronePhoto} onUpload={f=>{const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{setDronePhotoNatural({w:img.naturalWidth,h:img.naturalHeight});setDronePhoto(url);setDroneShapes([]);setDroneHistory([[]]);setDroneHistIdx(0);};img.src=url;}} onClear={()=>setDronePhoto(null)} uploading={false}/></div>
