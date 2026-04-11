@@ -860,23 +860,21 @@ export default function DesignStudioV2(){
       let inputIdx=0;
       const inputArgs:string[]=[];
 
-      // Branding intro: card with drop shadow, lowered, cross dissolve into first clip
+      // Branding intro: card with drop shadow on 20% opacity first frame, cross dissolve into clip 1
       if(hasBranding){
         inputArgs.push("-loop","1","-t","6","-framerate","24","-i","brand.png");
         inputArgs.push("-i","clip_0.mp4");
         const introCardW=Math.round(outW*0.7);const introCardH=Math.round(outH*0.7);
         const introX=Math.round((outW-introCardW)/2);
         const introY=Math.round((outH-introCardH)/2+outH*0.04);
-        // Shadow: scale card slightly larger, darken to black, blur it, then overlay real card on top
         const shX=introX+6;const shY=introY+8;
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=144:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_intro]`,
+          `[${inputIdx+1}:v]trim=start=0:end=0.042,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=144:1:0,setpts=PTS-STARTPTS,lutyuv=y=val*0.2:u=128:v=128,format=yuv420p[bg_intro]`,
           `[${inputIdx}:v]scale=${introCardW}:${introCardH},eq=brightness=-1:contrast=0,gblur=sigma=12,format=yuv420p[shadow_intro]`,
           `[bg_intro][shadow_intro]overlay=${shX}:${shY},format=yuv420p[bg_sh_intro]`,
           `[${inputIdx}:v]scale=${introCardW}:${introCardH},format=yuv420p[card_intro]`,
           `[bg_sh_intro][card_intro]overlay=${introX}:${introY},format=yuv420p[vintro_raw]`
         );
-        // Don't push to concatInputs yet — we'll xfade with first clip
         inputIdx+=2;
       }
 
@@ -898,7 +896,7 @@ export default function DesignStudioV2(){
         for(let i=0;i<remixClips.length;i++)concatInputs.push(`[v${i}]`);
       }
 
-      // Branding outro: card with drop shadow, lowered
+      // Branding outro: card with drop shadow on 20% opacity last frame
       if(hasBranding){
         const lastClipIdx=remixClips.length-1;
         inputArgs.push("-loop","1","-t","5","-framerate","24","-i","brand.png");
@@ -910,7 +908,7 @@ export default function DesignStudioV2(){
         const outroY=Math.round((outH-outroCardH)/2+outH*0.03);
         const oshX=outroX+6;const oshY=outroY+8;
         filterParts.push(
-          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,eq=brightness=-0.7:contrast=0.3,format=yuv420p[bg_outro]`,
+          `[${inputIdx+1}:v]trim=start=${outroTrimStart}:end=${lastClip.trimEnd},setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},loop=120:1:0,setpts=PTS-STARTPTS,lutyuv=y=val*0.2:u=128:v=128,format=yuv420p[bg_outro]`,
           `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},eq=brightness=-1:contrast=0,gblur=sigma=12,format=yuv420p[shadow_outro]`,
           `[bg_outro][shadow_outro]overlay=${oshX}:${oshY},format=yuv420p[bg_sh_outro]`,
           `[${inputIdx}:v]scale=${outroCardW}:${outroCardH},format=yuv420p[card_outro]`,
