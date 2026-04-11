@@ -5,6 +5,15 @@ import { useState, useRef, useEffect } from "react";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 function hexToRgba(hex, a) { const c = hex.replace("#",""); if (c.length < 6) return `rgba(0,0,0,${a})`; return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${a})`; }
 
+/* ─── text measurement helper ─── */
+let _measureCanvas = null;
+function measureTextWidth(text, fontSize, fontWeight = "700", fontFamily = "Helvetica Neue, Arial, sans-serif") {
+  if (!_measureCanvas) _measureCanvas = document.createElement("canvas");
+  const ctx = _measureCanvas.getContext("2d");
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  return ctx.measureText(text).width;
+}
+
 /* ─── palettes ─── */
 const BROKERAGE_COLORS = [
   {hex:"#ffffff",label:"White"},{hex:"#b40101",label:"KW Red"},{hex:"#666666",label:"KW Gray"},
@@ -82,25 +91,20 @@ function ColorPicker({ value, onChange }) {
   );
 }
 
-function SwatchGrid({ colors, current, onSelect, showLabels }) {
+function SwatchGrid({ colors, current, onSelect }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: showLabels ? 3 : 5 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
       {colors.map(c => {
         const hex = typeof c === "string" ? c : c.hex;
-        const label = typeof c === "string" ? null : c.label;
+        const label = typeof c === "string" ? hex : c.label;
         const active = current === hex;
         return (
-          <div key={hex} onClick={() => onSelect(hex)} title={label || hex} style={{
-            display: showLabels ? "flex" : "block", alignItems: "center", gap: 5,
-            padding: showLabels ? "3px 7px" : 0, borderRadius: showLabels ? 5 : 6,
-            border: active ? (showLabels ? "1px solid #6366f1" : "2px solid #fff") : "1px solid rgba(255,255,255,0.06)",
-            background: active && showLabels ? "rgba(99,102,241,0.12)" : showLabels ? "rgba(255,255,255,0.02)" : "none",
-            cursor: "pointer", transition: "all 0.12s",
-            boxShadow: active && !showLabels ? "0 0 0 2px #6366f1" : "none",
-          }}>
-            <div style={{ width: showLabels ? 14 : 24, height: showLabels ? 14 : 24, borderRadius: showLabels ? 3 : 6, backgroundColor: hex, flexShrink: 0, border: (hex === "#ffffff" || hex === "#000000") ? "1px solid rgba(128,128,128,0.3)" : "none" }} />
-            {showLabels && label && <span style={{ fontSize: 9, fontWeight: 600, color: active ? "#6366f1" : "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{label}</span>}
-          </div>
+          <div key={hex} onClick={() => onSelect(hex)} title={label} style={{
+            width: 26, height: 26, borderRadius: 6, backgroundColor: hex, cursor: "pointer",
+            border: active ? "2px solid #6366f1" : (hex === "#ffffff" || hex === "#000000") ? "1px solid rgba(128,128,128,0.3)" : "1px solid rgba(255,255,255,0.08)",
+            boxShadow: active ? "0 0 0 1px rgba(99,102,241,0.4)" : "none",
+            transition: "all 0.12s",
+          }} />
         );
       })}
     </div>
@@ -139,7 +143,7 @@ export default function DroneMark({ agentLogo }) {
   const [toast, setToast] = useState(null);
 
   /* ── STYLE REF (mutable ref pattern — DO NOT refactor to useState) ── */
-  const sty = useRef({ color: "#ffffff", width: 4, fill: 0.12, pinColor: "#ef4444", pinSize: 200, pinText: "", labelText: "", labelFs: 28, labelColor: "#ffffff", labelBg: true, logo: agentLogo || null, unit: "m" });
+  const sty = useRef({ color: "#ffffff", width: 4, fill: 0.12, pinColor: "#ef4444", pinSize: 200, pinText: "", labelText: "", labelFs: 28, labelColor: "#ffffff", labelBgMode: "solid", logo: agentLogo || null, unit: "m" });
   const [uiColor, setUiColor] = useState("#ffffff");
   const [uiWidth, setUiWidth] = useState(4);
   const [uiFill, setUiFill] = useState(12);
@@ -149,6 +153,7 @@ export default function DroneMark({ agentLogo }) {
   const [uiLabelText, setUiLabelText] = useState("");
   const [uiLabelFs, setUiLabelFs] = useState(28);
   const [uiLabelColor, setUiLabelColor] = useState("#ffffff");
+  const [uiLabelBgMode, setUiLabelBgMode] = useState("solid");
   const [uiLogoKey, setUiLogoKey] = useState(0);
 
   function setColor(v) { sty.current.color = v; setUiColor(v); }
@@ -160,6 +165,7 @@ export default function DroneMark({ agentLogo }) {
   function setLabelText(v) { sty.current.labelText = v; setUiLabelText(v); }
   function setLabelFs(v) { sty.current.labelFs = v; setUiLabelFs(v); }
   function setLabelColor(v) { sty.current.labelColor = v; setUiLabelColor(v); }
+  function setLabelBgMode(v) { sty.current.labelBgMode = v; setUiLabelBgMode(v); }
 
   useEffect(() => { if (agentLogo) { sty.current.logo = agentLogo; setUiLogoKey(k => k + 1); } }, [agentLogo]);
 
@@ -187,7 +193,7 @@ export default function DroneMark({ agentLogo }) {
     const p = getPos(e), s = sty.current;
     if (tool === "polygon") { if (!isDrawing) { setIsDrawing(true); setDrawPts([p]); } else { const f = drawPts[0], d = Math.sqrt((p.x - f.x) ** 2 + (p.y - f.y) ** 2); if (drawPts.length >= 3 && d < 30 * (natW / 1000)) { addShape({ id: uid(), type: "polygon", points: [...drawPts], color: s.color, width: s.width, fillOpacity: s.fill }); setIsDrawing(false); setDrawPts([]); } else setDrawPts([...drawPts, p]); } }
     else if (tool === "pin") addShape({ id: uid(), type: "pin", x: p.x, y: p.y, color: s.pinColor, size: s.pinSize, logo: s.logo, text: s.pinText });
-    else if (tool === "label") { if (!s.labelText.trim()) { notify("Type label text first"); return; } addShape({ id: uid(), type: "label", x: p.x, y: p.y, text: s.labelText, fontSize: s.labelFs, color: s.labelColor, bg: s.labelBg }); }
+    else if (tool === "label") { if (!s.labelText.trim()) { notify("Type label text first"); return; } addShape({ id: uid(), type: "label", x: p.x, y: p.y, text: s.labelText, fontSize: s.labelFs, color: s.labelColor, bgMode: s.labelBgMode }); }
     else if (tool === "select") setSelId(null);
   }
   function onMouseDown(e) { const p = getPos(e); if (tool === "rect") { setRectStart(p); setRectCur(p); } else if (tool === "line" || tool === "measure" || tool === "arrow") { setLineStart(p); setLineCur(p); } }
@@ -293,14 +299,14 @@ export default function DroneMark({ agentLogo }) {
     if (shape.type === "measure") {
       const dx = shape.x2 - shape.x1, dy = shape.y2 - shape.y1, dist = Math.sqrt(dx * dx + dy * dy);
       const mx = (shape.x1 + shape.x2) / 2, my = (shape.y1 + shape.y2) / 2, ang = Math.atan2(dy, dx) * 180 / Math.PI;
-      const txt = shape.measureText || `${Math.round(dist / 10)} ${shape.unit || "m"}`;
+      const txt = shape.measureText || "";
       const fs = Math.max(22, Math.min(40, dist * 0.08)), tL = Math.max(14, dist * 0.04), pX = -dy / dist * tL, pY = dx / dist * tL;
       return (<g key={shape.id} data-sid={shape.id} onMouseDown={e => onShapeDown(e, shape.id)} style={{ cursor: cur }}>
         <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round" />
         <line x1={shape.x1 + pX} y1={shape.y1 + pY} x2={shape.x1 - pX} y2={shape.y1 - pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round" />
         <line x1={shape.x2 + pX} y1={shape.y2 + pY} x2={shape.x2 - pX} y2={shape.y2 - pY} stroke={shape.color} strokeWidth={shape.width} strokeLinecap="round" />
         <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke="transparent" strokeWidth={Math.max(24, (shape.width || 4) + 16)} />
-        <g transform={`translate(${mx},${my - 8})`}><text textAnchor="middle" fill={shape.color} fontSize={fs} fontWeight="800" fontFamily="Helvetica Neue, sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="4" paintOrder="stroke" transform={ang > 90 || ang < -90 ? `rotate(${ang + 180})` : `rotate(${ang})`}>{txt}</text></g>
+        {txt && <g transform={`translate(${mx},${my - 8})`}><text textAnchor="middle" fill={shape.color} fontSize={fs} fontWeight="800" fontFamily="Helvetica Neue, sans-serif" stroke="rgba(0,0,0,0.5)" strokeWidth="4" paintOrder="stroke" transform={ang > 90 || ang < -90 ? `rotate(${ang + 180})` : `rotate(${ang})`}>{txt}</text></g>}
         {isSel && <><circle data-handle cx={shape.x1} cy={shape.y1} r={hR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{ cursor: "grab" }} onMouseDown={e => onHandleDown(e, shape.id, 0)} /><circle data-handle cx={shape.x2} cy={shape.y2} r={hR} fill="#fff" stroke="#6366f1" strokeWidth={3} style={{ cursor: "grab" }} onMouseDown={e => onHandleDown(e, shape.id, 1)} /></>}
       </g>);
     }
@@ -313,10 +319,33 @@ export default function DroneMark({ agentLogo }) {
     }
     if (shape.type === "label") {
       const fs = shape.fontSize || 28;
+      const text = shape.text || "";
+      const tw = measureTextWidth(text, fs);
+      const pad = 12;
+      const bgMode = shape.bgMode || (shape.bg === true ? "solid" : shape.bg === false ? "none" : "solid");
+      const labelFilterId = `lbl-shadow-${shape.id}`;
       return (<g key={shape.id} data-sid={shape.id} onMouseDown={e => onShapeDown(e, shape.id)} style={{ cursor: cur }}>
-        {shape.bg && <rect x={(shape.x || 0) - 6} y={(shape.y || 0) - fs - 4} width={(shape.text || "").length * fs * 0.62 + 24} height={fs + 16} fill="rgba(0,0,0,0.55)" rx={6} />}
-        <text x={(shape.x || 0) + 6} y={shape.y} fill={shape.color || "#fff"} fontSize={fs} fontWeight="700" fontFamily="Helvetica Neue, Arial, sans-serif" stroke={shape.bg ? "none" : "rgba(0,0,0,0.5)"} strokeWidth={shape.bg ? 0 : 4} paintOrder="stroke">{shape.text}</text>
-        {isSel && <rect x={(shape.x || 0) - 10} y={(shape.y || 0) - fs - 10} width={(shape.text || "").length * fs * 0.62 + 32} height={fs + 28} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={6} />}
+        {bgMode === "shadow" && (
+          <defs>
+            <filter id={labelFilterId} x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy={Math.max(2, fs * 0.08)} stdDeviation={Math.max(3, fs * 0.12)} floodColor="rgba(0,0,0,0.7)" />
+            </filter>
+          </defs>
+        )}
+        {bgMode === "solid" && <rect x={(shape.x || 0) - pad / 2} y={(shape.y || 0) - fs - 4} width={tw + pad * 2} height={fs + 16} fill="rgba(0,0,0,0.55)" rx={6} />}
+        <text
+          x={(shape.x || 0) + pad / 2}
+          y={shape.y}
+          fill={shape.color || "#fff"}
+          fontSize={fs}
+          fontWeight="700"
+          fontFamily="Helvetica Neue, Arial, sans-serif"
+          stroke={bgMode === "none" ? "rgba(0,0,0,0.5)" : "none"}
+          strokeWidth={bgMode === "none" ? 4 : 0}
+          paintOrder="stroke"
+          filter={bgMode === "shadow" ? `url(#${labelFilterId})` : undefined}
+        >{text}</text>
+        {isSel && <rect x={(shape.x || 0) - pad} y={(shape.y || 0) - fs - 10} width={tw + pad * 2 + pad} height={fs + 28} fill="none" stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" rx={6} />}
       </g>);
     }
     return null;
@@ -367,6 +396,25 @@ export default function DroneMark({ agentLogo }) {
   const btnBase = { border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" };
   const iconBtn = { ...btnBase, width: 34, height: 34, borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)", fontSize: 15 };
   const inputStyle = { width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.04)", color: "#e4e4ea", fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+
+  /* ── bg mode selector helper ── */
+  const bgModeOptions = ["solid", "shadow", "none"];
+  const bgModeLabels = { solid: "Solid", shadow: "Shadow", none: "None" };
+  function currentBgMode() {
+    if (isEditing && sel?.type === "label") {
+      const m = sel.bgMode;
+      if (m) return m;
+      // legacy compat
+      if (sel.bg === true) return "solid";
+      if (sel.bg === false) return "none";
+      return "solid";
+    }
+    return uiLabelBgMode;
+  }
+  function handleBgModeChange(v) {
+    if (isEditing && sel?.type === "label") editSel("bgMode", v);
+    else setLabelBgMode(v);
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#0a0a0f", fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif", color: "#e4e4ea", overflow: "hidden" }}>
@@ -513,11 +561,10 @@ export default function DroneMark({ agentLogo }) {
           {showStroke && (
             <Section title={isEditing ? "Shape Color" : "Stroke Color"} icon="🎨" defaultOpen={true}>
               <ColorPicker value={editableColor} onChange={handleColorChange} />
-              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "8px 0 6px" }}>Brokerage Presets</p>
-              <SwatchGrid colors={BROKERAGE_COLORS} current={editableColor} onSelect={handleColorChange} showLabels />
-              <div style={{ marginTop: 8 }}>
-                <SwatchGrid colors={ACCENT_COLORS} current={editableColor} onSelect={handleColorChange} />
-              </div>
+              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "6px 0 5px" }}>Brokerage</p>
+              <SwatchGrid colors={BROKERAGE_COLORS} current={editableColor} onSelect={handleColorChange} />
+              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "8px 0 5px" }}>Accent</p>
+              <SwatchGrid colors={ACCENT_COLORS} current={editableColor} onSelect={handleColorChange} />
             </Section>
           )}
 
@@ -540,11 +587,10 @@ export default function DroneMark({ agentLogo }) {
             <>
               <Section title="Pin Color" icon="📍" defaultOpen={true}>
                 <ColorPicker value={isEditing && sel?.type === "pin" ? sel.color : uiPinColor} onChange={handlePinColorChange} />
-                <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "8px 0 6px" }}>Brokerage Presets</p>
-                <SwatchGrid colors={BROKERAGE_COLORS} current={isEditing && sel?.type === "pin" ? sel.color : uiPinColor} onSelect={handlePinColorChange} showLabels />
-                <div style={{ marginTop: 8 }}>
-                  <SwatchGrid colors={ACCENT_COLORS} current={isEditing && sel?.type === "pin" ? sel.color : uiPinColor} onSelect={handlePinColorChange} />
-                </div>
+                <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "6px 0 5px" }}>Brokerage</p>
+                <SwatchGrid colors={BROKERAGE_COLORS} current={isEditing && sel?.type === "pin" ? sel.color : uiPinColor} onSelect={handlePinColorChange} />
+                <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "8px 0 5px" }}>Accent</p>
+                <SwatchGrid colors={ACCENT_COLORS} current={isEditing && sel?.type === "pin" ? sel.color : uiPinColor} onSelect={handlePinColorChange} />
               </Section>
               <Section title="Pin Size" icon="↕" defaultOpen={true}>
                 <Slider min={80} max={400} value={isEditing && sel?.type === "pin" ? (sel.size || 200) : uiPinSize} onChange={v => { if (isEditing && sel?.type === "pin") editSel("size", v); else setPinSize(v); }} suffix="px" />
@@ -592,29 +638,28 @@ export default function DroneMark({ agentLogo }) {
                 <ColorPicker value={isEditing && sel?.type === "label" ? (sel.color || "#ffffff") : uiLabelColor} onChange={v => { if (isEditing && sel?.type === "label") editSel("color", v); else setLabelColor(v); }} />
                 <SwatchGrid colors={ACCENT_COLORS} current={isEditing && sel?.type === "label" ? (sel.color || "#ffffff") : uiLabelColor} onSelect={v => { if (isEditing && sel?.type === "label") editSel("color", v); else setLabelColor(v); }} />
               </Section>
+              <Section title="Background Style" icon="◧" defaultOpen={true}>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {bgModeOptions.map(m => (
+                    <button key={m} onClick={() => handleBgModeChange(m)} style={{
+                      flex: 1, padding: "6px 0", borderRadius: 6, fontFamily: "inherit", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      border: currentBgMode() === m ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.08)",
+                      background: currentBgMode() === m ? "rgba(99,102,241,0.15)" : "none",
+                      color: currentBgMode() === m ? "#6366f1" : "rgba(255,255,255,0.4)",
+                    }}>{bgModeLabels[m]}</button>
+                  ))}
+                </div>
+              </Section>
             </>
           )}
 
           {/* ── measure settings ── */}
           {showMeasure && (
-            <>
-              <Section title="Measurement Text" icon="📐" defaultOpen={true}>
-                <input value={sel.measureText || ""} onChange={e => editSel("measureText", e.target.value)} placeholder="e.g. 15 m"
-                  style={inputStyle} />
-              </Section>
-              <Section title="Unit" icon="📏" defaultOpen={true}>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {["m", "ft", "yd"].map(u => (
-                    <button key={u} onClick={() => editSel("unit", u)} style={{
-                      flex: 1, padding: "6px 0", borderRadius: 6, fontFamily: "inherit", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      border: (sel.unit || "m") === u ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.08)",
-                      background: (sel.unit || "m") === u ? "rgba(99,102,241,0.15)" : "none",
-                      color: (sel.unit || "m") === u ? "#6366f1" : "rgba(255,255,255,0.4)",
-                    }}>{u}</button>
-                  ))}
-                </div>
-              </Section>
-            </>
+            <Section title="Measurement Text" icon="📐" defaultOpen={true}>
+              <input value={sel.measureText || ""} onChange={e => editSel("measureText", e.target.value)} placeholder='e.g. "15 m" or "50 ft"'
+                style={inputStyle} />
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6, marginBottom: 0 }}>Type the measurement to display on the line</p>
+            </Section>
           )}
 
           {/* ── measure defaults for tool (not editing) ── */}
@@ -626,18 +671,6 @@ export default function DroneMark({ agentLogo }) {
               </Section>
               <Section title="Line Width" icon="━" defaultOpen={true}>
                 <Slider min={1} max={14} value={uiWidth} onChange={setWidth} suffix="px" />
-              </Section>
-              <Section title="Unit" icon="📏" defaultOpen={true}>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {["m", "ft", "yd"].map(u => (
-                    <button key={u} onClick={() => { sty.current.unit = u; }} style={{
-                      flex: 1, padding: "6px 0", borderRadius: 6, fontFamily: "inherit", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                      border: sty.current.unit === u ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.08)",
-                      background: sty.current.unit === u ? "rgba(99,102,241,0.15)" : "none",
-                      color: sty.current.unit === u ? "#6366f1" : "rgba(255,255,255,0.4)",
-                    }}>{u}</button>
-                  ))}
-                </div>
               </Section>
             </>
           )}
