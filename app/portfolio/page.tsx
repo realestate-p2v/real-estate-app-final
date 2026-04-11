@@ -11,6 +11,9 @@ const SAMPLES = [
   { title: "P2V Demo Walkthrough", location: "Rockland County, NY", photos: 15, music: "Upbeat Modern", fileId: "1pTrtAQ9ot7l9Y6yVmVD_U73Qk7kzK-N3", vertical: false },
   { title: "46 Nursery Rd", location: "Tuxedo Park, NY", photos: 12, music: "Energetic", fileId: "1l5L-qJuhDLeojJmFRltgiZmh5qFUs9RY", vertical: false },
   { title: "Home in Costa Rica", location: "Playas del Coco, Guanacaste", photos: 12, music: "Elegant Classical", fileId: "1IR74fE9h0tLFoHd0gCrJ3Brmqf-axZM5", vertical: false },
+  { title: "Hilltop 4", location: "Playa Hermosa, Guanacaste", cloudinaryUrl: "https://res.cloudinary.com/dh6ztnoue/video/upload/v1775016224/photo2video/orders/c7535e3a-6d35-413d-8836-280f8a5a4397/landscape_branded.mp4", vertical: false },
+  { title: "24 Altos de Roble", location: "Comunidad, Guanacaste", cloudinaryUrl: "https://res.cloudinary.com/dh6ztnoue/video/upload/v1775009538/photo2video/orders/e03a12ba-8ccf-456e-9d9c-45169f5dcd2c/landscape_branded.mp4", vertical: false },
+  { title: "Casa Pacifico Alain", location: "Playas del Coco, Guanacaste", cloudinaryUrl: "https://res.cloudinary.com/dh6ztnoue/video/upload/v1774370331/photo2video/orders/7d8d2c7e-55f3-4712-8962-e186c52c4681/landscape_branded.mp4", vertical: false },
   { title: "Dionnes 19, For Time Wolfe", location: "Pearl River, NY", photos: 10, music: "Warm Acoustic", fileId: "1B-4iFvPVEZCxH6bHg4n_MzzPdoFSdrvO", vertical: true },
   { title: "Realtor Ad", location: "Marketing Sample", photos: 8, music: "Energetic Pop", fileId: "1OzvlA2We-zsLOV0124QtyzjtxdMdLRDU", vertical: true },
   { title: "UGC Compare", location: "Marketing Sample", photos: 10, music: "Chill Tropical", fileId: "1LEyTP3oWjNuZmUUuTVGflxTzfA3iPmSw", vertical: true },
@@ -53,15 +56,15 @@ export default function PortfolioPage() {
               {horizontal.map((v, i) => (
                 <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow">
                   <VideoPlayer
-                    url={`https://drive.google.com/file/d/${v.fileId}/view`}
+                    url={v.cloudinaryUrl ?? `https://drive.google.com/file/d/${v.fileId}/view`}
                     className="aspect-video"
                   />
                   <div className="p-5">
                     <h3 className="font-bold text-lg text-foreground">{v.title}</h3>
                     <p className="text-sm text-muted-foreground">{v.location}</p>
                     <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Camera className="h-3 w-3" />{v.photos} photos</span>
-                      <span>Music: {v.music}</span>
+                      {v.photos ? <span className="flex items-center gap-1"><Camera className="h-3 w-3" />{v.photos} photos</span> : null}
+                      {v.music ? <span>Music: {v.music}</span> : null}
                     </div>
                   </div>
                 </div>
@@ -82,15 +85,15 @@ export default function PortfolioPage() {
               {vertical.map((v, i) => (
                 <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow">
                   <VideoPlayer
-                    url={`https://drive.google.com/file/d/${v.fileId}/view`}
+                    url={v.cloudinaryUrl ?? `https://drive.google.com/file/d/${v.fileId}/view`}
                     className="aspect-[9/16]"
                   />
                   <div className="p-5">
                     <h3 className="font-bold text-lg text-foreground">{v.title}</h3>
                     <p className="text-sm text-muted-foreground">{v.location}</p>
                     <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Camera className="h-3 w-3" />{v.photos} photos</span>
-                      <span>Music: {v.music}</span>
+                      {v.photos ? <span className="flex items-center gap-1"><Camera className="h-3 w-3" />{v.photos} photos</span> : null}
+                      {v.music ? <span>Music: {v.music}</span> : null}
                     </div>
                   </div>
                 </div>
