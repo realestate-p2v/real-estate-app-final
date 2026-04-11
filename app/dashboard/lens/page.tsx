@@ -111,7 +111,7 @@ export default function DashboardLensPage() {
   }, []);
 
   const handleCopyLink = async (slug: string) => {
-    const url = \`\${window.location.origin}/p/\${slug}\`;
+    const url = `${window.location.origin}/p/${slug}`;
     await navigator.clipboard.writeText(url);
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(null), 2000);
@@ -273,15 +273,15 @@ export default function DashboardLensPage() {
               key={tool.label}
               href={tool.href}
               className="launcher-item group relative flex items-start gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/20 hover:bg-white/[0.06] hover:translate-y-[-2px] hover:shadow-lg hover:shadow-cyan-400/5"
-              style={{ animationDelay: \`\${0.1 + i * 0.06}s\` }}
+              style={{ animationDelay: `${0.1 + i * 0.06}s` }}
             >
               {"badge" in tool && tool.badge && (
                 <span className="absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
                   {tool.badge}
                 </span>
               )}
-              <div className={\`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl \${tool.bg} ring-1 ring-white/[0.08] transition-transform group-hover:scale-110\`}>
-                <tool.icon className={\`h-6 w-6 \${tool.iconColor}\`} />
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ring-white/[0.08] transition-transform group-hover:scale-110`}>
+                <tool.icon className={`h-6 w-6 ${tool.iconColor}`} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-bold text-white/90 group-hover:text-cyan-300 transition-colors">{tool.label}</p>
@@ -313,9 +313,9 @@ export default function DashboardLensPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {publishedWebsites.map((site, i) => {
                 const heroUrl = getHeroImage(site.website_curated);
-                const siteUrl = \`\${PROPERTY_SITE_BASE}/\${site.website_slug}\`;
+                const siteUrl = `${PROPERTY_SITE_BASE}/${site.website_slug}`;
                 return (
-                  <div key={site.id} className="launcher-item rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]" style={{ animationDelay: \`\${0.65 + i * 0.06}s\` }}>
+                  <div key={site.id} className="launcher-item rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]" style={{ animationDelay: `${0.65 + i * 0.06}s` }}>
                     <div className="relative h-40 w-full overflow-hidden">
                       {heroUrl ? <img src={heroUrl} alt={site.address} className="w-full h-full object-cover" /> : <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 50%, rgba(168,85,247,0.15) 100%)" }} />}
                       <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1"><div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /><span className="text-[10px] font-bold text-green-400">Live</span></div>
@@ -324,7 +324,7 @@ export default function DashboardLensPage() {
                     <div className="border-t border-white/[0.06] px-4 py-3 flex items-center gap-3">
                       <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"><Eye className="h-3 w-3" />View Live Page</a>
                       <button onClick={() => handleCopyLink(site.website_slug)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors">{copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}</button>
-                      <Link href={\`/dashboard/properties/\${site.id}\`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings \u2192</Link>
+                      <Link href={`/dashboard/properties/${site.id}`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings \u2192</Link>
                     </div>
                   </div>
                 );
