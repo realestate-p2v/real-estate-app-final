@@ -232,18 +232,26 @@ export default function DroneMark({ agentLogo }) {
     setSelId(null); await new Promise(r => setTimeout(r, 50));
     try {
       const svg = svgRef.current; if (!svg) return;
-      const canvas = document.createElement("canvas"); canvas.width = natW; canvas.height = natH;
+      const MAX_W = 3840;
+      const MAX_H = 2160;
+      let outW = natW, outH = natH;
+      if (outW > MAX_W) { const s = MAX_W / outW; outW = MAX_W; outH = Math.round(outH * s); }
+      if (outH > MAX_H) { const s = MAX_H / outH; outH = MAX_H; outW = Math.round(outW * s); }
+      const canvas = document.createElement("canvas"); canvas.width = outW; canvas.height = outH;
       const ctx = canvas.getContext("2d");
       const img = new Image(); img.crossOrigin = "anonymous";
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = photo; });
-      ctx.drawImage(img, 0, 0, natW, natH);
+      ctx.drawImage(img, 0, 0, outW, outH);
       const svgData = new XMLSerializer().serializeToString(svg);
       const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
       const svgUrl = URL.createObjectURL(svgBlob);
       const svgImg = new Image();
       await new Promise((res, rej) => { svgImg.onload = res; svgImg.onerror = rej; svgImg.src = svgUrl; });
-      ctx.drawImage(svgImg, 0, 0, natW, natH); URL.revokeObjectURL(svgUrl);
-      const link = document.createElement("a"); link.download = `drone-${Date.now()}.png`; link.href = canvas.toDataURL("image/png"); link.click();
+      ctx.drawImage(svgImg, 0, 0, outW, outH); URL.revokeObjectURL(svgUrl);
+      const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.82));
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a"); link.download = `drone-${Date.now()}.jpg`; link.href = url; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
       notify("Exported!");
     } catch (err) { console.error(err); notify("Export failed"); }
   }
@@ -439,7 +447,7 @@ export default function DroneMark({ agentLogo }) {
           <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.08)", margin: "0 4px" }} />
           <button onClick={() => fileRef.current?.click()} title="Upload Photo" style={{ ...iconBtn }} onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>📷</button>
           <button onClick={doExport} style={{ ...btnBase, height: 34, padding: "0 16px", borderRadius: 8, background: "linear-gradient(135deg,#f59e0b,#ef4444)", color: "#fff", fontSize: 12, fontWeight: 700, gap: 5, boxShadow: "0 2px 12px rgba(245,158,11,0.25)" }}>
-            <span>⬇</span> Export PNG
+            <span>⬇</span> Export
           </button>
         </div>
       </div>
