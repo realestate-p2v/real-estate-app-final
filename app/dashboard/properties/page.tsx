@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Plus, Home, X, Loader2, Merge, AlertTriangle, Check, Undo2,
+  ArrowLeft, Plus, Home, X, Loader2, Merge, AlertTriangle, Check, Undo2, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeAddress } from "@/lib/utils/address";
@@ -52,6 +52,110 @@ function isSimilarAddress(a: string, b: string): boolean {
   return false;
 }
 
+function extractPublicId(cloudinaryUrl: string): string | null {
+  if (!cloudinaryUrl) return null;
+  try {
+    const match = cloudinaryUrl.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
+    return match ? match[1] : null;
+  } catch { return null; }
+}
+
+async function deleteFromCloudinary(url: string, resourceType: string = "image"): Promise<boolean> {
+  const publicId = extractPublicId(url);
+  if (!publicId) return false;
+  try {
+    const res = await fetch("/api/cloudinary-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ public_id: publicId, resource_type: resourceType }),
+    });
+    const data = await res.json();
+    return data.success;
+  } catch { return false; }
+}
+
+function extractAllUrls(obj: any): string[] {
+  if (!obj) return [];
+  if (typeof obj === "string") return obj.startsWith("http") ? [obj] : [];
+  if (Array.isArray(obj)) return obj.flatMap(extractAllUrls);
+  if (typeof obj === "object") return Object.values(obj).flatMap(extractAllUrls);
+  return [];
+}
+
+async function deletePropertyWithCleanup(propertyId: string) {
+  const supabase = createClient();
+
+  // 1. Design exports — delete Cloudinary assets + DB rows
+  const { data: exps } = await supabase
+    .from("design_exports").select("id, export_url, template_type")
+    .eq("property_id", propertyId);
+  for (const exp of (exps || [])) {
+    if (exp.export_url?.includes("cloudinary")) {
+      const rt = exp.template_type?.startsWith("video_remix") ? "video" : "image";
+      await deleteFromCloudinary(exp.export_url, rt);
+    }
+    await supabase.from("design_exports").delete().eq("id", exp.id);
+  }
+
+  // 2. Orders — delete Cloudinary videos + order photos, then child records + orders
+  const { data: orders } = await supabase
+    .from("orders").select("id, photos, delivery_url, unbranded_delivery_url, branded_video_url, unbranded_video_url, clip_urls")
+    .eq("property_id", propertyId);
+  const orderPhotoUrls: string[] = [];
+  for (const o of (orders || [])) {
+    // Delete order videos from Cloudinary
+    for (const vUrl of [o.delivery_url, o.unbranded_delivery_url, o.branded_video_url, o.unbranded_video_url].filter(Boolean)) {
+      if (vUrl?.includes("cloudinary")) await deleteFromCloudinary(vUrl, "video");
+    }
+    // Delete clip URLs from Cloudinary
+    const clips = Array.isArray(o.clip_urls) ? o.clip_urls : [];
+    for (const clip of clips) {
+      const clipUrl = typeof clip === "string" ? clip : clip?.url;
+      if (clipUrl?.includes("cloudinary")) await deleteFromCloudinary(clipUrl, "video");
+    }
+    // Collect photo URLs for staging lookup + Cloudinary cleanup
+    orderPhotoUrls.push(...extractAllUrls(o.photos));
+    // Delete child records
+    await supabase.from("order_revisions").delete().eq("order_id", o.id).catch(() => {});
+    await supabase.from("order_messages").delete().eq("order_id", o.id).catch(() => {});
+  }
+  await supabase.from("orders").delete().eq("property_id", propertyId);
+
+  // 3. Staging results — find via order photo URLs
+  if (orderPhotoUrls.length > 0) {
+    const { data: stagings } = await supabase
+      .from("lens_staging").select("id, staged_url, original_url");
+    for (const s of (stagings || [])) {
+      if (orderPhotoUrls.includes(s.original_url)) {
+        if (s.staged_url?.includes("cloudinary")) await deleteFromCloudinary(s.staged_url);
+        await supabase.from("lens_staging").delete().eq("id", s.id);
+      }
+    }
+  }
+
+  // 4. Order photos from Cloudinary
+  for (const url of orderPhotoUrls) {
+    if (url.includes("cloudinary")) await deleteFromCloudinary(url);
+  }
+
+  // 5. Website curated + optimized photos
+  const { data: prop } = await supabase
+    .from("agent_properties").select("website_curated, optimized_photos")
+    .eq("id", propertyId).single();
+  if (prop) {
+    for (const url of extractAllUrls(prop.website_curated)) {
+      if (url.includes("cloudinary")) await deleteFromCloudinary(url);
+    }
+    for (const opt of (prop.optimized_photos || [])) {
+      if (opt?.url?.includes("cloudinary")) await deleteFromCloudinary(opt.url);
+    }
+  }
+
+  // 6. Clear merge refs + delete property
+  await supabase.from("agent_properties").update({ merged_into_id: null }).eq("merged_into_id", propertyId);
+  await supabase.from("agent_properties").delete().eq("id", propertyId);
+}
+
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -75,6 +179,9 @@ export default function PropertiesPage() {
 
   // Undo state
   const [undoing, setUndoing] = useState<string | null>(null);
+
+  // Delete state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProperties();
@@ -232,6 +339,20 @@ export default function PropertiesPage() {
     setSelected(new Set());
   }
 
+  async function handleDeleteProperty(propertyId: string, address: string) {
+    const ok = window.confirm(`Delete "${address}"?\n\nThis will permanently remove the property and all associated cloud storage files (videos, photos, exports, staging). This cannot be undone.`);
+    if (!ok) return;
+    setDeletingId(propertyId);
+    try {
+      await deletePropertyWithCleanup(propertyId);
+      setProperties(prev => prev.filter(p => p.id !== propertyId));
+    } catch (e) {
+      console.error("Property delete failed:", e);
+      alert("Failed to delete property. Please try again.");
+    }
+    setDeletingId(null);
+  }
+
   const selectedProps = properties.filter((p) => selected.has(p.id));
   const inp = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50";
 
@@ -312,7 +433,7 @@ export default function PropertiesPage() {
               const isSelected = selected.has(p.id);
               const isDuplicate = duplicateGroups.has(p.id);
               return (
-                <div key={p.id} className="relative">
+                <div key={p.id} className="relative group">
                   {/* Checkbox overlay in select mode */}
                   {selectMode && (
                     <button
@@ -331,6 +452,17 @@ export default function PropertiesPage() {
                     <span className="absolute top-3 right-3 z-10 bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                       Possible duplicate
                     </span>
+                  )}
+                  {/* Delete button */}
+                  {!selectMode && !isDuplicate && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProperty(p.id, p.address); }}
+                      disabled={deletingId === p.id}
+                      className="absolute top-3 right-3 z-10 h-7 w-7 rounded-lg bg-black/40 hover:bg-red-600 backdrop-blur-sm flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                      title="Delete property"
+                    >
+                      {deletingId === p.id ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-white" />}
+                    </button>
                   )}
                   <Link
                     href={selectMode ? "#" : `/dashboard/properties/${p.id}`}
