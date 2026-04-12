@@ -144,7 +144,7 @@ const mcStyles = `
 
   /* Backgrounds → white/translucent */
   .dashboard-light [class*="bg-white\\/"] { background-color: rgba(255,255,255,0.75) !important; }
-  .dashboard-light [class*="bg-gray-950"] { background-color: #f1f5f9 !important; }
+  .dashboard-light [class*="bg-gray-900"] { background-color: #f1f5f9 !important; }
   .dashboard-light [class*="bg-black\\/50"] { background-color: rgba(255,255,255,0.75) !important; }
 
   /* Borders → light gray */
@@ -264,6 +264,65 @@ interface ToolDef {
   locked?: boolean;
 }
 
+/* ─────────────────────────────────────────────
+   Access gating
+   ───────────────────────────────────────────── */
+const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+
+type AccessResult = {
+  allowed: boolean;
+  reason: "admin" | "pro" | "tools" | "trial" | "video_only" | "free";
+  tier: "admin" | "pro" | "tools" | "trial" | "video_only" | "free";
+  trialDaysLeft?: number;
+  hasVideo?: boolean;
+};
+
+function checkAccess(
+  email: string,
+  lensUsage: any,
+  hasPaidOrder: boolean
+): AccessResult {
+  if (ADMIN_EMAILS.includes(email)) {
+    return { allowed: true, reason: "admin", tier: "admin" };
+  }
+  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "pro") {
+    return { allowed: true, reason: "pro", tier: "pro" };
+  }
+  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "tools") {
+    return { allowed: true, reason: "tools", tier: "tools" };
+  }
+  // Legacy subscriber tiers (Individual, free_prize, etc.) — treat as tools-level
+  if (lensUsage?.is_subscriber) {
+    return { allowed: true, reason: "tools", tier: "tools" };
+  }
+  if (lensUsage?.trial_expires_at) {
+    const expires = new Date(lensUsage.trial_expires_at);
+    if (expires > new Date()) {
+      const daysLeft = Math.ceil((expires.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      return { allowed: true, reason: "trial", tier: "trial", trialDaysLeft: daysLeft };
+    }
+  }
+  if (hasPaidOrder) {
+    return { allowed: false, reason: "video_only", tier: "video_only", hasVideo: true };
+  }
+  return { allowed: false, reason: "free", tier: "free", hasVideo: false };
+}
+
+const PRO_ONLY_TOOLS = ["location_value_score", "agent_website", "custom_reports"];
+
+function checkToolAccess(toolKey: string, access: AccessResult): {
+  canUse: boolean;
+  gateType: "none" | "subscribe" | "upgrade_pro" | "buy_video";
+} {
+  if (access.tier === "admin") return { canUse: true, gateType: "none" };
+  if (access.tier === "pro") return { canUse: true, gateType: "none" };
+  if (PRO_ONLY_TOOLS.includes(toolKey)) return { canUse: false, gateType: "upgrade_pro" };
+  if (access.tier === "tools" || access.tier === "trial") return { canUse: true, gateType: "none" };
+  if (toolKey === "video_remix" && access.hasVideo) return { canUse: true, gateType: "none" };
+  if (access.tier === "video_only") return { canUse: false, gateType: "subscribe" };
+  return { canUse: false, gateType: "buy_video" };
+}
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE EXPORT
    ═══════════════════════════════════════════════ */
@@ -290,6 +349,7 @@ export default function DashboardPage() {
   const [signupPrizeCode, setSignupPrizeCode] = useState<string | null>(null);
   const [signupPrizeLabel, setSignupPrizeLabel] = useState("");
   const [hasDirectoryListing, setHasDirectoryListing] = useState<boolean | null>(null);
+  const [access, setAccess] = useState<AccessResult>({ allowed: false, reason: "free", tier: "free", hasVideo: false });
 
   // Profile editing
   const [editingProfile, setEditingProfile] = useState(false);
@@ -311,8 +371,6 @@ export default function DashboardPage() {
   const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
-    const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
-
     const init = async () => {
       const supabase = createClient();
 
@@ -331,7 +389,7 @@ export default function DashboardPage() {
 
       const { data: usage } = await supabase
         .from("lens_usage")
-        .select("is_subscriber, subscription_tier, free_lens_expires_at, total_analyses, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_headshot_url, saved_logo_url, signup_prize_code")
+        .select("is_subscriber, subscription_tier, free_lens_expires_at, trial_activated_at, trial_expires_at, total_analyses, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_headshot_url, saved_logo_url, signup_prize_code")
         .eq("user_id", authUser.id)
         .single();
 
@@ -353,6 +411,18 @@ export default function DashboardPage() {
           setSignupPrizeLabel("Discount on your first order");
         }
       }
+
+      // ── Check if user has any paid video orders ──
+      const { count: orderCount } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", authUser.id)
+        .eq("payment_status", "paid");
+      const hasPaidOrder = (orderCount || 0) > 0;
+
+      // ── Build access result ──
+      const accessResult = checkAccess(authUser.email || "", usage, hasPaidOrder);
+      setAccess(accessResult);
 
       // ── Resolve subscription status (needed for tools array) ──
       if (isAdmin) {
@@ -497,7 +567,7 @@ export default function DashboardPage() {
 
   if (!coreReady) {
     return (
-      <div className="min-h-screen bg-gray-950">
+      <div className="min-h-screen bg-gray-900">
         <Navigation />
         <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
         <div className="flex items-center justify-center py-32">
@@ -515,37 +585,48 @@ export default function DashboardPage() {
   /* ─────────────────────────────────────────────
      Tools array — shared definition with gating
      ───────────────────────────────────────────── */
-  const tools: ToolDef[] = isSubscriber ? [
-    // Subscriber tools — no badges, no locks
-    { icon: Film, label: "Order a Video", desc: "Cinematic listing walkthrough from $4.95/clip", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
-    { icon: Film, label: "Video Remix", desc: "Remix your clips into social-ready videos with music & branding", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20" },
-    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null },
-    { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20" },
+  const hasAccess = access.allowed; // admin, pro, tools, or trial
+  const isTrial = access.tier === "trial";
+  const isVideoOnly = access.tier === "video_only";
+  const isFreeAcct = access.tier === "free";
+
+  // Helper: badge & lock for a given tool key
+  const gated = (toolKey: string) => {
+    const ta = checkToolAccess(toolKey, access);
+    if (ta.canUse) {
+      // Show trial countdown badge if on trial
+      if (isTrial && access.trialDaysLeft !== undefined) {
+        return { badge: `TRIAL: ${access.trialDaysLeft}d`, badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: false };
+      }
+      return { badge: undefined, badgeColor: undefined, locked: false };
+    }
+    if (ta.gateType === "upgrade_pro") return { badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20", locked: true };
+    if (ta.gateType === "subscribe") return { badge: "SUBSCRIBE", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: true };
+    return { badge: "ORDER VIDEO", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20", locked: true };
+  };
+
+  // Helper: where does a locked card link?
+  const gatedHref = (toolKey: string, defaultHref: string) => {
+    const ta = checkToolAccess(toolKey, access);
+    if (ta.canUse) return defaultHref;
+    if (ta.gateType === "buy_video") return "/order";
+    return "/lens#pricing";
+  };
+
+  const tools: ToolDef[] = [
+    { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
+    { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: gatedHref("video_remix", "/dashboard/lens/remix"), color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
+    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: gatedHref("description_writer", "/dashboard/lens/descriptions"), color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
+    { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: gatedHref("design_studio", "/dashboard/lens/design-studio"), color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
     { icon: Globe, label: "Website Builder", desc: "Property pages & full agent websites on your own domain", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", badge: "COMING SOON", badgeColor: "text-white/40 bg-white/[0.06] border-white/[0.08]" },
-    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
-    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
-    { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null },
-    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20" },
-    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
-  ] : [
-    // Non-subscriber tools — open, free-use, or locked
-    { icon: Video, label: "Order a Video", desc: "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
-    { icon: Film, label: "Video Remix", desc: "Recut your clips into new videos — free forever", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20" },
-    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null },
-    { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, flyers, yard signs", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    { icon: Globe, label: "Website Builder", desc: "Property pages & full agent websites on your own domain", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", badge: "COMING SOON", badgeColor: "text-white/40 bg-white/[0.06] border-white/[0.08]" },
-    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", badge: "FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", badge: "3 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null },
-    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20", locked: true },
-    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "/dashboard/lens/location-score", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "/dashboard/lens/value-boost", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", badge: "1 FREE", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" },
-    // Locked tools
-    { icon: Zap, label: "Quick Videos", desc: "$4.95/clip — subscribe to unlock", href: "/lens", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", badge: "LENS", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: true },
-    { icon: User, label: "Agent Websites", desc: "Your own agent marketing page", href: "/lens", color: "text-pink-400", bg: "bg-pink-400/10", ring: "ring-pink-400/20", badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20", locked: true },
-    { icon: Building2, label: "Property Portfolio", desc: "Showcase all your listings in one place", href: "/lens", color: "text-lime-400", bg: "bg-lime-400/10", ring: "ring-lime-400/20", badge: "LENS", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: true },
+    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: gatedHref("photo_optimizer", "/dashboard/lens/optimize"), color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
+    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: gatedHref("drone_mark", "/dashboard/lens/dronemark"), color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
+    { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: gatedHref("photo_coach", "/dashboard/lens/coach"), color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
+    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: gatedHref("virtual_staging", "/dashboard/lens/staging"), color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", ...gated("virtual_staging") },
+    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: gatedHref("custom_reports", "/dashboard/lens/reports"), color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("custom_reports") },
+    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: gatedHref("listing_flyer", "/dashboard/lens/design-studio"), color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
+    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: gatedHref("location_value_score", "/dashboard/lens/location-score"), color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
+    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: gatedHref("value_boost", "/dashboard/lens/value-boost"), color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
   ];
 
   const subscriberPerks = [
@@ -558,7 +639,7 @@ export default function DashboardPage() {
      SHARED DARK DASHBOARD — used by both subscriber & non-subscriber
      ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className={`dash-root min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-950" : "dashboard-light"}`}>
+    <div className={`dash-root min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-900" : "dashboard-light"}`}>
       <Navigation />
       <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
       {user && <SignupSpin userId={user.id} />}
@@ -614,34 +695,69 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ═══ SUBSCRIBE BANNER — non-subscribers only ═══ */}
-        {!isSubscriber && !bannerDismissed && (
+        {/* ═══ TRIAL BANNER — active trial ═══ */}
+        {access.tier === "trial" && access.trialDaysLeft !== undefined && (
+          <div className={`mc-animate mt-4 rounded-xl border p-4 ${access.trialDaysLeft <= 3 ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-cyan-400/15 bg-cyan-400/[0.04]"}`} style={{ animationDelay: "0.08s" }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className={`h-4 w-4 ${access.trialDaysLeft <= 3 ? "text-amber-400" : "text-cyan-400"}`} />
+                <span className="text-sm font-bold text-white/90">Lens Trial</span>
+                <span className={`text-sm font-bold ${access.trialDaysLeft <= 3 ? "text-amber-400" : "text-cyan-400"}`}>{access.trialDaysLeft} day{access.trialDaysLeft !== 1 ? "s" : ""} remaining</span>
+              </div>
+              <Link href="/lens#pricing"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs">Subscribe now →</Button></Link>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ FREE ACCOUNT BANNER — no purchase yet ═══ */}
+        {access.tier === "free" && !bannerDismissed && (
           <div className="mc-animate mt-4 rounded-xl border border-green-400/15 bg-green-400/[0.04] p-5 relative" style={{ animationDelay: "0.08s" }}>
             <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
             <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <Film className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-white/90">Unlock unlimited access to all tools</p>
-                <p className="mt-1 text-xs leading-relaxed text-white/50">Subscribe to P2V Lens for $27.95/mo and get unlimited photo coaching, design exports, descriptions, staging, and 10% off every video order.</p>
+                <p className="text-sm font-bold text-white/90">Order your first listing video to unlock 10 days of every AI marketing tool — free.</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/50">Your first video order comes with a 10-day trial of all P2V Lens tools. No credit card required for the trial.</p>
                 <div className="flex items-center gap-3 mt-3">
-                  <Link href="/lens"><Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Explore P2V Lens <ArrowRight className="ml-1.5 h-3 w-3" /></Button></Link>
-                  <Link href="/lens#features" className="text-xs font-semibold text-green-400/60 hover:text-green-400 transition-colors">See what&apos;s included</Link>
+                  <Link href="/order"><Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Order a Video — from $79 <ArrowRight className="ml-1.5 h-3 w-3" /></Button></Link>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ═══ FREE LENS EXPIRED — non-subscriber who had a free month ═══ */}
-        {freeLensExpired && !isSubscriber && (
-          <div className="mc-animate mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.06] p-4" style={{ animationDelay: "0.1s" }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-red-400" />
-                <span className="text-sm font-bold text-red-300">Your free month has ended</span>
-                <span className="text-xs text-white/40">Subscribe to continue using all features.</span>
+        {/* ═══ VIDEO OWNER BANNER — trial expired, no sub ═══ */}
+        {access.tier === "video_only" && !bannerDismissed && (
+          <div className="mc-animate mt-4 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-5 relative" style={{ animationDelay: "0.08s" }}>
+            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
+            <div className="flex items-start gap-3">
+              <Lock className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-white/90">Your trial has ended</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/50">Subscribe to keep using all marketing tools. Your videos and Video Remix are still available.</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Link href="/lens#pricing"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Subscribe — $27/mo</Button></Link>
+                  <Link href="/lens#pricing" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">See Plans</Link>
+                </div>
               </div>
-              <Link href="/lens"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs">Subscribe — $27.95/mo</Button></Link>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ SUBSCRIBE BANNER — non-subscribers (legacy, kept for existing subs) ═══ */}
+        {!isSubscriber && !bannerDismissed && access.tier !== "free" && access.tier !== "video_only" && access.tier !== "trial" && (
+          <div className="mc-animate mt-4 rounded-xl border border-green-400/15 bg-green-400/[0.04] p-5 relative" style={{ animationDelay: "0.08s" }}>
+            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-white/90">Unlock unlimited access to all tools</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/50">Subscribe to P2V Lens for $27/mo and get unlimited photo coaching, design exports, descriptions, staging, and 10% off every video order.</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Link href="/lens"><Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Explore P2V Lens <ArrowRight className="ml-1.5 h-3 w-3" /></Button></Link>
+                  <Link href="/lens#features" className="text-xs font-semibold text-green-400/60 hover:text-green-400 transition-colors">See what&apos;s included</Link>
+                </div>
+              </div>
             </div>
           </div>
         )}
