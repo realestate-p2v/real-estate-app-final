@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Paintbrush, Sun, Moon, Printer, Globe, Video,
   Clock, ArrowUp, ArrowDown, Trash2, Lock,
 } from "lucide-react";
+import { GateOverlay } from "@/components/gate-overlay";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
 function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
@@ -483,6 +484,7 @@ export default function DesignStudioV2(){
   const[isLensSubscriber,setIsLensSubscriber]=useState(false);
   const[savedBrandingCardUrl,setSavedBrandingCardUrl]=useState<string|null>(null);
   const[hasVideoOrders,setHasVideoOrders]=useState<boolean|null>(null);
+  const[showGate,setShowGate]=useState(false);
   const[remixPlaying,setRemixPlaying]=useState(false);
   const[remixPlayingIdx,setRemixPlayingIdx]=useState(0);
   const[remixPlaybackTime,setRemixPlaybackTime]=useState(0);
@@ -524,11 +526,17 @@ export default function DesignStudioV2(){
     (async()=>{
       try{
         const supabase=(await import("@/lib/supabase/client")).createClient();
-        const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-        // Subscription check — same as hero: admin emails + lens_usage.is_subscriber
+        const{data:{session}}=await supabase.auth.getSession();if(!session?.user)return;
+        const user=session.user;
+        // Subscription check — admin emails + lens_usage.is_subscriber + trial
         const ADMIN_EMAILS=["realestatephoto2video@gmail.com"];
         if(user.email&&ADMIN_EMAILS.includes(user.email)){setIsLensSubscriber(true);}
-        else{const{data:usageCheck}=await supabase.from("lens_usage").select("is_subscriber").eq("user_id",user.id).single();if(usageCheck?.is_subscriber)setIsLensSubscriber(true);}
+        else{
+          const{data:usageCheck}=await supabase.from("lens_usage").select("is_subscriber,subscription_tier,trial_expires_at").eq("user_id",user.id).single();
+          const isSub=usageCheck?.is_subscriber;
+          const hasActiveTrial=usageCheck?.trial_expires_at&&new Date(usageCheck.trial_expires_at)>new Date();
+          if(isSub||hasActiveTrial)setIsLensSubscriber(true);
+        }
         const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors,saved_branding_cards").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
@@ -1054,6 +1062,8 @@ export default function DesignStudioV2(){
   };
 
   const handleExport = async () => {
+    // Video Remix: free for anyone with purchased videos. Gate only if no videos.
+    if(!hasVideoOrders && !isLensSubscriber){setShowGate(true);return;}
     // Warn mobile users about video export limitations
     if((isRemixMode||isVideoMode)&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
       const proceed=window.confirm("Video encoding works best on desktop browsers. Mobile devices may run out of memory on longer videos.\n\nProceed anyway?");
@@ -1513,6 +1523,7 @@ export default function DesignStudioV2(){
       </div>
 
 {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
+      {showGate&&<GateOverlay gateType="buy_video" toolName="Video Remix" onClose={()=>setShowGate(false)}/>}
     </div></>
   );
 }
