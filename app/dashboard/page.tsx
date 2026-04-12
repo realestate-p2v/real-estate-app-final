@@ -279,7 +279,8 @@ export default function DashboardPage() {
   const [recentProperties, setRecentProperties] = useState<RecentProperty[]>([]);
   const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [coreReady, setCoreReady] = useState(false);
+  const [secondaryLoaded, setSecondaryLoaded] = useState(false);
   const [isFreePrize, setIsFreePrize] = useState(false);
   const [freeLensDaysLeft, setFreeLensDaysLeft] = useState<number | null>(null);
   const [freeLensExpired, setFreeLensExpired] = useState(false);
@@ -312,7 +313,7 @@ export default function DashboardPage() {
     const init = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) { setIsLoading(false); return; }
+      if (!authUser) { setCoreReady(true); return; }
 
       setUser({
         id: authUser.id,
@@ -347,7 +348,32 @@ export default function DashboardPage() {
         }
       }
 
-      // ── Fire all independent queries in parallel ──
+      // ── Resolve subscription status (needed for tools array) ──
+      if (isAdmin) {
+        setSubscription({ active: true, plan: "Admin", analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
+      } else if (usage?.is_subscriber) {
+        if (usage.subscription_tier === "free_prize" && usage.free_lens_expires_at) {
+          const expiresAt = new Date(usage.free_lens_expires_at);
+          const msLeft = expiresAt.getTime() - Date.now();
+          const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+          if (daysLeft <= 0) {
+            setFreeLensExpired(true);
+            supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
+            setSubscription({ active: false, plan: null, analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
+          } else {
+            setIsFreePrize(true);
+            setFreeLensDaysLeft(daysLeft);
+            setSubscription({ active: true, plan: "Free Month", analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
+          }
+        } else {
+          setSubscription({ active: true, plan: usage.subscription_tier || "Individual", analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
+        }
+      }
+
+      // ═══ PHASE 1 DONE — show the dashboard immediately ═══
+      setCoreReady(true);
+
+      // ═══ PHASE 2 — load secondary data in background ═══
       const [
         sessionsResult,
         sessionCountResult,
@@ -373,33 +399,11 @@ export default function DashboardPage() {
         fetch("/api/directory/me").then(r => r.json()).catch(() => ({ success: false })),
       ]);
 
-      // ── Process subscription from sessions data ──
-      const sessions = sessionsResult.data;
-      const totalFromSessions = (sessions || []).reduce((sum: number, s: { total_analyses: number | null }) => sum + (s.total_analyses || 0), 0);
+      // Update analyses count with session data
+      const totalFromSessions = (sessionsResult.data || []).reduce((sum: number, s: { total_analyses: number | null }) => sum + (s.total_analyses || 0), 0);
       const totalAnalyses = Math.max(usage?.total_analyses || 0, totalFromSessions);
+      setSubscription(prev => ({ ...prev, analysesUsed: totalAnalyses }));
 
-      if (isAdmin) {
-        setSubscription({ active: true, plan: "Admin", analysesUsed: totalAnalyses, analysesLimit: 200, renewsAt: null });
-      } else if (usage?.is_subscriber) {
-        if (usage.subscription_tier === "free_prize" && usage.free_lens_expires_at) {
-          const expiresAt = new Date(usage.free_lens_expires_at);
-          const msLeft = expiresAt.getTime() - Date.now();
-          const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-          if (daysLeft <= 0) {
-            setFreeLensExpired(true);
-            supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
-            setSubscription({ active: false, plan: null, analysesUsed: totalAnalyses, analysesLimit: 200, renewsAt: null });
-          } else {
-            setIsFreePrize(true);
-            setFreeLensDaysLeft(daysLeft);
-            setSubscription({ active: true, plan: "Free Month", analysesUsed: totalAnalyses, analysesLimit: 200, renewsAt: null });
-          }
-        } else {
-          setSubscription({ active: true, plan: usage.subscription_tier || "Individual", analysesUsed: totalAnalyses, analysesLimit: 200, renewsAt: null });
-        }
-      }
-
-      // ── Apply results from parallel queries ──
       setCoachSessionCount(sessionCountResult.count || 0);
       setDescriptionCount(descCountResult.count || 0);
       setPropertyCount(propCountResult.count || 0);
@@ -407,7 +411,7 @@ export default function DashboardPage() {
       if (publishedSitesResult.data) setPublishedWebsites(publishedSitesResult.data);
       setHasDirectoryListing(directoryResult.success && !!directoryResult.photographer);
 
-      setIsLoading(false);
+      setSecondaryLoaded(true);
     };
     init();
   }, []);
@@ -485,7 +489,7 @@ export default function DashboardPage() {
     return p.toString();
   };
 
-  if (isLoading) {
+  if (!coreReady) {
     return (
       <div className="min-h-screen bg-gray-950">
         <Navigation />
