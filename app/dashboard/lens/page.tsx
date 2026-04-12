@@ -33,6 +33,7 @@ import {
   TrendingUp,
   Video,
   X,
+  Crown,
 } from "lucide-react";
 
 /* ─── Lazy-loaded ─── */
@@ -239,18 +240,20 @@ export default function DashboardLensPage() {
   const hasAccess = access.allowed;
   const isTrial = access.tier === "trial";
 
-  // Helper: badge for a given tool key (informational only — cards always link to tool page)
+  // Helper: crown tier badge (subtle visual indicator — gating is handled by GateOverlay)
+  const PRO_TOOLS = ["location_value_score", "website_builder"];
+  const NO_CROWN_TOOLS = ["order_video", "video_remix"];
+
   const gated = (toolKey: string) => {
     const ta = checkToolAccess(toolKey, access);
-    if (ta.canUse) {
-      if (isTrial && access.trialDaysLeft !== undefined) {
-        return { badge: `TRIAL: ${access.trialDaysLeft}d`, badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" };
-      }
-      return { badge: undefined as string | undefined, badgeColor: undefined as string | undefined };
+    const trialBadge = (isTrial && access.trialDaysLeft !== undefined)
+      ? `TRIAL: ${access.trialDaysLeft}d` : undefined;
+
+    if (NO_CROWN_TOOLS.includes(toolKey)) {
+      return { badge: trialBadge, badgeColor: trialBadge ? "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" : undefined, crown: undefined as "silver" | "gold" | undefined };
     }
-    if (ta.gateType === "upgrade_pro") return { badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20" };
-    if (ta.gateType === "subscribe") return { badge: "SUBSCRIBE", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" };
-    return { badge: "ORDER VIDEO", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" };
+    const crown = PRO_TOOLS.includes(toolKey) ? "gold" as const : "silver" as const;
+    return { badge: trialBadge, badgeColor: trialBadge ? "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" : undefined, crown };
   };
 
   const tools = [
@@ -258,14 +261,14 @@ export default function DashboardLensPage() {
     { icon: Film, label: "Video Remix", desc: "Remix your clips into social-ready videos with music & branding", href: "/dashboard/lens/remix", iconColor: "text-purple-400", bg: "bg-purple-500/10", ...gated("video_remix") },
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from photos & details", href: "/dashboard/lens/descriptions", iconColor: "text-sky-400", bg: "bg-sky-500/10", ...gated("description_writer") },
     { icon: PenTool, label: "Design Studio", desc: "Listing graphics, flyers, yard signs, branding cards", href: "/dashboard/lens/design-studio", iconColor: "text-indigo-400", bg: "bg-indigo-500/10", ...gated("design_studio") },
-    { icon: Globe, label: "Website Builder", desc: "Property pages & full agent websites on your own domain", href: "#", iconColor: "text-sky-400", bg: "bg-sky-500/10", badge: "COMING SOON", badgeColor: "text-white/40 bg-white/[0.06] border-white/[0.08]" },
+    { icon: Globe, label: "Website Builder", desc: "Build your full agent website with AI-powered content", href: "#", iconColor: "text-sky-400", bg: "bg-sky-500/10", ...gated("website_builder") },
     { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", iconColor: "text-emerald-400", bg: "bg-emerald-500/10", ...gated("photo_optimizer") },
     { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines, branded pins & labels", href: "/dashboard/lens/dronemark", iconColor: "text-amber-400", bg: "bg-amber-500/10", ...gated("drone_mark") },
     { icon: Camera, label: "Photo Coach", desc: "AI scoring & feedback for your listing photos", href: "/dashboard/lens/coach", iconColor: "text-blue-400", bg: "bg-blue-500/10", ...gated("photo_coach") },
     { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI — 6 design styles", href: "/dashboard/lens/staging", iconColor: "text-violet-400", bg: "bg-violet-500/10", ...gated("virtual_staging") },
     { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides with AI content", href: "/dashboard/lens/reports", iconColor: "text-amber-400", bg: "bg-amber-500/10", ...gated("custom_reports") },
-    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "/dashboard/lens/location-score", iconColor: "text-emerald-400", bg: "bg-emerald-500/10", ...gated("location_value_score") },
-    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "/dashboard/lens/value-boost", iconColor: "text-rose-400", bg: "bg-rose-500/10", ...gated("value_boost") },
+    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "#", iconColor: "text-emerald-400", bg: "bg-emerald-500/10", ...gated("location_value_score") },
+    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "#", iconColor: "text-rose-400", bg: "bg-rose-500/10", ...gated("value_boost") },
   ];
 
   const quickLinks = [
@@ -360,11 +363,15 @@ export default function DashboardLensPage() {
               className="launcher-item group relative flex items-start gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/20 hover:bg-white/[0.06] hover:translate-y-[-2px] hover:shadow-lg hover:shadow-cyan-400/5"
               style={{ animationDelay: `${0.1 + i * 0.06}s` }}
             >
-              {"badge" in tool && tool.badge && (
-                <span className={`absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || "text-amber-400 bg-amber-400/10 border-amber-400/20"}`}>
-                  {tool.badge}
-                </span>
-              )}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {"badge" in tool && tool.badge && (
+                  <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
+                    {tool.badge}
+                  </span>
+                )}
+                {"crown" in tool && tool.crown === "gold" && <Crown className="h-3.5 w-3.5 text-amber-400/50" />}
+                {"crown" in tool && tool.crown === "silver" && <Crown className="h-3.5 w-3.5 text-gray-400/40" />}
+              </div>
               <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ring-white/[0.08] transition-transform group-hover:scale-110`}>
                 <tool.icon className={`h-6 w-6 ${tool.iconColor}`} />
               </div>
