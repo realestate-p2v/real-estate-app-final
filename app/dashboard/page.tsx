@@ -89,6 +89,18 @@ const mcStyles = `
     animation: mc-glow-pulse 3s ease-in-out infinite;
   }
 
+  /* ── Font size bump — everything one step larger ── */
+  .dash-root .text-\[9px\]  { font-size: 10px !important; }
+  .dash-root .text-\[10px\] { font-size: 11px !important; }
+  .dash-root .text-\[11px\] { font-size: 12px !important; }
+  .dash-root .text-xs  { font-size: 13px !important; line-height: 1.5 !important; }
+  .dash-root .text-sm  { font-size: 15px !important; line-height: 1.5 !important; }
+  .dash-root .text-base { font-size: 17px !important; }
+  .dash-root .text-lg  { font-size: 19px !important; }
+  .dash-root .text-xl  { font-size: 21px !important; }
+  .dash-root .text-2xl { font-size: 26px !important; }
+  .dash-root .text-3xl { font-size: 32px !important; }
+
   /* ── Light mode overrides ── */
   .dashboard-light {
     background: #f1f5f9 !important;
@@ -542,7 +554,7 @@ export default function DashboardPage() {
      SHARED DARK DASHBOARD — used by both subscriber & non-subscriber
      ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-950" : "dashboard-light"}`}>
+    <div className={`dash-root min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-950" : "dashboard-light"}`}>
       <Navigation />
       <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
       {user && <SignupSpin userId={user.id} />}
