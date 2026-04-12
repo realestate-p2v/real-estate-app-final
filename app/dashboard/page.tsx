@@ -299,7 +299,7 @@ export default function DashboardPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Active tab for tools vs quick links
-  const [activeTab, setActiveTab] = useState<"tools" | "coming-soon">("tools");
+  const [activeTab, setActiveTab] = useState<"tools" | "perks">("tools");
 
   // Subscribe banner dismiss (resets each visit — intentional gentle reminder)
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -548,7 +548,7 @@ export default function DashboardPage() {
     { icon: Building2, label: "Property Portfolio", desc: "Showcase all your listings in one place", href: "/lens", color: "text-lime-400", bg: "bg-lime-400/10", ring: "ring-lime-400/20", badge: "LENS", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: true },
   ];
 
-  const comingSoonTools = [
+  const subscriberPerks = [
     { icon: ImageIcon, label: "Photo Enhancement", desc: "AI brightness, color, and white balance correction", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
     { icon: Percent, label: "10% Off Every Video", desc: "Automatic subscriber discount at checkout", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20" },
     { icon: Zap, label: "Priority Delivery", desc: "12-hour turnaround — subscribers go first", color: "text-yellow-400", bg: "bg-yellow-400/10", ring: "ring-yellow-400/20" },
@@ -831,7 +831,7 @@ export default function DashboardPage() {
 
         {/* ═══ TABS ═══ */}
         <div id="tools" className="mc-animate mt-10 flex items-center gap-1 border-b border-white/[0.06]" style={{ animationDelay: "0.24s" }}>
-          {[{ id: "tools" as const, label: "Your Tools" }, { id: "coming-soon" as const, label: "Coming Soon" }].map(t => (
+          {[{ id: "tools" as const, label: "Your Tools" }, { id: "perks" as const, label: "Subscriber Perks" }].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-4 py-2.5 text-sm font-bold transition-colors relative ${activeTab === t.id ? "text-cyan-400" : "text-white/40 hover:text-white/60"}`}>
               {t.label}
               {activeTab === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-full" />}
@@ -872,14 +872,14 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {activeTab === "coming-soon" && (
+        {activeTab === "perks" && (
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {comingSoonTools.map((tool, i) => (
-              <div key={tool.label} className="mc-chip-animate flex items-start gap-4 rounded-2xl border border-white/[0.04] bg-white/[0.02] p-5 opacity-70" style={{ animationDelay: `${0.05 + i * 0.06}s` }}>
+            {subscriberPerks.map((tool, i) => (
+              <div key={tool.label} className="mc-chip-animate flex items-start gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5" style={{ animationDelay: `${0.05 + i * 0.06}s` }}>
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring}`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2"><p className="text-sm font-bold text-white/70">{tool.label}</p><span className="text-[9px] font-bold uppercase tracking-wider text-white/30 bg-white/[0.06] px-1.5 py-0.5 rounded-full">Coming Soon</span></div>
-                  <p className="mt-1 text-xs leading-relaxed text-white/35">{tool.desc}</p>
+                  <div className="flex items-center gap-2"><p className="text-sm font-bold text-white/90">{tool.label}</p><span className="text-[9px] font-bold uppercase tracking-wider text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full border border-green-400/20">Included</span></div>
+                  <p className="mt-1 text-xs leading-relaxed text-white/40">{tool.desc}</p>
                 </div>
               </div>
             ))}
