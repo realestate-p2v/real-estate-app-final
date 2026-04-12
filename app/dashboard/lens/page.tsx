@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Navigation } from "@/components/navigation";
-import { LensConversionTracker } from "@/components/lens-conversion-tracker";
-import { LensTrialBanner } from "@/components/lens-trial-banner";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -32,6 +32,10 @@ import {
   ImageIcon,
 } from "lucide-react";
 
+/* ─── Lazy-loaded (only needed for non-subscriber view) ─── */
+const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
+const LensTrialBanner = dynamic(() => import("@/components/lens-trial-banner").then(m => ({ default: m.LensTrialBanner })), { ssr: false });
+
 const PROPERTY_SITE_BASE = "/p";
 
 const launcherStyles = `
@@ -56,7 +60,7 @@ interface PublishedWebsite {
 export default function DashboardLensPage() {
   const [user, setUser] = useState<any>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [coreReady, setCoreReady] = useState(false);
   const [freeLensExpired, setFreeLensExpired] = useState(false);
   const [agentName, setAgentName] = useState("");
   const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
@@ -65,9 +69,12 @@ export default function DashboardLensPage() {
   useEffect(() => {
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
     const init = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) { setIsLoading(false); return; }
+      const supabase = createClient();
+
+      // getSession reads from local token — much faster than getUser network call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { setCoreReady(true); return; }
+      const authUser = session.user;
       setUser(authUser);
 
       const isAdmin = authUser.email && ADMIN_EMAILS.includes(authUser.email);
@@ -86,7 +93,7 @@ export default function DashboardLensPage() {
           const daysLeft = Math.ceil((new Date(usage.free_lens_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
           if (daysLeft <= 0) {
             setFreeLensExpired(true);
-            await supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
+            supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
           } else {
             setIsSubscriber(true);
           }
@@ -95,6 +102,10 @@ export default function DashboardLensPage() {
         }
       }
 
+      // ═══ PHASE 1 DONE — show UI immediately ═══
+      setCoreReady(true);
+
+      // ═══ PHASE 2 — load websites in background ═══
       const { data: publishedSites } = await supabase
         .from("agent_properties")
         .select("id, address, website_slug, website_published, website_curated")
@@ -105,8 +116,6 @@ export default function DashboardLensPage() {
         .order("updated_at", { ascending: false })
         .limit(3);
       if (publishedSites) setPublishedWebsites(publishedSites);
-
-      setIsLoading(false);
     };
     init();
   }, []);
@@ -126,7 +135,7 @@ export default function DashboardLensPage() {
     return null;
   };
 
-  if (isLoading) {
+  if (!coreReady) {
     return (
       <div className="min-h-screen bg-gray-950">
         <Navigation />
