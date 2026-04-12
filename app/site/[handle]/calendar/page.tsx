@@ -20,22 +20,15 @@ export default function AgentCalendarPage() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      let { data: website } = await supabase
+      // Use .limit(1) instead of .single() to avoid 406 on zero results
+      const { data: websites } = await supabase
         .from("agent_websites")
         .select("user_id, site_title, primary_color, status, calendar_enabled")
-        .eq("handle", handle)
+        .or(`handle.eq.${handle},slug.eq.${handle}`)
         .eq("status", "published")
-        .single();
+        .limit(1);
 
-      if (!website) {
-        const { data: bySlug } = await supabase
-          .from("agent_websites")
-          .select("user_id, site_title, primary_color, status, calendar_enabled")
-          .eq("slug", handle)
-          .eq("status", "published")
-          .single();
-        website = bySlug;
-      }
+      const website = websites?.[0] || null;
 
       if (!website || !website.calendar_enabled) {
         setNotFound(true);
@@ -43,13 +36,13 @@ export default function AgentCalendarPage() {
         return;
       }
 
-      const { data: agent } = await supabase
+      const { data: agents } = await supabase
         .from("lens_usage")
         .select("saved_agent_name")
         .eq("user_id", website.user_id)
-        .single();
+        .limit(1);
 
-      setAgentName(agent?.saved_agent_name || website.site_title || "Agent");
+      setAgentName(agents?.[0]?.saved_agent_name || website.site_title || "Agent");
       setLoading(false);
     }
 
