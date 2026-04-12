@@ -32,11 +32,80 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
-      /* ─── Checkout completed → activate subscription ─── */
+      /* ─── Checkout completed → activate subscription OR process video order ─── */
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // Only handle Lens subscriptions
+        // ── Video order (has orderId, not a lens subscription) ──
+        if (session.metadata?.orderId && session.metadata?.product !== "lens") {
+          const orderId = session.metadata.orderId;
+
+          // 1. Mark the order as paid
+          const { data: orderData, error: orderError } = await supabase
+            .from("orders")
+            .update({
+              payment_status: "paid",
+              status: "new",
+              stripe_session_id: session.id,
+            })
+            .eq("order_id", orderId)
+            .select("user_id")
+            .single();
+
+          if (orderError) {
+            console.error("[Lens Webhook] Order update error:", orderError);
+            break;
+          }
+
+          console.log(`[Lens Webhook] ✅ Video order paid: ${orderId}`);
+
+          // 2. Activate 10-day trial if user qualifies
+          const userId = orderData?.user_id;
+          if (userId) {
+            const { data: lensUsage } = await supabase
+              .from("lens_usage")
+              .select("trial_activated_at, is_subscriber")
+              .eq("user_id", userId)
+              .single();
+
+            // Only activate if: never had a trial AND not already a subscriber
+            if (lensUsage && !lensUsage.trial_activated_at && !lensUsage.is_subscriber) {
+              const now = new Date();
+              const expires = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+
+              await supabase
+                .from("lens_usage")
+                .update({
+                  trial_activated_at: now.toISOString(),
+                  trial_expires_at: expires.toISOString(),
+                })
+                .eq("user_id", userId);
+
+              console.log(`[Lens Webhook] ⚡ 10-day trial activated for user ${userId.slice(0, 8)}`);
+            } else if (!lensUsage) {
+              // No lens_usage row yet — create one with trial
+              const now = new Date();
+              const expires = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+
+              await supabase
+                .from("lens_usage")
+                .insert({
+                  user_id: userId,
+                  is_subscriber: false,
+                  trial_activated_at: now.toISOString(),
+                  trial_expires_at: expires.toISOString(),
+                });
+
+              console.log(`[Lens Webhook] ⚡ 10-day trial activated (new row) for user ${userId.slice(0, 8)}`);
+            } else {
+              console.log(`[Lens Webhook] Trial skipped for user ${userId.slice(0, 8)} (already had trial or is subscriber)`);
+            }
+          }
+
+          break;
+        }
+
+        // ── Lens subscription checkout ──
         if (session.metadata?.product !== "lens") break;
 
         const userId = session.metadata?.user_id || session.client_reference_id;
