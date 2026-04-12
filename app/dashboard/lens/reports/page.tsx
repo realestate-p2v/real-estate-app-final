@@ -24,6 +24,7 @@ import {
   Eye,
   Edit3,
 } from "lucide-react";
+import { GateOverlay } from "@/components/gate-overlay";
 
 /* ─────────────────────────────────────────────
    Styles
@@ -272,6 +273,8 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubscriber, setIsSubscriber] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [showGate, setShowGate] = useState(false);
+  const [gateType, setGateType] = useState<"buy_video" | "subscribe" | "upgrade_pro">("upgrade_pro");
   const [userId, setUserId] = useState<string | null>(null);
   const [agentInfo, setAgentInfo] = useState<AgentInfo | null>(null);
   const [properties, setProperties] = useState<PropertyOption[]>([]);
@@ -330,27 +333,44 @@ export default function ReportsPage() {
 
     const init = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         setIsLoading(false);
         return;
       }
+      const user = session.user;
 
       setUserId(user.id);
       const isAdmin = user.email && ADMIN_EMAILS.includes(user.email);
 
       const { data: usage } = await supabase
         .from("lens_usage")
-        .select("is_subscriber, subscription_tier, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_headshot_url, saved_logo_url, saved_branding_cards")
+        .select("is_subscriber, subscription_tier, trial_expires_at, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_headshot_url, saved_logo_url, saved_branding_cards")
         .eq("user_id", user.id)
         .single();
+
+      // Check for paid orders
+      const { count: orderCount } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("payment_status", "paid");
+      const hasPaid = (orderCount || 0) > 0;
 
       if (isAdmin) {
         setIsSubscriber(true);
         setIsPro(true);
-      } else if (usage?.is_subscriber) {
+      } else if (usage?.is_subscriber || (usage?.trial_expires_at && new Date(usage.trial_expires_at) > new Date())) {
         setIsSubscriber(true);
-        setIsPro(true);
+        // Reports is PRO-only — tools/trial subscribers get upgrade_pro gate
+        if (usage?.subscription_tier === "pro") {
+          setIsPro(true);
+        } else {
+          setGateType("upgrade_pro");
+        }
+      } else {
+        // Not subscribed at all
+        setGateType(hasPaid ? "subscribe" : "buy_video");
       }
 
       if (usage) {
@@ -393,6 +413,7 @@ export default function ReportsPage() {
 
   /* ─── Generation ─── */
   const handleGenerate = useCallback(async () => {
+    if (!isPro) { setShowGate(true); return; }
     if (!reportType) return;
 
     const sectionNames = reportType === "seller" ? SELLER_SECTIONS : BUYER_SECTIONS;
@@ -709,25 +730,8 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* ═══ GATE: Not subscribed ═══ */}
-        {!isSubscriber && (
-          <div className="rp-animate rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8 text-center max-w-3xl mx-auto" style={{ animationDelay: "0.1s" }}>
-            <Lock className="h-10 w-10 text-white/20 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-white/90 mb-2">Custom Reports are a Lens Pro feature</h2>
-            <p className="text-sm text-white/50 mb-6 max-w-md mx-auto">
-              Generate branded buyer and seller guides. AI writes professional content, you edit and download as a beautiful PDF with your branding.
-            </p>
-            <Link href="/lens#pricing">
-              <Button className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold">
-                <Crown className="mr-2 h-4 w-4" />
-                Upgrade to P2V Lens
-              </Button>
-            </Link>
-          </div>
-        )}
-
         {/* ═══ WIZARD ═══ */}
-        {isSubscriber && (
+        {(
           <>
             {/* Progress */}
             <div className="rp-animate mb-8 max-w-3xl mx-auto" style={{ animationDelay: "0.1s" }}>
@@ -1269,6 +1273,7 @@ export default function ReportsPage() {
           </>
         )}
       </div>
+      {showGate && <GateOverlay gateType={gateType} toolName="Custom Reports" onClose={() => setShowGate(false)} />}
     </div>
   );
 }
