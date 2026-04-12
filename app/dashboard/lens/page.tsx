@@ -9,10 +9,8 @@ import Link from "next/link";
 import {
   Camera,
   Sparkles,
-  Clock,
   Sofa,
   ArrowRight,
-  ArrowLeft,
   MessageSquare,
   BookOpen,
   Lock,
@@ -30,11 +28,15 @@ import {
   Copy,
   Check,
   ImageIcon,
+  Zap,
+  MapPin,
+  TrendingUp,
+  Video,
+  X,
 } from "lucide-react";
 
-/* ─── Lazy-loaded (only needed for non-subscriber view) ─── */
+/* ─── Lazy-loaded ─── */
 const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
-const LensTrialBanner = dynamic(() => import("@/components/lens-trial-banner").then(m => ({ default: m.LensTrialBanner })), { ssr: false });
 
 const PROPERTY_SITE_BASE = "/p";
 
@@ -57,6 +59,64 @@ interface PublishedWebsite {
   website_curated: any;
 }
 
+/* ─────────────────────────────────────────────
+   Access gating
+   ───────────────────────────────────────────── */
+const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+
+type AccessResult = {
+  allowed: boolean;
+  reason: "admin" | "pro" | "tools" | "trial" | "video_only" | "free";
+  tier: "admin" | "pro" | "tools" | "trial" | "video_only" | "free";
+  trialDaysLeft?: number;
+  hasVideo?: boolean;
+};
+
+function checkAccess(
+  email: string,
+  lensUsage: any,
+  hasPaidOrder: boolean
+): AccessResult {
+  if (ADMIN_EMAILS.includes(email)) {
+    return { allowed: true, reason: "admin", tier: "admin" };
+  }
+  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "pro") {
+    return { allowed: true, reason: "pro", tier: "pro" };
+  }
+  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "tools") {
+    return { allowed: true, reason: "tools", tier: "tools" };
+  }
+  if (lensUsage?.is_subscriber) {
+    return { allowed: true, reason: "tools", tier: "tools" };
+  }
+  if (lensUsage?.trial_expires_at) {
+    const expires = new Date(lensUsage.trial_expires_at);
+    if (expires > new Date()) {
+      const daysLeft = Math.ceil((expires.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      return { allowed: true, reason: "trial", tier: "trial", trialDaysLeft: daysLeft };
+    }
+  }
+  if (hasPaidOrder) {
+    return { allowed: false, reason: "video_only", tier: "video_only", hasVideo: true };
+  }
+  return { allowed: false, reason: "free", tier: "free", hasVideo: false };
+}
+
+const PRO_ONLY_TOOLS = ["location_value_score", "agent_website", "custom_reports"];
+
+function checkToolAccess(toolKey: string, access: AccessResult): {
+  canUse: boolean;
+  gateType: "none" | "subscribe" | "upgrade_pro" | "buy_video";
+} {
+  if (access.tier === "admin") return { canUse: true, gateType: "none" };
+  if (access.tier === "pro") return { canUse: true, gateType: "none" };
+  if (PRO_ONLY_TOOLS.includes(toolKey)) return { canUse: false, gateType: "upgrade_pro" };
+  if (access.tier === "tools" || access.tier === "trial") return { canUse: true, gateType: "none" };
+  if (toolKey === "video_remix" && access.hasVideo) return { canUse: true, gateType: "none" };
+  if (access.tier === "video_only") return { canUse: false, gateType: "subscribe" };
+  return { canUse: false, gateType: "buy_video" };
+}
+
 export default function DashboardLensPage() {
   const [user, setUser] = useState<any>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
@@ -65,9 +125,10 @@ export default function DashboardLensPage() {
   const [agentName, setAgentName] = useState("");
   const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [access, setAccess] = useState<AccessResult>({ allowed: false, reason: "free", tier: "free", hasVideo: false });
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
-    const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
     const init = async () => {
       const supabase = createClient();
 
@@ -80,11 +141,23 @@ export default function DashboardLensPage() {
       const isAdmin = authUser.email && ADMIN_EMAILS.includes(authUser.email);
       const { data: usage } = await supabase
         .from("lens_usage")
-        .select("is_subscriber, subscription_tier, free_lens_expires_at, saved_agent_name")
+        .select("is_subscriber, subscription_tier, free_lens_expires_at, trial_activated_at, trial_expires_at, saved_agent_name")
         .eq("user_id", authUser.id)
         .single();
 
       if (usage?.saved_agent_name) setAgentName(usage.saved_agent_name);
+
+      // Check if user has any paid video orders
+      const { count: orderCount } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", authUser.id)
+        .eq("payment_status", "paid");
+      const hasPaidOrder = (orderCount || 0) > 0;
+
+      // Build access result
+      const accessResult = checkAccess(authUser.email || "", usage, hasPaidOrder);
+      setAccess(accessResult);
 
       if (isAdmin) {
         setIsSubscriber(true);
@@ -137,7 +210,7 @@ export default function DashboardLensPage() {
 
   if (!coreReady) {
     return (
-      <div className="min-h-screen bg-gray-950">
+      <div className="min-h-screen bg-gray-900">
         <Navigation />
         <div className="flex items-center justify-center py-32">
           <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
@@ -163,99 +236,36 @@ export default function DashboardLensPage() {
     );
   }
 
-  if (!isSubscriber) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <LensConversionTracker />
-        <NonSubscriberLensPage freeLensExpired={freeLensExpired} />
-      </div>
-    );
-  }
+  const hasAccess = access.allowed;
+  const isTrial = access.tier === "trial";
+
+  // Helper: badge for a given tool key (informational only — cards always link to tool page)
+  const gated = (toolKey: string) => {
+    const ta = checkToolAccess(toolKey, access);
+    if (ta.canUse) {
+      if (isTrial && access.trialDaysLeft !== undefined) {
+        return { badge: `TRIAL: ${access.trialDaysLeft}d`, badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" };
+      }
+      return { badge: undefined as string | undefined, badgeColor: undefined as string | undefined };
+    }
+    if (ta.gateType === "upgrade_pro") return { badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20" };
+    if (ta.gateType === "subscribe") return { badge: "SUBSCRIBE", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" };
+    return { badge: "ORDER VIDEO", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" };
+  };
 
   const tools = [
-    {
-      icon: Film,
-      label: "Order a Video",
-      desc: "Cinematic listing walkthrough from $4.95/clip",
-      href: "/order",
-      iconColor: "text-cyan-400",
-      bg: "bg-cyan-500/10",
-    },
-    {
-      icon: Film,
-      label: "Video Remix",
-      desc: "Remix your clips into social-ready videos with music & branding",
-      href: "/dashboard/lens/remix",
-      iconColor: "text-purple-400",
-      bg: "bg-purple-500/10",
-    },
-    {
-      icon: MessageSquare,
-      label: "Description Writer",
-      desc: "MLS-ready listing copy from photos & details",
-      href: "/dashboard/lens/descriptions",
-      iconColor: "text-sky-400",
-      bg: "bg-sky-500/10",
-    },
-    {
-      icon: PenTool,
-      label: "Design Studio",
-      desc: "Listing graphics, flyers, yard signs, branding cards",
-      href: "/dashboard/lens/design-studio",
-      iconColor: "text-indigo-400",
-      bg: "bg-indigo-500/10",
-    },
-    {
-      icon: Globe,
-      label: "Website Builder",
-      desc: "Property pages & full agent websites on your own domain",
-      href: "#",
-      iconColor: "text-sky-400",
-      bg: "bg-sky-500/10",
-      badge: "COMING SOON",
-    },
-    {
-      icon: ImageIcon,
-      label: "Photo Optimizer",
-      desc: "Batch compress for MLS, Zillow, social — under 290KB",
-      href: "/dashboard/lens/optimize",
-      iconColor: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-    },
-    {
-      icon: Crosshair,
-      label: "Drone Mark",
-      desc: "Annotate aerial photos with lot lines, branded pins & labels",
-      href: "/dashboard/lens/dronemark",
-      iconColor: "text-amber-400",
-      bg: "bg-amber-500/10",
-    },
-    {
-      icon: Camera,
-      label: "Photo Coach",
-      desc: "AI scoring & feedback for your listing photos",
-      href: "/dashboard/lens/coach",
-      iconColor: "text-blue-400",
-      bg: "bg-blue-500/10",
-    },
-    {
-      icon: Sofa,
-      label: "Virtual Staging",
-      desc: "Furnish empty rooms with AI \u2014 6 design styles",
-      href: "/dashboard/lens/staging",
-      iconColor: "text-violet-400",
-      bg: "bg-violet-500/10",
-    },
-    {
-      icon: FileText,
-      label: "Reports",
-      desc: "Branded buyer & seller guides with AI content",
-      href: "/dashboard/lens/reports",
-      iconColor: "text-amber-400",
-      bg: "bg-amber-500/10",
-      badge: "PRO",
-    },
+    { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", iconColor: "text-cyan-400", bg: "bg-cyan-500/10" },
+    { icon: Film, label: "Video Remix", desc: "Remix your clips into social-ready videos with music & branding", href: "/dashboard/lens/remix", iconColor: "text-purple-400", bg: "bg-purple-500/10", ...gated("video_remix") },
+    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from photos & details", href: "/dashboard/lens/descriptions", iconColor: "text-sky-400", bg: "bg-sky-500/10", ...gated("description_writer") },
+    { icon: PenTool, label: "Design Studio", desc: "Listing graphics, flyers, yard signs, branding cards", href: "/dashboard/lens/design-studio", iconColor: "text-indigo-400", bg: "bg-indigo-500/10", ...gated("design_studio") },
+    { icon: Globe, label: "Website Builder", desc: "Property pages & full agent websites on your own domain", href: "#", iconColor: "text-sky-400", bg: "bg-sky-500/10", badge: "COMING SOON", badgeColor: "text-white/40 bg-white/[0.06] border-white/[0.08]" },
+    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", iconColor: "text-emerald-400", bg: "bg-emerald-500/10", ...gated("photo_optimizer") },
+    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines, branded pins & labels", href: "/dashboard/lens/dronemark", iconColor: "text-amber-400", bg: "bg-amber-500/10", ...gated("drone_mark") },
+    { icon: Camera, label: "Photo Coach", desc: "AI scoring & feedback for your listing photos", href: "/dashboard/lens/coach", iconColor: "text-blue-400", bg: "bg-blue-500/10", ...gated("photo_coach") },
+    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI — 6 design styles", href: "/dashboard/lens/staging", iconColor: "text-violet-400", bg: "bg-violet-500/10", ...gated("virtual_staging") },
+    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides with AI content", href: "/dashboard/lens/reports", iconColor: "text-amber-400", bg: "bg-amber-500/10", ...gated("custom_reports") },
+    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "/dashboard/lens/location-score", iconColor: "text-emerald-400", bg: "bg-emerald-500/10", ...gated("location_value_score") },
+    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "/dashboard/lens/value-boost", iconColor: "text-rose-400", bg: "bg-rose-500/10", ...gated("value_boost") },
   ];
 
   const quickLinks = [
@@ -270,15 +280,16 @@ export default function DashboardLensPage() {
   const firstName = agentName?.split(" ")[0] || user.email?.split("@")[0] || "there";
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-gray-900">
       <Navigation />
+      {!isSubscriber && <LensConversionTracker />}
       <style dangerouslySetInnerHTML={{ __html: launcherStyles }} />
 
       <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 60% 50% at 30% 20%, rgba(56,189,248,0.04) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 80%, rgba(99,102,241,0.03) 0%, transparent 60%)" }} />
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
 
-        <div className="launcher-item flex items-center justify-between mb-10" style={{ animationDelay: "0.05s" }}>
+        <div className="launcher-item flex items-center justify-between mb-6" style={{ animationDelay: "0.05s" }}>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-5 w-5 text-cyan-400" />
@@ -294,6 +305,53 @@ export default function DashboardLensPage() {
           </Link>
         </div>
 
+        {/* ═══ TRIAL BANNER ═══ */}
+        {access.tier === "trial" && access.trialDaysLeft !== undefined && (
+          <div className={`launcher-item mb-6 rounded-xl border p-4 ${access.trialDaysLeft <= 3 ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-cyan-400/15 bg-cyan-400/[0.04]"}`} style={{ animationDelay: "0.07s" }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className={`h-4 w-4 ${access.trialDaysLeft <= 3 ? "text-amber-400" : "text-cyan-400"}`} />
+                <span className="text-sm font-bold text-white/90">Lens Trial</span>
+                <span className={`text-sm font-bold ${access.trialDaysLeft <= 3 ? "text-amber-400" : "text-cyan-400"}`}>{access.trialDaysLeft} day{access.trialDaysLeft !== 1 ? "s" : ""} remaining</span>
+              </div>
+              <Link href="/lens#pricing"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs">Subscribe now →</Button></Link>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ FREE ACCOUNT BANNER ═══ */}
+        {access.tier === "free" && !bannerDismissed && (
+          <div className="launcher-item mb-6 rounded-xl border border-green-400/15 bg-green-400/[0.04] p-5 relative" style={{ animationDelay: "0.07s" }}>
+            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
+            <div className="flex items-start gap-3">
+              <Film className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-white/90">Order your first listing video to unlock 10 days of every AI marketing tool — free.</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/50">Your first video order comes with a 10-day trial of all P2V Lens tools. No credit card required for the trial.</p>
+                <Link href="/order" className="mt-3 inline-block"><Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Order a Video — from $79 <ArrowRight className="ml-1.5 h-3 w-3" /></Button></Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ VIDEO OWNER BANNER — trial expired ═══ */}
+        {access.tier === "video_only" && !bannerDismissed && (
+          <div className="launcher-item mb-6 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-5 relative" style={{ animationDelay: "0.07s" }}>
+            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
+            <div className="flex items-start gap-3">
+              <Lock className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-white/90">Your trial has ended</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/50">Subscribe to keep using all marketing tools. Your videos and Video Remix are still available.</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Link href="/lens#pricing"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Subscribe — $27/mo</Button></Link>
+                  <Link href="/lens#pricing" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">See Plans</Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-12">
           {tools.map((tool, i) => (
             <Link
@@ -303,7 +361,7 @@ export default function DashboardLensPage() {
               style={{ animationDelay: `${0.1 + i * 0.06}s` }}
             >
               {"badge" in tool && tool.badge && (
-                <span className="absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                <span className={`absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || "text-amber-400 bg-amber-400/10 border-amber-400/20"}`}>
                   {tool.badge}
                 </span>
               )}
@@ -364,82 +422,6 @@ export default function DashboardLensPage() {
           <p className="text-xs text-white/20">&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function NonSubscriberLensPage({ freeLensExpired }: { freeLensExpired: boolean }) {
-  const features = [
-    { icon: Film, title: "Order a Video", description: "Cinematic listing walkthrough videos from $4.95/clip.", actionLabel: "Order Now", actionHref: "/order" },
-    { icon: Film, title: "Video Remix", description: "Remix your clips into social-ready videos with music & branding.", actionLabel: "Open Remix", actionHref: "/dashboard/lens/remix" },
-    { icon: MessageSquare, title: "Description Writer", description: "MLS-ready listing copy generated from your photos & details.", actionLabel: "Write a Description", actionHref: "/dashboard/lens/descriptions" },
-    { icon: PenTool, title: "Design Studio", description: "Listing graphics, flyers, yard signs, branding cards.", actionLabel: "Open Design Studio", actionHref: "/dashboard/lens/design-studio" },
-    { icon: Globe, title: "Website Builder", description: "Property pages & full agent websites on your own domain.", actionLabel: "Coming Soon", actionHref: "#", badge: "COMING SOON" },
-    { icon: ImageIcon, title: "Photo Optimizer", description: "Batch compress for MLS, Zillow, social — under 290KB.", actionLabel: "Open Photo Optimizer", actionHref: "/dashboard/lens/optimize", badge: "FREE" },
-    { icon: Crosshair, title: "Drone Mark", description: "Annotate aerial photos with lot lines, branded pins & measurement labels.", actionLabel: "Open Drone Mark", actionHref: "/dashboard/lens/dronemark" },
-    { icon: Camera, title: "AI Photo Coach", description: "AI-powered photo scoring & instant feedback during shoots.", actionLabel: "Start a Shoot", actionHref: "/dashboard/lens/coach" },
-    { icon: Sofa, title: "Virtual Staging", description: "Furnish empty rooms with AI — 6 design styles, before/after.", actionLabel: "Stage a Room", actionHref: "/dashboard/lens/staging" },
-    { icon: FileText, title: "Reports", description: "Branded buyer & seller guides with AI-written content.", actionLabel: "Create Report", actionHref: "/dashboard/lens/reports", badge: "PRO" },
-  ];
-
-  return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
-      <div className="flex items-center gap-3 mb-2">
-        <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors"><ArrowLeft className="h-5 w-5" /></Link>
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">P2V Lens</h1>
-          <p className="text-muted-foreground mt-1">Your AI-powered real estate marketing suite</p>
-        </div>
-      </div>
-
-      <div className="mt-8"><LensTrialBanner /></div>
-
-      {freeLensExpired && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mt-6">
-          <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0"><Clock className="h-5 w-5 text-red-600" /></div>
-            <div className="flex-1"><h3 className="font-bold text-red-800">Your free month has ended</h3><p className="text-sm text-red-700 mt-1">Subscribe to continue using all features.</p><Button asChild size="sm" className="mt-3 bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo</Link></Button></div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 mt-6">
-        <div className="flex items-start gap-4 flex-wrap">
-          <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0"><Lock className="h-6 w-6 text-muted-foreground" /></div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-foreground">Unlock P2V Lens</h2>
-            <p className="text-sm text-muted-foreground mt-1">AI photo coaching, design studio, listing descriptions, virtual staging, reports, and priority delivery.</p>
-            <div className="flex flex-wrap gap-3 mt-4"><Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"><Link href="/lens">Subscribe — $27.95/mo<ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-10 mb-14">
-        <div className="flex items-center gap-3 mb-6"><div className="h-8 w-1.5 bg-accent rounded-full" /><h2 className="text-2xl font-bold text-foreground">What You Get</h2></div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map(({ icon: Icon, title, description, actionLabel, actionHref, badge }, i) => (
-            <Link key={i} href={actionHref} className="relative bg-card rounded-xl border border-primary/20 p-5 space-y-2.5 hover:border-accent/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block group">
-              {badge === "PRO" && <span className="absolute top-3 right-3 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{badge}</span>}
-              {badge === "FREE" && <span className="absolute top-3 right-3 text-[10px] font-black text-green-600 bg-green-100 px-2 py-0.5 rounded-full border border-green-200">{badge}</span>}
-              {!badge && <span className="absolute top-3 right-3 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">With Subscription</span>}
-              <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center"><Icon className="h-5 w-5 text-accent" /></div>
-              <h3 className="font-bold text-foreground group-hover:text-accent transition-colors">{title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-              <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent pt-1">{actionLabel}<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-card rounded-2xl border border-border p-8 text-center space-y-5">
-        <h2 className="text-2xl font-bold text-foreground">Your Complete Marketing Suite</h2>
-        <p className="text-muted-foreground max-w-lg mx-auto">Everything you need to market your listings — $27.95/month.</p>
-        <Button asChild className="bg-accent hover:bg-accent/90 px-8 py-6 text-lg font-bold"><Link href="/lens"><Sparkles className="mr-2 h-5 w-5" />Get P2V Lens</Link></Button>
-      </div>
-
-      <footer className="border-t py-8 mt-12 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video.</p>
-      </footer>
     </div>
   );
 }
