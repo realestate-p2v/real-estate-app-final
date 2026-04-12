@@ -25,6 +25,7 @@ import {
   Home,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { GateOverlay } from "@/components/gate-overlay";
 import { SpinWheel } from "@/components/spin-wheel";
 
 type Style = "professional" | "luxury" | "conversational" | "concise";
@@ -107,6 +108,10 @@ function DescriptionWriterPageInner() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
 
+  // Access gating
+  const [showGate, setShowGate] = useState(false);
+  const [gateType, setGateType] = useState<"buy_video" | "subscribe" | "upgrade_pro">("buy_video");
+
   // Surprise discount wheel
   const [showSurpriseWheel, setShowSurpriseWheel] = useState(false);
   const [surprisePromoCode, setSurprisePromoCode] = useState<string | null>(null);
@@ -184,20 +189,36 @@ function DescriptionWriterPageInner() {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
       setUser(user);
       setAuthLoading(false);
       if (user?.email === "realestatephoto2video@gmail.com") {
         setIsAdmin(true);
         setIsSubscriber(true);
       } else if (user) {
-        const { data: usage } = await supabase
-          .from("lens_usage")
-          .select("is_subscriber")
-          .eq("user_id", user.id)
-          .single();
-        if (usage?.is_subscriber) {
+        const [usageResult, orderResult] = await Promise.all([
+          supabase
+            .from("lens_usage")
+            .select("is_subscriber, subscription_tier, trial_expires_at")
+            .eq("user_id", user.id)
+            .single(),
+          supabase
+            .from("orders")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .eq("payment_status", "paid"),
+        ]);
+
+        const usage = usageResult.data;
+        const hasPaid = (orderResult.count || 0) > 0;
+        const isSub = usage?.is_subscriber;
+        const hasActiveTrial = usage?.trial_expires_at && new Date(usage.trial_expires_at) > new Date();
+
+        if (isSub || hasActiveTrial) {
           setIsSubscriber(true);
+        } else {
+          setGateType(hasPaid ? "subscribe" : "buy_video");
         }
       }
 
@@ -360,6 +381,12 @@ function DescriptionWriterPageInner() {
   };
 
   const handleGenerate = async () => {
+    // Gate: non-subscribers cannot generate descriptions
+    if (!isSubscriber && !isAdmin) {
+      setShowGate(true);
+      return;
+    }
+
     if (photoUrls.length === 0) {
       setError("Please upload at least one photo.");
       return;
@@ -868,6 +895,9 @@ function DescriptionWriterPageInner() {
           onClose={() => setShowSurpriseWheel(false)}
         />
       )}
+
+      {/* Access gate overlay */}
+      {showGate && <GateOverlay gateType={gateType} toolName="Description Writer" onClose={() => setShowGate(false)} />}
     </div>
   );
 }
