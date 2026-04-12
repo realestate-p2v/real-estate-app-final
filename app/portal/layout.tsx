@@ -1,7 +1,10 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Building2 } from "lucide-react";
 import { PortalThemeProvider } from "@/components/portal-theme-provider";
 import { PortalNav } from "@/components/portal-nav";
+
+const LensyPortal = dynamic(() => import("@/components/lensy-portal"), { ssr: false });
 
 export default function PortalLayout({
   children,
@@ -96,6 +99,7 @@ export default function PortalLayout({
           </div>
         </footer>
       </div>
+      <LensyPortal mode="portal" />
     </PortalThemeProvider>
   );
 }
