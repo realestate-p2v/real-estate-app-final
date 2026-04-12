@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import {
   Camera,
   Sparkles,
@@ -20,28 +21,26 @@ import {
   ChevronUp,
   Loader2,
   ImageIcon,
-  TrendingUp,
   LogIn,
   PenTool,
-  Percent,
-  Clock,
   Film,
   Globe,
   FileText,
-  LayoutDashboard,
   MapPin,
-  Lightbulb,
-  TreePine,
   DollarSign,
-  Search,
   BookOpen,
+  Crosshair,
+  Download,
+  Share2,
+  Monitor,
+  Play,
+  Shield,
 } from "lucide-react";
 
 export default function LensPage() {
   const router = useRouter();
-  const [billingToggle, setBillingToggle] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [subscribing, setSubscribing] = useState(false);
+  const [subscribingTools, setSubscribingTools] = useState(false);
   const [subscribingPro, setSubscribingPro] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
@@ -49,11 +48,11 @@ export default function LensPage() {
 
   useEffect(() => {
     const init = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser({ id: user.id, email: user.email || "" });
-        const { data: usage } = await supabase.from("lens_usage").select("is_subscriber").eq("user_id", user.id).single();
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email || "" });
+        const { data: usage } = await supabase.from("lens_usage").select("is_subscriber").eq("user_id", session.user.id).single();
         if (usage?.is_subscriber) setIsSubscriber(true);
       }
       setLoadingUser(false);
@@ -61,419 +60,367 @@ export default function LensPage() {
     init();
   }, []);
 
-  const handleSubscribe = async (plan: "monthly" | "yearly") => {
+  const handleSubscribe = async (plan: string) => {
     if (!user) { router.push("/login?redirect=/lens"); return; }
-    setSubscribing(true);
+    const setter = plan.startsWith("pro") ? setSubscribingPro : setSubscribingTools;
+    setter(true);
     try {
       const res = await fetch("/api/lens/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, user_id: user.id, user_email: user.email }) });
       const data = await res.json();
-      if (data.success && data.url) { window.location.href = data.url; } else { alert(data.error || "Something went wrong. Please try again."); }
-    } catch { alert("Something went wrong. Please try again."); } finally { setSubscribing(false); }
+      if (data.success && data.url) { window.location.href = data.url; } else { alert(data.error || "Something went wrong."); }
+    } catch { alert("Something went wrong."); } finally { setter(false); }
   };
-
-  const handleSubscribePro = async (plan: "monthly" | "yearly") => {
-    if (!user) { router.push("/login?redirect=/lens"); return; }
-    setSubscribingPro(true);
-    try {
-      const res = await fetch("/api/lens/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan === "monthly" ? "pro_monthly" : "pro_yearly", user_id: user.id, user_email: user.email }) });
-      const data = await res.json();
-      if (data.success && data.url) { window.location.href = data.url; } else { alert(data.error || "Something went wrong. Please try again."); }
-    } catch { alert("Something went wrong. Please try again."); } finally { setSubscribingPro(false); }
-  };
-
-  const toolLink = (path: string) => (user ? path : `/login?redirect=${path}`);
 
   const faqs = [
-    { q: "How does the AI Photo Coach work?", a: "Upload any listing photo and our AI (powered by Claude Vision) analyzes it instantly. You get specific, actionable feedback — not vague tips, but exactly what to fix: \"The kitchen is underexposed. Open the blinds on the east wall, turn on the overhead light, and retake from the doorway at chest height.\" Use it during your photo shoot to coach yourself room by room." },
-    { q: "How is P2V Lens different from other AI tools?", a: "P2V Lens is built specifically for real estate listing marketing — not repurposed from a generic AI platform. Every tool understands MLS requirements, listing photography standards, and what actually sells homes. The Photo Coach scores photos based on real estate criteria. The Description Writer knows MLS formatting rules. The Design Studio has templates for Just Listed, Open House, and Price Reduced — not generic flyer makers. This is the difference between a tool built by real estate marketers and one built by a tech company." },
-    { q: "What counts as one \"analysis\"?", a: "Each photo you upload for AI feedback counts as one analysis. You get 200 per month — enough for about 2 full listing shoots with coaching on every single photo (25 photos × 4 attempts each = 100 analyses per listing)." },
-    { q: "How does Quick Video pricing work?", a: "Subscribers can order short-form videos with 5–14 clips at $4.95 per clip. This rate already includes your 10% subscriber savings. Quick Videos include branding and music but do not include a free revision — paid revisions are available at standard rates. Upload 15+ photos and you'll automatically get the Standard package ($79) with your 10% subscriber discount at checkout." },
-    { q: "What's the difference between Lens and Lens Pro?", a: "Lens ($27.95/mo) includes all the core marketing tools: Photo Coach, Description Writer, Design Studio, Virtual Staging, Quick Videos, and subscriber perks. Lens Pro ($49.95/mo) adds everything in Lens plus your own agent website with custom domain, AI-generated blog, property portfolios, single-listing websites with lead capture, Location Value Scores, staging and landscaping ideas, Value Boost Reports, and Lead Finder with skip tracing." },
-    { q: "How does the Agent Website Builder work?", a: "Connect your own domain and get a professional agent website with your branding, listings, and contact info. The AI Blog automatically generates SEO-optimized posts about your market area. Property Websites create single-listing microsites with lead capture forms — share a branded link instead of a Zillow page." },
-    { q: "What is the Location Value Score?", a: "A composite 1–100 score for any property address based on five sub-scores: school quality, walkability, safety, amenities, and market trends. Use it in listing presentations to quantify neighborhood value for buyers, or in listing appointments to show sellers how their location adds value." },
-    { q: "How does Lead Finder work?", a: "Search public records to find motivated sellers — pre-foreclosures, divorces, probate, tax liens, and more. Lens Pro includes 100 searches per month and 50 skip traces to get phone numbers and emails for the leads you find." },
-    { q: "Do I need to be a P2V video customer to use Lens?", a: "No — P2V Lens works as a standalone subscription. The AI Photo Coach helps you take better photos regardless of whether you order videos from us. But if you do order videos, your subscription includes free photo enhancement, 10% off every order, priority processing, and per-clip Quick Video pricing." },
-    { q: "How does brokerage pricing work?", a: "Brokerage plans are $19.95 per agent per month with a minimum of 10 agents. Each agent gets their own login and 200 analyses per month. Contact us to set up your brokerage account." },
-    { q: "Can I cancel anytime?", a: "Yes — cancel anytime from your Account Settings. Your subscription stays active through the end of your current billing period. No contracts, no cancellation fees." },
+    { q: "What happens when I order a video?", a: "Upload your listing photos, add your branding, and we produce a cinematic walkthrough video. You own every clip. After purchase, you get Video Remix access forever — recut your clips into social content, add music, change branding, unlimited times." },
+    { q: "What's the 10-day trial?", a: "After your first video purchase, every AI tool unlocks for 10 days — free, no credit card needed for the trial. Design marketing graphics, write descriptions, stage empty rooms, optimize photos for MLS. Everything you create is yours to keep. After 10 days, subscribe to keep access." },
+    { q: "What's the difference between Lens Tools and Lens Pro?", a: "Lens Tools ($27/mo) gives you all the AI marketing tools — Photo Coach, Design Studio, Description Writer, Virtual Staging, Drone Mark, Photo Optimizer, Reports, and more. Export and download everything, push to CRMs. Lens Pro ($49/mo) adds your own professional agent website hosted on our platform — we handle domain, hosting, SSL, updates, everything." },
+    { q: "Can I buy the website outright?", a: "Yes — $399 one-time gets you a full website export with all backend editing features, plus 3 months of Lens Pro included. After that you handle your own hosting and domain, but you can still use the one-click export tool to push content updates from P2V to your site." },
+    { q: "How does the AI Photo Coach work?", a: "Open a session for a property, and AI scores every photo on a 1-10 scale with specific feedback — 'move left 3 feet, open the blinds on the east wall.' Use it during your shoot to coach yourself room by room. Approved photos flow directly into your video orders and marketing tools." },
+    { q: "Do I keep my content if I cancel?", a: "Your videos, clips, and property profile stay accessible. Marketing content you've exported or downloaded is yours forever. Tools lock until you resubscribe, but nothing gets deleted." },
+    { q: "How does brokerage pricing work?", a: "Custom pricing for teams of 10+ agents. Each agent gets their own login and full tool access. Contact us for a quote." },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-950 text-white">
       <Navigation />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-orange-50/80 via-white to-white">
+      {/* ═══ HERO ═══ */}
+      <section className="relative overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-[0.19]">
-            <source src="/p2v-lens-bg-video.mp4" type="video/mp4" />
-          </video>
+          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/[0.07] rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/[0.05] rounded-full blur-[100px]" />
         </div>
-        <div className="absolute inset-0 overflow-hidden z-[1]">
-          <div className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-gradient-to-br from-red-200/40 to-orange-200/30 rounded-full blur-[80px]" />
-          <div className="absolute top-1/3 -left-32 w-[400px] h-[400px] bg-gradient-to-br from-cyan-200/30 to-blue-200/20 rounded-full blur-[80px]" />
-          <div className="absolute -bottom-20 right-1/4 w-[350px] h-[350px] bg-gradient-to-br from-purple-200/25 to-pink-200/20 rounded-full blur-[80px]" />
-        </div>
-        <div className="relative z-[2] mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-          <div className="max-w-3xl mx-auto bg-white/10 backdrop-blur-xl border border-white/40 rounded-3xl shadow-xl p-8 sm:p-12 text-center">
-            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent text-sm font-bold px-4 py-1.5 rounded-full mb-6">
+        <div className="absolute inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(56,189,248,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-24 sm:pt-28 sm:pb-32">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 text-cyan-400 text-sm font-bold tracking-wider uppercase mb-6">
               <Sparkles className="w-4 h-4" />
-              Purpose-Built for Real Estate
+              Built for Real Estate. Not Repurposed.
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight tracking-tight">
-              The AI Marketing Suite<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-orange-500 to-purple-600">That Sells Homes</span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight">
+              Your Photos Become<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">Your Entire Marketing Engine</span>
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Photo coaching, marketing design, listing descriptions, virtual staging, agent websites, lead generation, and short-form videos — all in one subscription.
+            <p className="mt-6 text-lg sm:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
+              Order a listing video. Get 10 days of every AI marketing tool — free.
+              Build descriptions, flyers, staged rooms, drone annotations, and reports.
+              Then keep it all on your own branded agent website.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              {[
-                { icon: Camera, label: "15+ AI Tools" },
-                { icon: Sparkles, label: "200 Analyses/Mo" },
-                { icon: Film, label: "Videos from $24.75" },
-                { icon: CheckCircle, label: "Cancel Anytime" },
-              ].map((badge) => (
-                <span key={badge.label} className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 bg-white/80 border border-border/50 rounded-full px-3 py-1.5 shadow-sm">
-                  <badge.icon className="h-3.5 w-3.5 text-accent" />
-                  {badge.label}
-                </span>
-              ))}
-            </div>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               {isSubscriber ? (
-                <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
-                  <Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl">
+                  <Link href="/dashboard/lens">Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
                 </Button>
               ) : (
-                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 px-8 text-lg rounded-full shadow-lg shadow-accent/20">
-                  See Plans & Pricing <ArrowRight className="ml-2 h-5 w-5" />
+                <>
+                  <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
+                    <Link href="/order">Order a Video — from $79 <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                  </Button>
+                  <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold h-14 px-8 text-lg rounded-xl">
+                    See Plans
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ HOW IT WORKS — The Funnel ═══ */}
+      <section className="py-20 sm:py-24 border-t border-white/[0.04]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-extrabold">One Video Unlocks Everything</h2>
+            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">Your listing photos are the starting point. Every tool builds on them.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[
+              { step: "1", icon: Camera, title: "Upload Photos", desc: "Upload your listing photos and order a cinematic walkthrough video.", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
+              { step: "2", icon: Film, title: "Get Your Video", desc: "We produce your video. You own every clip. Remix them forever — free.", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20" },
+              { step: "3", icon: Zap, title: "10 Days Free", desc: "All AI tools unlock. Build descriptions, flyers, staging, reports — everything.", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
+              { step: "4", icon: Globe, title: "Subscribe & Grow", desc: "Keep your tools at $27/mo. Add your own agent website at $49/mo.", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20" },
+            ].map((s, i) => (
+              <div key={i} className="relative text-center">
+                <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl ${s.bg} ring-1 ${s.ring} mb-5`}>
+                  <s.icon className={`h-7 w-7 ${s.color}`} />
+                </div>
+                <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-white/[0.08] text-white/60 text-sm font-bold mb-3">{s.step}</div>
+                <h3 className="text-lg font-bold text-white/90 mb-2">{s.title}</h3>
+                <p className="text-sm text-white/40 leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SOCIAL PROOF ═══ */}
+      <section className="border-y border-white/[0.04] bg-white/[0.02]">
+        <div className="mx-auto max-w-5xl px-4 py-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-center">
+          <div className="flex items-center gap-2"><Play className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60">Listings with video get <span className="text-cyan-400">403% more inquiries</span></span></div>
+          <div className="hidden sm:block h-5 w-px bg-white/[0.08]" />
+          <div className="flex items-center gap-2"><Camera className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60">Professional photos sell <span className="text-cyan-400">32% faster</span></span></div>
+          <div className="hidden sm:block h-5 w-px bg-white/[0.08]" />
+          <div className="flex items-center gap-2"><Star className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60"><span className="text-cyan-400">10+ AI tools</span> built for real estate</span></div>
+        </div>
+      </section>
+
+      {/* ═══ VIDEO REMIX — The Free Hook ═══ */}
+      <section className="py-20 sm:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-purple-400/20 bg-purple-400/[0.04] p-8 sm:p-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl bg-purple-400/10 ring-1 ring-purple-400/20 flex items-center justify-center"><Film className="h-6 w-6 text-purple-400" /></div>
+              <div>
+                <h3 className="text-xl font-extrabold text-white">Video Remix — Free Forever</h3>
+                <p className="text-sm text-white/40">Included with every video purchase</p>
+              </div>
+            </div>
+            <p className="text-white/50 leading-relaxed mb-6">Buy your clips once. Remix them forever. Recut into social teasers, add music, swap branding, create landscape, portrait, and square versions — unlimited. Every time you come back to Remix, you see what else the platform can do.</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6">
+              {["Unlimited remixes", "3 aspect ratios", "Music library", "Custom branding", "No watermarks"].map(p => (
+                <span key={p} className="flex items-center gap-1.5 text-sm text-white/60"><CheckCircle className="h-3.5 w-3.5 text-purple-400" />{p}</span>
+              ))}
+            </div>
+            <Link href="/order" className="inline-flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors">Order a Video to Unlock <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ AI TOOLS SHOWCASE ═══ */}
+      <section id="features" className="py-20 sm:py-24 border-t border-white/[0.04]">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Every Tool Your Listing Needs</h2>
+            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">Each one is purpose-built for real estate — not a generic AI wrapper. Try them all free for 10 days after your first video order.</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { icon: Camera, title: "AI Photo Coach", desc: "Instant 1-10 scoring with room-by-room feedback during your shoot. Approved photos flow into every other tool.", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20" },
+              { icon: PenTool, title: "Design Studio", desc: "Just Listed, Open House, Price Reduced graphics. 11 templates. Your branding auto-fills. PNG + PDF export.", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20" },
+              { icon: MessageSquare, title: "Description Writer", desc: "AI analyzes your photos and writes MLS-ready listing copy. 4 writing styles. Property details auto-fill.", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20" },
+              { icon: Sofa, title: "Virtual Staging", desc: "Furnish empty rooms with AI. 8 design styles x 8 room types. Before/after slider. Pennies per room.", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20" },
+              { icon: Crosshair, title: "Drone Mark", desc: "Annotate aerial photos with lot lines, measurement labels, branded pins. 8 drawing tools. JPEG export.", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
+              { icon: ImageIcon, title: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, and social. Hard cap: 1920px, under 290KB. One-click for the whole set.", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
+              { icon: FileText, title: "Reports", desc: "Branded buyer & seller guides with AI-written content. Color swatches. Agent branding. PDF export.", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20" },
+              { icon: DollarSign, title: "Value Boost Report", desc: "Room-by-room DIY improvements with cost, time, and ROI estimates. Amazon affiliate links included.", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20" },
+              { icon: MapPin, title: "Location Value Score", desc: "1-100 composite neighborhood score. Amenities, trends, growth, infrastructure. Branded PDF export.", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", badge: "PRO" },
+            ].map((tool, i) => (
+              <div key={i} className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
+                {tool.badge && <span className="absolute top-4 right-4 text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">{tool.badge}</span>}
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
+                  <tool.icon className={`h-6 w-6 ${tool.color}`} />
+                </div>
+                <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
+                <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ WHAT YOU DO WITH IT — Export / CRM / Website ═══ */}
+      <section className="py-20 sm:py-24 border-t border-white/[0.04] bg-white/[0.02]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Your Content. Your Way.</h2>
+            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">Everything you create in P2V is yours. Use it however you want.</p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-6">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 ring-1 ring-cyan-400/20 mb-5"><Download className="h-6 w-6 text-cyan-400" /></div>
+              <h4 className="text-lg font-bold text-white/90 mb-2">Download & Export</h4>
+              <p className="text-sm text-white/40 leading-relaxed">PNG, PDF, JPEG, MP4. Download everything to your computer. Use it on MLS, Zillow, social, print — anywhere.</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-green-400/10 ring-1 ring-green-400/20 mb-5"><Share2 className="h-6 w-6 text-green-400" /></div>
+              <h4 className="text-lg font-bold text-white/90 mb-2">Push to Your CRM</h4>
+              <p className="text-sm text-white/40 leading-relaxed">Direct integrations with Salesforce, Follow Up Boss, HubSpot, Wise Agent, KVCore. One-click sync.</p>
+            </div>
+            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-6 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 ring-1 ring-cyan-400/20 mb-5"><Globe className="h-6 w-6 text-cyan-400" /></div>
+              <h4 className="text-lg font-bold text-white/90 mb-2">Your Agent Website</h4>
+              <p className="text-sm text-white/40 leading-relaxed">Everything you build lives on your own branded site. Custom domain. We handle hosting, SSL, and updates. <span className="text-cyan-400 font-semibold">$49/mo</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ AGENT WEBSITE PREVIEW ═══ */}
+      <section className="py-20 sm:py-24 border-t border-white/[0.04]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-cyan-400/15 bg-gradient-to-b from-cyan-400/[0.06] to-transparent p-8 sm:p-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20 flex items-center justify-center"><Monitor className="h-6 w-6 text-cyan-400" /></div>
+              <div>
+                <h3 className="text-2xl font-extrabold text-white">Your A+ Agent Website</h3>
+                <p className="text-sm text-white/40">The reason every tool exists</p>
+              </div>
+            </div>
+            <p className="text-white/50 leading-relaxed mb-8 max-w-2xl">Every description you write, every room you stage, every flyer you design, every report you generate — it all feeds your professional agent website. One platform builds your entire online presence.</p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {[
+                "Professional homepage with your branding",
+                "Property listing pages with lead capture",
+                "AI-generated SEO blog posts",
+                "Virtual tours & staged room galleries",
+                "Neighborhood scores & market data",
+                "Contact forms that go directly to you",
+              ].map((f, i) => (
+                <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span className="text-sm text-white/60">{f}</span></div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-4 items-center">
+              <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold px-6 py-3 rounded-xl">
+                Get Your Website — $49/mo <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <span className="text-sm text-white/30">or <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="text-cyan-400/70 hover:text-cyan-400 font-semibold transition-colors">buy outright for $399</button> — includes 3 months of Lens Pro</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PRICING ═══ */}
+      <section id="pricing" className="py-20 sm:py-24 border-t border-white/[0.04] bg-white/[0.02]">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Simple Pricing. No Surprises.</h2>
+            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">Start with a video. Try everything free for 10 days. Then pick the plan that fits.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {/* Start Here */}
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-3">Start here</p>
+              <h3 className="text-xl font-bold text-white mb-1">Order a Video</h3>
+              <div className="flex items-baseline gap-1 mb-4"><span className="text-3xl font-extrabold text-white">$79</span><span className="text-white/40 text-sm">one-time</span></div>
+              <ul className="space-y-2.5 mb-6">
+                {[
+                  "Cinematic listing walkthrough",
+                  "You own every clip",
+                  "Video Remix — free forever",
+                  "10-day trial of all AI tools",
+                  "Property profile with your media",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-white/60"><CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" />{item}</li>
+                ))}
+              </ul>
+              <Button asChild className="w-full bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] text-white font-bold py-5 rounded-xl">
+                <Link href="/order">Order a Video <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
+            </div>
+
+            {/* Lens Tools */}
+            <div className="rounded-2xl border-2 border-cyan-400/30 bg-cyan-400/[0.04] p-7 relative">
+              <span className="absolute -top-3 left-6 bg-cyan-400/20 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-400/30">MOST POPULAR</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-cyan-400/50 mb-3">All tools</p>
+              <h3 className="text-xl font-bold text-white mb-1">Lens Tools</h3>
+              <div className="flex items-baseline gap-1 mb-4"><span className="text-3xl font-extrabold text-white">$27</span><span className="text-white/40 text-sm">/month</span></div>
+              <ul className="space-y-2.5 mb-6">
+                {[
+                  "Every AI marketing tool",
+                  "Photo Coach, Design Studio, Staging",
+                  "Description Writer, Drone Mark",
+                  "Photo Optimizer, Reports",
+                  "Export & download everything",
+                  "CRM integrations (Salesforce, etc.)",
+                  "10% off every video order",
+                  "Priority processing",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-white/70"><CheckCircle className="h-4 w-4 text-cyan-400 flex-shrink-0 mt-0.5" />{item}</li>
+                ))}
+              </ul>
+              {isSubscriber ? (
+                <Button asChild className="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-5 rounded-xl">
+                  <Link href="/dashboard/lens"><CheckCircle className="mr-2 h-4 w-4" />Go to Dashboard</Link>
+                </Button>
+              ) : (
+                <Button onClick={() => handleSubscribe("monthly")} disabled={subscribingTools || loadingUser} className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-5 rounded-xl">
+                  {subscribingTools ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</> : !user && !loadingUser ? <><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</> : <>Subscribe — $27/mo<ArrowRight className="ml-2 h-4 w-4" /></>}
                 </Button>
               )}
-              <Button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="bg-white border border-border text-foreground hover:bg-muted h-14 px-8 text-lg font-bold rounded-full shadow-sm">
-                See All Features
+            </div>
+
+            {/* Lens Pro */}
+            <div className="rounded-2xl border-2 border-purple-400/30 bg-purple-400/[0.04] p-7 relative">
+              <span className="absolute -top-3 left-6 bg-purple-400/20 text-purple-400 text-xs font-bold px-3 py-1 rounded-full border border-purple-400/30">FULL PLATFORM</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-purple-400/50 mb-3">Tools + website</p>
+              <h3 className="text-xl font-bold text-white mb-1">Lens Pro</h3>
+              <div className="flex items-baseline gap-1 mb-4"><span className="text-3xl font-extrabold text-white">$49</span><span className="text-white/40 text-sm">/month</span></div>
+              <ul className="space-y-2.5 mb-6">
+                {[
+                  "Everything in Lens Tools",
+                  "A+ agent website on your domain",
+                  "Property pages with lead capture",
+                  "AI blog — auto SEO content",
+                  "Location Value Score",
+                  "We handle hosting, SSL, updates",
+                  "Custom domain setup",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-white/70"><CheckCircle className="h-4 w-4 text-purple-400 flex-shrink-0 mt-0.5" />{item}</li>
+                ))}
+              </ul>
+              <Button onClick={() => handleSubscribe("pro_monthly")} disabled={subscribingPro || loadingUser} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold py-5 rounded-xl">
+                {subscribingPro ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</> : !user && !loadingUser ? <><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</> : <>Subscribe — $49/mo<ArrowRight className="ml-2 h-4 w-4" /></>}
               </Button>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* SOCIAL PROOF */}
-      <section className="bg-muted/30 border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 py-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-center">
-          <div className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-accent" /><span className="text-sm font-semibold text-foreground">Listings with video get <span className="text-accent">403% more inquiries</span></span></div>
-          <div className="hidden sm:block h-5 w-px bg-border" />
-          <div className="flex items-center gap-2"><Camera className="h-5 w-5 text-accent" /><span className="text-sm font-semibold text-foreground">Professional photos sell <span className="text-accent">32% faster</span></span></div>
-          <div className="hidden sm:block h-5 w-px bg-border" />
-          <div className="flex items-center gap-2"><Star className="h-5 w-5 text-accent" /><span className="text-sm font-semibold text-foreground">15+ AI tools · <span className="text-accent">two plans</span></span></div>
-        </div>
-      </section>
-
-      {/* QUICK VIDEO */}
-      <section className="py-16 sm:py-20 bg-gradient-to-b from-cyan-50/50 to-background">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="bg-card rounded-2xl border border-cyan-200 p-6 sm:p-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center"><Film className="h-5 w-5 text-cyan-600" /></div>
+          {/* Buy-Out + Brokerage */}
+          <div className="grid sm:grid-cols-2 gap-6 mt-8 max-w-5xl mx-auto">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-amber-400/10 ring-1 ring-amber-400/20 flex items-center justify-center flex-shrink-0"><Shield className="h-5 w-5 text-amber-400" /></div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-extrabold text-foreground">Quick Videos</h2>
-                  <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">SUBSCRIBER EXCLUSIVE</span>
-                </div>
-                <p className="text-sm text-muted-foreground">5–14 clips at $4.95/clip · Starting at $24.75</p>
+                <h4 className="text-lg font-bold text-white mb-1">Website Buy-Out — $399</h4>
+                <p className="text-sm text-white/40 leading-relaxed">Full website export to your own domain. Includes 3 months of Lens Pro. One-click content updates from P2V. You handle hosting after that.</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 mb-5">
-              <div className="text-center p-3 bg-muted/50 rounded-xl"><p className="text-lg font-extrabold text-cyan-700">$24.75</p><p className="text-xs text-muted-foreground">Social Teaser · 5 clips</p></div>
-              <div className="text-center p-3 bg-muted/50 rounded-xl"><p className="text-lg font-extrabold text-cyan-700">$39.60</p><p className="text-xs text-muted-foreground">Listing Refresh · 8 clips</p></div>
-              <div className="text-center p-3 bg-muted/50 rounded-xl"><p className="text-lg font-extrabold text-cyan-700">$59.40</p><p className="text-xs text-muted-foreground">Open House · 12 clips</p></div>
-            </div>
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-5">
-              {["Custom branding", "Choice of music", "Under 12h delivery", "HD quality"].map((item) => (
-                <span key={item} className="flex items-center gap-1.5 text-sm text-muted-foreground"><CheckCircle className="h-3.5 w-3.5 text-cyan-600" />{item}</span>
-              ))}
-            </div>
-            <div className="text-center">
-              {isSubscriber ? (
-                <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-5 text-base"><Link href="/order">Order a Quick Video <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-              ) : (
-                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-5 text-base">
-                  Subscribe to Unlock Quick Videos <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08] flex items-center justify-center flex-shrink-0"><Building2 className="h-5 w-5 text-white/40" /></div>
+              <div>
+                <h4 className="text-lg font-bold text-white mb-1">Brokerage Plans</h4>
+                <p className="text-sm text-white/40 leading-relaxed">Custom pricing for teams of 10+ agents. Each agent gets their own login and full access. <Link href="mailto:support@realestatephoto2video.com?subject=Brokerage%20Pricing" className="text-cyan-400/70 hover:text-cyan-400 font-semibold transition-colors">Contact us →</Link></p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section id="features" className="py-20 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">Everything You Need to Market Your Listings</h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Purpose-built for real estate agents by real estate marketing professionals — not a generic AI platform.</p>
-          </div>
-
-          {/* Core Tools */}
-          <div className="flex items-center gap-2 mb-8">
-            <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center"><Sparkles className="h-4 w-4 text-accent" /></div>
-            <h3 className="text-xl font-extrabold text-foreground">Core Marketing Tools</h3>
-            <span className="text-xs bg-accent/10 text-accent font-bold px-2 py-0.5 rounded-full">INCLUDED IN ALL PLANS</span>
-          </div>
-
-          {/* Photo Coach */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center"><Camera className="h-6 w-6 text-blue-600" /></div>
-                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
-              </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">Never Miss a Shot with <span className="text-blue-600">AI Photo Coach</span></h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">Open a session per property, and the smart checklist makes sure you never forget a room. Snap a photo and get instant AI scoring with specific feedback — &ldquo;move 3 feet left, turn on the overhead light&rdquo; — then reshoot on the spot until it&apos;s perfect.</p>
-              <div className="space-y-2 mb-5">
-                {["Room-by-room checklist so you never miss a shot", "Instant 1-10 scoring with specific actionable feedback", "AI Edit: auto brightness, color, contrast correction", "HDR detection and horizon straightening", "Gallery management — approved photos ready for video orders"].map((point, i) => (
-                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
-                ))}
-              </div>
-              <Link href={toolLink("/dashboard/lens/coach")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Try Photo Coach <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <div className="flex items-center gap-3 mb-4"><div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center"><Sparkles className="h-4 w-4 text-blue-600" /></div><p className="text-sm font-semibold text-foreground">AI Photo Coach — Sample Feedback</p></div>
-              <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-                <div className="flex items-start gap-3"><div className="h-5 w-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5"><span className="text-red-600 text-xs font-bold">!</span></div><p className="text-sm text-foreground"><strong>Lighting:</strong> The kitchen is underexposed. Open the blinds on the east-facing window and turn on the overhead recessed lights.</p></div>
-                <div className="flex items-start gap-3"><div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5"><span className="text-amber-600 text-xs font-bold">~</span></div><p className="text-sm text-foreground"><strong>Angle:</strong> Step back 3 feet and shoot from the doorway at chest height to show full room depth.</p></div>
-                <div className="flex items-start gap-3"><div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5"><CheckCircle className="h-3.5 w-3.5 text-green-600" /></div><p className="text-sm text-foreground"><strong>Composition:</strong> Good framing with the island as a leading line. Keep this angle after fixing the lighting.</p></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Design Studio */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="order-2 lg:order-1">
-              <div className="bg-card rounded-2xl border border-border p-6 space-y-3">
-                <p className="text-sm font-semibold text-foreground mb-2">Template Types:</p>
-                {["Just Listed", "Open House", "Price Reduced", "Just Sold", "Yard Signs", "Property PDF Sheets", "Video Branding Cards"].map((t, i) => (
-                  <div key={i} className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-muted/50"><PenTool className="h-3.5 w-3.5 text-orange-500" /><span className="text-sm font-medium text-foreground">{t}</span></div>
-                ))}
-              </div>
-            </div>
-            <div className="order-1 lg:order-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center"><PenTool className="h-6 w-6 text-orange-600" /></div>
-                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
-              </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">Professional Marketing in 60 Seconds with <span className="text-orange-600">Design Studio</span></h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">Just Listed, Open House, Price Reduced, Just Sold graphics. Yard signs for print shops. Property PDF sheets. Video branding cards. Upload your headshot and logo once — they&apos;re saved for next time.</p>
-              <div className="space-y-2 mb-5">
-                {["7 template types for every listing stage", "Brokerage brand colors built in", "Saved headshot & logo auto-populate", "PNG + PDF export for print and social", "Video branding card designer for your orders"].map((point, i) => (
-                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
-                ))}
-              </div>
-              <Link href={toolLink("/dashboard/lens/design-studio")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Open Design Studio <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-          </div>
-
-          {/* Description Writer */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-teal-500/10 flex items-center justify-center"><MessageSquare className="h-6 w-6 text-teal-600" /></div>
-                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
-              </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">MLS Descriptions That Sell with <span className="text-teal-600">Description Writer</span></h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">Upload listing photos, enter property details, pick a writing style. AI analyzes every room then writes a polished, MLS-ready description.</p>
-              <div className="space-y-2 mb-5">
-                {["Claude Vision photo analysis — sees what's in every room", "4 styles: Professional, Luxury, Conversational, Concise", "Edit in-place, then copy to clipboard", "Works with Photo Coach gallery photos"].map((point, i) => (
-                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
-                ))}
-              </div>
-              <Link href={toolLink("/dashboard/lens/descriptions")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Write a Description <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <p className="text-sm font-semibold text-foreground mb-3">Writing Styles:</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[{ style: "Professional", desc: "Clean, MLS-standard tone" }, { style: "Luxury", desc: "Elevated, high-end language" }, { style: "Conversational", desc: "Warm, relatable voice" }, { style: "Concise", desc: "Tight, punchy, no fluff" }].map((s, i) => (
-                  <div key={i} className="bg-muted/50 rounded-xl p-3"><p className="font-bold text-foreground text-sm">{s.style}</p><p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p></div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Virtual Staging */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="order-2 lg:order-1">
-              <div className="bg-card rounded-2xl border border-border p-6">
-                <p className="text-sm font-semibold text-foreground mb-3">8 Design Styles:</p>
-                <div className="flex flex-wrap gap-2">{["Modern", "Traditional", "Minimalist", "Coastal", "Farmhouse", "Mid-Century", "Scandinavian", "Industrial"].map((s, i) => (<span key={i} className="text-xs font-medium bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg">{s}</span>))}</div>
-                <p className="text-sm font-semibold text-foreground mt-4 mb-2">8 Room Types:</p>
-                <div className="flex flex-wrap gap-2">{["Living Room", "Bedroom", "Kitchen", "Dining Room", "Office", "Bathroom", "Nursery", "Patio"].map((r, i) => (<span key={i} className="text-xs font-medium bg-muted text-foreground px-3 py-1.5 rounded-lg">{r}</span>))}</div>
-              </div>
-            </div>
-            <div className="order-1 lg:order-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center"><Sofa className="h-6 w-6 text-indigo-600" /></div>
-                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Live</span>
-              </div>
-              <h3 className="text-2xl font-extrabold text-foreground mb-3">Furnish Empty Rooms Instantly with <span className="text-indigo-600">Virtual Staging</span></h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">Upload a photo of an empty room, choose a style, and AI adds furniture while preserving the actual room architecture. Before/after comparison slider. 8 styles from Modern to Farmhouse.</p>
-              <div className="space-y-2 mb-5">
-                {["Preserves real room structure (not text-to-image)", "8 furniture styles × 8 room types", "Before/after comparison slider", "~$0.07 per staging — pennies per room"].map((point, i) => (
-                  <div key={i} className="flex items-start gap-2.5"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span className="text-sm text-foreground">{point}</span></div>
-                ))}
-              </div>
-              <Link href={toolLink("/dashboard/lens/staging")} className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent/80 transition-colors">Stage a Room <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-          </div>
-
-          {/* Subscriber Perks */}
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-extrabold text-foreground">Subscriber Perks on Every Video Order</h3>
-            <p className="mt-2 text-muted-foreground">Automatic benefits when you order listing videos</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4"><Film className="h-6 w-6 text-cyan-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">Quick Videos</h4><p className="text-sm text-muted-foreground leading-relaxed">5–14 clips at $4.95/clip. Starting at $24.75.</p></div>
-            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4"><ImageIcon className="h-6 w-6 text-emerald-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">Free Photo Enhancement</h4><p className="text-sm text-muted-foreground leading-relaxed">AI corrections on every photo — brightness, color, white balance. Normally $2.99/photo.</p></div>
-            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4"><Clock className="h-6 w-6 text-amber-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">Priority Processing</h4><p className="text-sm text-muted-foreground leading-relaxed">Your orders are processed first. Faster delivery every time.</p></div>
-            <div className="bg-card rounded-2xl border border-border p-6 hover:border-accent/40 hover:shadow-lg transition-all duration-300"><div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4"><Percent className="h-6 w-6 text-purple-600" /></div><h4 className="text-lg font-bold text-foreground mb-2">10% Off Every Video</h4><p className="text-sm text-muted-foreground leading-relaxed">Automatic discount at checkout. No coupon needed.</p></div>
-          </div>
-
-          {/* Pro Tools — CHANGED: Added "Coming Soon" badge to each card */}
-          <div className="mt-20">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center"><Zap className="h-4 w-4 text-purple-600" /></div>
-              <h3 className="text-xl font-extrabold text-foreground">Pro Tools</h3>
-              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">LENS PRO</span>
-            </div>
-            <p className="text-muted-foreground mb-10 max-w-2xl">Everything in Lens, plus a full business platform — your own website, AI-generated content, lead generation, and property intelligence tools.</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { icon: Globe, title: "Agent Website Builder", desc: "Your own professional website with custom domain. Branded, mobile-responsive, and built for lead capture." },
-                { icon: BookOpen, title: "AI Blog", desc: "Auto-generated SEO blog posts about your market area. Fresh content keeps your site ranking and builds authority." },
-                { icon: LayoutDashboard, title: "Property Portfolio", desc: "Private dashboard hub linking all content by address — photos, videos, descriptions, staging, and marketing materials in one place." },
-                { icon: FileText, title: "Property Websites", desc: "Single-listing microsites with lead capture. Share a branded link instead of a Zillow page. Every lead goes directly to you." },
-                { icon: MapPin, title: "Location Value Score", desc: "1–100 composite score with 5 sub-scores: schools, walkability, safety, amenities, and market trends. Use in listing presentations." },
-                { icon: Lightbulb, title: "Staging Ideas", desc: "Room-by-room staging suggestions powered by AI. Show sellers exactly how to prepare each room for photos and showings." },
-                { icon: TreePine, title: "Landscaping Ideas", desc: "Exterior improvement suggestions to boost curb appeal. AI analyzes the property and recommends high-impact, low-cost changes." },
-                { icon: DollarSign, title: "Value Boost Report", desc: "Private seller report with improvement recommendations and estimated ROI. Includes product links so sellers can take action immediately." },
-                { icon: Search, title: "Lead Finder", desc: "Search public records for motivated sellers — pre-foreclosures, divorces, probate, tax liens. 100 searches/mo + 50 skip traces included." },
-              ].map((tool, i) => (
-                <div key={i} className="bg-card rounded-2xl border border-border p-6 hover:border-purple-300 hover:shadow-lg transition-all duration-300">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center"><tool.icon className="h-6 w-6 text-purple-600" /></div>
-                    <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                      Coming Soon
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-foreground mb-2">{tool.title}</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="py-20 sm:py-24 bg-muted/30">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">How It Works</h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Subscribe once, use everything — on every listing.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { step: "1", title: "Subscribe", description: "Pick Lens or Lens Pro. Instant access to all tools — no setup, no onboarding.", icon: <Sparkles className="h-8 w-8" /> },
-              { step: "2", title: "Use the Tools", description: "Photo Coach during shoots, Design Studio for marketing, Description Writer for MLS, Virtual Staging for empty rooms. Pro adds websites, leads, and more.", icon: <Camera className="h-8 w-8" /> },
-              { step: "3", title: "Order Videos", description: "Quick Videos from $24.75, or full listings with priority processing, free photo editing, and 10% off — automatically.", icon: <Zap className="h-8 w-8" /> },
-            ].map((s, i) => (
-              <div key={i} className="text-center">
-                <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-5">{s.icon}</div>
-                <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-accent text-accent-foreground text-sm font-bold mb-3">{s.step}</div>
-                <h3 className="text-xl font-bold text-foreground mb-2">{s.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{s.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section id="pricing" className="py-20 sm:py-24">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">Simple, Transparent Pricing</h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Two plans — pick the one that matches where you are in your business.</p>
-          </div>
-          <div className="flex items-center justify-center gap-3 mb-10">
-            <button onClick={() => setBillingToggle("monthly")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${billingToggle === "monthly" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}>Monthly</button>
-            <button onClick={() => setBillingToggle("yearly")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${billingToggle === "yearly" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}>Yearly<span className="ml-1.5 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded-full font-bold">Save 2 months</span></button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Lens */}
-            <div className="bg-card rounded-2xl border-2 border-accent/40 p-8 relative">
-              <span className="absolute -top-3 left-6 bg-accent/10 text-accent text-xs font-bold px-3 py-1 rounded-full">MOST POPULAR</span>
-              <h3 className="text-lg font-bold text-foreground mb-1">P2V Lens</h3>
-              <p className="text-sm text-muted-foreground mb-5">Core marketing tools for every agent</p>
-              <div className="mb-6">{billingToggle === "monthly" ? (<div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$27.95</span><span className="text-muted-foreground text-sm">/month</span></div>) : (<div><div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$279</span><span className="text-muted-foreground text-sm">/year</span></div><p className="text-sm text-green-600 font-medium mt-1">$23.25/month — save $55.40</p></div>)}</div>
-              <ul className="space-y-3 mb-8">{["200 photo analyses / month", "AI Photo Coach with instant feedback", "Marketing Design Studio (7 templates)", "AI Listing Description Writer", "Virtual Staging (8 styles)", "Quick Videos ($4.95/clip, 5–14 clips)", "Free photo enhancement on video orders", "10% off all video orders", "Priority processing — first in queue"].map((item, i) => (<li key={i} className="flex items-start gap-2.5 text-sm text-foreground"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />{item}</li>))}</ul>
-              {isSubscriber ? (
-                <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-6 text-base"><Link href="/dashboard/lens"><CheckCircle className="mr-2 h-4 w-4" />You&apos;re Subscribed — Go to Dashboard</Link></Button>
-              ) : (
-                <Button onClick={() => handleSubscribe(billingToggle)} disabled={subscribing || loadingUser} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black py-6 text-base">{subscribing ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting to checkout...</>) : !user && !loadingUser ? (<><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</>) : (<>Subscribe Now<ArrowRight className="ml-2 h-4 w-4" /></>)}</Button>
-              )}
-              {!isSubscriber && <p className="text-center mt-3 text-xs text-muted-foreground">Try free — 3 photo analyses, 1 description, 1 staging, 3 design exports</p>}
-            </div>
-            {/* Lens Pro */}
-            <div className="bg-card rounded-2xl border-2 border-purple-400/40 p-8 relative">
-              <span className="absolute -top-3 left-6 bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">FULL PLATFORM</span>
-              <h3 className="text-lg font-bold text-foreground mb-1">P2V Lens Pro</h3>
-              <p className="text-sm text-muted-foreground mb-5">Marketing + websites + lead gen</p>
-              <div className="mb-6">{billingToggle === "monthly" ? (<div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$49.95</span><span className="text-muted-foreground text-sm">/month</span></div>) : (<div><div className="flex items-baseline gap-1"><span className="text-4xl font-extrabold text-foreground">$499</span><span className="text-muted-foreground text-sm">/year</span></div><p className="text-sm text-green-600 font-medium mt-1">$41.58/month — save $100.40</p></div>)}</div>
-              <ul className="space-y-3 mb-8">{["Everything in P2V Lens", "Agent Website Builder (custom domain)", "AI Blog (auto-generated SEO posts)", "Property Portfolio dashboard", "Property Websites with lead capture", "Location Value Score (1–100)", "Staging Ideas (room-by-room)", "Landscaping Ideas (curb appeal)", "Value Boost Report for sellers", "Lead Finder (100 searches/mo)", "Skip Tracing (50 records/mo)"].map((item, i) => (<li key={i} className="flex items-start gap-2.5 text-sm text-foreground"><CheckCircle className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />{item}</li>))}</ul>
-              <Button onClick={() => handleSubscribePro(billingToggle)} disabled={subscribingPro || loadingUser} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black py-6 text-base">{subscribingPro ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting to checkout...</>) : !user && !loadingUser ? (<><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</>) : (<>Subscribe to Pro<ArrowRight className="ml-2 h-4 w-4" /></>)}</Button>
-            </div>
-          </div>
-          {/* Brokerage */}
-          <div className="mt-10 max-w-4xl mx-auto">
-            <div className="bg-muted/50 rounded-2xl border border-border p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
-              <Building2 className="h-8 w-8 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1 text-center sm:text-left"><h4 className="text-lg font-bold text-foreground">Brokerage Plans</h4><p className="text-sm text-muted-foreground mt-1">$19.95/agent/month · Minimum 10 agents · Each agent gets their own login, 200 analyses/month, and all Lens tools.</p></div>
-              <div className="flex flex-col gap-2 flex-shrink-0"><Button asChild variant="outline" className="font-bold"><Link href="mailto:support@realestatephoto2video.com?subject=Brokerage%20Pricing%20Inquiry">Contact Us <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Link href="/P2V_Brokerage_Presentation.pdf" target="_blank" className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors text-center">Download PDF</Link></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-20 sm:py-24 bg-muted/30">
+      {/* ═══ FAQ ═══ */}
+      <section className="py-20 sm:py-24 border-t border-white/[0.04]">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14"><h2 className="text-3xl font-extrabold text-foreground">Frequently Asked Questions</h2></div>
+          <div className="text-center mb-14"><h2 className="text-3xl font-extrabold">Frequently Asked Questions</h2></div>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <div key={i} className="bg-card rounded-xl border border-border overflow-hidden">
-                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
-                  <span className="font-semibold text-foreground text-sm sm:text-base">{faq.q}</span>
-                  {openFaq === i ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+              <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-white/[0.04] transition-colors">
+                  <span className="font-semibold text-white/80 text-sm sm:text-base">{faq.q}</span>
+                  {openFaq === i ? <ChevronUp className="h-4 w-4 text-white/30 flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-white/30 flex-shrink-0" />}
                 </button>
-                {openFaq === i && <div className="px-6 pb-4"><p className="text-sm text-muted-foreground leading-relaxed">{faq.a}</p></div>}
+                {openFaq === i && <div className="px-6 pb-4"><p className="text-sm text-white/40 leading-relaxed">{faq.a}</p></div>}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="py-16 sm:py-20">
+      {/* ═══ FINAL CTA ═══ */}
+      <section className="py-16 sm:py-20 border-t border-white/[0.04]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">Start Your Free Trial Today</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">3 free photo analyses, 1 listing description, 1 virtual staging, 3 design exports — no credit card required to try.</p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">Start With a Video. Build Your Empire.</h2>
+          <p className="text-lg text-white/40 max-w-2xl mx-auto mb-8">One listing video unlocks 10 days of every marketing tool. No credit card for the trial. No commitment.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isSubscriber ? (
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg"><Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+              <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-6 text-lg rounded-xl">
+                <Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
+              </Button>
             ) : (
-              <Button onClick={() => handleSubscribe(billingToggle)} disabled={subscribing} className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-lg">{subscribing ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Redirecting...</>) : (<>Subscribe to P2V Lens<ArrowRight className="ml-2 h-5 w-5" /></>)}</Button>
+              <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
+                <Link href="/order">Order Your First Video — $79 <ArrowRight className="ml-2 h-5 w-5" /></Link>
+              </Button>
             )}
-            <Button asChild variant="outline" className="px-8 py-6 text-lg font-bold"><Link href="/order">Create a Listing Video</Link></Button>
           </div>
         </div>
       </section>
