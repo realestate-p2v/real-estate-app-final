@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Navigation } from "@/components/navigation";
-import { LensConversionTracker } from "@/components/lens-conversion-tracker";
-import { LensTrialBanner } from "@/components/lens-trial-banner";
-import { SignupSpin } from "@/components/signup-spin";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import {
   Camera,
@@ -55,6 +54,10 @@ import {
   Moon,
   ChevronDown,
 } from "lucide-react";
+
+/* ─── Lazy-loaded components (not needed for initial paint) ─── */
+const SignupSpin = dynamic(() => import("@/components/signup-spin").then(m => ({ default: m.SignupSpin })), { ssr: false });
+const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
 
 /* ─────────────────────────────────────────────
    Constants
@@ -311,9 +314,12 @@ export default function DashboardPage() {
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
     const init = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) { setCoreReady(true); return; }
+      const supabase = createClient();
+
+      // getSession reads from local token — much faster than getUser which hits network
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { setCoreReady(true); return; }
+      const authUser = session.user;
 
       setUser({
         id: authUser.id,
@@ -325,7 +331,7 @@ export default function DashboardPage() {
 
       const { data: usage } = await supabase
         .from("lens_usage")
-        .select("*, signup_prize_code")
+        .select("is_subscriber, subscription_tier, free_lens_expires_at, total_analyses, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_headshot_url, saved_logo_url, signup_prize_code")
         .eq("user_id", authUser.id)
         .single();
 
@@ -437,7 +443,7 @@ export default function DashboardPage() {
   const handleSaveProfile = async () => {
     if (!user) return;
     setSavingProfile(true);
-    const supabase = (await import("@/lib/supabase/client")).createClient();
+    const supabase = createClient();
     await supabase.from("lens_usage").upsert({
       user_id: user.id,
       saved_agent_name: profileForm.saved_agent_name,
@@ -465,7 +471,7 @@ export default function DashboardPage() {
       const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
       const result = await res.json();
       if (result.secure_url) {
-        const supabase = (await import("@/lib/supabase/client")).createClient();
+        const supabase = createClient();
         await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: result.secure_url }, { onConflict: "user_id" });
         setAgentProfile(prev => ({ ...prev, [field]: result.secure_url }));
         setProfileForm(prev => ({ ...prev, [field]: result.secure_url }));
