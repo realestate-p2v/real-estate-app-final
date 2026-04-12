@@ -550,6 +550,9 @@ export default function DesignStudioV2(){
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[exportStatus,setExportStatus]=useState("");const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
   const[mobilePanel,setMobilePanel]=useState<string|null>(null);
+  const[isMobile,setIsMobile]=useState(false);
+  useEffect(()=>{const check=()=>setIsMobile(window.innerWidth<850);check();window.addEventListener("resize",check);return()=>window.removeEventListener("resize",check);},[]);
+  useEffect(()=>{if(mobilePanel){document.body.style.overflow="hidden";}else{document.body.style.overflow="";}return()=>{document.body.style.overflow="";};},[mobilePanel]);
   const previewRef=useRef<HTMLDivElement>(null);
 
   const currentSize=SIZES.find(s=>s.id===selectedSize)!;
@@ -681,7 +684,7 @@ export default function DesignStudioV2(){
     else if(activeTab==="branding-card"){w=currentBrandOr.width;h=currentBrandOr.height;}
     else if(activeTab==="listing-flyer"){w=2550;h=3300;}
     else{w=currentSize.width;h=currentSize.height;}
-    const maxW=580,maxH=560;const s=Math.min(maxW/w,maxH/h,1)*(zoom/100);
+    const maxW=isMobile?Math.min(window.innerWidth-32,560):580,maxH=isMobile?400:560;const s=Math.min(maxW/w,maxH/h,1)*(zoom/100);
     return{scale:s,pW:w*s,pH:h*s,rawW:w,rawH:h};
   },[activeTab,currentSize,currentYardSize,currentBrandOr,currentRemixSize,zoom]);
   const{scale,pW,pH,rawW,rawH}=getPreviewDims();
@@ -809,6 +812,31 @@ export default function DesignStudioV2(){
     return null;
   };
 
+  const MobileSheet=({open,onClose,title,children}:{open:boolean;onClose:()=>void;title:string;children:React.ReactNode})=>{
+    if(!open)return null;
+    return(<>
+      <div onClick={onClose} style={{position:"fixed",inset:0,backgroundColor:"rgba(0,0,0,0.5)",zIndex:90}}/>
+      <div style={{position:"fixed",bottom:56,left:0,right:0,maxHeight:"60vh",backgroundColor:"#111116",borderTop:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px 16px 0 0",zIndex:95,overflowY:"auto",transform:open?"translateY(0)":"translateY(100%)",transition:"transform 0.3s ease"}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:"#111116",zIndex:2}}>
+          <span style={{fontSize:13,fontWeight:700,color:"#e4e4ea"}}>{title}</span>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"rgba(255,255,255,0.4)",cursor:"pointer",padding:4,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+        <div style={{padding:"0 0 16px"}}>{children}</div>
+      </div>
+    </>);
+  };
+
+  const MobileToolNav=()=>(
+    <div style={{position:"fixed",bottom:0,left:0,right:0,height:56,backgroundColor:"#111116",borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"space-around",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {currentPanels.map(p=>(
+        <button key={p.id} onClick={()=>{setLeftPanel(p.id);setMobilePanel(mobilePanel===p.id?null:p.id);}} style={{display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"6px 12px",color:mobilePanel===p.id?"#06b6d4":"rgba(255,255,255,0.35)",fontSize:9,fontWeight:600,fontFamily:"inherit"}}>
+          <p.icon style={{width:20,height:20}}/>
+          <span>{p.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   const css=`
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
     :root{--sb:#0c0c10;--ss:#151519;--ss2:#1c1c22;--sbr:rgba(255,255,255,0.06);--sa:#6366f1;--sag:rgba(99,102,241,0.15);--st:#e4e4ea;--std:rgba(255,255,255,0.4);--stm:rgba(255,255,255,0.2);--suc:#10b981;--sc:#09090d;--sf:'DM Sans',-apple-system,sans-serif;--si:rgba(255,255,255,0.03);--sih:rgba(255,255,255,0.05);--sdash:rgba(255,255,255,0.10);--schk:#fff;}
@@ -849,6 +877,24 @@ export default function DesignStudioV2(){
     .am-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--sbr);background:var(--si);cursor:pointer;font-size:11px;font-weight:600;color:var(--std);transition:all 0.15s;font-family:var(--sf);}.am-chip:hover{background:var(--sih);color:var(--st);}.am-chip.ac{border-color:var(--sa);background:var(--sag);color:var(--sa);}
     .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
     #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*='lensy'],iframe[src*='lensy']{display:none!important;visibility:hidden!important;}
+    @media(max-width:849px){
+      .st{height:auto;min-height:48px;flex-wrap:wrap;padding:8px 10px;gap:6px;}
+      .stb{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:1;min-width:0;}.stb::-webkit-scrollbar{display:none;}
+      .stbi{padding:5px 10px;font-size:11px;white-space:nowrap;}
+      .ssp{display:none;}
+      .sac .bi[title="Undo"],.sac .bi[title="Redo"],.sac .td{display:none;}
+      .sb .slr{display:none;}
+      .sb .slp{display:none;}
+      .sb .slp.mob-open{display:block;position:fixed;bottom:56px;left:0;right:0;width:100%;max-height:60vh;border-right:none;border-top:1px solid rgba(255,255,255,0.08);border-radius:16px 16px 0 0;z-index:95;box-shadow:0 -8px 32px rgba(0,0,0,0.4);}
+      .sb{flex-direction:column;}
+      .sc{padding-bottom:56px;}
+      .sct{bottom:72px;max-width:calc(100vw - 24px);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}.sct::-webkit-scrollbar{display:none;}
+      .fi,.ta,.ps{min-height:44px;font-size:14px;}
+      .mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90;}
+      .mob-export-fab{position:fixed;bottom:72px;right:16px;z-index:88;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--sa),#7c3aed);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(99,102,241,0.4);}
+      .mob-export-fab:active{transform:scale(0.95);}
+      .mob-prop-sel{width:100%!important;margin-left:0!important;}
+    }
   `;
 
 
@@ -859,9 +905,9 @@ export default function DesignStudioV2(){
         <a href="/dashboard" className="back-btn" title="Back"><ChevronLeft size={14}/></a>
         <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:"1px solid var(--sbr)",marginRight:6}}><div style={{width:30,height:30,background:"linear-gradient(135deg,var(--sa),#a855f7)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
-        <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}><Home size={14} color="var(--sa)"/><select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}><option value="">Select property...</option>{userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}<option value="__new__">{"\uff0b"} Enter manually</option></select></div>
+        <div style={{marginLeft:isMobile?0:12,display:"flex",alignItems:"center",gap:8,flex:isMobile?"1 1 100%":undefined}}><Home size={14} color="var(--sa)"/><select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:isMobile?"100%":220}}><option value="">Select property...</option>{userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}<option value="__new__">{"\uff0b"} Enter manually</option></select></div>
         <div className="ssp"/>
-        <div className="sac">
+        <div className="sac" style={isMobile?{display:"none"}:undefined}>
           <button className="bi" title="Undo"><Undo2 size={15}/></button>
           <button className="bi" title="Redo"><Redo2 size={15}/></button>
           <div className="td"/>
@@ -874,7 +920,7 @@ export default function DesignStudioV2(){
       <div className="sb">
         <div className="slr">{currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}</div>
 
-        <div className="slp">
+        <div className={`slp${isMobile&&mobilePanel?" mob-open":""}`}>
 
           {/* ── PANELS ── */}
 
@@ -942,6 +988,10 @@ export default function DesignStudioV2(){
           </div>
         </div>
       </div>
+
+      {isMobile&&mobilePanel&&<div className="mob-overlay" onClick={()=>setMobilePanel(null)}/>}
+      {isMobile&&<MobileToolNav/>}
+      {isMobile&&!exporting&&<button className="mob-export-fab" onClick={handleExport} disabled={exporting}><Download size={20}/></button>}
 
       {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
       {exporting&&exportStatus&&<div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",padding:"12px 20px",borderRadius:12,background:"var(--ss)",border:"1px solid var(--sbr)",boxShadow:"0 8px 32px rgba(0,0,0,0.4)",display:"flex",alignItems:"center",gap:10,fontFamily:"var(--sf)",zIndex:101}}><Loader2 size={14} color="var(--sa)" className="animate-spin"/><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>{exportStatus}</p></div>{exportProgress>0&&<div style={{width:36,height:36,borderRadius:"50%",background:`conic-gradient(var(--sa) ${exportProgress*3.6}deg, var(--sbr) 0deg)`,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:28,borderRadius:"50%",background:"var(--ss)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"var(--st)"}}>{exportProgress}%</div></div>}</div>}
