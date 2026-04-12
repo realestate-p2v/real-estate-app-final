@@ -261,7 +261,6 @@ interface ToolDef {
   stat?: string | null;
   badge?: string;
   badgeColor?: string;
-  locked?: boolean;
 }
 
 /* ─────────────────────────────────────────────
@@ -590,43 +589,34 @@ export default function DashboardPage() {
   const isVideoOnly = access.tier === "video_only";
   const isFreeAcct = access.tier === "free";
 
-  // Helper: badge & lock for a given tool key
+  // Helper: badge for a given tool key (informational only — cards always link to tool page)
   const gated = (toolKey: string) => {
     const ta = checkToolAccess(toolKey, access);
     if (ta.canUse) {
-      // Show trial countdown badge if on trial
       if (isTrial && access.trialDaysLeft !== undefined) {
-        return { badge: `TRIAL: ${access.trialDaysLeft}d`, badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: false };
+        return { badge: `TRIAL: ${access.trialDaysLeft}d`, badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" };
       }
-      return { badge: undefined, badgeColor: undefined, locked: false };
+      return { badge: undefined, badgeColor: undefined };
     }
-    if (ta.gateType === "upgrade_pro") return { badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20", locked: true };
-    if (ta.gateType === "subscribe") return { badge: "SUBSCRIBE", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", locked: true };
-    return { badge: "ORDER VIDEO", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20", locked: true };
-  };
-
-  // Helper: where does a locked card link?
-  const gatedHref = (toolKey: string, defaultHref: string) => {
-    const ta = checkToolAccess(toolKey, access);
-    if (ta.canUse) return defaultHref;
-    if (ta.gateType === "buy_video") return "/order";
-    return "/lens#pricing";
+    if (ta.gateType === "upgrade_pro") return { badge: "PRO", badgeColor: "text-amber-400 bg-amber-400/10 border-amber-400/20" };
+    if (ta.gateType === "subscribe") return { badge: "SUBSCRIBE", badgeColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" };
+    return { badge: "ORDER VIDEO", badgeColor: "text-green-400 bg-green-400/10 border-green-400/20" };
   };
 
   const tools: ToolDef[] = [
     { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
-    { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: gatedHref("video_remix", "/dashboard/lens/remix"), color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
-    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: gatedHref("description_writer", "/dashboard/lens/descriptions"), color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
-    { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: gatedHref("design_studio", "/dashboard/lens/design-studio"), color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
+    { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
+    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
+    { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
     { icon: Globe, label: "Website Builder", desc: "Property pages & full agent websites on your own domain", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", badge: "COMING SOON", badgeColor: "text-white/40 bg-white/[0.06] border-white/[0.08]" },
-    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: gatedHref("photo_optimizer", "/dashboard/lens/optimize"), color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
-    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: gatedHref("drone_mark", "/dashboard/lens/dronemark"), color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
-    { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: gatedHref("photo_coach", "/dashboard/lens/coach"), color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
-    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: gatedHref("virtual_staging", "/dashboard/lens/staging"), color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", ...gated("virtual_staging") },
-    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: gatedHref("custom_reports", "/dashboard/lens/reports"), color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("custom_reports") },
-    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: gatedHref("listing_flyer", "/dashboard/lens/design-studio"), color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
-    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: gatedHref("location_value_score", "/dashboard/lens/location-score"), color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
-    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: gatedHref("value_boost", "/dashboard/lens/value-boost"), color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
+    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
+    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
+    { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
+    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", ...gated("virtual_staging") },
+    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("custom_reports") },
+    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
+    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "/dashboard/lens/location-score", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
+    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "/dashboard/lens/value-boost", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
   ];
 
   const subscriberPerks = [
@@ -962,13 +952,12 @@ export default function DashboardPage() {
               <Link
                 key={tool.label}
                 href={tool.href}
-                className={`mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] ${tool.locked ? "opacity-60" : ""}`}
+                className="mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
                 style={{ animationDelay: `${0.28 + i * 0.05}s` }}
               >
                 {/* Badge */}
                 {tool.badge && (
                   <span className={`absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || "text-amber-400 bg-amber-400/10 border-amber-400/20"}`}>
-                    {tool.locked && <Lock className="inline h-2.5 w-2.5 mr-0.5" />}
                     {tool.badge}
                   </span>
                 )}
@@ -981,7 +970,7 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-xs leading-relaxed text-white/40">{tool.desc}</p>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-400/60 group-hover:text-cyan-400 transition-colors mt-auto pt-1">
-                  {tool.locked ? <>Unlock<Lock className="h-3 w-3" /></> : <>Open<ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" /></>}
+                  Open<ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </Link>
             ))}
