@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/client";
-
-const anthropic = new Anthropic();
 
 const platformTones: Record<string, string> = {
   instagram:
@@ -54,6 +51,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Anthropic API key not configured" },
+        { status: 500 }
+      );
+    }
+
     // Pull agent's past descriptions for voice matching
     const supabase = createClient();
     const { data: pastDescriptions } = await supabase
@@ -93,16 +98,34 @@ Platform tone: ${platformTone}
 
 Write the caption now:`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: platform === "blog" ? 800 : 400,
-      messages: [{ role: "user", content: userPrompt }],
-      system: systemPrompt,
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: platform === "blog" ? 800 : 400,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+      }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Anthropic API error:", response.status, errorText);
+      return NextResponse.json(
+        { error: "Caption generation failed" },
+        { status: 500 }
+      );
+    }
+
+    const data = await response.json();
     const caption =
-      response.content[0]?.type === "text"
-        ? response.content[0].text.trim()
+      data.content?.[0]?.type === "text"
+        ? data.content[0].text.trim()
         : "";
 
     return NextResponse.json({ caption, platform, contentType });
