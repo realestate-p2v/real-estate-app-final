@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Paintbrush, Sun, Moon, Printer, Globe, Video,
   Clock, ArrowUp, ArrowDown, Trash2, Lock,
 } from "lucide-react";
+import { GateOverlay } from "@/components/gate-overlay";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
 function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
@@ -538,6 +539,8 @@ export default function DesignStudioV2(){
   const[remixClipSources,setRemixClipSources]=useState<{orderId:string;address:string;date:string;clips:{url:string;thumbnail:string|null;label:string}[]}[]>([]);
   const[loadingRemixClips,setLoadingRemixClips]=useState(false);
   const[isLensSubscriber,setIsLensSubscriber]=useState(false);
+  const[showGate,setShowGate]=useState(false);
+  const[gateType,setGateType]=useState<"buy_video"|"subscribe"|"upgrade_pro">("buy_video");
   const[hasVideoOrders,setHasVideoOrders]=useState<boolean|null>(null);
   const[remixPlaying,setRemixPlaying]=useState(false);
   const[remixPlayingIdx,setRemixPlayingIdx]=useState(0);
@@ -581,10 +584,20 @@ export default function DesignStudioV2(){
     (async()=>{
       try{
         const supabase=(await import("@/lib/supabase/client")).createClient();
-        const{data:{user}}=await supabase.auth.getUser();if(!user)return;
+        const{data:{session}}=await supabase.auth.getSession();if(!session?.user)return;
+        const user=session.user;
         const ADMIN_EMAILS=["realestatephoto2video@gmail.com"];
         if(user.email&&ADMIN_EMAILS.includes(user.email)){setIsLensSubscriber(true);}
-        else{const{data:usageCheck}=await supabase.from("lens_usage").select("is_subscriber").eq("user_id",user.id).single();if(usageCheck?.is_subscriber)setIsLensSubscriber(true);}
+        else{
+          const[usageRes,orderRes]=await Promise.all([
+            supabase.from("lens_usage").select("is_subscriber,subscription_tier,trial_expires_at").eq("user_id",user.id).single(),
+            supabase.from("orders").select("*",{count:"exact",head:true}).eq("user_id",user.id).eq("payment_status","paid"),
+          ]);
+          const usage=usageRes.data;const hasPaid=(orderRes.count||0)>0;
+          const isSub=usage?.is_subscriber;const hasActiveTrial=usage?.trial_expires_at&&new Date(usage.trial_expires_at)>new Date();
+          if(isSub||hasActiveTrial){setIsLensSubscriber(true);}
+          else{setGateType(hasPaid?"subscribe":"buy_video");}
+        }
         const{data}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).single();
         if(data){
           if(data.saved_headshot_url){setHeadshot(data.saved_headshot_url);setBrandHeadshot(data.saved_headshot_url);}
@@ -725,6 +738,7 @@ export default function DesignStudioV2(){
   };
 
   const handleExport=async()=>{
+    if(!isLensSubscriber){setShowGate(true);return;}
     if(isVideoMode&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
       const ok=window.confirm("Video encoding works best on desktop. Mobile may run out of memory.\n\nProceed?");
       if(!ok)return;
@@ -738,6 +752,7 @@ export default function DesignStudioV2(){
   };
 
   const handleExportPdf=async()=>{
+    if(!isLensSubscriber){setShowGate(true);return;}
     setExporting(true);
     try{await exportPdf();}catch(err:any){console.error("PDF export error:",err);notify(err?.message||"PDF export failed.");}
     setExporting(false);
@@ -995,6 +1010,7 @@ export default function DesignStudioV2(){
 
       {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
       {exporting&&exportStatus&&<div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",padding:"12px 20px",borderRadius:12,background:"var(--ss)",border:"1px solid var(--sbr)",boxShadow:"0 8px 32px rgba(0,0,0,0.4)",display:"flex",alignItems:"center",gap:10,fontFamily:"var(--sf)",zIndex:101}}><Loader2 size={14} color="var(--sa)" className="animate-spin"/><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>{exportStatus}</p></div>{exportProgress>0&&<div style={{width:36,height:36,borderRadius:"50%",background:`conic-gradient(var(--sa) ${exportProgress*3.6}deg, var(--sbr) 0deg)`,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:28,borderRadius:"50%",background:"var(--ss)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"var(--st)"}}>{exportProgress}%</div></div>}</div>}
+      {showGate&&<GateOverlay gateType={gateType} toolName="Design Studio" onClose={()=>setShowGate(false)}/>}
     </div></>
   );
 }
