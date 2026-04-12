@@ -97,10 +97,10 @@ export default function LensPage() {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 text-cyan-400 text-sm font-bold tracking-wider uppercase mb-6">
               <Sparkles className="w-4 h-4" />
-              Built for Real Estate. Not Repurposed.
+              Listing Photos Make Unlimited Content
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight">
-              Your Photos Become<br />
+              Listing Photos Become<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">Your Entire Marketing Engine</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
@@ -128,26 +128,26 @@ export default function LensPage() {
         </div>
       </section>
 
-      {/* ═══ HOW IT WORKS — The Funnel ═══ */}
+      {/* ═══ HOW IT WORKS — Warm & Inviting ═══ */}
       <section className="py-20 sm:py-24 border-t border-white/[0.04]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold">One Video Unlocks Everything</h2>
-            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">Your listing photos are the starting point. Every tool builds on them.</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Here&apos;s How It Works</h2>
+            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">From photos to a full marketing suite in four simple steps — and you get to try everything before you commit.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { step: "1", icon: Camera, title: "Upload Photos", desc: "Upload your listing photos and order a cinematic walkthrough video.", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
-              { step: "2", icon: Film, title: "Get Your Video", desc: "We produce your video. You own every clip. Remix them forever — free.", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20" },
-              { step: "3", icon: Zap, title: "10 Days Free", desc: "All AI tools unlock. Build descriptions, flyers, staging, reports — everything.", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
-              { step: "4", icon: Globe, title: "Subscribe & Grow", desc: "Keep your tools at $27/mo. Add your own agent website at $49/mo.", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20" },
+              { step: "1", icon: Camera, title: "Upload Your Photos", desc: "Send us your listing photos and we'll turn them into a cinematic walkthrough video.", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20", border: "border-cyan-400/15" },
+              { step: "2", icon: Film, title: "Get Your Video & Clips", desc: "You own every clip. Remix them into social content forever — that's included, always free.", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", border: "border-purple-400/15" },
+              { step: "3", icon: Zap, title: "Explore Every Tool Free", desc: "All AI tools unlock for 10 days. Write descriptions, stage rooms, design flyers — go wild.", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", border: "border-amber-400/15" },
+              { step: "4", icon: Globe, title: "Keep Growing", desc: "Love it? Stay on Lens Tools for $27/mo — or add your own agent website for $49/mo.", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20", border: "border-green-400/15" },
             ].map((s, i) => (
-              <div key={i} className="relative text-center">
-                <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl ${s.bg} ring-1 ${s.ring} mb-5`}>
-                  <s.icon className={`h-7 w-7 ${s.color}`} />
+              <div key={i} className={`rounded-2xl border ${s.border} bg-white/[0.02] p-6 text-center`}>
+                <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${s.bg} ring-1 ${s.ring} mb-4`}>
+                  <s.icon className={`h-6 w-6 ${s.color}`} />
                 </div>
-                <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-white/[0.08] text-white/60 text-sm font-bold mb-3">{s.step}</div>
-                <h3 className="text-lg font-bold text-white/90 mb-2">{s.title}</h3>
+                <div className={`inline-flex items-center justify-center h-6 w-6 rounded-full ${s.bg} ${s.color} text-xs font-bold mb-3`}>{s.step}</div>
+                <h3 className="text-base font-bold text-white/90 mb-2">{s.title}</h3>
                 <p className="text-sm text-white/40 leading-relaxed">{s.desc}</p>
               </div>
             ))}
@@ -163,6 +163,35 @@ export default function LensPage() {
           <div className="flex items-center gap-2"><Camera className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60">Professional photos sell <span className="text-cyan-400">32% faster</span></span></div>
           <div className="hidden sm:block h-5 w-px bg-white/[0.08]" />
           <div className="flex items-center gap-2"><Star className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60"><span className="text-cyan-400">10+ AI tools</span> built for real estate</span></div>
+        </div>
+      </section>
+
+      {/* ═══ QUICK VIDEOS CTA ═══ */}
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-cyan-400/20 bg-gradient-to-r from-cyan-400/[0.06] to-indigo-400/[0.04] p-8 sm:p-10 text-center">
+            <div className="inline-flex items-center gap-2 bg-cyan-400/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-400/20 mb-5">
+              <Film className="h-3.5 w-3.5" />
+              SUBSCRIBER EXCLUSIVE
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">Quick Videos — $4.95 per clip</h3>
+            <p className="text-white/50 max-w-xl mx-auto mb-6">Need a fast social teaser or an open house highlight? Lens subscribers get short-form videos starting at just $4.95 per clip. Pick 5–14 clips, add branding and music, delivered in under 12 hours.</p>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-8">
+              {[
+                { clips: "5 clips", price: "$24.75", label: "Social Teaser" },
+                { clips: "8 clips", price: "$39.60", label: "Listing Refresh" },
+                { clips: "12 clips", price: "$59.40", label: "Open House" },
+              ].map(p => (
+                <div key={p.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-5 py-3 text-center">
+                  <p className="text-lg font-extrabold text-cyan-400">{p.price}</p>
+                  <p className="text-xs text-white/40">{p.label} · {p.clips}</p>
+                </div>
+              ))}
+            </div>
+            <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-5 text-base rounded-xl shadow-lg shadow-cyan-500/20">
+              <Link href="/order">Order Quick Videos <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            </Button>
+          </div>
         </div>
       </section>
 
