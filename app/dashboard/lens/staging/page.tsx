@@ -23,6 +23,7 @@ import {
   Home,
 } from "lucide-react";
 import { SpinWheel } from "@/components/spin-wheel";
+import { GateOverlay } from "@/components/gate-overlay";
 
 const ADMIN_EMAIL = "realestatephoto2video@gmail.com";
 const MONTHLY_STAGING_LIMIT = 25;
@@ -237,6 +238,8 @@ function VirtualStagingPageInner() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
+  const [showGate, setShowGate] = useState(false);
+  const [gateType, setGateType] = useState<"buy_video" | "subscribe" | "upgrade_pro">("buy_video");
   const [stagingCount, setStagingCount] = useState(0);
   const [monthlyCount, setMonthlyCount] = useState(0);
 
@@ -273,12 +276,13 @@ function VirtualStagingPageInner() {
     const init = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
         setLoading(false);
         return;
       }
+      const user = session.user;
       setUser(user);
 
       const admin = user.email === ADMIN_EMAIL;
@@ -287,12 +291,27 @@ function VirtualStagingPageInner() {
       if (admin) {
         setIsSubscriber(true);
       } else {
-        const { data: usage } = await supabase
-          .from("lens_usage")
-          .select("is_subscriber")
-          .eq("user_id", user.id)
-          .single();
-        if (usage?.is_subscriber) setIsSubscriber(true);
+        const [usageRes, orderRes] = await Promise.all([
+          supabase
+            .from("lens_usage")
+            .select("is_subscriber, subscription_tier, trial_expires_at")
+            .eq("user_id", user.id)
+            .single(),
+          supabase
+            .from("orders")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .eq("payment_status", "paid"),
+        ]);
+        const usage = usageRes.data;
+        const hasPaid = (orderRes.count || 0) > 0;
+        const isSub = usage?.is_subscriber;
+        const hasActiveTrial = usage?.trial_expires_at && new Date(usage.trial_expires_at) > new Date();
+        if (isSub || hasActiveTrial) {
+          setIsSubscriber(true);
+        } else {
+          setGateType(hasPaid ? "subscribe" : "buy_video");
+        }
       }
 
       const { data: stagings, count } = await supabase
@@ -409,6 +428,12 @@ function VirtualStagingPageInner() {
   // ── Generate staging ──
   const handleGenerate = async () => {
     if (!photoUrl || !user) return;
+
+    // Gate: non-subscribers cannot stage
+    if (!isSubscriber && !isAdmin) {
+      setShowGate(true);
+      return;
+    }
 
     setGenerating(true);
     setError("");
@@ -942,6 +967,9 @@ function VirtualStagingPageInner() {
           onClose={() => setShowSurpriseWheel(false)}
         />
       )}
+
+      {/* Access gate overlay */}
+      {showGate && <GateOverlay gateType={gateType} toolName="Virtual Staging" onClose={() => setShowGate(false)} />}
     </div>
   );
 }
