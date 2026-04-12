@@ -8,6 +8,8 @@ import {
   buildToolSupportPrompt,
   buildSalesPrompt,
   buildAgentPersonaContext,
+  buildPortalPrompt,
+  buildAgentSitePrompt,
   type LensyMode,
 } from "@/lib/lensy/build-context";
 
@@ -27,7 +29,8 @@ export async function POST(request: NextRequest) {
       mode = "sales" as LensyMode,
       conversationId = null,
       visitorSession = null,
-      agentUserId = null, // Required for buyer_facing mode (public visitors)
+      agentUserId = null, // Required for buyer_facing + agent_site modes
+      currentListingAddress = null, // Portal mode: current listing context
     } = body;
 
     if (!message || typeof message !== "string") {
@@ -36,13 +39,13 @@ export async function POST(request: NextRequest) {
 
     // ── Determine auth context ──────────────────────────────
     // tool_support: user must be authenticated (subscriber)
-    // sales: works for anyone (logged in or not)
-    // buyer_facing: no auth required, but agentUserId must be provided
+    // sales, portal: works for anyone (logged in or not)
+    // buyer_facing, agent_site: no auth required, but agentUserId must be provided
     let userId: string | null = null;
 
-    if (mode === "buyer_facing") {
+    if (mode === "buyer_facing" || mode === "agent_site") {
       if (!agentUserId) {
-        return NextResponse.json({ error: "agentUserId is required for buyer_facing mode" }, { status: 400 });
+        return NextResponse.json({ error: "agentUserId is required for this mode" }, { status: 400 });
       }
     } else if (mode === "tool_support") {
       const supabase = await createClient();
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
       }
       userId = user.id;
     } else {
-      // Sales mode — try to get user but don't require it
+      // Sales + portal mode — try to get user but don't require it
       try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -62,12 +65,106 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const effectiveUserId = mode === "buyer_facing" ? agentUserId : userId;
+    const effectiveUserId = (mode === "buyer_facing" || mode === "agent_site") ? agentUserId : userId;
 
     // ── Build system prompt based on mode ───────────────────
     let systemPrompt = "";
 
-    if (propertyId && (mode === "buyer_facing" || mode === "tool_support")) {
+    if (mode === "portal") {
+      // ── Portal mode: p2v.homes public pages ──
+      systemPrompt = buildPortalPrompt();
+
+      // If viewing a specific listing, add context
+      if (currentListingAddress) {
+        const adminSupabase = createAdminClient();
+        const { data: listing } = await adminSupabase
+          .from("agent_properties")
+          .select("address, city, state, price, bedrooms, bathrooms, sqft, status, special_features, amenities")
+          .ilike("address", `%${currentListingAddress}%`)
+          .eq("website_published", true)
+          .is("merged_into_id", null)
+          .limit(1)
+          .single();
+        if (listing) {
+          systemPrompt += `\n\nTHE VISITOR IS CURRENTLY VIEWING:\n- Address: ${listing.address}`;
+          if (listing.city) systemPrompt += `\n- City: ${listing.city}`;
+          if (listing.state) systemPrompt += `\n- State: ${listing.state}`;
+          if (listing.price) systemPrompt += `\n- Price: $${listing.price.toLocaleString()}`;
+          if (listing.bedrooms) systemPrompt += `\n- Bedrooms: ${listing.bedrooms}`;
+          if (listing.bathrooms) systemPrompt += `\n- Bathrooms: ${listing.bathrooms}`;
+          if (listing.sqft) systemPrompt += `\n- Square feet: ${listing.sqft.toLocaleString()}`;
+          if (listing.status) systemPrompt += `\n- Status: ${listing.status}`;
+          if (listing.special_features?.length) systemPrompt += `\n- Features: ${listing.special_features.join(", ")}`;
+          if (listing.amenities?.length) systemPrompt += `\n- Amenities: ${listing.amenities.join(", ")}`;
+        }
+      }
+
+    } else if (mode === "agent_site") {
+      // ── Agent site mode: [handle].p2v.homes or custom domain ──
+      const adminSupabase = createAdminClient();
+
+      const { data: agentUsage } = await adminSupabase
+        .from("lens_usage")
+        .select("saved_agent_name, saved_phone, saved_email, saved_company")
+        .eq("user_id", agentUserId)
+        .single();
+
+      const { data: agentListings } = await adminSupabase
+        .from("agent_properties")
+        .select("address, city, state, price, bedrooms, bathrooms, sqft, status, special_features, website_slug")
+        .eq("user_id", agentUserId)
+        .eq("website_published", true)
+        .is("merged_into_id", null);
+
+      let currentProp = null;
+      if (propertyId) {
+        const { data: prop } = await adminSupabase
+          .from("agent_properties")
+          .select("address, price, bedrooms, bathrooms, sqft, special_features")
+          .eq("id", propertyId)
+          .single();
+        // Column is "description" not "content"
+        const { data: desc } = await adminSupabase
+          .from("lens_descriptions")
+          .select("description")
+          .eq("user_id", agentUserId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (prop) currentProp = { ...prop, description: desc?.[0]?.description };
+      }
+
+      systemPrompt = buildAgentSitePrompt(
+        {
+          name: agentUsage?.saved_agent_name || "the agent",
+          company: agentUsage?.saved_company,
+          phone: agentUsage?.saved_phone,
+          email: agentUsage?.saved_email,
+        },
+        (agentListings || []).map((l) => ({
+          address: l.address,
+          city: l.city,
+          state: l.state,
+          price: l.price,
+          beds: l.bedrooms,
+          baths: l.bathrooms,
+          sqft: l.sqft,
+          status: l.status,
+          specialFeatures: l.special_features,
+        })),
+        currentProp
+          ? {
+              address: currentProp.address,
+              price: currentProp.price,
+              beds: currentProp.bedrooms,
+              baths: currentProp.bathrooms,
+              sqft: currentProp.sqft,
+              specialFeatures: currentProp.special_features,
+              description: currentProp.description,
+            }
+          : null
+      );
+
+    } else if (propertyId && (mode === "buyer_facing" || mode === "tool_support")) {
       // Property-specific chat (property website or support viewing a property)
       const context = await buildLensyContext(propertyId, mode, effectiveUserId!);
 
@@ -115,7 +212,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
+        max_tokens: mode === "portal" || mode === "agent_site" ? 500 : 1024,
         system: systemPrompt,
         messages,
         stream: true,
@@ -180,7 +277,11 @@ export async function POST(request: NextRequest) {
                     message,
                     response: fullResponse,
                     history: recentHistory,
-                    source: mode === "buyer_facing"
+                    source: mode === "portal"
+                      ? "portal"
+                      : mode === "agent_site"
+                      ? "agent_website"
+                      : mode === "buyer_facing"
                       ? (propertyId ? "property_website" : "agent_website")
                       : "dashboard",
                     mode,
@@ -273,8 +374,6 @@ async function saveConversation({
       .select("id")
       .single();
 
-    // Return the conversation ID — the client should store this
-    // for subsequent messages in the same chat session
     return data?.id;
   }
 }
