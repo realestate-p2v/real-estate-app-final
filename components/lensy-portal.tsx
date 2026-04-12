@@ -1,6 +1,6 @@
 "use client";
 
-import { LensyChatBase } from "./lensy-chat-base";
+import { LensyChatBase } from "./lensy/lensy-chat-base";
 import { Calendar } from "lucide-react";
 
 // ============================================================
