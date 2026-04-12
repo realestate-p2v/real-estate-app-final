@@ -74,7 +74,7 @@ export default async function AgentContactPage({ params }: Props) {
         </div>
 
         {/* Contact form */}
-        <form action="/api/websites/contact" method="POST" className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 sm:p-8">
+        <form action="https://realestatephoto2video.com/api/websites/contact" method="POST" className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 sm:p-8">
           <input type="hidden" name="agent_user_id" value={website.user_id} />
 
           <div>
