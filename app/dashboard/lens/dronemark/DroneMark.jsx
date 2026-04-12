@@ -250,7 +250,7 @@ export default function DroneMark({ agentLogo, isLensSubscriber = false, gateTyp
 
   useEffect(() => { function h(e) { if (e.key === "Escape") cancelDraw(); if ((e.key === "Delete" || e.key === "Backspace") && selId && !e.target.closest("input,textarea")) { e.preventDefault(); deleteShape(selId); } if ((e.metaKey || e.ctrlKey) && e.key === "z") { e.preventDefault(); undo(); } if ((e.metaKey || e.ctrlKey) && e.key === "y") { e.preventDefault(); redo(); } } window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); });
 
-  function onPhotoUpload(e) { const f = e.target.files?.[0]; if (!f) return; const url = URL.createObjectURL(f); const img = new Image(); img.onload = () => { setNatW(img.naturalWidth); setNatH(img.naturalHeight); setPhoto(url); setShapes([]); histRef.current = { stack: [[]], idx: 0 }; }; img.src = url; }
+  function onPhotoUpload(e) { if (!isLensSubscriber) { setShowGate(true); e.target.value = ""; return; } const f = e.target.files?.[0]; if (!f) return; const url = URL.createObjectURL(f); const img = new Image(); img.onload = () => { setNatW(img.naturalWidth); setNatH(img.naturalHeight); setPhoto(url); setShapes([]); histRef.current = { stack: [[]], idx: 0 }; }; img.src = url; }
   function onLogoUpload(e) { const f = e.target.files?.[0]; if (!f) return; const reader = new FileReader(); reader.onload = (ev) => { sty.current.logo = ev.target.result; setUiLogoKey(k => k + 1); }; reader.readAsDataURL(f); }
 
   async function doExport() {
