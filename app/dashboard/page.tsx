@@ -347,10 +347,34 @@ export default function DashboardPage() {
         }
       }
 
-      const { data: sessions } = await supabase
-        .from("lens_sessions")
-        .select("total_analyses")
-        .eq("user_id", authUser.id);
+      // ── Fire all independent queries in parallel ──
+      const [
+        sessionsResult,
+        sessionCountResult,
+        descCountResult,
+        propCountResult,
+        propsResult,
+        publishedSitesResult,
+        directoryResult,
+      ] = await Promise.all([
+        supabase.from("lens_sessions").select("total_analyses").eq("user_id", authUser.id),
+        supabase.from("lens_sessions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
+        supabase.from("lens_descriptions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
+        supabase.from("agent_properties").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
+        supabase.from("agent_properties")
+          .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features")
+          .eq("user_id", authUser.id).is("merged_into_id", null)
+          .order("updated_at", { ascending: false }).limit(5),
+        supabase.from("agent_properties")
+          .select("id, address, website_slug, website_published, website_curated")
+          .eq("user_id", authUser.id).eq("website_published", true)
+          .is("merged_into_id", null).not("website_slug", "is", null)
+          .order("updated_at", { ascending: false }).limit(6),
+        fetch("/api/directory/me").then(r => r.json()).catch(() => ({ success: false })),
+      ]);
+
+      // ── Process subscription from sessions data ──
+      const sessions = sessionsResult.data;
       const totalFromSessions = (sessions || []).reduce((sum: number, s: { total_analyses: number | null }) => sum + (s.total_analyses || 0), 0);
       const totalAnalyses = Math.max(usage?.total_analyses || 0, totalFromSessions);
 
@@ -363,7 +387,7 @@ export default function DashboardPage() {
           const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
           if (daysLeft <= 0) {
             setFreeLensExpired(true);
-            await supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
+            supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
             setSubscription({ active: false, plan: null, analysesUsed: totalAnalyses, analysesLimit: 200, renewsAt: null });
           } else {
             setIsFreePrize(true);
@@ -375,43 +399,13 @@ export default function DashboardPage() {
         }
       }
 
-      const { count: sessionCount } = await supabase.from("lens_sessions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id);
-      setCoachSessionCount(sessionCount || 0);
-
-      const { count: descCount } = await supabase.from("lens_descriptions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id);
-      setDescriptionCount(descCount || 0);
-
-      const { count: propCount } = await supabase.from("agent_properties").select("*", { count: "exact", head: true }).eq("user_id", authUser.id);
-      setPropertyCount(propCount || 0);
-
-      // Recent properties for quick links
-      const { data: props } = await supabase
-        .from("agent_properties")
-        .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features")
-        .eq("user_id", authUser.id)
-        .is("merged_into_id", null)
-        .order("updated_at", { ascending: false })
-        .limit(5);
-      if (props) setRecentProperties(props);
-
-      // Published property websites
-      const { data: publishedSites } = await supabase
-        .from("agent_properties")
-        .select("id, address, website_slug, website_published, website_curated")
-        .eq("user_id", authUser.id)
-        .eq("website_published", true)
-        .is("merged_into_id", null)
-        .not("website_slug", "is", null)
-        .order("updated_at", { ascending: false })
-        .limit(6);
-      if (publishedSites) setPublishedWebsites(publishedSites);
-
-      // Directory listing check
-      try {
-        const res = await fetch("/api/directory/me");
-        const data = await res.json();
-        setHasDirectoryListing(data.success && !!data.photographer);
-      } catch { setHasDirectoryListing(false); }
+      // ── Apply results from parallel queries ──
+      setCoachSessionCount(sessionCountResult.count || 0);
+      setDescriptionCount(descCountResult.count || 0);
+      setPropertyCount(propCountResult.count || 0);
+      if (propsResult.data) setRecentProperties(propsResult.data);
+      if (publishedSitesResult.data) setPublishedWebsites(publishedSitesResult.data);
+      setHasDirectoryListing(directoryResult.success && !!directoryResult.photographer);
 
       setIsLoading(false);
     };
