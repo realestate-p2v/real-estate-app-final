@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { GateOverlay } from "@/components/gate-overlay";
 
 /* ─── helpers ─── */
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -123,7 +124,7 @@ function Slider({ min, max, value, onChange, suffix }) {
 /* ═══════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
-export default function DroneMark({ agentLogo }) {
+export default function DroneMark({ agentLogo, isLensSubscriber = false, gateType = "buy_video" }) {
   const [photo, setPhoto] = useState(null);
   const [natW, setNatW] = useState(1920);
   const [natH, setNatH] = useState(1080);
@@ -141,6 +142,7 @@ export default function DroneMark({ agentLogo }) {
   const histRef = useRef({ stack: [[]], idx: 0 });
   const [zoom, setZoom] = useState(100);
   const [toast, setToast] = useState(null);
+  const [showGate, setShowGate] = useState(false);
 
   /* ── STYLE REF (mutable ref pattern — DO NOT refactor to useState) ── */
   const sty = useRef({ color: "#ffffff", width: 4, fill: 0.12, pinColor: "#ef4444", pinSize: 200, pinText: "", labelText: "", labelFs: 28, labelColor: "#ffffff", labelBgMode: "solid", logo: agentLogo || null, unit: "m" });
@@ -252,6 +254,7 @@ export default function DroneMark({ agentLogo }) {
   function onLogoUpload(e) { const f = e.target.files?.[0]; if (!f) return; const reader = new FileReader(); reader.onload = (ev) => { sty.current.logo = ev.target.result; setUiLogoKey(k => k + 1); }; reader.readAsDataURL(f); }
 
   async function doExport() {
+    if (!isLensSubscriber) { setShowGate(true); return; }
     if (!photo) { notify("Upload photo first"); return; }
     setSelId(null); await new Promise(r => setTimeout(r, 50));
     try {
@@ -739,6 +742,7 @@ export default function DroneMark({ agentLogo }) {
 
       {/* ═══ TOAST ═══ */}
       {toast && <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", padding: "10px 22px", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 700, borderRadius: 10, zIndex: 100, boxShadow: "0 4px 20px rgba(16,185,129,0.3)" }}>✓ {toast}</div>}
+      {showGate && <GateOverlay gateType={gateType} toolName="Drone Mark" onClose={() => setShowGate(false)} />}
     </div>
   );
 }
