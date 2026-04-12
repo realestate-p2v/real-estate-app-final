@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { Phone, Mail, MapPin } from "lucide-react";
+import { ContactStatusBanner } from "@/components/contact-status-banner";
 
 interface Props {
   params: Promise<{ handle: string }>;
@@ -73,8 +74,10 @@ export default async function AgentContactPage({ params }: Props) {
           )}
         </div>
 
+        <ContactStatusBanner />
+
         {/* Contact form */}
-        <form action="https://realestatephoto2video.com/api/websites/contact" method="POST" className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 sm:p-8">
+        <form action="/api/website/contact" method="POST" className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 sm:p-8">
           <input type="hidden" name="agent_user_id" value={website.user_id} />
 
           <div>
