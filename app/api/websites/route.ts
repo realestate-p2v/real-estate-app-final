@@ -9,14 +9,45 @@ const supabase = createClient(
 const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
 
 async function getUser(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const cookieHeader = req.headers.get("cookie");
-
-  // Try to get user from Supabase auth
   const { createClient: createBrowserClient } = await import("@/lib/supabase/server");
   const sbServer = await createBrowserClient();
   const { data: { user } } = await sbServer.auth.getUser();
   return user;
+}
+
+// Sync websites row to agent_websites so public site pages work
+async function syncToAgentWebsites(userId: string, website: any) {
+  // Map template names between systems
+  const templateMap: Record<string, string> = {
+    modern_clean: "modern",
+    luxury_dark: "bold",
+    classic_light: "classic",
+  };
+
+  const mappedTemplate = templateMap[website.template] || "modern";
+
+  await supabase
+    .from("agent_websites")
+    .upsert(
+      {
+        user_id: userId,
+        handle: website.slug,
+        slug: website.slug,
+        template: mappedTemplate,
+        site_title: website.name,
+        tagline: website.hero_subheadline || null,
+        about_content: website.about_content || null,
+        bio: website.agent_bio || null,
+        status: website.status === "published" ? "published" : "draft",
+        published: website.status === "published",
+        published_at: website.status === "published" ? new Date().toISOString() : null,
+        primary_color: "#06b6d4",
+        blog_enabled: true,
+        calendar_enabled: website.modules?.booking || false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
 }
 
 /* ─── GET: List user's websites ─── */
@@ -106,9 +137,6 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (usage?.subscription_tier !== "pro") {
-        // Check if they have a buy-outright purchase pending
-        // For now, only Pro subscribers can create via wizard
-        // Buy-outright flow goes through /api/websites/billing/purchase
         return NextResponse.json(
           { error: "Lens Pro subscription required to create a website" },
           { status: 403 }
@@ -116,8 +144,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (usage?.included_website_used) {
-        // They need to pay for an additional site
-        // This should have been handled by the upgrade modal before reaching here
         return NextResponse.json(
           { error: "You've used your included website. Purchase an add-on or buy outright." },
           { status: 403 }
@@ -199,6 +225,15 @@ export async function POST(req: NextRequest) {
         .eq("id", property_id);
     }
 
+    // ── Sync to agent_websites for public site rendering ──
+    await syncToAgentWebsites(user.id, {
+      ...website,
+      modules,
+      hero_subheadline,
+      about_content,
+      agent_bio,
+    });
+
     return NextResponse.json(website, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -268,6 +303,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // ── Sync updates to agent_websites ──
+    await syncToAgentWebsites(user.id, updated);
+
     return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -330,6 +368,12 @@ export async function DELETE(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // ── Also remove from agent_websites ──
+    await supabase
+      .from("agent_websites")
+      .update({ status: "suspended", published: false })
+      .eq("user_id", user.id);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
