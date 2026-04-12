@@ -58,6 +58,7 @@ import {
 /* ─── Lazy-loaded components (not needed for initial paint) ─── */
 const SignupSpin = dynamic(() => import("@/components/signup-spin").then(m => ({ default: m.SignupSpin })), { ssr: false });
 const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
+const MarketingPlannerCard = dynamic(() => import("@/components/marketing-planner-card").then(m => ({ default: m.MarketingPlannerCard })), { ssr: false });
 
 /* ─────────────────────────────────────────────
    Constants
@@ -612,6 +613,7 @@ export default function DashboardPage() {
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
     { icon: Globe, label: "Website Builder", desc: "Build your full agent website with AI-powered content", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", ...gated("website_builder") },
+    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "#planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
     { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
     { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
     { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
@@ -882,6 +884,19 @@ export default function DashboardPage() {
             </button>
         </div>
 
+        {/* ═══ MARKETING PLANNER ═══ */}
+        {secondaryLoaded && user && (access.allowed) && (
+          <div id="planner" className="mc-animate mt-8" style={{ animationDelay: "0.19s" }}>
+            <MarketingPlannerCard
+              userId={user.id}
+              agentName={agentProfile.saved_agent_name}
+              isSubscriber={isSubscriber}
+              isTrial={access.tier === "trial"}
+              trialDaysLeft={access.trialDaysLeft}
+            />
+          </div>
+        )}
+
         {/* ═══ PROPERTY WEBSITES ═══ */}
         {publishedWebsites.length > 0 && (
           <div id="websites" className="mc-animate mt-8" style={{ animationDelay: "0.18s" }}>
@@ -951,36 +966,50 @@ export default function DashboardPage() {
         {/* ═══ TOOLS GRID ═══ */}
         {activeTab === "tools" && (
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool, i) => (
-              <Link
-                key={tool.label}
-                href={tool.href}
-                className="mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
-                style={{ animationDelay: `${0.28 + i * 0.05}s` }}
-              >
-                {/* Crown tier indicator + optional trial badge */}
-                <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                  {tool.badge && (
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
-                      {tool.badge}
-                    </span>
-                  )}
-                  {tool.crown === "gold" && <Crown className="h-3.5 w-3.5 text-amber-400/50" />}
-                  {tool.crown === "silver" && <Crown className="h-3.5 w-3.5 text-gray-400/40" />}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} transition-transform group-hover:scale-110`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white/90 group-hover:text-cyan-300 transition-colors">{tool.label}</p>
-                    {tool.stat && <p className="text-[11px] font-medium text-white/30">{tool.stat}</p>}
+            {tools.map((tool, i) => {
+              const isScrollLink = tool.href.startsWith("#");
+              const Wrapper = isScrollLink ? "button" as any : Link;
+              const wrapperProps = isScrollLink
+                ? {
+                    onClick: () => {
+                      const el = document.getElementById(tool.href.slice(1));
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    },
+                    className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] text-left w-full",
+                    style: { animationDelay: `${0.28 + i * 0.05}s` },
+                  }
+                : {
+                    href: tool.href,
+                    className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
+                    style: { animationDelay: `${0.28 + i * 0.05}s` },
+                  };
+
+              return (
+                <Wrapper key={tool.label} {...wrapperProps}>
+                  {/* Crown tier indicator + optional trial badge */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    {tool.badge && (
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
+                        {tool.badge}
+                      </span>
+                    )}
+                    {tool.crown === "gold" && <Crown className="h-3.5 w-3.5 text-amber-400/50" />}
+                    {tool.crown === "silver" && <Crown className="h-3.5 w-3.5 text-gray-400/40" />}
                   </div>
-                </div>
-                <p className="text-xs leading-relaxed text-white/40">{tool.desc}</p>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-400/60 group-hover:text-cyan-400 transition-colors mt-auto pt-1">
-                  Open<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </Link>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} transition-transform group-hover:scale-110`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white/90 group-hover:text-cyan-300 transition-colors">{tool.label}</p>
+                      {tool.stat && <p className="text-[11px] font-medium text-white/30">{tool.stat}</p>}
+                    </div>
+                  </div>
+                  <p className="text-xs leading-relaxed text-white/40">{tool.desc}</p>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-400/60 group-hover:text-cyan-400 transition-colors mt-auto pt-1">
+                    Open<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </Wrapper>
+              );
+            })}
           </div>
         )}
 
