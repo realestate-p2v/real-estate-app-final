@@ -14,7 +14,7 @@ import {
 
 // ============================================================
 // LENSY CHAT BASE
-// Shared UI shell used by all three Lensy variants.
+// Shared UI shell used by all Lensy variants.
 // Handles: streaming, message display, input, animations.
 // Each variant passes its own config for theming + behavior.
 // ============================================================
@@ -77,18 +77,24 @@ function renderMessageContent(text: string): React.ReactNode {
       else if (cleanUrl.includes("/lens/staging") || cleanUrl.includes("lens/staging")) label = "Open Virtual Staging";
       else if (cleanUrl.includes("/properties")) label = "Open Property Portfolio";
       else if (cleanUrl.includes("/settings")) label = "Account Settings";
+      else if (cleanUrl.includes("p2v.homes/listings")) label = "Browse Listings";
+      else if (cleanUrl.includes("p2v.homes/join")) label = "Join p2v.homes";
+      else if (cleanUrl.includes("p2v.homes")) label = "Visit p2v.homes";
+      else if (cleanUrl.includes("/signup")) label = "Sign Up";
       else if (cleanUrl.includes("/lens")) label = "View P2V Lens";
+
+      const isInternal = cleanUrl.includes("realestatephoto2video.com") || cleanUrl.includes("p2v.homes");
 
       return (
         <span key={i}>
           <a
             href={cleanUrl}
-            target={cleanUrl.includes("realestatephoto2video.com") ? "_self" : "_blank"}
+            target={isInternal ? "_self" : "_blank"}
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-500 underline underline-offset-2 decoration-sky-400/40 hover:decoration-sky-500/60 font-medium transition-colors"
           >
             {label}
-            {!cleanUrl.includes("realestatephoto2video.com") && (
+            {!isInternal && (
               <svg className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
@@ -104,7 +110,7 @@ function renderMessageContent(text: string): React.ReactNode {
 
 export interface LensyChatBaseConfig {
   // Identity
-  variant: "sales" | "support" | "agent";
+  variant: "sales" | "support" | "portal" | "agent";
   headerLabel: string;
   greeting: string;
   suggestions: string[];
