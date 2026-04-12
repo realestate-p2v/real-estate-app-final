@@ -319,7 +319,7 @@ export default async function AgentListingDetailPage({ params }: Props) {
               </div>
 
               {/* Contact form */}
-              <form action="/api/websites/contact" method="POST" className="mt-5 pt-5 border-t border-gray-100 space-y-3">
+              <form action="https://realestatephoto2video.com/api/websites/contact" method="POST" className="mt-5 pt-5 border-t border-gray-100 space-y-3">
                 <input type="hidden" name="agent_user_id" value={website.user_id} />
                 <input type="hidden" name="property_address" value={property.address || ""} />
                 <input type="text" name="name" placeholder="Your name" required className="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300" />
