@@ -20,7 +20,7 @@ export function GateOverlay({ gateType, toolName, onClose }: GateOverlayProps) {
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md rounded-2xl border border-white/[0.08] bg-gray-950 p-8 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl border border-white/[0.08] bg-gray-850 p-8 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close */}
