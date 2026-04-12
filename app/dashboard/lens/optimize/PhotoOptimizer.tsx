@@ -13,11 +13,14 @@ import {
   AlertCircle,
   Info,
 } from "lucide-react";
+import { GateOverlay } from "@/components/gate-overlay";
 
 // ── Types ──
 
 interface Props {
   userId: string;
+  isLensSubscriber?: boolean;
+  gateType?: "buy_video" | "subscribe" | "upgrade_pro";
 }
 
 interface PropertyOption {
@@ -163,7 +166,10 @@ function extractPhotoUrls(obj: any): string[] {
 
 // ── Component ──
 
-export default function PhotoOptimizer({ userId }: Props) {
+export default function PhotoOptimizer({ userId, isLensSubscriber = false, gateType = "buy_video" }: Props) {
+  // Gate state
+  const [showGate, setShowGate] = useState(false);
+
   // Property selection
   const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -463,6 +469,7 @@ export default function PhotoOptimizer({ userId }: Props) {
 
   // ── Process All Selected Photos ──
   async function handleOptimize() {
+    if (!isLensSubscriber) { setShowGate(true); return; }
     if (!selectedPropertyId || selectedIds.size === 0) return;
 
     const selected = photos.filter(p => selectedIds.has(p.id));
@@ -890,6 +897,7 @@ export default function PhotoOptimizer({ userId }: Props) {
         )}
 
       </div>
+      {showGate && <GateOverlay gateType={gateType} toolName="Photo Optimizer" onClose={() => setShowGate(false)} />}
     </div>
   );
 }
