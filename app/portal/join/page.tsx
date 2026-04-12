@@ -10,6 +10,10 @@ import {
   Zap,
   ArrowRight,
   CheckCircle2,
+  PenTool,
+  CalendarDays,
+  MessageSquare,
+  Upload,
 } from "lucide-react";
 
 export default function JoinPage() {
@@ -26,112 +30,169 @@ export default function JoinPage() {
               For Real Estate Agents
             </p>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-              <span className="text-white">Build Your Agent</span>
+              <span className="text-white">Your Professional</span>
               <br />
               <span className="bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
-                Website on P2V
+                Agent Website
               </span>
             </h1>
             <p className="mt-5 text-lg text-white/50 max-w-xl mx-auto leading-relaxed">
-              One platform for listing videos, AI marketing tools, and your own professional website — all auto-populated from the work you already do.
+              A fully-featured real estate website with listings, blog, contact forms, and booking calendar. Add your own content or let AI do the heavy lifting.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
-                href="https://realestatephoto2video.com/order"
+                href="https://realestatephoto2video.com/signup"
                 className="px-6 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-sm transition-all flex items-center gap-2"
               >
-                Get Started — Order a Video
+                Create Your Website
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
                 href="https://realestatephoto2video.com/lens"
                 className="px-6 py-3.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white font-medium text-sm transition-all"
               >
-                Learn About P2V Lens
+                See Plans & Pricing
               </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
+      {/* What you get */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white text-center mb-12">
-          How It Works
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white text-center mb-4">
+          Everything Your Website Includes
         </h2>
+        <p className="text-white/40 text-center max-w-lg mx-auto mb-12">
+          A complete agent website — set it up in minutes, update it anytime.
+        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-4xl mx-auto">
           {[
-            {
-              step: "1",
-              icon: Camera,
-              title: "Upload Photos",
-              desc: "Upload your listing photos and order a cinematic video from $79.",
-            },
-            {
-              step: "2",
-              icon: Sparkles,
-              title: "Use AI Tools",
-              desc: "Generate descriptions, virtual staging, flyers, and reports instantly.",
-            },
-            {
-              step: "3",
-              icon: Globe,
-              title: "Website Auto-Fills",
-              desc: "Everything you create feeds your agent website automatically.",
-            },
-            {
-              step: "4",
-              icon: TrendingUp,
-              title: "Grow Your Brand",
-              desc: "Your listings appear on P2V Homes and your own professional site.",
-            },
+            { icon: Globe, title: "Custom Domain", desc: "Your subdomain or your own domain" },
+            { icon: Upload, title: "Listing Pages", desc: "Upload your own photos & details" },
+            { icon: PenTool, title: "Blog", desc: "Write posts manually or with AI" },
+            { icon: MessageSquare, title: "Contact Forms", desc: "Leads go straight to your inbox" },
+            { icon: CalendarDays, title: "Booking Calendar", desc: "Let clients book showings" },
+            { icon: FileText, title: "About Page", desc: "Your bio, headshot & company info" },
+            { icon: Palette, title: "3 Templates", desc: "Classic, Modern, or Bold" },
+            { icon: TrendingUp, title: "Portal Listing", desc: "Appear on P2V Homes directory" },
           ].map((item) => (
             <div
-              key={item.step}
-              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 text-center relative"
+              key={item.title}
+              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-center"
             >
-              <span className="absolute top-3 left-3 text-[10px] font-bold text-cyan-400/40">
-                {item.step}
-              </span>
-              <div className="h-10 w-10 rounded-lg bg-cyan-500/10 flex items-center justify-center mx-auto mb-3">
-                <item.icon className="h-5 w-5 text-cyan-400" />
+              <div className="h-9 w-9 rounded-lg bg-cyan-500/10 flex items-center justify-center mx-auto mb-2.5">
+                <item.icon className="h-4.5 w-4.5 text-cyan-400" />
               </div>
               <p className="text-sm font-bold text-white">{item.title}</p>
-              <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
-                {item.desc}
-              </p>
+              <p className="text-xs text-white/40 mt-1">{item.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Tools showcase */}
+      {/* Two paths */}
       <section className="border-t border-white/[0.06]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white text-center mb-4">
-            AI-Powered Tools
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white text-center mb-12">
+            Two Ways to Get Started
           </h2>
-          <p className="text-white/40 text-center max-w-lg mx-auto mb-12">
-            Every tool feeds your website. Create once, publish everywhere.
-          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Path 1: Website only */}
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
+              <div className="h-11 w-11 rounded-lg bg-cyan-500/10 flex items-center justify-center mb-4">
+                <Globe className="h-5.5 w-5.5 text-cyan-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                Start With a Website
+              </h3>
+              <p className="text-sm text-white/40 mt-2 leading-relaxed">
+                Subscribe to Lens Pro ($49/mo) or buy your site outright ($399). Upload your own photos, write your own descriptions and blog posts, and manage everything yourself.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {[
+                  "Upload your own photos & content",
+                  "Write blog posts manually",
+                  "Manage listings yourself",
+                  "Add AI tools anytime",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-white/50">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400/60 mt-0.5 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="https://realestatephoto2video.com/signup"
+                className="block mt-5 text-center py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-bold transition-all"
+              >
+                Create Your Website
+              </a>
+            </div>
+
+            {/* Path 2: Video → website */}
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
+              <div className="h-11 w-11 rounded-lg bg-cyan-500/10 flex items-center justify-center mb-4">
+                <Film className="h-5.5 w-5.5 text-cyan-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                Start With a Listing Video
+              </h3>
+              <p className="text-sm text-white/40 mt-2 leading-relaxed">
+                Order a cinematic listing video from $79. You get a 10-day free trial of all AI tools, and your content auto-fills your website when you subscribe.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {[
+                  "Professional video from your photos",
+                  "10-day trial of all AI tools",
+                  "Content auto-populates your site",
+                  "You own every clip forever",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-white/50">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400/60 mt-0.5 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="https://realestatephoto2video.com/order"
+                className="block mt-5 text-center py-2.5 rounded-lg border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-sm font-medium transition-all"
+              >
+                Order a Video
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Optional AI tools upsell */}
+      <section className="border-t border-white/[0.06]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">
+              Optional
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+              Supercharge Your Site With AI Tools
+            </h2>
+            <p className="mt-4 text-white/40 leading-relaxed">
+              Don&apos;t want to write everything yourself? Subscribe to Lens Tools and let AI generate descriptions, virtual staging, blog posts, flyers, and more — all of which auto-populate your website.
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {[
               {
-                icon: Film,
-                title: "Listing Videos",
-                desc: "Cinematic walkthrough videos from your photos. You own every clip.",
-              },
-              {
                 icon: FileText,
-                title: "Description Writer",
-                desc: "MLS-ready descriptions generated from your photos in seconds.",
+                title: "AI Description Writer",
+                desc: "MLS-ready listing descriptions generated from your photos in seconds.",
               },
               {
                 icon: Palette,
                 title: "Virtual Staging",
-                desc: "AI-powered staging to fill empty rooms with furniture.",
+                desc: "AI-powered staging fills empty rooms with furniture and decor.",
               },
               {
                 icon: Camera,
@@ -142,6 +203,11 @@ export default function JoinPage() {
                 icon: Zap,
                 title: "Design Studio",
                 desc: "Create branded flyers, social posts, and marketing materials.",
+              },
+              {
+                icon: PenTool,
+                title: "AI Blog Generator",
+                desc: "Generate SEO-optimized blog posts about your market in one click.",
               },
               {
                 icon: TrendingUp,
@@ -182,6 +248,7 @@ export default function JoinPage() {
               <p className="text-3xl font-extrabold text-white">
                 $27<span className="text-base font-medium text-white/40">/mo</span>
               </p>
+              <p className="text-xs text-white/30 mt-1">AI tools only, no website</p>
               <ul className="mt-5 space-y-2.5">
                 {[
                   "All AI marketing tools",
@@ -219,15 +286,16 @@ export default function JoinPage() {
               <p className="text-3xl font-extrabold text-white">
                 $49<span className="text-base font-medium text-white/40">/mo</span>
               </p>
+              <p className="text-xs text-white/30 mt-1">Website + AI tools</p>
               <ul className="mt-5 space-y-2.5">
                 {[
                   "Everything in Lens Tools",
                   "Full agent website",
-                  "Custom subdomain",
+                  "Custom subdomain or domain",
                   "AI blog generator",
                   "Booking calendar",
-                  "Contact forms",
-                  "Location Q&A pages",
+                  "Contact forms → your inbox",
+                  "Upload your own content too",
                 ].map((f) => (
                   <li
                     key={f}
@@ -239,7 +307,7 @@ export default function JoinPage() {
                 ))}
               </ul>
               <a
-                href="https://realestatephoto2video.com/lens"
+                href="https://realestatephoto2video.com/signup"
                 className="block mt-6 text-center py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-sm font-bold transition-all"
               >
                 Get Started
@@ -254,14 +322,15 @@ export default function JoinPage() {
               <p className="text-3xl font-extrabold text-white">
                 $399<span className="text-base font-medium text-white/40"> once</span>
               </p>
+              <p className="text-xs text-white/30 mt-1">Own your site forever</p>
               <ul className="mt-5 space-y-2.5">
                 {[
-                  "Own your website forever",
+                  "Own your website permanently",
                   "3 months Lens Pro included",
                   "Custom domain support",
-                  "Export & download site",
+                  "Export & download your site",
                   "Keep editing after sub ends",
-                  "Re-subscribe anytime for AI",
+                  "Re-subscribe for AI anytime",
                 ].map((f) => (
                   <li
                     key={f}
@@ -273,13 +342,18 @@ export default function JoinPage() {
                 ))}
               </ul>
               <a
-                href="https://realestatephoto2video.com/lens"
+                href="https://realestatephoto2video.com/signup"
                 className="block mt-6 text-center py-2.5 rounded-lg border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white text-sm font-medium transition-all"
               >
-                Learn More
+                Get Started
               </a>
             </div>
           </div>
+
+          {/* Video add-on note */}
+          <p className="text-center text-xs text-white/30 mt-6 max-w-md mx-auto">
+            Listing videos are available as a separate service from $79 — no subscription required. They integrate automatically with your website if you have one.
+          </p>
         </div>
       </section>
 
@@ -288,18 +362,26 @@ export default function JoinPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center max-w-xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
-              Ready to Get Started?
+              Ready to Build Your Site?
             </h2>
             <p className="mt-4 text-white/40 leading-relaxed">
-              Order your first listing video and unlock a 10-day free trial of all AI tools. No commitment required.
+              Sign up, choose a template, add your listings and content. Your professional agent website can be live today.
             </p>
-            <a
-              href="https://realestatephoto2video.com/order"
-              className="inline-flex items-center gap-2 mt-6 px-8 py-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold transition-all"
-            >
-              Order Your First Video
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href="https://realestatephoto2video.com/signup"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold transition-all"
+              >
+                Create Your Website
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              <a
+                href="https://realestatephoto2video.com/order"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/[0.08] hover:border-white/20 text-white/60 hover:text-white font-medium transition-all"
+              >
+                Or Order a Video First
+              </a>
+            </div>
           </div>
         </div>
       </section>
