@@ -37,6 +37,7 @@ import {
   Info,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { GateOverlay } from "@/components/gate-overlay";
 import { SpinWheel } from "@/components/spin-wheel";
 import * as exifr from "exifr";
 
@@ -173,6 +174,11 @@ function PhotoCoachPageInner() {
   // Paywall
   const [paywallHit, setPaywallHit] = useState(false);
 
+  // Access gating
+  const [showGate, setShowGate] = useState(false);
+  const [gateType, setGateType] = useState<"buy_video" | "subscribe" | "upgrade_pro">("buy_video");
+  const [hasPaidOrder, setHasPaidOrder] = useState(false);
+
   // Surprise discount wheel
   const [showSurpriseWheel, setShowSurpriseWheel] = useState(false);
   const [surprisePromoCode, setSurprisePromoCode] = useState<string | null>(null);
@@ -233,13 +239,14 @@ function PhotoCoachPageInner() {
   /* ─── Auth & Subscription Check ─── */
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      const { data: { session } } = await supabase.auth.getSession();
+      const authUser = session?.user || null;
+      setUser(authUser);
       setAuthLoading(false);
 
-      if (!user) return;
+      if (!authUser) return;
 
-      const admin = user.email === "realestatephoto2video@gmail.com";
+      const admin = authUser.email === "realestatephoto2video@gmail.com";
       setIsAdmin(admin);
 
       if (admin) {
@@ -247,15 +254,41 @@ function PhotoCoachPageInner() {
         return;
       }
 
-      const { data: usage } = await supabase
-        .from("lens_usage")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      const [usageResult, orderResult] = await Promise.all([
+        supabase
+          .from("lens_usage")
+          .select("is_subscriber, subscription_tier, trial_expires_at, free_analyses_used")
+          .eq("user_id", authUser.id)
+          .single(),
+        supabase
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", authUser.id)
+          .eq("payment_status", "paid"),
+      ]);
+
+      const usage = usageResult.data;
+      const hasPaid = (orderResult.count || 0) > 0;
+      setHasPaidOrder(hasPaid);
 
       if (usage) {
-        setIsSubscriber(usage.is_subscriber);
+        // Check if subscriber or active trial
+        const isSub = usage.is_subscriber;
+        const hasActiveTrial = usage.trial_expires_at && new Date(usage.trial_expires_at) > new Date();
+        setIsSubscriber(isSub || hasActiveTrial);
         setFreeApprovedUsed(usage.free_analyses_used || 0);
+
+        // Determine gate type for non-subscribers
+        if (!isSub && !hasActiveTrial) {
+          if (hasPaid) {
+            setGateType("subscribe");
+          } else {
+            setGateType("buy_video");
+          }
+        }
+      } else {
+        // No lens_usage row — free account
+        setGateType(hasPaid ? "subscribe" : "buy_video");
       }
     };
     init();
@@ -285,6 +318,12 @@ function PhotoCoachPageInner() {
   /* ─── Create Session ─── */
   const createSession = async () => {
     if (!newAddress.trim() || !user) return;
+
+    // Gate: non-subscribers cannot create sessions
+    if (!isSubscriber && !isAdmin) {
+      setShowGate(true);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("lens_sessions")
@@ -467,6 +506,12 @@ function PhotoCoachPageInner() {
     const file = e.target.files?.[0];
     if (!file || !activeSession) return;
     e.target.value = "";
+
+    // Gate: non-subscribers cannot upload/analyze photos
+    if (!isSubscriber && !isAdmin) {
+      setShowGate(true);
+      return;
+    }
 
     setUploading(true);
     setLastResult(null);
@@ -2035,6 +2080,9 @@ function PhotoCoachPageInner() {
           onClose={() => setShowSurpriseWheel(false)}
         />
       )}
+
+      {/* Access gate overlay */}
+      {showGate && <GateOverlay gateType={gateType} toolName="Photo Coach" onClose={() => setShowGate(false)} />}
     </div>
   );
 }
