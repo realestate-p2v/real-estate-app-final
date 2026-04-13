@@ -1,193 +1,57 @@
-import { createClient } from "@supabase/supabase-js";
+// app/site/[handle]/listings/page.tsx
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { getSite, getProfile, getListings } from "../data";
 
-// ── Cloudinary URL helpers (inline) ──
-function cloudinaryUrl(url: string | null | undefined, transforms?: string): string | null {
-  if (!url) return null;
-  if (!url.includes("res.cloudinary.com")) return url;
-  try {
-    const base = "f_auto,q_auto";
-    const all = transforms ? `${base},${transforms}` : base;
-    const fixed = url.replace(/\/upload\/v\d+\//, `/upload/${all}/`);
-    if (fixed !== url) return fixed;
-    return url.replace(/\/upload\//, `/upload/${all}/`);
-  } catch { return url; }
-}
-
-async function getWebsiteData(handle: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  // Try handle first, fall back to slug
-  let { data: website } = await supabase
-    .from("agent_websites")
-    .select("*")
-    .eq("handle", handle)
-    .eq("status", "published")
-    .single();
-
-  if (!website) {
-    const { data: bySlug } = await supabase
-      .from("agent_websites")
-      .select("*")
-      .eq("slug", handle)
-      .eq("status", "published")
-      .single();
-    website = bySlug;
-  }
-
-  if (!website) return null;
-
-  // Get agent info
-  const { data: agent } = await supabase
-    .from("lens_usage")
-    .select(
-      "saved_agent_name, saved_phone, saved_email, saved_company, saved_headshot_url, saved_logo_url"
-    )
-    .eq("user_id", website.user_id)
-    .single();
-
-  return { website, agent };
-}
-
-export default async function AgentSiteLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
+interface Props {
   params: Promise<{ handle: string }>;
-}) {
+}
+
+export default async function ListingsPage({ params }: Props) {
   const { handle } = await params;
-  const data = await getWebsiteData(handle);
+  const site = await getSite(handle);
+  if (!site) return notFound();
+  const [profile, listings] = await Promise.all([
+    getProfile(site.user_id),
+    getListings(site.user_id),
+  ]);
 
-  if (!data) return notFound();
-
-  const { website, agent } = data;
-  const agentName = agent?.saved_agent_name || website.site_title || "Agent";
-  const siteTitle = website.site_title || agentName;
-  const primaryColor = website.primary_color || "#06b6d4";
-
-  // Fix Cloudinary URLs for cross-domain delivery
-  const headshotUrl = cloudinaryUrl(agent?.saved_headshot_url);
-  const logoUrl = cloudinaryUrl(agent?.saved_logo_url);
-
-  const navLinks = [
-    { href: `/`, label: "Home" },
-    { href: `/about`, label: "About" },
-    { href: `/listings`, label: "Listings" },
-  ];
-
-  if (website.blog_enabled) {
-    navLinks.push({ href: `/blog`, label: "Blog" });
-  }
-
-  navLinks.push({ href: `/contact`, label: "Contact" });
-
-  if (website.calendar_enabled) {
-    navLinks.push({ href: `/calendar`, label: "Calendar" });
-  }
+  const primary = site.primary_color || "#334155";
+  const fmtPrice = (p: number | null) => p ? "$" + p.toLocaleString("en-US") : null;
+  const fmtDetails = (l: (typeof listings)[0]) =>
+    [l.bedrooms && l.bedrooms + " BD", l.bathrooms && l.bathrooms + " BA", l.sqft && l.sqft.toLocaleString() + " SF"]
+      .filter(Boolean).join("  \u00b7  ");
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            {/* Logo / Name */}
-            <Link href="/" className="flex items-center gap-2.5">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={siteTitle}
-                  className="h-8 w-auto max-w-[120px] object-contain"
-                />
-              ) : headshotUrl ? (
-                <img
-                  src={headshotUrl}
-                  alt={agentName}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <div
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {agentName[0]}
+    <div style={{ padding: "48px 24px", maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <h1 style={{ fontSize: 32, fontWeight: 700, color: "#111", margin: "0 0 8px" }}>All Listings</h1>
+        <p style={{ fontSize: 16, color: "#777", margin: 0 }}>{listings.length} {listings.length === 1 ? "property" : "properties"}</p>
+      </div>
+
+      {listings.length === 0 ? (
+        <p style={{ textAlign: "center", color: "#999", fontSize: 16, padding: "60px 0" }}>No listings available right now. Check back soon.</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
+          {listings.map((l) => (
+            <div key={l.id} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+              {l.photos.length > 0 ? (
+                <div style={{ position: "relative", paddingBottom: "66%", overflow: "hidden" }}>
+                  <img src={l.photos[0]} alt={l.address} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                  {l.photos.length > 1 ? <div style={{ position: "absolute", bottom: 8, right: 8, padding: "4px 10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 6, fontSize: 12, color: "#fff", fontWeight: 600 }}>{l.photos.length} photos</div> : null}
                 </div>
+              ) : (
+                <div style={{ paddingBottom: "66%", backgroundColor: "#f1f5f9" }} />
               )}
-              <span className="text-base font-bold text-gray-900 tracking-tight">
-                {siteTitle}
-              </span>
-            </Link>
-
-            {/* Desktop nav */}
-            <div className="hidden sm:flex items-center gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <div style={{ padding: "16px 20px" }}>
+                {l.price ? <p style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>{fmtPrice(l.price)}</p> : null}
+                <p style={{ fontSize: 15, color: "#444", margin: "0 0 4px", fontWeight: 600 }}>{l.address}</p>
+                {(l.city || l.state) ? <p style={{ fontSize: 14, color: "#888", margin: "0 0 8px" }}>{[l.city, l.state].filter(Boolean).join(", ")}</p> : null}
+                {fmtDetails(l) ? <p style={{ fontSize: 13, color: "#aaa", margin: 0, letterSpacing: "0.04em" }}>{fmtDetails(l)}</p> : null}
+              </div>
             </div>
-
-            {/* Mobile nav — simple links */}
-            <div className="sm:hidden flex items-center gap-2">
-              <Link href="/listings" className="px-2 py-1 text-xs font-medium text-gray-500">
-                Listings
-              </Link>
-              <Link href="/contact" className="px-2 py-1 text-xs font-medium text-gray-500">
-                Contact
-              </Link>
-            </div>
-          </div>
+          ))}
         </div>
-      </nav>
-
-      {/* Page content */}
-      <main className="flex-1">{children}</main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-100 bg-gray-50">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-center sm:text-left">
-              <p className="text-sm font-semibold text-gray-900">{agentName}</p>
-              {agent?.saved_company && (
-                <p className="text-xs text-gray-400 mt-0.5">{agent.saved_company}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              {agent?.saved_phone && (
-                <a href={`tel:${agent.saved_phone}`} className="hover:text-gray-600 transition-colors">
-                  {agent.saved_phone}
-                </a>
-              )}
-              {agent?.saved_email && (
-                <a href={`mailto:${agent.saved_email}`} className="hover:text-gray-600 transition-colors">
-                  {agent.saved_email}
-                </a>
-              )}
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-[11px] text-gray-300">
-              © {new Date().getFullYear()} {agentName}. All rights reserved.
-            </p>
-            <a
-              href="https://realestatephoto2video.com"
-              className="text-[11px] text-gray-300 hover:text-gray-400 transition-colors"
-            >
-              Powered by Realestatephoto2video.com
-            </a>
-          </div>
-        </div>
-      </footer>
+      )}
     </div>
   );
 }
