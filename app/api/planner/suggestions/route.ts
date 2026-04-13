@@ -11,7 +11,7 @@ import { checkSelfMarketingNudge, daysSince } from "@/lib/planner/self-marketing
 export interface Suggestion {
   id: string;
   type: "action" | "nudge" | "status_trigger" | "self_marketing" | "calendar";
-  priority: number; // lower = higher priority
+  priority: number;
   propertyId?: string;
   propertyAddress?: string;
   platform?: string;
@@ -36,7 +36,6 @@ export async function POST(req: Request) {
     const today = new Date().toISOString().split("T")[0];
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    // All queries in parallel
     const [
       propertiesRes,
       ordersRes,
@@ -44,17 +43,18 @@ export async function POST(req: Request) {
       stagingRes,
       exportsRes,
       actionsRes,
-      blogRes,
       scheduleRes,
       profileRes,
     ] = await Promise.all([
       supabase.from("agent_properties").select("id, address, status, photos, optimized_photos, website_published, updated_at").eq("user_id", userId),
-      supabase.from("orders").select("id, property_address, photos, delivery_url, branded_video_url, clip_urls, payment_status, created_at").eq("user_id", userId),
-      supabase.from("lens_descriptions").select("id, property_address").eq("user_id", userId),
+      // FIXED: removed branded_video_url (doesn't exist); clip_urls is correct
+      supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at").eq("user_id", userId),
+      // FIXED: property_data (JSONB) not property_address
+      supabase.from("lens_descriptions").select("id, property_data").eq("user_id", userId),
       supabase.from("lens_staging").select("id, property_id, created_at").eq("user_id", userId),
       supabase.from("design_exports").select("id, property_id, template_type, export_url, created_at").eq("user_id", userId),
       supabase.from("marketing_actions").select("id, property_id, action_type, content_type, platform, created_at").eq("user_id", userId),
-      supabase.from("blog_posts").select("id, property_id, created_at").eq("user_id", userId),
+      // REMOVED: blog_posts — table has no user_id or property_id
       supabase.from("marketing_schedule").select("*").eq("user_id", userId).gte("scheduled_date", today).order("scheduled_date", { ascending: true }).limit(10),
       supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, saved_company, saved_agent_name").eq("user_id", userId).single(),
     ]);
@@ -65,7 +65,6 @@ export async function POST(req: Request) {
     const staging = stagingRes.data || [];
     const exports_ = exportsRes.data || [];
     const actions = actionsRes.data || [];
-    const blogs = blogRes.data || [];
     const schedule = scheduleRes.data || [];
     const profile = profileRes.data;
     const hasAgentWebsite = properties.some((p: { website_published?: boolean }) => p.website_published);
@@ -129,7 +128,7 @@ export async function POST(req: Request) {
       }
     });
 
-    // 3. Unshared content (created but not posted)
+    // 3. Unshared staging content
     staging
       .filter((s: { created_at: string }) => s.created_at > twoWeeksAgo)
       .forEach((s: { property_id?: string; id: string }) => {
@@ -155,8 +154,7 @@ export async function POST(req: Request) {
         }
       });
 
-    // 4. Stale/untouched listings — conversational nudges
-    // Check what content exists for each property to make specific suggestions
+    // 4. Stale/untouched listings
     properties
       .filter((p: { status: string }) => p.status === "active" || p.status === "new" || p.status === "coming_soon")
       .forEach((prop: { id: string; address: string; photos: unknown[] | null }) => {
@@ -167,10 +165,12 @@ export async function POST(req: Request) {
         );
         const propExports = exports_.filter((e: { property_id?: string }) => e.property_id === prop.id);
         const propStaging = staging.filter((s: { property_id?: string }) => s.property_id === prop.id);
-        const propDescs = descriptions.filter((d: { property_address?: string }) =>
-          d.property_address && prop.address &&
-          d.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
-        );
+        // FIXED: property_data is JSONB — extract .address
+        const propDescs = descriptions.filter((d: { property_data?: { address?: string } }) => {
+          const descAddr = d.property_data?.address || "";
+          return descAddr && prop.address &&
+            descAddr.toLowerCase().includes(prop.address.toLowerCase().split(",")[0]);
+        });
         const hasVideo = propOrders.some((o: { delivery_url?: string }) => o.delivery_url);
         const hasClips = propOrders.some((o: { clip_urls?: unknown }) => Array.isArray(o.clip_urls) && o.clip_urls.length > 0);
         const hasPhotos = (prop.photos && prop.photos.length > 0) || propOrders.length > 0;
@@ -184,7 +184,6 @@ export async function POST(req: Request) {
         // ZERO TOUCH — no actions AND no content created at all
         if (propActions.length === 0 && propExports.length === 0 && propStaging.length === 0 && propDescs.length === 0) {
           if (hasVideo || hasPhotos) {
-            // Has raw content but agent never used any tools on it
             suggestions.push({
               id: nextId(),
               type: "nudge",
@@ -203,7 +202,6 @@ export async function POST(req: Request) {
               ],
             });
           } else {
-            // No content at all
             suggestions.push({
               id: nextId(),
               type: "nudge",
@@ -222,7 +220,6 @@ export async function POST(req: Request) {
 
         // STALE — has some history but nothing in 14+ days
         if (daysSinceAction !== null && daysSinceAction > 14) {
-          // Build specific suggestions based on what content exists
           const specificButtons: string[] = [];
 
           if (hasPhotos && photoCount >= 5) {
@@ -260,9 +257,8 @@ export async function POST(req: Request) {
           });
         }
 
-        // HAS CONTENT NEVER SHARED — created graphics/staging but never posted about them
+        // HAS CONTENT NEVER SHARED
         if (daysSinceAction === null || daysSinceAction <= 14) {
-          // Check for unshared exports (created in last 7 days)
           const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
           const recentUnsharedExports = propExports.filter(
             (e: { created_at: string; template_type?: string }) =>
@@ -308,16 +304,15 @@ export async function POST(req: Request) {
       });
     }
 
-    // Sort by priority, cap at 8
     suggestions.sort((a, b) => a.priority - b.priority);
     const capped = suggestions.slice(0, 8);
 
-    // Calculate content scores (compact for suggestions response)
+    // Content scores (compact)
     const scores = properties
       .filter((p: { status: string }) => p.status === "active" || p.status === "new" || p.status === "coming_soon")
       .slice(0, 5)
       .map((prop: { id: string; address: string; status: string; photos: unknown[] | null; optimized_photos: unknown[] | null; website_published?: boolean }) => {
-        const propOrders = orders.filter((o: { property_address?: string; payment_status?: string }) =>
+        const propOrders = orders.filter((o: { property_address?: string }) =>
           o.property_address && prop.address &&
           o.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
         );
@@ -325,24 +320,25 @@ export async function POST(req: Request) {
         const propExports = exports_.filter((e: { property_id?: string }) => e.property_id === prop.id);
         const propActions = actions.filter((a: { property_id?: string }) => a.property_id === prop.id);
         const propStaging = staging.filter((s: { property_id?: string }) => s.property_id === prop.id);
-        const propBlogs = blogs.filter((b: { property_id?: string }) => b.property_id === prop.id);
         const photoCount = prop.photos ? prop.photos.length : 0;
 
         return calculateContentScore(prop, {
           hasOrder: propOrders.length > 0,
           hasVideoDelivery: !!(paidOrder && (paidOrder as { delivery_url?: string }).delivery_url),
           hasRemix: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("video_remix")),
-          hasDescription: descriptions.some((d: { property_address?: string }) =>
-            d.property_address && prop.address &&
-            d.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
-          ),
+          // FIXED: property_data is JSONB — extract .address
+          hasDescription: descriptions.some((d: { property_data?: { address?: string } }) => {
+            const descAddr = d.property_data?.address || "";
+            return descAddr && prop.address &&
+              descAddr.toLowerCase().includes(prop.address.toLowerCase().split(",")[0]);
+          }),
           hasFlyer: propExports.some((e: { template_type?: string }) => e.template_type && !e.template_type.includes("video_remix") && !e.template_type.includes("drone")),
           hasOptimizedPhotos: !!(prop.optimized_photos && prop.optimized_photos.length > 0),
           hasSocialShare: propActions.some((a: { action_type?: string }) => a.action_type === "social_share"),
           hasStaging: propStaging.length > 0,
           hasDroneAnnotation: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("drone")),
           hasWebsite: !!prop.website_published,
-          hasBlogPost: propBlogs.length > 0,
+          hasBlogPost: false,
           hasJustSoldGraphic: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("sold")),
           hasPriceReducedGraphic: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("price")),
           photoCount,
@@ -367,12 +363,7 @@ export async function POST(req: Request) {
       daysSinceMarketUpdate: daysSince(lastMarket ? lastMarket.created_at : null),
     });
 
-    return NextResponse.json({
-      suggestions: capped,
-      scores,
-      brandScore,
-      agentName,
-    });
+    return NextResponse.json({ suggestions: capped, scores, brandScore, agentName });
   } catch (error) {
     console.error("Suggestions API error:", error);
     return NextResponse.json({ error: "Failed to load suggestions" }, { status: 500 });
