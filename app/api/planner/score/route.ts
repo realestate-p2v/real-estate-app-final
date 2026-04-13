@@ -45,7 +45,7 @@ export async function GET(req: Request) {
       supabase.from("design_exports").select("id, property_id, template_type, export_url").eq("user_id", userId),
       supabase.from("marketing_actions").select("id, property_id, action_type, content_type, created_at").eq("user_id", userId),
       supabase.from("blog_posts").select("id, property_id").eq("user_id", userId),
-      supabase.from("profiles").select("headshot_url, logo_url, company, bio").eq("id", userId).single(),
+      supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, saved_company, saved_agent_name").eq("user_id", userId).single(),
     ]);
 
     const properties = propertiesRes.data || [];
@@ -115,10 +115,10 @@ export async function GET(req: Request) {
       .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
     const brandScore = calculateBrandScore({
-      hasHeadshot: !!(profile && profile.headshot_url),
-      hasLogo: !!(profile && profile.logo_url),
-      hasCompany: !!(profile && profile.company),
-      hasBio: !!(profile && profile.bio),
+      hasHeadshot: !!(profile && profile.saved_headshot_url),
+      hasLogo: !!(profile && profile.saved_logo_url),
+      hasCompany: !!(profile && profile.saved_company),
+      hasBio: !!(profile && profile.saved_agent_name), // Using agent name as proxy — no separate bio field
       hasPublishedWebsite: hasAgentWebsite,
       daysSincePersonalPost: daysSince(lastPersonalPost ? lastPersonalPost.created_at : null),
       daysSinceMarketUpdate: daysSince(lastMarketUpdate ? lastMarketUpdate.created_at : null),
