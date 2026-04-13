@@ -57,6 +57,7 @@ export default function PostCreator({
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [noEmoji, setNoEmoji] = useState(false);
 
   // Sync initial values when they change
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function PostCreator({
           propertyId: propertyId || undefined,
           platform,
           contentType,
+          noEmoji,
         }),
       });
       if (res.ok) {
@@ -276,6 +278,20 @@ export default function PostCreator({
               placeholder="Write your caption or generate one with AI..."
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/30 resize-none"
             />
+          </div>
+
+          {/* Emoji-free toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-white/60">Emoji-free mode</p>
+              <p className="text-[10px] text-white/25">Some brokerages restrict emoji in marketing</p>
+            </div>
+            <button
+              onClick={() => setNoEmoji(!noEmoji)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${noEmoji ? "bg-emerald-500" : "bg-white/[0.08]"}`}
+            >
+              <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${noEmoji ? "translate-x-5" : "translate-x-0.5"}`} />
+            </button>
           </div>
         </div>
 
