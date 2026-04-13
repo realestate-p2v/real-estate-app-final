@@ -1,69 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/client";
+// app/api/planner/action/route.ts
+// Records marketing actions (social shares, caption copies, downloads, etc.)
+// Fixed: uses server Supabase client
 
-export async function POST(request: NextRequest) {
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const {
-      userId,
-      actionType,
-      propertyId,
-      contentType,
-      platform,
-      metadata,
-    } = body;
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!userId || !actionType) {
-      return NextResponse.json(
-        { error: "Missing userId or actionType" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const { actionType, propertyId, platform, contentType, metadata } = body;
+
+    if (!actionType) {
+      return NextResponse.json({ error: "Missing actionType" }, { status: 400 });
     }
 
-    const validActions = [
-      "social_share",
-      "caption_generated",
-      "caption_copied",
-      "asset_downloaded",
-      "email_sent",
-      "blog_published",
-      "website_published",
-      "planner_item_completed",
-      "planner_item_skipped",
-    ];
+    const { data, error } = await supabase
+      .from("marketing_actions")
+      .insert({
+        user_id: session.user.id,
+        property_id: propertyId || null,
+        action_type: actionType,
+        platform: platform || null,
+        content_type: contentType || null,
+        metadata: metadata || {},
+      })
+      .select()
+      .single();
 
-    if (!validActions.includes(actionType)) {
-      return NextResponse.json(
-        { error: "Invalid action_type" },
-        { status: 400 }
-      );
-    }
+    if (error) throw error;
 
-    const supabase = createClient();
-
-    const { data, error } = await supabase.from("marketing_actions").insert({
-      user_id: userId,
-      property_id: propertyId || null,
-      action_type: actionType,
-      platform: platform || null,
-      content_type: contentType || null,
-      metadata: metadata || {},
-    });
-
-    if (error) {
-      console.error("Insert marketing_action error:", error);
-      return NextResponse.json(
-        { error: "Failed to record action" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Action recording error:", error);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ action: data });
+  } catch (error) {
+    console.error("Action route error:", error);
+    return NextResponse.json({ error: "Failed to record action" }, { status: 500 });
   }
 }
