@@ -1,118 +1,76 @@
-import { createClient } from "@supabase/supabase-js";
+// app/site/[handle]/contact/page.tsx
 import { notFound } from "next/navigation";
-import { Phone, Mail, MapPin } from "lucide-react";
-import { ContactStatusBanner } from "@/components/contact-status-banner";
+import { getSite, getProfile } from "../data";
 
 interface Props {
   params: Promise<{ handle: string }>;
 }
 
-async function getData(handle: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  let { data: website } = await supabase
-    .from("agent_websites")
-    .select("user_id, site_title, primary_color, status")
-    .eq("handle", handle)
-    .eq("status", "published")
-    .single();
-
-  if (!website) {
-    const { data: bySlug } = await supabase
-      .from("agent_websites")
-      .select("user_id, site_title, primary_color, status")
-      .eq("slug", handle)
-      .eq("status", "published")
-      .single();
-    website = bySlug;
-  }
-
-  if (!website) return null;
-
-  const { data: agent } = await supabase
-    .from("lens_usage")
-    .select("saved_agent_name, saved_phone, saved_email, saved_company, saved_headshot_url")
-    .eq("user_id", website.user_id)
-    .single();
-
-  return { website, agent };
-}
-
-export default async function AgentContactPage({ params }: Props) {
+export default async function ContactPage({ params }: Props) {
   const { handle } = await params;
-  const data = await getData(handle);
-  if (!data) notFound();
-
-  const { website, agent } = data;
-  const agentName = agent?.saved_agent_name || website.site_title || "Agent";
-  const primaryColor = website.primary_color || "#06b6d4";
+  const site = await getSite(handle);
+  if (!site) return notFound();
+  const profile = await getProfile(site.user_id);
+  const primary = site.primary_color || "#334155";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
-      <div className="max-w-xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 text-center">
-          Get in Touch
-        </h1>
-        <p className="text-gray-400 text-center mb-8">
-          Reach out to {agentName} — happy to help with any questions.
-        </p>
+    <div style={{ padding: "64px 24px", maxWidth: 800, margin: "0 auto" }}>
+      <h1 style={{ fontSize: 32, fontWeight: 700, color: "#111", margin: "0 0 8px", textAlign: "center" }}>Get in Touch</h1>
+      <p style={{ fontSize: 16, color: "#777", margin: "0 0 48px", textAlign: "center" }}>
+        {profile.agent_name ? "Reach out to " + profile.agent_name : "We'd love to hear from you"}
+      </p>
 
+      <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
         {/* Contact info */}
-        <div className="flex items-center justify-center gap-6 mb-8 text-sm text-gray-500">
-          {agent?.saved_phone && (
-            <a href={`tel:${agent.saved_phone}`} className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
-              <Phone className="h-4 w-4" /> {agent.saved_phone}
-            </a>
-          )}
-          {agent?.saved_email && (
-            <a href={`mailto:${agent.saved_email}`} className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
-              <Mail className="h-4 w-4" /> {agent.saved_email}
-            </a>
-          )}
+        <div style={{ flex: "0 0 240px" }}>
+          {profile.headshot_url ? (
+            <img src={profile.headshot_url} alt={profile.agent_name || ""} style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover", marginBottom: 20, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }} />
+          ) : null}
+          {profile.agent_name ? <p style={{ fontSize: 18, fontWeight: 700, color: "#111", margin: "0 0 4px" }}>{profile.agent_name}</p> : null}
+          {profile.company ? <p style={{ fontSize: 14, color: "#888", margin: "0 0 16px" }}>{profile.company}</p> : null}
+          {profile.phone ? (
+            <p style={{ margin: "0 0 8px" }}>
+              <a href={"tel:" + profile.phone.replace(/\D/g, "")} style={{ fontSize: 15, color: primary, textDecoration: "none", fontWeight: 600 }}>{profile.phone}</a>
+            </p>
+          ) : null}
+          {profile.email ? (
+            <p style={{ margin: 0 }}>
+              <a href={"mailto:" + profile.email} style={{ fontSize: 15, color: primary, textDecoration: "none" }}>{profile.email}</a>
+            </p>
+          ) : null}
         </div>
 
-        <ContactStatusBanner />
+        {/* Form */}
+        <div style={{ flex: 1, minWidth: 300 }}>
+          <form action="https://realestatephoto2video.com/api/websites/contact" method="POST">
+            <input type="hidden" name="handle" value={handle} />
+            <input type="hidden" name="agent_email" value={profile.email || ""} />
 
-        {/* Contact form */}
-        <form action="/api/website/contact" method="POST" className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 sm:p-8">
-          <input type="hidden" name="agent_user_id" value={website.user_id} />
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#333", marginBottom: 6 }}>Name</label>
+              <input name="name" required style={{ width: "100%", padding: "12px 16px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 15, boxSizing: "border-box" }} />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Name</label>
-            <input type="text" name="name" required className="w-full px-3.5 py-2.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition-colors" placeholder="Your full name" />
-          </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#333", marginBottom: 6 }}>Email</label>
+              <input name="email" type="email" required style={{ width: "100%", padding: "12px 16px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 15, boxSizing: "border-box" }} />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Email</label>
-            <input type="email" name="email" required className="w-full px-3.5 py-2.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition-colors" placeholder="your@email.com" />
-          </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#333", marginBottom: 6 }}>Phone</label>
+              <input name="phone" type="tel" style={{ width: "100%", padding: "12px 16px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 15, boxSizing: "border-box" }} />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone (optional)</label>
-            <input type="tel" name="phone" className="w-full px-3.5 py-2.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition-colors" placeholder="(555) 123-4567" />
-          </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#333", marginBottom: 6 }}>Message</label>
+              <textarea name="message" required rows={5} style={{ width: "100%", padding: "12px 16px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 15, boxSizing: "border-box", resize: "vertical" }} />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Interested in a property?</label>
-            <input type="text" name="property_interest" className="w-full px-3.5 py-2.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition-colors" placeholder="Property address or type (optional)" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Message</label>
-            <textarea name="message" rows={4} required className="w-full px-3.5 py-2.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:border-gray-300 transition-colors" placeholder="How can I help you?" />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90 shadow-sm hover:shadow-md"
-            style={{ backgroundColor: primaryColor }}
-          >
-            Send Message
-          </button>
-        </form>
+            <button type="submit" style={{ padding: "14px 36px", backgroundColor: primary, color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>
+              Send Message
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
