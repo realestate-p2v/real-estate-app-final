@@ -29,12 +29,14 @@ interface MarketingPlannerWidgetProps {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Make a video remix", href: "/dashboard/lens/remix", color: "text-purple-400 border-purple-400/20 bg-purple-400/5 hover:bg-purple-400/10" },
-  { label: "Write a listing description", href: "/dashboard/lens/descriptions", color: "text-sky-400 border-sky-400/20 bg-sky-400/5 hover:bg-sky-400/10" },
+  { label: "Order a video", href: "/order", color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5 hover:bg-cyan-400/10" },
+  { label: "My properties", href: "/dashboard/properties", color: "text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10" },
+  { label: "My videos", href: "/dashboard/videos", color: "text-purple-400 border-purple-400/20 bg-purple-400/5 hover:bg-purple-400/10" },
+  { label: "Make a video remix", href: "/dashboard/lens/remix", color: "text-pink-400 border-pink-400/20 bg-pink-400/5 hover:bg-pink-400/10" },
+  { label: "Write a description", href: "/dashboard/lens/descriptions", color: "text-sky-400 border-sky-400/20 bg-sky-400/5 hover:bg-sky-400/10" },
   { label: "Create a graphic", href: "/dashboard/lens/design-studio", color: "text-indigo-400 border-indigo-400/20 bg-indigo-400/5 hover:bg-indigo-400/10" },
   { label: "Stage a room", href: "/dashboard/lens/staging", color: "text-violet-400 border-violet-400/20 bg-violet-400/5 hover:bg-violet-400/10" },
-  { label: "Build a listing site", href: "/dashboard/properties", color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5 hover:bg-cyan-400/10" },
-  { label: "See full planner", href: "/dashboard/planner", color: "text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10" },
+  { label: "Full planner", href: "/dashboard/planner", color: "text-white/40 border-white/10 bg-white/[0.02] hover:bg-white/[0.05]" },
 ];
 
 function getGreeting(name: string): string {
