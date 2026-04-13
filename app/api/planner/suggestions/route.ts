@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       supabase.from("marketing_actions").select("id, property_id, action_type, content_type, platform, created_at").eq("user_id", userId),
       supabase.from("blog_posts").select("id, property_id, created_at").eq("user_id", userId),
       supabase.from("marketing_schedule").select("*").eq("user_id", userId).gte("scheduled_date", today).order("scheduled_date", { ascending: true }).limit(10),
-      supabase.from("profiles").select("headshot_url, logo_url, company, bio").eq("id", userId).single(),
+      supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, saved_company, saved_agent_name").eq("user_id", userId).single(),
     ]);
 
     const properties = propertiesRes.data || [];
@@ -155,29 +155,136 @@ export async function POST(req: Request) {
         }
       });
 
-    // 4. Stale listings (no action in 14+ days)
+    // 4. Stale/untouched listings — conversational nudges
+    // Check what content exists for each property to make specific suggestions
     properties
       .filter((p: { status: string }) => p.status === "active" || p.status === "new" || p.status === "coming_soon")
-      .forEach((prop: { id: string; address: string }) => {
-        const lastAction = actions
-          .filter((a: { property_id?: string }) => a.property_id === prop.id)
-          .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      .forEach((prop: { id: string; address: string; photos: unknown[] | null }) => {
+        const propActions = actions.filter((a: { property_id?: string }) => a.property_id === prop.id);
+        const propOrders = orders.filter((o: { property_address?: string }) =>
+          o.property_address && prop.address &&
+          o.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
+        );
+        const propExports = exports_.filter((e: { property_id?: string }) => e.property_id === prop.id);
+        const propStaging = staging.filter((s: { property_id?: string }) => s.property_id === prop.id);
+        const propDescs = descriptions.filter((d: { property_address?: string }) =>
+          d.property_address && prop.address &&
+          d.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
+        );
+        const hasVideo = propOrders.some((o: { delivery_url?: string }) => o.delivery_url);
+        const hasClips = propOrders.some((o: { clip_urls?: unknown }) => Array.isArray(o.clip_urls) && o.clip_urls.length > 0);
+        const hasPhotos = (prop.photos && prop.photos.length > 0) || propOrders.length > 0;
+        const photoCount = prop.photos ? prop.photos.length : 0;
 
-        if (!lastAction || lastAction.created_at < twoWeeksAgo) {
+        const lastAction = propActions
+          .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        const daysSinceAction = lastAction ? daysSince(lastAction.created_at) : null;
+        const addressShort = prop.address.split(",")[0] || prop.address;
+
+        // ZERO TOUCH — no actions AND no content created at all
+        if (propActions.length === 0 && propExports.length === 0 && propStaging.length === 0 && propDescs.length === 0) {
+          if (hasVideo || hasPhotos) {
+            // Has raw content but agent never used any tools on it
+            suggestions.push({
+              id: nextId(),
+              type: "nudge",
+              priority: 3,
+              propertyId: prop.id,
+              propertyAddress: prop.address,
+              title: `${addressShort} has zero marketing`,
+              description: `You have ${hasVideo ? "a video and " : ""}${photoCount > 0 ? photoCount + " photos" : "photos"} for this listing but haven't created any marketing materials or posts yet. Is this listing still active?`,
+              actionLabel: "Start Marketing",
+              actionType: "zero_touch",
+              buttons: [
+                hasVideo ? "Create a story reel" : "Make a photo teaser",
+                "Create a Just Listed graphic",
+                "Write a listing description",
+                "This listing is no longer active",
+              ],
+            });
+          } else {
+            // No content at all
+            suggestions.push({
+              id: nextId(),
+              type: "nudge",
+              priority: 4,
+              propertyId: prop.id,
+              propertyAddress: prop.address,
+              title: `${addressShort} needs content`,
+              description: `No photos, videos, or marketing materials exist for this listing. Let's start with the basics.`,
+              actionLabel: "Get Started",
+              actionType: "no_content",
+              buttons: ["Order a listing video", "Upload photos", "Skip"],
+            });
+          }
+          return;
+        }
+
+        // STALE — has some history but nothing in 14+ days
+        if (daysSinceAction !== null && daysSinceAction > 14) {
+          // Build specific suggestions based on what content exists
+          const specificButtons: string[] = [];
+
+          if (hasPhotos && photoCount >= 5) {
+            specificButtons.push(`Create a ${photoCount >= 8 ? "photo carousel" : "5-photo teaser"} for socials`);
+          }
+          if (hasVideo && !propExports.some((e: { template_type?: string }) => e.template_type?.includes("video_remix"))) {
+            specificButtons.push("Make a story reel from the video");
+          }
+          if (hasClips) {
+            specificButtons.push("Create a remix with the Just Listed template");
+          }
+          if (propStaging.length > 0 && !propActions.some((a: { content_type?: string }) => a.content_type === "staging_reveal")) {
+            specificButtons.push("Share the staging before/after");
+          }
+          if (propDescs.length === 0) {
+            specificButtons.push("Write a listing description first");
+          }
+          if (specificButtons.length === 0) {
+            specificButtons.push("Write a new caption");
+            specificButtons.push("Create a price update graphic");
+          }
+          specificButtons.push("This listing is no longer active");
+
           suggestions.push({
             id: nextId(),
             type: "nudge",
             priority: 4,
             propertyId: prop.id,
             propertyAddress: prop.address,
-            title: `${prop.address} needs attention`,
-            description: lastAction
-              ? `No marketing activity in ${daysSince(lastAction.created_at)} days`
-              : "No marketing activity recorded yet",
-            actionLabel: "Plan Posts",
-            actionType: "plan_posts",
-            buttons: ["Write Caption", "View Content Score", "Skip"],
+            title: `You haven't promoted ${addressShort} in ${daysSinceAction} days`,
+            description: `Is this listing still active? You have ${hasVideo ? "video, " : ""}${photoCount > 0 ? photoCount + " photos" : ""}${propStaging.length > 0 ? ", staging" : ""}${propExports.length > 0 ? ", " + propExports.length + " graphics" : ""} ready to use.`,
+            actionLabel: "Promote Now",
+            actionType: "stale_listing",
+            buttons: specificButtons.slice(0, 4),
           });
+        }
+
+        // HAS CONTENT NEVER SHARED — created graphics/staging but never posted about them
+        if (daysSinceAction === null || daysSinceAction <= 14) {
+          // Check for unshared exports (created in last 7 days)
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const recentUnsharedExports = propExports.filter(
+            (e: { created_at: string; template_type?: string }) =>
+              e.created_at > sevenDaysAgo &&
+              !propActions.some((a: { content_type?: string; created_at: string }) =>
+                a.created_at > e.created_at && a.content_type === "social_share"
+              )
+          );
+          if (recentUnsharedExports.length > 0) {
+            suggestions.push({
+              id: nextId(),
+              type: "nudge",
+              priority: 5,
+              propertyId: prop.id,
+              propertyAddress: prop.address,
+              title: `${addressShort} has ${recentUnsharedExports.length} unshared graphic${recentUnsharedExports.length > 1 ? "s" : ""}`,
+              description: `You created marketing materials but haven't posted them yet. Let's get them out there.`,
+              actionLabel: "Share Now",
+              actionType: "unshared_content",
+              buttons: ["Post to Instagram", "Post to Facebook", "Schedule for later", "Skip"],
+            });
+          }
         }
       });
 
@@ -251,10 +358,10 @@ export async function POST(req: Request) {
       .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
     const brandScore = calculateBrandScore({
-      hasHeadshot: !!(profile && profile.headshot_url),
-      hasLogo: !!(profile && profile.logo_url),
-      hasCompany: !!(profile && profile.company),
-      hasBio: !!(profile && profile.bio),
+      hasHeadshot: !!(profile && profile.saved_headshot_url),
+      hasLogo: !!(profile && profile.saved_logo_url),
+      hasCompany: !!(profile && profile.saved_company),
+      hasBio: !!(profile && profile.saved_agent_name),
       hasPublishedWebsite: hasAgentWebsite,
       daysSincePersonalPost: daysSince(lastPersonal ? lastPersonal.created_at : null),
       daysSinceMarketUpdate: daysSince(lastMarket ? lastMarket.created_at : null),
