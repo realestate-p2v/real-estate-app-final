@@ -52,6 +52,7 @@ export default function PlannerPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const hasLoadedSuggestions = useRef(false);
 
   // Suggestions
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -79,32 +80,28 @@ export default function PlannerPage() {
       ]);
 
       setProperties(propsRes.data || []);
-      const name = profileRes.data?.saved_agent_name || "Agent";
-      setAgentName(name.includes(" ") ? name.split(" ")[0] : name);
-    };
-    init();
-  }, []);
+      const fullName = profileRes.data?.saved_agent_name || "";
+      const firstName = fullName ? (fullName.includes(" ") ? fullName.split(" ")[0] : fullName) : "there";
+      setAgentName(firstName);
 
-  // ─── Load suggestions ──────────────────────────────────────────────────
+      // Load suggestions once here — after we have both session and name
+      if (hasLoadedSuggestions.current) return;
+      hasLoadedSuggestions.current = true;
 
-  useEffect(() => {
-    if (!session) return;
-    const load = async () => {
       setIsTyping(true);
       try {
         const res = await fetch("/api/planner/suggestions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ agentName }),
+          body: JSON.stringify({ agentName: firstName }),
         });
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data.suggestions || []);
 
-          // Opening message
           const greeting = data.suggestions.length > 0
-            ? `Hey ${agentName}! I found ${data.suggestions.length} marketing items for you today. Let's get your listings some attention.`
-            : `Hey ${agentName}! You're all caught up — no urgent marketing tasks right now. Want to plan some posts or work on your brand?`;
+            ? `Hey ${firstName}! What are we working on today? I found a few things that need your attention — want me to walk you through them?`
+            : `Hey ${firstName}! What are we working on today? Everything looks good on my end — want to plan some posts or create content for a listing?`;
 
           addMessage({
             role: "assistant",
@@ -124,8 +121,8 @@ export default function PlannerPage() {
         setIsTyping(false);
       }
     };
-    load();
-  }, [session, agentName]);
+    init();
+  }, []);
 
   // ─── Chat helpers ─────────────────────────────────────────────────────
 
