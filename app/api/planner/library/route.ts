@@ -29,13 +29,16 @@ export async function GET(req: Request) {
     const filterType = url.searchParams.get("type") || "all";
     const propertyId = url.searchParams.get("propertyId");
 
-    // Parallel fetch everything
     const [propertiesRes, ordersRes, exportsRes, stagingRes, descriptionsRes] = await Promise.all([
       supabase.from("agent_properties").select("id, address, photos, optimized_photos").eq("user_id", userId),
-      supabase.from("orders").select("id, property_address, photos, delivery_url, branded_video_url, clip_urls, payment_status, created_at").eq("user_id", userId).eq("payment_status", "paid"),
+      // FIXED: removed branded_video_url (doesn't exist); clip_urls is correct; payment_status 'paid' confirmed
+      supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at").eq("user_id", userId).eq("payment_status", "paid"),
+      // design_exports: export_url and template_type confirmed correct
       supabase.from("design_exports").select("id, property_id, template_type, export_url, created_at").eq("user_id", userId),
+      // lens_staging: staged_url, room_type, style confirmed correct
       supabase.from("lens_staging").select("id, property_id, staged_url, room_type, style, created_at").eq("user_id", userId),
-      supabase.from("lens_descriptions").select("id, property_address, content, style, created_at").eq("user_id", userId),
+      // FIXED: property_data (JSONB) not property_address; description not content
+      supabase.from("lens_descriptions").select("id, property_data, description, style, created_at").eq("user_id", userId),
     ]);
 
     const properties = propertiesRes.data || [];
@@ -91,9 +94,9 @@ export async function GET(req: Request) {
       });
     }
 
-    // Videos from orders
+    // Videos from orders (delivery_url only — no branded_video_url column)
     if (filterType === "all" || filterType === "videos") {
-      orders.forEach((order: { id: string; property_address: string; delivery_url?: string; branded_video_url?: string; created_at: string }) => {
+      orders.forEach((order: { id: string; property_address: string; delivery_url?: string; created_at: string }) => {
         if (order.delivery_url) {
           assets.push({
             id: `video-${order.id}`,
@@ -101,16 +104,6 @@ export async function GET(req: Request) {
             propertyAddress: order.property_address || "Unknown",
             assetUrl: order.delivery_url,
             label: "Listing Video",
-            createdAt: order.created_at,
-          });
-        }
-        if (order.branded_video_url) {
-          assets.push({
-            id: `video-branded-${order.id}`,
-            type: "video",
-            propertyAddress: order.property_address || "Unknown",
-            assetUrl: order.branded_video_url,
-            label: "Branded Video",
             createdAt: order.created_at,
           });
         }
@@ -137,7 +130,7 @@ export async function GET(req: Request) {
       });
     }
 
-    // Flyers (design exports, non-remix non-drone)
+    // Flyers / Graphics (design exports, non-remix non-drone)
     if (filterType === "all" || filterType === "flyers") {
       exports_
         .filter((e: { template_type?: string }) =>
@@ -193,13 +186,14 @@ export async function GET(req: Request) {
     }
 
     // Descriptions
+    // FIXED: property_data is JSONB (extract .address); description not content
     if (filterType === "all" || filterType === "descriptions") {
-      descriptions.forEach((d: { id: string; property_address?: string; content: string; style?: string; created_at: string }) => {
+      descriptions.forEach((d: { id: string; property_data?: { address?: string }; description: string; style?: string; created_at: string }) => {
         assets.push({
           id: `desc-${d.id}`,
           type: "description",
-          propertyAddress: d.property_address || "Unknown",
-          content: d.content,
+          propertyAddress: d.property_data?.address || "Unknown",
+          content: d.description,
           label: `${d.style || "Standard"} Description`,
           createdAt: d.created_at,
         });
@@ -233,7 +227,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Sort by date descending
     filtered.sort((a, b) => {
       if (!a.createdAt) return 1;
       if (!b.createdAt) return -1;
