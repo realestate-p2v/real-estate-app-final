@@ -1,139 +1,212 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/client";
+// app/api/planner/caption/route.ts
+// Enhanced caption generation with property-specific data and voice matching
+// Fixes: client -> server Supabase, includes property details, matches agent writing voice
 
-const platformTones: Record<string, string> = {
-  instagram:
-    "Visual, emoji-friendly, hashtag-heavy. 2-3 sentences max + 5-8 relevant hashtags. Engaging, lifestyle-focused. Use line breaks between sentences.",
-  facebook:
-    "Conversational, slightly longer. 3-4 sentences. Community-focused, shareable. Ask a question or invite engagement at the end.",
-  linkedin:
-    "Professional, market-savvy. 2-3 sentences. Business-oriented, no emojis. Include an industry insight or data point.",
-  twitter:
-    "Punchy, under 280 chars total. One strong hook. No hashtags unless they fit naturally.",
-  blog:
-    "Informative blog post, 200-300 words. Include a headline, 3-4 paragraphs, and a call-to-action. Market-focused, helpful tone.",
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+// Platform-specific tone guidelines
+const PLATFORM_TONES: Record<string, string> = {
+  instagram: "Casual, visual-first. Use line breaks for readability. 3-5 relevant hashtags at the end. Emoji sparingly — 1-2 max. Keep under 150 words.",
+  facebook: "Conversational and warm. Slightly longer than Instagram. Include a clear call-to-action (schedule a showing, share with friends). No hashtags. 100-200 words.",
+  linkedin: "Professional and authoritative. Position the agent as a market expert. Data-driven when possible. No emoji. No hashtags. 150-250 words.",
+  blog: "Long-form, informative. 300-500 words. Include subheadings. SEO-friendly. Educational tone with local market expertise.",
 };
 
-const contentTypePrompts: Record<string, string> = {
-  new_listing:
-    "Announce this new listing. Highlight the top 2-3 features that make it special.",
-  just_sold:
-    "Celebrate this sale. Express gratitude. Show success without being boastful.",
-  open_house:
-    "Invite people to the open house. Create urgency and excitement.",
-  price_reduced:
-    "Announce the price reduction. Emphasize value and opportunity.",
-  staging_reveal:
-    "Show the before/after staging transformation. Emphasize the visual impact.",
-  video_share:
-    "Promote the listing video. Tease what viewers will see inside.",
-  neighborhood:
-    "Talk about the neighborhood and lifestyle. Why people love living here.",
-  market_update:
-    "Share a market insight relevant to the local area. Be data-informed and helpful.",
+// Fallback templates when API is unavailable
+const FALLBACK_TEMPLATES: Record<string, Record<string, string>> = {
+  instagram: {
+    new_listing: "✨ Just listed! This beautiful home features [key feature]. Don't miss your chance to see it.\n\nDM me for details or to schedule a private showing.\n\n#JustListed #RealEstate #DreamHome",
+    just_sold: "🎉 SOLD! So happy for my clients who just closed on this beautiful home. Wishing them years of wonderful memories.\n\nThinking of buying or selling? Let's chat.\n\n#JustSold #RealEstate #Closing",
+    price_reduced: "📉 Price improvement! This stunning home just got even more attractive. Now is the time to take a look.\n\nReach out for a private showing.\n\n#PriceReduced #RealEstate #Opportunity",
+    default: "New on my feed today! Excited to share this with you. Questions? DM me anytime.\n\n#RealEstate #Homes",
+  },
+  facebook: {
+    new_listing: "Excited to introduce my newest listing! This home has so much to offer — reach out if you'd like to learn more or schedule a showing. I'd love to show you around!",
+    just_sold: "Another one closed! Congratulations to my wonderful clients on their new home. It was a pleasure working with you through the entire process. If you're thinking about making a move, I'd love to help you too!",
+    default: "Have a real estate question? I'm always here to help. Don't hesitate to reach out!",
+  },
+  linkedin: {
+    market_update: "The local real estate market continues to evolve. Here are some key trends I'm seeing in my day-to-day work with buyers and sellers. If you have questions about how these trends affect your plans, feel free to connect.",
+    just_sold: "Pleased to announce another successful closing. This transaction reinforced the importance of proper preparation and market knowledge. If you're considering a real estate move, I'd welcome the opportunity to discuss your goals.",
+    default: "Real estate is more than transactions — it's about helping people find their next chapter. Happy to connect with anyone who has questions about the market.",
+  },
+  blog: {
+    default: "Welcome to my latest market update. In this post, I'll share insights from my recent experience helping buyers and sellers navigate today's real estate landscape.",
+  },
 };
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const userId = session.user.id;
+    const body = await req.json();
     const {
-      propertyAddress,
-      agentName,
+      propertyId,
       platform = "instagram",
       contentType = "new_listing",
-      userId,
+      freeform,
+      agentName,
     } = body;
 
-    if (!propertyAddress || !userId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    // If freeform, treat as a general chat message
+    if (freeform) {
+      return handleFreeform(freeform, userId, agentName || "Agent", supabase);
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Anthropic API key not configured" },
-        { status: 500 }
-      );
+    // Fetch property data if propertyId provided
+    let propertyDetails = "";
+    let propertyAddress = "";
+    if (propertyId) {
+      const [propRes, orderRes] = await Promise.all([
+        supabase.from("agent_properties").select("address, city, state, status, beds, baths, sqft, price, special_features, optimized_photos").eq("id", propertyId).single(),
+        supabase.from("orders").select("property_address, photos").eq("user_id", userId).limit(1),
+      ]);
+
+      if (propRes.data) {
+        const p = propRes.data;
+        propertyAddress = p.address || "";
+        propertyDetails = [
+          p.address && `Address: ${p.address}`,
+          p.city && p.state && `Location: ${p.city}, ${p.state}`,
+          p.price && `Price: $${Number(p.price).toLocaleString()}`,
+          p.beds && `Bedrooms: ${p.beds}`,
+          p.baths && `Bathrooms: ${p.baths}`,
+          p.sqft && `Square feet: ${Number(p.sqft).toLocaleString()}`,
+          p.special_features && `Special features: ${p.special_features}`,
+          p.status && `Status: ${p.status}`,
+        ].filter(Boolean).join("\n");
+      }
     }
 
-    // Pull agent's past descriptions for voice matching
-    const supabase = createClient();
-    const { data: pastDescriptions } = await supabase
-      .from("lens_descriptions")
-      .select("content, style")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(3);
+    // Fetch agent's writing voice (previous descriptions)
+    let voiceContext = "";
+    const descriptionsQuery = propertyId
+      ? supabase.from("lens_descriptions").select("content").eq("user_id", userId).limit(3).order("created_at", { ascending: false })
+      : supabase.from("lens_descriptions").select("content").eq("user_id", userId).limit(3).order("created_at", { ascending: false });
 
-    const voiceContext =
-      pastDescriptions?.length
-        ? `\n\nAGENT'S WRITING STYLE (match this tone and voice):\n${pastDescriptions
-            .map((d) => d.content)
-            .join("\n---\n")}`
-        : "";
+    const { data: descriptions } = await descriptionsQuery;
+    if (descriptions && descriptions.length > 0) {
+      const samples = descriptions.map((d: { content: string }) => d.content.slice(0, 200)).join("\n---\n");
+      voiceContext = `\nThe agent's writing style (match this voice):\n${samples}`;
+    }
 
-    const platformTone = platformTones[platform] || platformTones.instagram;
-    const contentPrompt =
-      contentTypePrompts[contentType] || contentTypePrompts.new_listing;
+    // Fetch agent profile
+    const { data: profile } = await supabase.from("profiles").select("full_name, company, bio").eq("id", userId).single();
+    const agentInfo = [
+      profile?.full_name && `Agent: ${profile.full_name}`,
+      profile?.company && `Company: ${profile.company}`,
+    ].filter(Boolean).join("\n");
 
-    const systemPrompt = `You are a real estate marketing copywriter. Write social media captions for real estate agents.
+    const platformTone = PLATFORM_TONES[platform] || PLATFORM_TONES.instagram;
+
+    const systemPrompt = `You are a real estate social media copywriter. Write a single ${platform} post for a real estate agent.
 
 Rules:
-- Write ONLY the caption text. No explanations, no labels, no quotes around it.
-- Use the agent's actual name, never say "the listing agent" or "your agent".
-- Be authentic — avoid cliché real estate phrases like "don't miss out" or "won't last long".
-- Match the platform tone exactly.
-- Never include placeholder text like [insert X here].${voiceContext}`;
+- Write ONLY the caption text. No explanations, no options, no preamble.
+- ${platformTone}
+- Be specific to this property — reference actual features, not generic placeholders.
+- Sound like a real agent, not a template.
+- Never use [brackets] or placeholder text.
+${voiceContext}`;
 
-    const userPrompt = `Write a ${platform} caption for agent ${agentName || "the agent"}.
+    const userPrompt = `Write a ${contentType.replace(/_/g, " ")} post for ${platform}.
 
-Property: ${propertyAddress}
-Content type: ${contentType}
-${contentPrompt}
+${agentInfo}
+${propertyDetails ? `\nProperty details:\n${propertyDetails}` : "\nThis is a personal/brand post — not about a specific listing."}
 
-Platform tone: ${platformTone}
+Post type: ${contentType.replace(/_/g, " ")}`;
 
-Write the caption now:`;
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: platform === "blog" ? 800 : 300,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Claude API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const caption = data.content?.[0]?.text || "";
+
+      if (caption) {
+        // Record the action
+        await supabase.from("marketing_actions").insert({
+          user_id: userId,
+          property_id: propertyId || null,
+          action_type: "caption_generated",
+          platform,
+          content_type: contentType,
+          metadata: { source: "planner_v2" },
+        });
+
+        return NextResponse.json({ caption });
+      }
+
+      throw new Error("Empty response from Claude");
+    } catch (apiError) {
+      console.error("Claude API error, using fallback:", apiError);
+      // Fallback templates
+      const platformTemplates = FALLBACK_TEMPLATES[platform] || FALLBACK_TEMPLATES.instagram;
+      const template = platformTemplates[contentType] || platformTemplates.default || "Check out this listing!";
+      return NextResponse.json({ caption: template, fallback: true });
+    }
+  } catch (error) {
+    console.error("Caption route error:", error);
+    return NextResponse.json({ error: "Failed to generate caption" }, { status: 500 });
+  }
+}
+
+// Handle freeform chat messages
+async function handleFreeform(
+  message: string,
+  userId: string,
+  agentName: string,
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  try {
+    const { data: profile } = await supabase.from("profiles").select("full_name, company").eq("id", userId).single();
+
+    const systemPrompt = `You are Lensy, the AI marketing assistant for a real estate agent named ${agentName}${profile?.company ? ` at ${profile.company}` : ""}. You help with:
+- Writing social media captions for listings
+- Suggesting marketing strategies
+- Creating content ideas
+- Answering marketing questions
+
+Be concise, practical, and specific. Sound like a helpful marketing colleague, not a generic AI. Keep responses under 150 words unless the agent asks for something longer.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: platform === "blog" ? 800 : 400,
+        max_tokens: 300,
         system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        messages: [{ role: "user", content: message }],
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
-      return NextResponse.json(
-        { error: "Caption generation failed" },
-        { status: 500 }
-      );
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
-    const caption =
-      data.content?.[0]?.type === "text"
-        ? data.content[0].text.trim()
-        : "";
+    const caption = data.content?.[0]?.text || "I'm here to help with your marketing. Try asking me to write a caption or suggest what to post this week!";
 
-    return NextResponse.json({ caption, platform, contentType });
-  } catch (error: any) {
-    console.error("Caption generation error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate caption" },
-      { status: 500 }
-    );
+    return NextResponse.json({ caption, response: caption });
+  } catch {
+    return NextResponse.json({
+      caption: "I'm having a moment — try asking me again! I can help with captions, posting strategies, and marketing ideas.",
+      response: "I'm having a moment — try asking me again!",
+      fallback: true,
+    });
   }
 }
