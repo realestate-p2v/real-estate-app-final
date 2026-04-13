@@ -10,6 +10,12 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // If `next` is already an absolute URL (e.g. https://mattsrealty.p2v.homes/editor/auth-callback),
+      // redirect to it directly — do not prepend the current host.
+      if (next.startsWith("https://") || next.startsWith("http://")) {
+        return NextResponse.redirect(next);
+      }
+
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
       if (isLocalEnv) {
