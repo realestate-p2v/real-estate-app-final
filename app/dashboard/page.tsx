@@ -58,7 +58,7 @@ import {
 /* ─── Lazy-loaded components (not needed for initial paint) ─── */
 const SignupSpin = dynamic(() => import("@/components/signup-spin").then(m => ({ default: m.SignupSpin })), { ssr: false });
 const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
-const MarketingPlannerWidget = dynamic(() => import("@/components/marketing-planner-widget").then(m => ({ default: m.MarketingPlannerWidget })), { ssr: false });
+const MarketingPlannerWidget = dynamic(() => import("@/components/marketing-planner-widget"), { ssr: false });
 
 /* ─────────────────────────────────────────────
    Constants
@@ -894,11 +894,8 @@ export default function DashboardPage() {
               </Link>
             </div>
             <MarketingPlannerWidget
-              userId={user.id}
-              agentName={agentProfile.saved_agent_name}
               isSubscriber={isSubscriber}
               isTrial={access.tier === "trial"}
-              trialDaysLeft={access.trialDaysLeft}
             />
           </div>
         )}
