@@ -1,19 +1,10 @@
 // app/site/[handle]/data.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared data layer for agent site pages.
-// Schema verified from live debug dump — April 13 2026.
-//
-// URLs from Supabase are used AS-IS. No cloudinaryUrl() transforms.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-// ─── Types (matched to actual DB columns) ────────────────────────────────────
 
 export interface AgentSite {
   id: string;
@@ -34,18 +25,15 @@ export interface AgentSite {
   faq_items: { question: string; answer: string }[];
   social_links: Record<string, string>;
   contact_info: any | null;
-  // Feature flags
   blog_enabled: boolean;
   calendar_enabled: boolean;
   listings_opt_in: boolean;
   reports_public: boolean;
   lensy_enabled: boolean;
   news_enabled: boolean;
-  // SEO
   seo_title: string | null;
   seo_description: string | null;
   og_image_url: string | null;
-  // Status
   status: string;
   published: boolean;
 }
@@ -89,52 +77,32 @@ export interface BlogPost {
   created_at: string;
 }
 
-// ─── Core: Resolve handle → site ────────────────────────────────────────────
-
 export async function getSite(handle: string): Promise<AgentSite | null> {
   const { data, error } = await supabase
     .from("agent_websites")
     .select("*")
     .eq("handle", handle)
     .limit(1);
-
   if (error || !data || data.length === 0) return null;
-
-  const row = data[0];
+  const r = data[0];
   return {
-    id: row.id,
-    user_id: row.user_id,
-    handle: row.handle,
-    slug: row.slug,
-    site_title: row.site_title || null,
-    tagline: row.tagline || null,
-    bio: row.bio || null,
-    about_content: row.about_content || null,
-    about_photo_url: row.about_photo_url || null,
-    template: row.template || null,
-    primary_color: row.primary_color || null,
-    brand_colors: row.brand_colors || null,
-    custom_css: row.custom_css || null,
-    custom_domain: row.custom_domain || null,
-    hero_photos: Array.isArray(row.hero_photos) ? row.hero_photos : [],
-    faq_items: Array.isArray(row.faq_items) ? row.faq_items : [],
-    social_links: row.social_links || {},
-    contact_info: row.contact_info || null,
-    blog_enabled: row.blog_enabled ?? true,
-    calendar_enabled: row.calendar_enabled ?? false,
-    listings_opt_in: row.listings_opt_in ?? true,
-    reports_public: row.reports_public ?? false,
-    lensy_enabled: row.lensy_enabled ?? false,
-    news_enabled: row.news_enabled ?? false,
-    seo_title: row.seo_title || null,
-    seo_description: row.seo_description || null,
-    og_image_url: row.og_image_url || null,
-    status: row.status || "draft",
-    published: row.published ?? false,
+    id: r.id, user_id: r.user_id, handle: r.handle, slug: r.slug,
+    site_title: r.site_title || null, tagline: r.tagline || null,
+    bio: r.bio || null, about_content: r.about_content || null,
+    about_photo_url: r.about_photo_url || null, template: r.template || null,
+    primary_color: r.primary_color || null, brand_colors: r.brand_colors || null,
+    custom_css: r.custom_css || null, custom_domain: r.custom_domain || null,
+    hero_photos: Array.isArray(r.hero_photos) ? r.hero_photos : [],
+    faq_items: Array.isArray(r.faq_items) ? r.faq_items : [],
+    social_links: r.social_links || {}, contact_info: r.contact_info || null,
+    blog_enabled: r.blog_enabled ?? true, calendar_enabled: r.calendar_enabled ?? false,
+    listings_opt_in: r.listings_opt_in ?? true, reports_public: r.reports_public ?? false,
+    lensy_enabled: r.lensy_enabled ?? false, news_enabled: r.news_enabled ?? false,
+    seo_title: r.seo_title || null, seo_description: r.seo_description || null,
+    og_image_url: r.og_image_url || null, status: r.status || "draft",
+    published: r.published ?? false,
   };
 }
-
-// ─── Profile: from lens_usage ───────────────────────────────────────────────
 
 export async function getProfile(userId: string): Promise<AgentProfile> {
   const { data } = await supabase
@@ -142,62 +110,38 @@ export async function getProfile(userId: string): Promise<AgentProfile> {
     .select("saved_headshot_url, saved_logo_url, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_company_colors")
     .eq("user_id", userId)
     .limit(1);
-
-  const row = data?.[0];
-  if (!row) {
-    return {
-      headshot_url: null, logo_url: null, agent_name: null,
-      phone: null, email: null, company: null, website: null,
-      company_colors: [],
-    };
-  }
-
+  const r = data?.[0];
+  if (!r) return { headshot_url: null, logo_url: null, agent_name: null, phone: null, email: null, company: null, website: null, company_colors: [] };
   return {
-    headshot_url: row.saved_headshot_url || null,
-    logo_url: row.saved_logo_url || null,
-    agent_name: row.saved_agent_name || null,
-    phone: row.saved_phone || null,
-    email: row.saved_email || null,
-    company: row.saved_company || null,
-    website: row.saved_website || null,
-    company_colors: Array.isArray(row.saved_company_colors) ? row.saved_company_colors : [],
+    headshot_url: r.saved_headshot_url || null, logo_url: r.saved_logo_url || null,
+    agent_name: r.saved_agent_name || null, phone: r.saved_phone || null,
+    email: r.saved_email || null, company: r.saved_company || null,
+    website: r.saved_website || null,
+    company_colors: Array.isArray(r.saved_company_colors) ? r.saved_company_colors : [],
   };
 }
-
-// ─── Listings: agent_properties + photo enrichment from orders ──────────────
 
 export async function getListings(userId: string): Promise<Listing[]> {
   const { data: props } = await supabase
     .from("agent_properties")
     .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated")
-    .eq("user_id", userId)
-    .is("merged_into_id", null)
+    .eq("user_id", userId).is("merged_into_id", null)
     .order("updated_at", { ascending: false });
-
   if (!props || props.length === 0) return [];
-
   const { data: orders } = await supabase
-    .from("orders")
-    .select("photos, property_address")
-    .eq("user_id", userId)
-    .eq("payment_status", "paid");
-
-  const orderList = orders || [];
-
-  return props.map((prop: any) => {
+    .from("orders").select("photos, property_address")
+    .eq("user_id", userId).eq("payment_status", "paid");
+  const ol = orders || [];
+  return props.map((p: any) => {
     let photos: string[] = [];
-    const curated = prop.website_curated?.photos || [];
-    if (curated.length) photos = curated.slice(0, 7);
-
+    const cur = p.website_curated?.photos || [];
+    if (cur.length) photos = cur.slice(0, 7);
     if (photos.length < 5) {
-      const addrPrefix = (prop.address || "").substring(0, 15).toLowerCase();
-      if (addrPrefix) {
-        for (const order of orderList) {
-          const orderAddr = (order.property_address || "").toLowerCase();
-          if (orderAddr.includes(addrPrefix)) {
-            const urls = (order.photos || [])
-              .map((p: any) => p.secure_url || p.url)
-              .filter(Boolean);
+      const prefix = (p.address || "").substring(0, 15).toLowerCase();
+      if (prefix) {
+        for (const o of ol) {
+          if ((o.property_address || "").toLowerCase().includes(prefix)) {
+            const urls = (o.photos || []).map((x: any) => x.secure_url || x.url).filter(Boolean);
             photos = [...photos, ...urls];
             if (photos.length >= 7) break;
           }
@@ -205,50 +149,29 @@ export async function getListings(userId: string): Promise<Listing[]> {
       }
       photos = [...new Set(photos)].slice(0, 7);
     }
-
-    return {
-      id: prop.id,
-      address: prop.address || "",
-      city: prop.city || null,
-      state: prop.state || null,
-      bedrooms: prop.bedrooms ?? null,
-      bathrooms: prop.bathrooms ?? null,
-      sqft: prop.sqft ?? null,
-      price: prop.price ?? null,
-      special_features: prop.special_features || null,
-      amenities: prop.amenities || null,
-      website_slug: prop.website_slug || null,
-      website_published: prop.website_published ?? null,
-      website_curated: prop.website_curated || null,
-      photos,
-    };
+    return { id: p.id, address: p.address || "", city: p.city || null, state: p.state || null,
+      bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, sqft: p.sqft ?? null,
+      price: p.price ?? null, special_features: p.special_features || null,
+      amenities: p.amenities || null, website_slug: p.website_slug || null,
+      website_published: p.website_published ?? null, website_curated: p.website_curated || null,
+      photos };
   });
 }
-
-// ─── Blog posts ─────────────────────────────────────────────────────────────
 
 export async function getBlogPosts(userId: string): Promise<BlogPost[]> {
   const { data } = await supabase
     .from("agent_blog_posts")
     .select("id, title, slug, content, excerpt, featured_image, published_at, created_at")
-    .eq("user_id", userId)
-    .eq("status", "published")
+    .eq("user_id", userId).eq("status", "published")
     .order("published_at", { ascending: false });
-
   return (data || []) as BlogPost[];
 }
-
-// ─── Convenience: load everything ───────────────────────────────────────────
 
 export async function getAgentSiteData(handle: string) {
   const site = await getSite(handle);
   if (!site) return null;
-
   const [profile, listings, blogPosts] = await Promise.all([
-    getProfile(site.user_id),
-    getListings(site.user_id),
-    getBlogPosts(site.user_id),
+    getProfile(site.user_id), getListings(site.user_id), getBlogPosts(site.user_id),
   ]);
-
   return { site, profile, listings, blogPosts };
 }
