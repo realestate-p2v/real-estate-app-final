@@ -52,11 +52,17 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // ── 2. [handle].p2v.homes subdomain → agent website ──
-  // Public agent sites — no auth needed
+  // ── 2. [handle].p2v.homes subdomain → agent website or editor ──
   if (isP2vHomesSubdomain(hostname)) {
     const handle = hostname.split(".")[0];
     if (handle && handle !== "www") {
+      // Editor route: [handle].p2v.homes/editor → /editor/[handle]
+      if (pathname === "/editor" || pathname === "/editor/") {
+        return NextResponse.rewrite(
+          new URL(`/editor/${handle}`, request.url)
+        );
+      }
+      // Everything else → public agent site
       return NextResponse.rewrite(
         new URL(`/site/${handle}${pathname}`, request.url)
       );
