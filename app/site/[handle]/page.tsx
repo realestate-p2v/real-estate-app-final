@@ -1,5 +1,5 @@
 // app/site/[handle]/page.tsx
-// DIAGNOSTIC BUILD — inline everything, zero external imports except supabase + next
+// DIAGNOSTIC BUILD v2 — fixed: removed accent_color (column doesn't exist)
 import { createClient } from "@supabase/supabase-js";
 
 interface Props {
@@ -18,10 +18,10 @@ export default async function AgentHomePage({ params }: Props) {
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // Step 1: Get site config
+    // Step 1: Get site config — use select("*") to discover actual columns
     const { data: sites, error: siteErr } = await supabase
       .from("agent_websites")
-      .select("id, user_id, handle, site_title, primary_color, accent_color")
+      .select("*")
       .eq("handle", handle)
       .limit(1);
 
@@ -37,8 +37,13 @@ export default async function AgentHomePage({ params }: Props) {
     }
 
     const site = sites[0];
-    debug.push("site_title: " + site.site_title);
-    debug.push("user_id: " + site.user_id);
+    // Log ALL columns so we know what exists
+    debug.push("--- SITE COLUMNS ---");
+    Object.keys(site).forEach((key) => {
+      const val = site[key];
+      const display = val === null ? "null" : typeof val === "object" ? JSON.stringify(val).substring(0, 100) : String(val).substring(0, 100);
+      debug.push("  " + key + ": " + display);
+    });
 
     // Step 2: Get profile from lens_usage
     const { data: profiles, error: profileErr } = await supabase
@@ -49,9 +54,12 @@ export default async function AgentHomePage({ params }: Props) {
 
     if (profileErr) debug.push("profile error: " + profileErr.message);
     const profile = profiles?.[0] || null;
-    debug.push("agent_name: " + (profile?.saved_agent_name || "null"));
-    debug.push("headshot: " + (profile?.saved_headshot_url ? "YES" : "null"));
-    debug.push("logo: " + (profile?.saved_logo_url ? "YES" : "null"));
+    debug.push("--- PROFILE ---");
+    debug.push("  agent_name: " + (profile?.saved_agent_name || "null"));
+    debug.push("  headshot: " + (profile?.saved_headshot_url ? profile.saved_headshot_url.substring(0, 80) : "null"));
+    debug.push("  logo: " + (profile?.saved_logo_url ? profile.saved_logo_url.substring(0, 80) : "null"));
+    debug.push("  phone: " + (profile?.saved_phone || "null"));
+    debug.push("  company: " + (profile?.saved_company || "null"));
 
     // Step 3: Get listings
     const { data: props, error: propsErr } = await supabase
@@ -63,7 +71,8 @@ export default async function AgentHomePage({ params }: Props) {
       .limit(10);
 
     if (propsErr) debug.push("props error: " + propsErr.message);
-    debug.push("listings: " + (props?.length || 0));
+    debug.push("--- LISTINGS ---");
+    debug.push("  count: " + (props?.length || 0));
 
     // Step 4: Get orders with photos
     const { data: orders, error: ordersErr } = await supabase
@@ -73,9 +82,9 @@ export default async function AgentHomePage({ params }: Props) {
       .eq("payment_status", "paid");
 
     if (ordersErr) debug.push("orders error: " + ordersErr.message);
-    debug.push("orders: " + (orders?.length || 0));
+    debug.push("  orders: " + (orders?.length || 0));
 
-    // Photo enrichment helper (inline, same as Design Studio)
+    // Photo enrichment (same as Design Studio)
     function getPhotos(listing: any): string[] {
       let photos: string[] = [];
       const cur = listing.website_curated?.photos || [];
@@ -95,10 +104,21 @@ export default async function AgentHomePage({ params }: Props) {
       return [...new Set(photos)].slice(0, 7);
     }
 
-    // Enrich listings
     const listings = (props || []).map((p: any) => ({ ...p, photos: getPhotos(p) }));
     const featured = listings.filter((l: any) => l.photos.length > 0).slice(0, 6);
-    debug.push("featured with photos: " + featured.length);
+    debug.push("  featured (with photos): " + featured.length);
+
+    // Log first listing photo URLs
+    if (featured.length > 0) {
+      debug.push("--- FIRST LISTING PHOTOS ---");
+      featured[0].photos.forEach((url: string, i: number) => {
+        debug.push("  [" + i + "]: " + url.substring(0, 100));
+      });
+    }
+
+    // Colors — use whatever columns actually exist
+    const primaryColor = site.primary_color || site.color_primary || "#1a1a2e";
+    const accentColor = site.accent_color || site.color_accent || site.secondary_color || site.color_secondary || "#e2725b";
 
     // ─── RENDER ────────────────────────────────────────────────────────
     return (
@@ -111,7 +131,7 @@ export default async function AgentHomePage({ params }: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: site.primary_color || "#1a1a2e",
+          backgroundColor: primaryColor,
           overflow: "hidden",
         }}>
           {featured[0]?.photos[0] && (
@@ -180,7 +200,7 @@ export default async function AgentHomePage({ params }: Props) {
           </section>
         )}
 
-        {/* Debug — remove after confirming assets load */}
+        {/* Debug — remove after confirming */}
         <details style={{ margin: "40px 24px", padding: 20, backgroundColor: "#111", borderRadius: 8, color: "#0f0", fontFamily: "monospace", fontSize: 12 }}>
           <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: 14, color: "#0f0" }}>Debug Output</summary>
           <pre style={{ marginTop: 12, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{debug.join("\n")}</pre>
