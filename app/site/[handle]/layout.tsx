@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Building2, Menu } from "lucide-react";
+import { cloudinaryUrl } from "@/lib/cloudinary-url";
 
 async function getWebsiteData(handle: string) {
   const supabase = createClient(
@@ -58,6 +58,10 @@ export default async function AgentSiteLayout({
   const siteTitle = website.site_title || agentName;
   const primaryColor = website.primary_color || "#06b6d4";
 
+  // Fix Cloudinary URLs for cross-domain delivery
+  const headshotUrl = cloudinaryUrl(agent?.saved_headshot_url);
+  const logoUrl = cloudinaryUrl(agent?.saved_logo_url);
+
   const navLinks = [
     { href: `/`, label: "Home" },
     { href: `/about`, label: "About" },
@@ -82,15 +86,15 @@ export default async function AgentSiteLayout({
           <div className="flex h-16 items-center justify-between">
             {/* Logo / Name */}
             <Link href="/" className="flex items-center gap-2.5">
-              {agent?.saved_logo_url ? (
+              {logoUrl ? (
                 <img
-                  src={agent.saved_logo_url}
+                  src={logoUrl}
                   alt={siteTitle}
                   className="h-8 w-auto max-w-[120px] object-contain"
                 />
-              ) : agent?.saved_headshot_url ? (
+              ) : headshotUrl ? (
                 <img
-                  src={agent.saved_headshot_url}
+                  src={headshotUrl}
                   alt={agentName}
                   className="h-8 w-8 rounded-full object-cover"
                 />
