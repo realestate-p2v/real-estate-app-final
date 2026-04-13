@@ -58,7 +58,7 @@ import {
 /* ─── Lazy-loaded components (not needed for initial paint) ─── */
 const SignupSpin = dynamic(() => import("@/components/signup-spin").then(m => ({ default: m.SignupSpin })), { ssr: false });
 const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
-const MarketingPlannerCard = dynamic(() => import("@/components/marketing-planner-card").then(m => ({ default: m.MarketingPlannerCard })), { ssr: false });
+const MarketingPlannerWidget = dynamic(() => import("@/components/marketing-planner-widget"), { ssr: false });
 
 /* ─────────────────────────────────────────────
    Constants
@@ -613,7 +613,7 @@ export default function DashboardPage() {
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
     { icon: Globe, label: "Website Builder", desc: "Build your full agent website with AI-powered content", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", ...gated("website_builder") },
-    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "#planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
+    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "/dashboard/planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
     { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
     { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
     { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
@@ -884,15 +884,19 @@ export default function DashboardPage() {
             </button>
         </div>
 
-        {/* ═══ MARKETING PLANNER ═══ */}
-        {secondaryLoaded && user && (access.allowed) && (
-          <div id="planner" className="mc-animate mt-8" style={{ animationDelay: "0.19s" }}>
-            <MarketingPlannerCard
-              userId={user.id}
-              agentName={agentProfile.saved_agent_name}
+
+        {/* ═══ MARKETING COPILOT — right after quick links, first thing agents see ═══ */}
+        {secondaryLoaded && user && access.allowed && (
+          <div id="planner" className="mc-animate mt-6" style={{ animationDelay: "0.19s" }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Marketing Copilot</p>
+              <Link href="/dashboard/planner" className="text-xs font-semibold text-emerald-400/60 hover:text-emerald-400 transition-colors flex items-center gap-1">
+                Open full planner <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <MarketingPlannerWidget
               isSubscriber={isSubscriber}
               isTrial={access.tier === "trial"}
-              trialDaysLeft={access.trialDaysLeft}
             />
           </div>
         )}
