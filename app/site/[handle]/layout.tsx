@@ -1,7 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { cloudinaryUrl } from "@/lib/cloudinary-url";
+
+// ── Cloudinary URL helpers (inline) ──
+function cloudinaryUrl(url: string | null | undefined, transforms?: string): string | null {
+  if (!url) return null;
+  if (!url.includes("res.cloudinary.com")) return url;
+  try {
+    const base = "f_auto,q_auto";
+    const all = transforms ? `${base},${transforms}` : base;
+    const fixed = url.replace(/\/upload\/v\d+\//, `/upload/${all}/`);
+    if (fixed !== url) return fixed;
+    return url.replace(/\/upload\//, `/upload/${all}/`);
+  } catch { return url; }
+}
 
 async function getWebsiteData(handle: string) {
   const supabase = createClient(
