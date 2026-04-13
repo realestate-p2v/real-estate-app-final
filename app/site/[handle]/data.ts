@@ -1,15 +1,9 @@
 // app/site/[handle]/data.ts
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared data layer for agent site pages.
-//
-// Mirrors the PROVEN data flow from the Design Studio (page__44_.tsx):
-//   1. lens_usage  → agent profile (headshot, logo, name, phone, etc.)
-//   2. agent_properties → listings (address, beds, baths, price, etc.)
-//   3. orders.photos   → real photos (secure_url), matched by address
-//   4. agent_websites  → site config (colors, template, SEO)
+// Schema verified from live debug dump — April 13 2026.
 //
 // URLs from Supabase are used AS-IS. No cloudinaryUrl() transforms.
-// The Design Studio renders them raw and they work. So do we.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from "@supabase/supabase-js";
@@ -19,20 +13,41 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types (matched to actual DB columns) ────────────────────────────────────
 
 export interface AgentSite {
   id: string;
   user_id: string;
   handle: string;
+  slug: string;
   site_title: string | null;
+  tagline: string | null;
+  bio: string | null;
+  about_content: string | null;
+  about_photo_url: string | null;
   template: string | null;
   primary_color: string | null;
-  secondary_color: string | null;
-  accent_color: string | null;
-  meta_title: string | null;
-  meta_description: string | null;
+  brand_colors: any | null;
+  custom_css: string | null;
   custom_domain: string | null;
+  hero_photos: string[];
+  faq_items: { question: string; answer: string }[];
+  social_links: Record<string, string>;
+  contact_info: any | null;
+  // Feature flags
+  blog_enabled: boolean;
+  calendar_enabled: boolean;
+  listings_opt_in: boolean;
+  reports_public: boolean;
+  lensy_enabled: boolean;
+  news_enabled: boolean;
+  // SEO
+  seo_title: string | null;
+  seo_description: string | null;
+  og_image_url: string | null;
+  // Status
+  status: string;
+  published: boolean;
 }
 
 export interface AgentProfile {
@@ -60,7 +75,7 @@ export interface Listing {
   website_slug: string | null;
   website_published: boolean | null;
   website_curated: { photos?: string[] } | null;
-  photos: string[]; // enriched from orders — ready to render
+  photos: string[];
 }
 
 export interface BlogPost {
@@ -74,20 +89,52 @@ export interface BlogPost {
   created_at: string;
 }
 
-// ─── Core: Resolve handle → site + user_id ──────────────────────────────────
+// ─── Core: Resolve handle → site ────────────────────────────────────────────
 
 export async function getSite(handle: string): Promise<AgentSite | null> {
   const { data, error } = await supabase
     .from("agent_websites")
-    .select("id, user_id, handle, site_title, template, primary_color, secondary_color, accent_color, meta_title, meta_description, custom_domain")
+    .select("*")
     .eq("handle", handle)
     .limit(1);
 
   if (error || !data || data.length === 0) return null;
-  return data[0] as AgentSite;
+
+  const row = data[0];
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    handle: row.handle,
+    slug: row.slug,
+    site_title: row.site_title || null,
+    tagline: row.tagline || null,
+    bio: row.bio || null,
+    about_content: row.about_content || null,
+    about_photo_url: row.about_photo_url || null,
+    template: row.template || null,
+    primary_color: row.primary_color || null,
+    brand_colors: row.brand_colors || null,
+    custom_css: row.custom_css || null,
+    custom_domain: row.custom_domain || null,
+    hero_photos: Array.isArray(row.hero_photos) ? row.hero_photos : [],
+    faq_items: Array.isArray(row.faq_items) ? row.faq_items : [],
+    social_links: row.social_links || {},
+    contact_info: row.contact_info || null,
+    blog_enabled: row.blog_enabled ?? true,
+    calendar_enabled: row.calendar_enabled ?? false,
+    listings_opt_in: row.listings_opt_in ?? true,
+    reports_public: row.reports_public ?? false,
+    lensy_enabled: row.lensy_enabled ?? false,
+    news_enabled: row.news_enabled ?? false,
+    seo_title: row.seo_title || null,
+    seo_description: row.seo_description || null,
+    og_image_url: row.og_image_url || null,
+    status: row.status || "draft",
+    published: row.published ?? false,
+  };
 }
 
-// ─── Profile: from lens_usage (same fields as Design Studio line 601) ───────
+// ─── Profile: from lens_usage ───────────────────────────────────────────────
 
 export async function getProfile(userId: string): Promise<AgentProfile> {
   const { data } = await supabase
@@ -117,15 +164,9 @@ export async function getProfile(userId: string): Promise<AgentProfile> {
   };
 }
 
-// ─── Listings: from agent_properties + photo enrichment from orders ─────────
-//
-// Photo enrichment mirrors Design Studio lines 800-807:
-//   1. Use website_curated.photos first (preferred)
-//   2. Fall back to orders.photos matched by address substring
-//   3. Extract secure_url || url from each photo object
+// ─── Listings: agent_properties + photo enrichment from orders ──────────────
 
 export async function getListings(userId: string): Promise<Listing[]> {
-  // 1. Get all properties for this agent
   const { data: props } = await supabase
     .from("agent_properties")
     .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated")
@@ -135,7 +176,6 @@ export async function getListings(userId: string): Promise<Listing[]> {
 
   if (!props || props.length === 0) return [];
 
-  // 2. Get all paid orders with photos for this user (one query, not per-listing)
   const { data: orders } = await supabase
     .from("orders")
     .select("photos, property_address")
@@ -144,17 +184,11 @@ export async function getListings(userId: string): Promise<Listing[]> {
 
   const orderList = orders || [];
 
-  // 3. Enrich each property with photos
   return props.map((prop: any) => {
     let photos: string[] = [];
-
-    // Prefer curated photos (same as Design Studio line 801-802)
     const curated = prop.website_curated?.photos || [];
-    if (curated.length) {
-      photos = curated.slice(0, 7);
-    }
+    if (curated.length) photos = curated.slice(0, 7);
 
-    // Fall back to orders if not enough curated (same as Design Studio line 803-806)
     if (photos.length < 5) {
       const addrPrefix = (prop.address || "").substring(0, 15).toLowerCase();
       if (addrPrefix) {
@@ -204,7 +238,7 @@ export async function getBlogPosts(userId: string): Promise<BlogPost[]> {
   return (data || []) as BlogPost[];
 }
 
-// ─── Convenience: load everything for a handle in one call ──────────────────
+// ─── Convenience: load everything ───────────────────────────────────────────
 
 export async function getAgentSiteData(handle: string) {
   const site = await getSite(handle);
