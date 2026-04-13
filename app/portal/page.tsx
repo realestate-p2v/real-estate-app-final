@@ -95,11 +95,49 @@ async function getPortalData() {
     }
   }
 
-  const listings = (listingsRes.data || []).map((l) => ({
-    ...l,
-    agent: agentMap[l.user_id] || null,
-    photos: l.optimized_photos || [],
-  }));
+  // ── Enrich listings with photos from orders ──
+  const listingUserIds = [...new Set((listingsRes.data || []).map((l) => l.user_id))];
+  let orderPhotosMap: Record<string, any[]> = {};
+  if (listingUserIds.length > 0) {
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("photos, property_address, user_id")
+      .in("user_id", listingUserIds)
+      .eq("payment_status", "paid")
+      .not("photos", "is", null);
+
+    if (orders) {
+      for (const o of orders) {
+        if (!orderPhotosMap[o.user_id]) orderPhotosMap[o.user_id] = [];
+        orderPhotosMap[o.user_id].push(o);
+      }
+    }
+  }
+
+  const listings = (listingsRes.data || []).map((l) => {
+    let photos = l.optimized_photos || [];
+
+    // If optimized_photos is empty, try to match from orders
+    if (!photos || !Array.isArray(photos) || photos.length === 0 || !getPhotoUrl(photos)) {
+      const userOrders = orderPhotosMap[l.user_id] || [];
+      const listingAddr = (l.address || "").toLowerCase().split(",")[0].trim();
+      if (listingAddr) {
+        const matchedOrder = userOrders.find((o: any) =>
+          o.property_address &&
+          o.property_address.toLowerCase().includes(listingAddr)
+        );
+        if (matchedOrder?.photos && Array.isArray(matchedOrder.photos) && matchedOrder.photos.length > 0) {
+          photos = matchedOrder.photos;
+        }
+      }
+    }
+
+    return {
+      ...l,
+      agent: agentMap[l.user_id] || null,
+      photos,
+    };
+  });
 
   const exampleSites = (exampleSitesRes.data || []).map((s) => ({
     ...s,
