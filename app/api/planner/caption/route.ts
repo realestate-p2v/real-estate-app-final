@@ -1,11 +1,9 @@
 // app/api/planner/caption/route.ts
 // Enhanced caption generation with property-specific data and voice matching
-// Fixes: client -> server Supabase, includes property details, matches agent writing voice
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// Platform-specific tone guidelines
 const PLATFORM_TONES: Record<string, string> = {
   instagram: "Casual, visual-first. Use line breaks for readability. 3-5 relevant hashtags at the end. Emoji sparingly — 1-2 max. Keep under 150 words.",
   facebook: "Conversational and warm. Slightly longer than Instagram. Include a clear call-to-action (schedule a showing, share with friends). No hashtags. 100-200 words.",
@@ -13,7 +11,6 @@ const PLATFORM_TONES: Record<string, string> = {
   blog: "Long-form, informative. 300-500 words. Include subheadings. SEO-friendly. Educational tone with local market expertise.",
 };
 
-// Fallback templates when API is unavailable
 const FALLBACK_TEMPLATES: Record<string, Record<string, string>> = {
   instagram: {
     new_listing: "✨ Just listed! This beautiful home features [key feature]. Don't miss your chance to see it.\n\nDM me for details or to schedule a private showing.\n\n#JustListed #RealEstate #DreamHome",
@@ -53,29 +50,26 @@ export async function POST(req: Request) {
       noEmoji = false,
     } = body;
 
-    // If freeform, treat as a general chat message
     if (freeform) {
       return handleFreeform(freeform, userId, agentName || "Agent", supabase);
     }
 
-    // Fetch property data if propertyId provided
     let propertyDetails = "";
-    let propertyAddress = "";
     if (propertyId) {
-      const [propRes, orderRes] = await Promise.all([
-        supabase.from("agent_properties").select("address, city, state, status, beds, baths, sqft, price, special_features, optimized_photos").eq("id", propertyId).single(),
-        supabase.from("orders").select("property_address, photos").eq("user_id", userId).limit(1),
-      ]);
+      const { data: p } = await supabase
+        .from("agent_properties")
+        // FIXED: bedrooms/bathrooms not beds/baths (confirmed from schema)
+        .select("address, city, state, status, bedrooms, bathrooms, sqft, price, special_features, optimized_photos")
+        .eq("id", propertyId)
+        .single();
 
-      if (propRes.data) {
-        const p = propRes.data;
-        propertyAddress = p.address || "";
+      if (p) {
         propertyDetails = [
           p.address && `Address: ${p.address}`,
           p.city && p.state && `Location: ${p.city}, ${p.state}`,
           p.price && `Price: $${Number(p.price).toLocaleString()}`,
-          p.beds && `Bedrooms: ${p.beds}`,
-          p.baths && `Bathrooms: ${p.baths}`,
+          p.bedrooms && `Bedrooms: ${p.bedrooms}`,
+          p.bathrooms && `Bathrooms: ${p.bathrooms}`,
           p.sqft && `Square feet: ${Number(p.sqft).toLocaleString()}`,
           p.special_features && `Special features: ${p.special_features}`,
           p.status && `Status: ${p.status}`,
@@ -83,20 +77,27 @@ export async function POST(req: Request) {
       }
     }
 
-    // Fetch agent's writing voice (previous descriptions)
+    // Fetch agent's writing voice from previous descriptions
+    // FIXED: description not content
     let voiceContext = "";
-    const descriptionsQuery = propertyId
-      ? supabase.from("lens_descriptions").select("content").eq("user_id", userId).limit(3).order("created_at", { ascending: false })
-      : supabase.from("lens_descriptions").select("content").eq("user_id", userId).limit(3).order("created_at", { ascending: false });
+    const { data: descriptions } = await supabase
+      .from("lens_descriptions")
+      .select("description")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(3);
 
-    const { data: descriptions } = await descriptionsQuery;
     if (descriptions && descriptions.length > 0) {
-      const samples = descriptions.map((d: { content: string }) => d.content.slice(0, 200)).join("\n---\n");
+      const samples = descriptions.map((d: { description: string }) => d.description.slice(0, 200)).join("\n---\n");
       voiceContext = `\nThe agent's writing style (match this voice):\n${samples}`;
     }
 
-    // Fetch agent profile
-    const { data: profile } = await supabase.from("lens_usage").select("saved_agent_name, saved_company, saved_location").eq("user_id", userId).single();
+    const { data: profile } = await supabase
+      .from("lens_usage")
+      .select("saved_agent_name, saved_company, saved_location")
+      .eq("user_id", userId)
+      .single();
+
     const agentInfo = [
       profile?.saved_agent_name && `Agent: ${profile.saved_agent_name}`,
       profile?.saved_company && `Company: ${profile.saved_company}`,
@@ -137,15 +138,12 @@ Post type: ${contentType.replace(/_/g, " ")}`;
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Claude API error: ${response.status}`);
 
       const data = await response.json();
       const caption = data.content?.[0]?.text || "";
 
       if (caption) {
-        // Record the action
         await supabase.from("marketing_actions").insert({
           user_id: userId,
           property_id: propertyId || null,
@@ -154,14 +152,12 @@ Post type: ${contentType.replace(/_/g, " ")}`;
           content_type: contentType,
           metadata: { source: "planner_v2" },
         });
-
         return NextResponse.json({ caption });
       }
 
       throw new Error("Empty response from Claude");
     } catch (apiError) {
       console.error("Claude API error, using fallback:", apiError);
-      // Fallback templates
       const platformTemplates = FALLBACK_TEMPLATES[platform] || FALLBACK_TEMPLATES.instagram;
       const template = platformTemplates[contentType] || platformTemplates.default || "Check out this listing!";
       return NextResponse.json({ caption: template, fallback: true });
@@ -172,7 +168,6 @@ Post type: ${contentType.replace(/_/g, " ")}`;
   }
 }
 
-// Handle freeform chat messages
 async function handleFreeform(
   message: string,
   userId: string,
@@ -180,7 +175,11 @@ async function handleFreeform(
   supabase: Awaited<ReturnType<typeof createClient>>
 ) {
   try {
-    const { data: profile } = await supabase.from("lens_usage").select("saved_agent_name, saved_company, saved_location").eq("user_id", userId).single();
+    const { data: profile } = await supabase
+      .from("lens_usage")
+      .select("saved_agent_name, saved_company, saved_location")
+      .eq("user_id", userId)
+      .single();
 
     const systemPrompt = `You are Lensy, the AI marketing assistant for a real estate agent named ${agentName}${profile?.saved_company ? ` at ${profile.saved_company}` : ""}${profile?.saved_location ? `, based in ${profile.saved_location}` : ""}. You help with:
 - Writing social media captions for listings
