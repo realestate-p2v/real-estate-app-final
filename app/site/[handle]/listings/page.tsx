@@ -40,7 +40,44 @@ async function getData(handle: string) {
     .is("merged_into_id", null)
     .order("created_at", { ascending: false });
 
-  return { website, listings: listings || [] };
+  // ── Enrich listings with photos from orders ──
+  const enrichedListings = await enrichListingsWithPhotos(supabase, listings || [], website.user_id);
+
+  return { website, listings: enrichedListings };
+}
+
+async function enrichListingsWithPhotos(supabase: any, listings: any[], userId: string) {
+  if (listings.length === 0) return listings;
+
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("photos, property_address")
+    .eq("user_id", userId)
+    .eq("payment_status", "paid")
+    .not("photos", "is", null);
+
+  if (!orders || orders.length === 0) return listings;
+
+  return listings.map((listing: any) => {
+    if (listing.optimized_photos && Array.isArray(listing.optimized_photos) && listing.optimized_photos.length > 0) {
+      const firstUrl = getPhotoUrl(listing.optimized_photos);
+      if (firstUrl) return listing;
+    }
+
+    const listingAddr = (listing.address || "").toLowerCase().split(",")[0].trim();
+    if (!listingAddr) return listing;
+
+    const matchedOrder = orders.find((o: any) =>
+      o.property_address &&
+      o.property_address.toLowerCase().includes(listingAddr)
+    );
+
+    if (matchedOrder?.photos && Array.isArray(matchedOrder.photos) && matchedOrder.photos.length > 0) {
+      return { ...listing, optimized_photos: matchedOrder.photos };
+    }
+
+    return listing;
+  });
 }
 
 function getPhotoUrl(photos: any): string | null {
