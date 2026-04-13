@@ -377,7 +377,30 @@ export default function PlannerPage() {
     // Calendar component handles the API call internally
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────
+  // ─── Rotating placeholder ─────────────────────────────────────────────
+  const PLACEHOLDERS = [
+    "Write a caption for my latest listing...",
+    "What should I post this week?",
+    "Help me write a market update post...",
+    "How do I promote my open house?",
+    "Write an about me post for Instagram...",
+    "What content gets the most engagement?",
+    "Create a Just Listed caption for socials...",
+    "How do I grow my real estate brand online?",
+  ];
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [placeholderVisible, setPlaceholderVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderVisible(false);
+      setTimeout(() => {
+        setPlaceholderIdx((i) => (i + 1) % PLACEHOLDERS.length);
+        setPlaceholderVisible(true);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -467,8 +490,9 @@ export default function PlannerPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Ask Lensy anything..."
-                  className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/30"
+                  placeholder={placeholderVisible ? PLACEHOLDERS[placeholderIdx] : ""}
+                  style={{ transition: "opacity 0.3s ease", opacity: placeholderVisible || input ? 1 : 0.3 }}
+                  className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-emerald-400/30"
                 />
                 <button
                   onClick={handleSend}
