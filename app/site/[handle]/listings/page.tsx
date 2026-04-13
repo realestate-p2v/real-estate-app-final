@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Bed, Bath, Maximize, Camera } from "lucide-react";
+import { cloudinaryUrl, cloudinaryThumb } from "@/lib/cloudinary-url";
 
 interface Props {
   params: Promise<{ handle: string }>;
@@ -84,9 +85,11 @@ function getPhotoUrl(photos: any): string | null {
   if (!photos) return null;
   if (Array.isArray(photos) && photos.length > 0) {
     const first = photos[0];
-    if (typeof first === "string") return first;
-    if (first?.url) return first.url;
-    if (first?.secure_url) return first.secure_url;
+    let url: string | null = null;
+    if (typeof first === "string") url = first;
+    else if (first?.url) url = first.url;
+    else if (first?.secure_url) url = first.secure_url;
+    return cloudinaryThumb(url, 800, 500) || url;
   }
   return null;
 }
