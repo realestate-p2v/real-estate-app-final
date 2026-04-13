@@ -35,15 +35,15 @@ interface ContentLibraryProps {
 // ─── Filter Tabs ────────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: "all", label: "All", icon: Filter },
   { key: "photos", label: "Photos", icon: Image },
   { key: "videos", label: "Videos", icon: Video },
   { key: "clips", label: "Clips", icon: Scissors },
-  { key: "flyers", label: "Flyers", icon: FileImage },
+  { key: "flyers", label: "Graphics", icon: FileImage },
   { key: "staging", label: "Staging", icon: Palette },
   { key: "remixes", label: "Remixes", icon: RotateCcw },
   { key: "descriptions", label: "Descriptions", icon: FileText },
   { key: "drone", label: "Drone", icon: Camera },
+  { key: "all", label: "All", icon: Filter },
 ];
 
 // ─── Asset Card ─────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ function AssetCard({
 // ─── Main Content Library ───────────────────────────────────────────────────
 
 export default function ContentLibrary({ properties, onSendToChat, onUseInPost }: ContentLibraryProps) {
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("photos");
   const [propertyFilter, setPropertyFilter] = useState("");
   const [assets, setAssets] = useState<LibraryAsset[]>([]);
   const [loading, setLoading] = useState(true);
