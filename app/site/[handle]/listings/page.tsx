@@ -1,22 +1,30 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Bed, Bath, Maximize, Camera } from "lucide-react";
-import { cloudinaryUrl, cloudinaryThumb } from "@/lib/cloudinary-url";
 
-interface Props {
-  params: Promise<{ handle: string }>;
+// ── Cloudinary URL helpers (inline) ──
+function cloudinaryUrl(url: string | null | undefined, transforms?: string): string | null {
+  if (!url) return null;
+  if (!url.includes("res.cloudinary.com")) return url;
+  try {
+    const base = "f_auto,q_auto";
+    const all = transforms ? `${base},${transforms}` : base;
+    const fixed = url.replace(/\/upload\/v\d+\//, `/upload/${all}/`);
+    if (fixed !== url) return fixed;
+    return url.replace(/\/upload\//, `/upload/${all}/`);
+  } catch { return url; }
 }
 
-async function getData(handle: string) {
+async function getWebsiteData(handle: string) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // Try handle first, fall back to slug
   let { data: website } = await supabase
     .from("agent_websites")
-    .select("user_id, site_title, primary_color, status")
+    .select("*")
     .eq("handle", handle)
     .eq("status", "published")
     .single();
@@ -24,7 +32,7 @@ async function getData(handle: string) {
   if (!website) {
     const { data: bySlug } = await supabase
       .from("agent_websites")
-      .select("user_id, site_title, primary_color, status")
+      .select("*")
       .eq("slug", handle)
       .eq("status", "published")
       .single();
@@ -33,145 +41,153 @@ async function getData(handle: string) {
 
   if (!website) return null;
 
-  const { data: listings } = await supabase
-    .from("agent_properties")
-    .select("id, address, city, state, zip, price, bedrooms, bathrooms, sqft, status, website_slug, optimized_photos, property_type")
+  // Get agent info
+  const { data: agent } = await supabase
+    .from("lens_usage")
+    .select(
+      "saved_agent_name, saved_phone, saved_email, saved_company, saved_headshot_url, saved_logo_url"
+    )
     .eq("user_id", website.user_id)
-    .eq("website_published", true)
-    .is("merged_into_id", null)
-    .order("created_at", { ascending: false });
+    .single();
 
-  // ── Enrich listings with photos from orders ──
-  const enrichedListings = await enrichListingsWithPhotos(supabase, listings || [], website.user_id);
-
-  return { website, listings: enrichedListings };
+  return { website, agent };
 }
 
-async function enrichListingsWithPhotos(supabase: any, listings: any[], userId: string) {
-  if (listings.length === 0) return listings;
-
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("photos, property_address")
-    .eq("user_id", userId)
-    .eq("payment_status", "paid")
-    .not("photos", "is", null);
-
-  if (!orders || orders.length === 0) return listings;
-
-  return listings.map((listing: any) => {
-    if (listing.optimized_photos && Array.isArray(listing.optimized_photos) && listing.optimized_photos.length > 0) {
-      const firstUrl = getPhotoUrl(listing.optimized_photos);
-      if (firstUrl) return listing;
-    }
-
-    const listingAddr = (listing.address || "").toLowerCase().split(",")[0].trim();
-    if (!listingAddr) return listing;
-
-    const matchedOrder = orders.find((o: any) =>
-      o.property_address &&
-      o.property_address.toLowerCase().includes(listingAddr)
-    );
-
-    if (matchedOrder?.photos && Array.isArray(matchedOrder.photos) && matchedOrder.photos.length > 0) {
-      return { ...listing, optimized_photos: matchedOrder.photos };
-    }
-
-    return listing;
-  });
-}
-
-function getPhotoUrl(photos: any): string | null {
-  if (!photos) return null;
-  if (Array.isArray(photos) && photos.length > 0) {
-    const first = photos[0];
-    let url: string | null = null;
-    if (typeof first === "string") url = first;
-    else if (first?.url) url = first.url;
-    else if (first?.secure_url) url = first.secure_url;
-    return cloudinaryThumb(url, 800, 500) || url;
-  }
-  return null;
-}
-
-function formatPrice(price: number | null): string {
-  if (!price) return "Price TBD";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(price);
-}
-
-export default async function AgentListingsPage({ params }: Props) {
+export default async function AgentSiteLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ handle: string }>;
+}) {
   const { handle } = await params;
-  const data = await getData(handle);
-  if (!data) notFound();
+  const data = await getWebsiteData(handle);
 
-  const { website, listings } = data;
+  if (!data) return notFound();
+
+  const { website, agent } = data;
+  const agentName = agent?.saved_agent_name || website.site_title || "Agent";
+  const siteTitle = website.site_title || agentName;
+  const primaryColor = website.primary_color || "#06b6d4";
+
+  // Fix Cloudinary URLs for cross-domain delivery
+  const headshotUrl = cloudinaryUrl(agent?.saved_headshot_url);
+  const logoUrl = cloudinaryUrl(agent?.saved_logo_url);
+
+  const navLinks = [
+    { href: `/`, label: "Home" },
+    { href: `/about`, label: "About" },
+    { href: `/listings`, label: "Listings" },
+  ];
+
+  if (website.blog_enabled) {
+    navLinks.push({ href: `/blog`, label: "Blog" });
+  }
+
+  navLinks.push({ href: `/contact`, label: "Contact" });
+
+  if (website.calendar_enabled) {
+    navLinks.push({ href: `/calendar`, label: "Calendar" });
+  }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-        All Listings
-      </h1>
-      <p className="text-sm text-gray-400 mb-8">
-        {listings.length} {listings.length === 1 ? "property" : "properties"} available
-      </p>
-
-      {listings.length === 0 ? (
-        <div className="text-center py-20 rounded-2xl border border-gray-100 bg-gray-50">
-          <Camera className="h-12 w-12 mx-auto text-gray-200 mb-3" />
-          <p className="text-gray-400 text-sm">No listings available right now.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {listings.map((listing) => {
-            const photoUrl = getPhotoUrl(listing.optimized_photos);
-            return (
-              <Link
-                key={listing.id}
-                href={`/${listing.website_slug || listing.id}`}
-                className="group rounded-xl border border-gray-100 bg-white overflow-hidden hover:shadow-lg transition-all"
-              >
-                <div className="aspect-[16/10] bg-gray-100 overflow-hidden relative">
-                  {photoUrl ? (
-                    <img
-                      src={photoUrl}
-                      alt={listing.address || "Property"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Camera className="h-8 w-8 text-gray-200" />
-                    </div>
-                  )}
-                  {listing.status && (
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-sm text-[10px] font-bold uppercase tracking-wider text-white">
-                      {listing.status}
-                    </span>
-                  )}
+    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+      {/* Nav */}
+      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo / Name */}
+            <Link href="/" className="flex items-center gap-2.5">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={siteTitle}
+                  className="h-8 w-auto max-w-[120px] object-contain"
+                />
+              ) : headshotUrl ? (
+                <img
+                  src={headshotUrl}
+                  alt={agentName}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {agentName[0]}
                 </div>
+              )}
+              <span className="text-base font-bold text-gray-900 tracking-tight">
+                {siteTitle}
+              </span>
+            </Link>
 
-                <div className="p-4">
-                  <p className="text-lg font-bold text-gray-900">{formatPrice(listing.price)}</p>
-                  <p className="text-sm text-gray-500 mt-0.5 truncate">{listing.address}</p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {[listing.city, listing.state, listing.zip].filter(Boolean).join(", ")}
-                  </p>
-                  <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-                    {listing.bedrooms != null && (
-                      <span className="flex items-center gap-1"><Bed className="h-3 w-3" /> {listing.bedrooms} bd</span>
-                    )}
-                    {listing.bathrooms != null && (
-                      <span className="flex items-center gap-1"><Bath className="h-3 w-3" /> {listing.bathrooms} ba</span>
-                    )}
-                    {listing.sqft != null && (
-                      <span className="flex items-center gap-1"><Maximize className="h-3 w-3" /> {listing.sqft.toLocaleString()}</span>
-                    )}
-                  </div>
-                </div>
+            {/* Desktop nav */}
+            <div className="hidden sm:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Mobile nav — simple links */}
+            <div className="sm:hidden flex items-center gap-2">
+              <Link href="/listings" className="px-2 py-1 text-xs font-medium text-gray-500">
+                Listings
               </Link>
-            );
-          })}
+              <Link href="/contact" className="px-2 py-1 text-xs font-medium text-gray-500">
+                Contact
+              </Link>
+            </div>
+          </div>
         </div>
-      )}
+      </nav>
+
+      {/* Page content */}
+      <main className="flex-1">{children}</main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 bg-gray-50">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <p className="text-sm font-semibold text-gray-900">{agentName}</p>
+              {agent?.saved_company && (
+                <p className="text-xs text-gray-400 mt-0.5">{agent.saved_company}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-xs text-gray-400">
+              {agent?.saved_phone && (
+                <a href={`tel:${agent.saved_phone}`} className="hover:text-gray-600 transition-colors">
+                  {agent.saved_phone}
+                </a>
+              )}
+              {agent?.saved_email && (
+                <a href={`mailto:${agent.saved_email}`} className="hover:text-gray-600 transition-colors">
+                  {agent.saved_email}
+                </a>
+              )}
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-[11px] text-gray-300">
+              © {new Date().getFullYear()} {agentName}. All rights reserved.
+            </p>
+            <a
+              href="https://realestatephoto2video.com"
+              className="text-[11px] text-gray-300 hover:text-gray-400 transition-colors"
+            >
+              Powered by Realestatephoto2video.com
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
