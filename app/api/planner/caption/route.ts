@@ -50,6 +50,7 @@ export async function POST(req: Request) {
       contentType = "new_listing",
       freeform,
       agentName,
+      noEmoji = false,
     } = body;
 
     // If freeform, treat as a general chat message
@@ -95,19 +96,23 @@ export async function POST(req: Request) {
     }
 
     // Fetch agent profile
-    const { data: profile } = await supabase.from("profiles").select("full_name, company, bio").eq("id", userId).single();
+    const { data: profile } = await supabase.from("lens_usage").select("saved_agent_name, saved_company, saved_location").eq("user_id", userId).single();
     const agentInfo = [
-      profile?.full_name && `Agent: ${profile.full_name}`,
-      profile?.company && `Company: ${profile.company}`,
+      profile?.saved_agent_name && `Agent: ${profile.saved_agent_name}`,
+      profile?.saved_company && `Company: ${profile.saved_company}`,
+      profile?.saved_location && `Market area: ${profile.saved_location}`,
     ].filter(Boolean).join("\n");
 
     const platformTone = PLATFORM_TONES[platform] || PLATFORM_TONES.instagram;
+    const emojiRule = noEmoji
+      ? "\n- ABSOLUTELY NO EMOJI. Not a single one. Many brokerages prohibit emoji in marketing materials. Use words only."
+      : "\n- Emoji sparingly — 1-2 max, only if natural for the platform.";
 
     const systemPrompt = `You are a real estate social media copywriter. Write a single ${platform} post for a real estate agent.
 
 Rules:
 - Write ONLY the caption text. No explanations, no options, no preamble.
-- ${platformTone}
+- ${platformTone}${emojiRule}
 - Be specific to this property — reference actual features, not generic placeholders.
 - Sound like a real agent, not a template.
 - Never use [brackets] or placeholder text.
@@ -175,9 +180,9 @@ async function handleFreeform(
   supabase: Awaited<ReturnType<typeof createClient>>
 ) {
   try {
-    const { data: profile } = await supabase.from("profiles").select("full_name, company").eq("id", userId).single();
+    const { data: profile } = await supabase.from("lens_usage").select("saved_agent_name, saved_company, saved_location").eq("user_id", userId).single();
 
-    const systemPrompt = `You are Lensy, the AI marketing assistant for a real estate agent named ${agentName}${profile?.company ? ` at ${profile.company}` : ""}. You help with:
+    const systemPrompt = `You are Lensy, the AI marketing assistant for a real estate agent named ${agentName}${profile?.saved_company ? ` at ${profile.saved_company}` : ""}${profile?.saved_location ? `, based in ${profile.saved_location}` : ""}. You help with:
 - Writing social media captions for listings
 - Suggesting marketing strategies
 - Creating content ideas
