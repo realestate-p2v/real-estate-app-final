@@ -17,11 +17,27 @@ export interface LibraryAsset {
   createdAt: string;
 }
 
-// Template types that belong in Flyers tab (Design Studio outputs only)
+// Only real listing flyers from Design Studio (not branding cards, remixes, drone)
 const FLYER_TEMPLATE_TYPES = [
-  "just_listed", "open_house", "price_reduced", "just_sold",
-  "yard_sign", "property_pdf",
+  "just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf",
 ];
+
+// Normalize an address string for loose matching
+function normalizeAddr(s: string): string {
+  return (s || "")
+    .toLowerCase()
+    .replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+    .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+    .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+    .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+}
+
+// Returns true if two address strings refer to the same property
+function addressesMatch(a: string, b: string): boolean {
+  const na = normalizeAddr(a).split(",")[0];
+  const nb = normalizeAddr(b).split(",")[0];
+  return na.length > 3 && nb.length > 3 && (na.includes(nb) || nb.includes(na));
+}
 
 export async function GET(req: Request) {
   try {
@@ -35,58 +51,68 @@ export async function GET(req: Request) {
     const propertyId = url.searchParams.get("propertyId");
 
     const [propertiesRes, ordersRes, exportsRes, stagingRes, descriptionsRes] = await Promise.all([
-      supabase.from("agent_properties").select("id, address, address_normalized, photos, optimized_photos").eq("user_id", userId),
-      // All orders — filter by property address after fetch; payment_status=paid confirmed correct
-      supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at").eq("user_id", userId).eq("payment_status", "paid"),
-      supabase.from("design_exports").select("id, property_id, template_type, export_url, created_at").eq("user_id", userId),
-      supabase.from("lens_staging").select("id, property_id, staged_url, room_type, style, created_at").eq("user_id", userId),
-      // FIXED: property_data (JSONB), description (not content)
-      supabase.from("lens_descriptions").select("id, property_data, description, style, created_at").eq("user_id", userId),
+      supabase.from("agent_properties")
+        .select("id, address, address_normalized, photos, optimized_photos")
+        .eq("user_id", userId)
+        .is("merged_into_id", null), // exclude merged properties
+      supabase.from("orders")
+        .select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at")
+        .eq("user_id", userId)
+        .eq("payment_status", "paid"),
+      supabase.from("design_exports")
+        .select("id, property_id, template_type, export_url, created_at")
+        .eq("user_id", userId),
+      supabase.from("lens_staging")
+        .select("id, property_id, staged_url, room_type, style, created_at")
+        .eq("user_id", userId),
+      supabase.from("lens_descriptions")
+        .select("id, property_data, description, style, created_at")
+        .eq("user_id", userId),
     ]);
 
     const properties = propertiesRes.data || [];
-    const orders = ordersRes.data || [];
+    const allOrders = ordersRes.data || [];
     const exports_ = exportsRes.data || [];
     const staging = stagingRes.data || [];
     const descriptions = descriptionsRes.data || [];
 
-    const propertyMap = new Map(properties.map((p: { id: string; address: string }) => [p.id, p.address]));
+    const propertyMap = new Map(
+      properties.map((p: { id: string; address: string }) => [p.id, p.address])
+    );
 
-    // If filtering by property, find the property's address for matching address-based records
-    let filterAddress = "";
-    let filterAddressNorm = "";
+    // Only show orders that match a currently active (non-merged) property
+    const activeOrders = allOrders.filter((o: { property_address: string }) =>
+      properties.some((p: { address: string }) => addressesMatch(o.property_address, p.address))
+    );
+
+    // When filtering by a specific property, get its address for matching
+    let filterProp: { address: string; address_normalized?: string } | null = null;
     if (propertyId) {
-      const prop = properties.find((p: { id: string; address: string; address_normalized?: string }) => p.id === propertyId);
-      filterAddress = prop?.address || "";
-      filterAddressNorm = prop?.address_normalized || filterAddress.toLowerCase().split(",")[0];
+      filterProp = properties.find((p: { id: string }) => p.id === propertyId) || null;
     }
 
-    // Helper: does an order's property_address match the selected property?
-    const orderMatchesProperty = (orderAddr: string) => {
-      if (!filterAddress) return true;
-      const norm = orderAddr?.toLowerCase() || "";
-      return norm.includes(filterAddressNorm.toLowerCase()) || filterAddressNorm.toLowerCase().includes(norm.split(",")[0]);
+    // Does an order match the selected property filter?
+    const orderMatchesFilter = (orderAddr: string): boolean => {
+      if (!filterProp) return true;
+      return addressesMatch(orderAddr, filterProp.address);
     };
 
-    // Helper: does a description match the selected property?
-    const descMatchesProperty = (desc: { property_data?: { address?: string } }) => {
-      if (!filterAddress) return true;
-      const descAddr = (desc.property_data?.address || "").toLowerCase().replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
-      const norm = filterAddressNorm.toLowerCase().replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
-      return descAddr.startsWith(norm) || norm.startsWith(descAddr.split(",")[0]);
+    // Does a description match the selected property filter?
+    const descMatchesFilter = (desc: { property_data?: { address?: string } }): boolean => {
+      if (!filterProp) return true;
+      const descAddr = desc.property_data?.address || "";
+      return addressesMatch(descAddr, filterProp.address);
     };
 
     const assets: LibraryAsset[] = [];
 
     // ── Photos from orders ──────────────────────────────────────────────────
-    // orders.photos is an array of objects with secure_url (from the property page source of truth)
     if (filterType === "all" || filterType === "photos") {
-      orders
-        .filter((o: { property_address: string }) => orderMatchesProperty(o.property_address))
+      activeOrders
+        .filter((o: { property_address: string }) => orderMatchesFilter(o.property_address))
         .forEach((order: { id: string; property_address: string; photos: unknown; created_at: string }) => {
           const photos = Array.isArray(order.photos) ? order.photos : [];
           photos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
-            // FIXED: photos are objects with secure_url (confirmed from property page)
             const photoUrl = typeof photo === "string"
               ? photo
               : photo?.secure_url || photo?.url || "";
@@ -131,8 +157,8 @@ export async function GET(req: Request) {
 
     // ── Videos from orders ──────────────────────────────────────────────────
     if (filterType === "all" || filterType === "videos") {
-      orders
-        .filter((o: { property_address: string }) => orderMatchesProperty(o.property_address))
+      activeOrders
+        .filter((o: { property_address: string }) => orderMatchesFilter(o.property_address))
         .forEach((order: { id: string; property_address: string; delivery_url?: string; created_at: string }) => {
           if (order.delivery_url) {
             assets.push({
@@ -148,10 +174,9 @@ export async function GET(req: Request) {
     }
 
     // ── Clips from orders ───────────────────────────────────────────────────
-    // FIXED: clip objects have url, clip_file, or drive_url (confirmed from property page)
     if (filterType === "all" || filterType === "clips") {
-      orders
-        .filter((o: { property_address: string }) => orderMatchesProperty(o.property_address))
+      activeOrders
+        .filter((o: { property_address: string }) => orderMatchesFilter(o.property_address))
         .forEach((order: { id: string; property_address: string; clip_urls: unknown; created_at: string }) => {
           const clips = Array.isArray(order.clip_urls) ? order.clip_urls : [];
           clips.forEach((clip: string | { url?: string; clip_file?: string; drive_url?: string; photo_url?: string; label?: string }, idx: number) => {
@@ -159,7 +184,7 @@ export async function GET(req: Request) {
               ? clip
               : clip?.url || clip?.clip_file || clip?.drive_url || "";
             const clipLabel = typeof clip === "object" && clip?.label ? clip.label : `Clip ${idx + 1}`;
-            const thumbUrl = typeof clip === "object" ? clip?.photo_url || "" : "";
+            const thumbUrl = typeof clip === "object" ? (clip?.photo_url || "") : "";
             if (!clipUrl) return;
             assets.push({
               id: `clip-${order.id}-${idx}`,
@@ -174,7 +199,7 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Flyers — Design Studio listing flyers only (not branding cards, remixes, drone) ──
+    // ── Graphics / Flyers — Design Studio listing flyers only ───────────────
     if (filterType === "all" || filterType === "flyers") {
       exports_
         .filter((e: { template_type?: string; property_id?: string }) =>
@@ -235,10 +260,9 @@ export async function GET(req: Request) {
     }
 
     // ── Descriptions ────────────────────────────────────────────────────────
-    // FIXED: filter by property address match when property selected
     if (filterType === "all" || filterType === "descriptions") {
       descriptions
-        .filter(descMatchesProperty)
+        .filter(descMatchesFilter)
         .forEach((d: { id: string; property_data?: { address?: string }; description: string; style?: string; created_at: string }) => {
           assets.push({
             id: `desc-${d.id}`,
@@ -272,7 +296,6 @@ export async function GET(req: Request) {
         });
     }
 
-    // Sort by date descending
     assets.sort((a, b) => {
       if (!a.createdAt) return 1;
       if (!b.createdAt) return -1;
