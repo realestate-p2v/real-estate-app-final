@@ -100,8 +100,8 @@ export default function PlannerPage() {
           setSuggestions(data.suggestions || []);
 
           const greeting = data.suggestions.length > 0
-            ? `Hey ${firstName}! What are we working on today? I found a few things that need your attention — want me to walk you through them?`
-            : `Hey ${firstName}! What are we working on today? Everything looks good on my end — want to plan some posts or create content for a listing?`;
+            ? `Hey ${firstName}! Great to see you — I've spotted some opportunities to get your listings more attention today. Want me to walk you through them?`
+            : `Hey ${firstName}! Your marketing is in great shape — no urgent tasks right now. Agents who keep posting even when things are quiet build the strongest pipelines. Want to plan ahead or create something new?`;
 
           addMessage({
             role: "assistant",
