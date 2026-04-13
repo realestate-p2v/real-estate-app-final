@@ -47,10 +47,10 @@ function getGreeting(name: string): string {
 }
 
 function getStatusMessage(suggestions: WidgetSuggestion[], overdueCount: number, todayCount: number): string {
-  if (overdueCount > 0) return `You have ${overdueCount} overdue post${overdueCount > 1 ? "s" : ""} that need attention.`;
-  if (todayCount > 0) return `You have ${todayCount} post${todayCount > 1 ? "s" : ""} scheduled for today.`;
+  if (overdueCount > 0) return `You have ${overdueCount} post${overdueCount > 1 ? "s" : ""} ready to go — agents who post consistently close more deals. Let's keep your streak alive!`;
+  if (todayCount > 0) return `You have ${todayCount} post${todayCount > 1 ? "s" : ""} lined up for today — staying visible keeps you top of mind with buyers and sellers.`;
   if (suggestions.length > 0) return suggestions[0].description;
-  return "Your marketing is looking good — what are we working on today?";
+  return "Your marketing is looking great — consistent agents build the strongest brands. What shall we create today?";
 }
 
 export default function MarketingPlannerWidget({ isSubscriber, isTrial }: MarketingPlannerWidgetProps) {
