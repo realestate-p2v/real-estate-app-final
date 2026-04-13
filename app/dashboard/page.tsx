@@ -646,38 +646,40 @@ export default function DashboardPage() {
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
 
-        {/* ═══ HEADER ═══ */}
-        <div className="mc-animate flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "0.05s" }}>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
-              {getTimeOfDay()}, <span className="text-cyan-400">{firstName}</span>
-            </h1>
-            <p className="mt-0.5 text-sm text-white/40">P2V Lens · {isSubscriber ? "Mission Control" : "Dashboard"}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="dl-mode-toggle flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
-              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
-            </button>
-            {isSubscriber ? (
-              <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 backdrop-blur-sm">
-                <Crown className="h-4 w-4 text-cyan-400" />
-                <span className="text-sm font-bold text-white/80">{subscription.plan}</span>
-                <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">Active</span>
-              </div>
-            ) : (
-              <Link href="/lens">
-                <Button size="sm" className="mc-glow-btn bg-green-500 hover:bg-green-400 text-white font-extrabold text-sm px-5 py-2.5 rounded-xl">
-                  Subscribe — $27.95/mo
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-          </div>
+        {/* ═══ TOP BAR — mode toggle + subscription status only ═══ */}
+        <div className="mc-animate flex items-center justify-end gap-3 mb-4" style={{ animationDelay: "0.05s" }}>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="dl-mode-toggle flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
+          </button>
+          {isSubscriber ? (
+            <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 backdrop-blur-sm">
+              <Crown className="h-4 w-4 text-cyan-400" />
+              <span className="text-sm font-bold text-white/80">{subscription.plan}</span>
+              <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">Active</span>
+            </div>
+          ) : (
+            <Link href="/lens">
+              <Button size="sm" className="mc-glow-btn bg-green-500 hover:bg-green-400 text-white font-extrabold text-sm px-5 py-2.5 rounded-xl">
+                Subscribe — $27.95/mo
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </Link>
+          )}
         </div>
+
+        {/* ═══ MARKETING COPILOT — first thing agents see ═══ */}
+        {secondaryLoaded && user && access.allowed && (
+          <div id="planner" className="mc-animate mb-5" style={{ animationDelay: "0.07s" }}>
+            <MarketingPlannerWidget
+              isSubscriber={isSubscriber}
+              isTrial={access.tier === "trial"}
+            />
+          </div>
+        )}
 
         {/* ═══ SIGNUP PRIZE ═══ */}
         {signupPrizeCode && (
@@ -829,76 +831,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* ═══ QUICK-LINK BUTTONS (replaces old Stats Row + Quick Actions) ═══ */}
-        <div className="mc-animate mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" style={{ animationDelay: "0.16s" }}>
-          <Link href="/order" className="group flex items-center gap-4 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4 transition-all hover:border-cyan-400/25 hover:bg-cyan-400/[0.08]">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20">
-              <Play className="h-5 w-5 text-cyan-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">Order a Video</p>
-              <p className="mt-0.5 text-xs text-white/40">From <span className="font-bold text-cyan-400">{isSubscriber ? "$4.95/clip" : "$79"}</span></p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-cyan-400 transition-all group-hover:translate-x-0.5" />
-          </Link>
-          <Link href="/dashboard/properties" className="group flex items-center gap-4 rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4 transition-all hover:border-emerald-400/25 hover:bg-emerald-400/[0.08]">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20">
-              <Home className="h-5 w-5 text-emerald-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">My Properties</p>
-              <p className="mt-0.5 text-xs text-white/40">{propertyCount > 0 ? `${propertyCount} propert${propertyCount === 1 ? "y" : "ies"}` : "Add your first"}</p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-emerald-400 transition-all group-hover:translate-x-0.5" />
-          </Link>
-          <Link href="/dashboard/videos" className="group flex items-center gap-4 rounded-2xl border border-purple-400/10 bg-purple-400/[0.04] p-4 transition-all hover:border-purple-400/25 hover:bg-purple-400/[0.08]">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-400/10 ring-1 ring-purple-400/20">
-              <Video className="h-5 w-5 text-purple-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">My Videos</p>
-              <p className="mt-0.5 text-xs text-white/40">View & download</p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-purple-400 transition-all group-hover:translate-x-0.5" />
-          </Link>
-          <button onClick={() => document.getElementById("tools")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group flex items-center gap-4 rounded-2xl border border-indigo-400/10 bg-indigo-400/[0.04] p-4 transition-all hover:border-indigo-400/25 hover:bg-indigo-400/[0.08] text-left w-full">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-400/10 ring-1 ring-indigo-400/20">
-              <Zap className="h-5 w-5 text-indigo-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">Tools</p>
-              <p className="mt-0.5 text-xs text-white/40">Jump to tools ↓</p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-white/20 group-hover:text-indigo-400 transition-all group-hover:translate-x-0.5" />
-          </button>
-          <button onClick={() => document.getElementById("more-tools")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="group flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-cyan-400/15 hover:bg-white/[0.05] text-left w-full">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
-                <ChevronRight className="h-5 w-5 text-white/40" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white/70 group-hover:text-white/90 transition-colors">More</p>
-                <p className="mt-0.5 text-xs text-white/30">Videos, drafts & more ↓</p>
-              </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-white/15 group-hover:text-white/40 transition-all group-hover:translate-x-0.5" />
-            </button>
-        </div>
-
-        {/* ═══ MARKETING COPILOT — right after quick links, first thing agents see ═══ */}
-        {secondaryLoaded && user && access.allowed && (
-          <div id="planner" className="mc-animate mt-6" style={{ animationDelay: "0.19s" }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Marketing Copilot</p>
-              <Link href="/dashboard/planner" className="text-xs font-semibold text-emerald-400/60 hover:text-emerald-400 transition-colors flex items-center gap-1">
-                Open full planner <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <MarketingPlannerWidget
-              isSubscriber={isSubscriber}
-              isTrial={access.tier === "trial"}
-            />
-          </div>
-        )}
 
         {/* ═══ PROPERTY WEBSITES ═══ */}
         {publishedWebsites.length > 0 && (
