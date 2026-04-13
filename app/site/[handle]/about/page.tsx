@@ -1,106 +1,61 @@
-import { createClient } from "@supabase/supabase-js";
+// app/site/[handle]/about/page.tsx
 import { notFound } from "next/navigation";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { getSite, getProfile } from "../data";
 
 interface Props {
   params: Promise<{ handle: string }>;
 }
 
-async function getData(handle: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  let { data: website } = await supabase
-    .from("agent_websites")
-    .select("*")
-    .eq("handle", handle)
-    .eq("status", "published")
-    .single();
-
-  if (!website) {
-    const { data: bySlug } = await supabase
-      .from("agent_websites")
-      .select("*")
-      .eq("slug", handle)
-      .eq("status", "published")
-      .single();
-    website = bySlug;
-  }
-
-  if (!website) return null;
-
-  const { data: agent } = await supabase
-    .from("lens_usage")
-    .select("saved_agent_name, saved_phone, saved_email, saved_company, saved_headshot_url")
-    .eq("user_id", website.user_id)
-    .single();
-
-  return { website, agent };
-}
-
-export default async function AgentAboutPage({ params }: Props) {
+export default async function AboutPage({ params }: Props) {
   const { handle } = await params;
-  const data = await getData(handle);
-  if (!data) notFound();
-
-  const { website, agent } = data;
-  const agentName = agent?.saved_agent_name || website.site_title || "Agent";
-  const aboutContent = website.about_content || website.bio;
-  const primaryColor = website.primary_color || "#06b6d4";
+  const site = await getSite(handle);
+  if (!site) return notFound();
+  const profile = await getProfile(site.user_id);
+  const primary = site.primary_color || "#334155";
+  const photoUrl = site.about_photo_url || profile.headshot_url || null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
-      <div className="max-w-3xl">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
-          About {agentName}
-        </h1>
+    <div style={{ padding: "64px 24px", maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ display: "flex", gap: 40, alignItems: "flex-start", flexWrap: "wrap" }}>
+        {photoUrl ? (
+          <img src={photoUrl} alt={profile.agent_name || ""} style={{ width: 240, height: 240, borderRadius: 16, objectFit: "cover", flexShrink: 0, boxShadow: "0 4px 24px rgba(0,0,0,0.1)" }} />
+        ) : null}
+        <div style={{ flex: 1, minWidth: 280 }}>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: "#111", margin: "0 0 8px" }}>
+            {profile.agent_name ? "About " + profile.agent_name : "About"}
+          </h1>
+          {profile.company ? <p style={{ fontSize: 17, color: "#666", margin: "0 0 4px", fontWeight: 600 }}>{profile.company}</p> : null}
+          {profile.phone ? <p style={{ fontSize: 15, color: "#888", margin: "0 0 4px" }}>{profile.phone}</p> : null}
+          {profile.email ? <p style={{ fontSize: 15, color: "#888", margin: "0 0 20px" }}>{profile.email}</p> : null}
 
-        <div className="flex flex-col sm:flex-row gap-8">
-          {/* Photo */}
-          {(agent?.saved_headshot_url || website.about_photo_url) && (
-            <div className="shrink-0">
-              <img
-                src={website.about_photo_url || agent?.saved_headshot_url}
-                alt={agentName}
-                className="h-48 w-48 rounded-2xl object-cover shadow-md"
-              />
-            </div>
-          )}
+          {site.bio ? <p style={{ fontSize: 17, color: "#333", margin: "0 0 16px", lineHeight: 1.7 }}>{site.bio}</p> : null}
+          {site.about_content ? <p style={{ fontSize: 16, color: "#555", margin: "0 0 24px", lineHeight: 1.7 }}>{site.about_content}</p> : null}
 
-          {/* Content */}
-          <div className="flex-1">
-            {agent?.saved_company && (
-              <p className="text-sm font-medium text-gray-400 mb-3">{agent.saved_company}</p>
-            )}
-
-            {aboutContent ? (
-              <div className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                {aboutContent}
-              </div>
-            ) : (
-              <p className="text-gray-400">
-                Contact {agentName} to learn more about their real estate services.
-              </p>
-            )}
-
-            {/* Contact info */}
-            <div className="mt-6 pt-6 border-t border-gray-100 space-y-2">
-              {agent?.saved_phone && (
-                <a href={`tel:${agent.saved_phone}`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                  <Phone className="h-4 w-4" /> {agent.saved_phone}
-                </a>
-              )}
-              {agent?.saved_email && (
-                <a href={`mailto:${agent.saved_email}`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                  <Mail className="h-4 w-4" /> {agent.saved_email}
-                </a>
-              )}
-            </div>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            {profile.phone ? (
+              <a href={"tel:" + profile.phone.replace(/\D/g, "")} style={{ display: "inline-block", padding: "12px 28px", backgroundColor: primary, color: "#fff", borderRadius: 8, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Call {profile.phone}</a>
+            ) : null}
+            {profile.email ? (
+              <a href={"mailto:" + profile.email} style={{ display: "inline-block", padding: "12px 28px", border: "2px solid " + primary, color: primary, borderRadius: 8, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Email Me</a>
+            ) : null}
           </div>
         </div>
       </div>
+
+      {/* FAQ on about page too */}
+      {site.faq_items.length > 0 ? (
+        <div style={{ marginTop: 64 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111", margin: "0 0 24px" }}>FAQ</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {site.faq_items.map((faq, i) => (
+              <div key={i} style={{ padding: "18px 22px", backgroundColor: "#f8fafc", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#111", margin: "0 0 6px" }}>{faq.question}</p>
+                <p style={{ fontSize: 14, color: "#555", margin: 0, lineHeight: 1.6 }}>{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
