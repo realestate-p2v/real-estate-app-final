@@ -75,11 +75,12 @@ export default function PlannerPage() {
 
       const [propsRes, profileRes] = await Promise.all([
         supabase.from("agent_properties").select("id, address").eq("user_id", s.user.id),
-        supabase.from("profiles").select("full_name, first_name").eq("id", s.user.id).single(),
+        supabase.from("lens_usage").select("saved_agent_name, saved_company, saved_location").eq("user_id", s.user.id).single(),
       ]);
 
       setProperties(propsRes.data || []);
-      setAgentName(profileRes.data?.first_name || profileRes.data?.full_name || "Agent");
+      const name = profileRes.data?.saved_agent_name || "Agent";
+      setAgentName(name.includes(" ") ? name.split(" ")[0] : name);
     };
     init();
   }, []);
@@ -181,19 +182,135 @@ export default function PlannerPage() {
     addMessage({ role: "user", text: btn });
     setIsTyping(true);
 
-    // Handle known buttons
     setTimeout(async () => {
+      const lower = btn.toLowerCase();
+
+      // ── Copy last caption ──
       if (btn === "Copy" && messages.length > 0) {
         const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
         if (lastAssistant) {
           await navigator.clipboard.writeText(lastAssistant.text);
           addMessage({ role: "assistant", text: "Copied to clipboard!" });
         }
-      } else if (btn === "Schedule this") {
+
+      // ── Schedule ──
+      } else if (btn === "Schedule this" || lower.includes("schedule for later")) {
         setPostCreatorOpen(true);
-        addMessage({ role: "assistant", text: "Opening the post creator for you." });
+        addMessage({ role: "assistant", text: "Opening the post creator — pick your platform and date." });
+
+      // ── Listing no longer active ──
+      } else if (lower.includes("no longer active") || lower.includes("not active")) {
+        addMessage({
+          role: "assistant",
+          text: "Got it — I'll stop nudging you about this one. You can update the listing status on the property page, or mark it as sold to trigger a Just Sold campaign!",
+          buttons: ["Mark as Sold", "Go to property page", "Dismiss"],
+        });
+
+      // ── Direct tool links ──
+      } else if (lower.includes("story reel") || lower.includes("remix")) {
+        addMessage({
+          role: "assistant",
+          text: "Great idea! Head to the Design Studio to create a story reel. Pick the \"Just Listed\" or \"Coming Soon\" template, select your clips, and you'll have a reel ready for Instagram, TikTok, and YouTube Shorts in minutes.",
+          buttons: ["Open Design Studio", "Write a caption for it first", "Schedule for later"],
+        });
+
+      } else if (lower.includes("photo teaser") || lower.includes("photo carousel")) {
+        addMessage({
+          role: "assistant",
+          text: "A photo teaser is one of the highest-engagement post types. Pick your 5 best photos from the content library on the right, and I'll write you a scroll-stopping caption. Which platform?",
+          buttons: ["Instagram carousel", "Facebook post", "Both platforms"],
+        });
+
+      } else if (lower.includes("just listed graphic") || lower.includes("just sold graphic") || lower.includes("price update graphic")) {
+        addMessage({
+          role: "assistant",
+          text: "The Design Studio has templates ready for that. Your branding and listing details auto-fill — just pick a style and export.",
+          buttons: ["Open Design Studio", "Schedule for later"],
+        });
+
+      } else if (lower.includes("listing description")) {
+        addMessage({
+          role: "assistant",
+          text: "The Description Writer will generate a professional listing description using your photos and property details. It matches your writing voice too.",
+          buttons: ["Open Description Writer", "Not now"],
+        });
+
+      } else if (lower.includes("open design studio")) {
+        window.open("/dashboard/lens/design-studio", "_blank");
+        addMessage({ role: "assistant", text: "Opened the Design Studio in a new tab. Come back here when your graphic is ready and I'll help you schedule it." });
+
+      } else if (lower.includes("open description writer")) {
+        window.open("/dashboard/lens/description-writer", "_blank");
+        addMessage({ role: "assistant", text: "Opened the Description Writer in a new tab." });
+
+      } else if (lower.includes("order a listing video")) {
+        window.open("/order", "_blank");
+        addMessage({ role: "assistant", text: "Opened the video order page. Once your video is delivered, it'll show up in your content library automatically." });
+
+      // ── Platform-specific post ──
+      } else if (lower.includes("post to instagram") || lower === "instagram carousel") {
+        setPostCreatorDate(new Date().toISOString().split("T")[0]);
+        setPostCreatorOpen(true);
+        addMessage({ role: "assistant", text: "Opening the post creator for Instagram. I'll generate a caption once you pick the content." });
+
+      } else if (lower.includes("post to facebook") || lower === "facebook post") {
+        setPostCreatorDate(new Date().toISOString().split("T")[0]);
+        setPostCreatorOpen(true);
+        addMessage({ role: "assistant", text: "Opening the post creator for Facebook." });
+
+      } else if (lower.includes("both platforms")) {
+        addMessage({
+          role: "assistant",
+          text: "Smart move — cross-posting maximizes reach. I'll help you create one for each. Let's start with Instagram (shorter, more visual) then adapt it for Facebook.",
+          buttons: ["Write Instagram caption", "Write Facebook caption"],
+        });
+
+      // ── Self-marketing responses ──
+      } else if (lower.includes("about-me post") || lower.includes("about me")) {
+        try {
+          const res = await fetch("/api/planner/caption", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ freeform: "Write me a personal About Me post for Instagram. Share my story as a real estate agent — why I got into real estate, what I love about it, and what makes me different. Warm and authentic.", agentName }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            addMessage({ role: "assistant", text: data.caption || "Here's your About Me post:", buttons: ["Copy", "Schedule this", "Try again"] });
+          }
+        } catch { addMessage({ role: "assistant", text: "Let me try that again." }); }
+
+      } else if (lower.includes("market update")) {
+        try {
+          const res = await fetch("/api/planner/caption", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ freeform: "Write a local real estate market update post for LinkedIn. Reference current trends like inventory, pricing, buyer demand. Position me as a knowledgeable local expert.", agentName }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            addMessage({ role: "assistant", text: data.caption || "Here's your market update:", buttons: ["Copy", "Schedule this", "Try again"] });
+          }
+        } catch { addMessage({ role: "assistant", text: "Let me try that again." }); }
+
+      } else if (lower.includes("real estate tip")) {
+        try {
+          const res = await fetch("/api/planner/caption", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ freeform: "Write a quick, actionable real estate tip post for Instagram. Could be for buyers or sellers. Educational, concise, shareable.", agentName }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            addMessage({ role: "assistant", text: data.caption || "Here's your tip post:", buttons: ["Copy", "Schedule this", "Try again"] });
+          }
+        } catch { addMessage({ role: "assistant", text: "Let me try that again." }); }
+
+      // ── Dismiss / Skip / Not now ──
+      } else if (lower === "not now" || lower === "skip" || lower === "dismiss") {
+        addMessage({ role: "assistant", text: "No worries — I'll bring it up again later. What else can I help with?" });
+
+      // ── Fallback: send to Claude as freeform ──
       } else {
-        // Send to caption API as freeform
         try {
           const res = await fetch("/api/planner/caption", {
             method: "POST",
