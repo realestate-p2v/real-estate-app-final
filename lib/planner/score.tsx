@@ -1,6 +1,6 @@
 // lib/planner/score.ts
 // Content Score Engine — calculates per-property marketing completeness
-// Items that don't apply are excluded from the denominator, never penalized.
+// Brand Score — based on profile completion (8 items)
 
 export interface ScoreItem {
   key: string;
@@ -74,7 +74,6 @@ export function calculateContentScore(
 ): ContentScore {
   const items: ScoreItem[] = [];
 
-  // Professional photos — always included
   items.push({
     key: "professional_photos",
     label: "Professional photos",
@@ -85,7 +84,6 @@ export function calculateContentScore(
     actionHref: "/order",
   });
 
-  // Listing video — always included
   items.push({
     key: "listing_video",
     label: "Listing video",
@@ -96,7 +94,6 @@ export function calculateContentScore(
     actionHref: "/order",
   });
 
-  // Video remix — only if has video
   items.push({
     key: "video_remix",
     label: "Video remix",
@@ -107,7 +104,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/design-studio",
   });
 
-  // Listing description — always
   items.push({
     key: "listing_description",
     label: "Listing description",
@@ -118,7 +114,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/description-writer",
   });
 
-  // Marketing graphic — always
   items.push({
     key: "marketing_graphic",
     label: "Marketing graphic",
@@ -129,7 +124,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/design-studio",
   });
 
-  // Optimized photos — always
   items.push({
     key: "optimized_photos",
     label: "Optimized photos",
@@ -140,7 +134,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/photo-coach",
   });
 
-  // Shared on social — always
   items.push({
     key: "social_share",
     label: "Shared on social media",
@@ -151,7 +144,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/planner",
   });
 
-  // Virtual staging — only if rooms appear empty (heuristic: <15 photos or flagged)
   items.push({
     key: "virtual_staging",
     label: "Virtual staging",
@@ -162,7 +154,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/virtual-staging",
   });
 
-  // Drone annotation — only if aerial photos exist
   items.push({
     key: "drone_annotation",
     label: "Drone photo annotation",
@@ -173,7 +164,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/design-studio",
   });
 
-  // On agent website — only if agent has published website
   items.push({
     key: "on_website",
     label: "Listed on agent website",
@@ -184,7 +174,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/website",
   });
 
-  // Blog post — only if agent has blog
   items.push({
     key: "blog_post",
     label: "Blog post about listing",
@@ -195,7 +184,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/blog",
   });
 
-  // Just Sold graphic — only if status is sold
   items.push({
     key: "just_sold_graphic",
     label: "Just Sold graphic",
@@ -206,7 +194,6 @@ export function calculateContentScore(
     actionHref: "/dashboard/lens/design-studio",
   });
 
-  // Price Reduced graphic — only if status is price_reduced
   items.push({
     key: "price_reduced_graphic",
     label: "Price Reduced graphic",
@@ -233,21 +220,64 @@ export function calculateContentScore(
   };
 }
 
+// Brand Score — based on 8 profile fields in lens_usage
+// Grading: 0=F, 1=C-, 2=C, 3=C+, 4=B-, 5=B, 6=B+, 7=A, 8=A+ ⭐
 export function calculateBrandScore(data: {
+  hasName: boolean;
+  hasPhone: boolean;
+  hasEmail: boolean;
+  hasCompany: boolean;
   hasHeadshot: boolean;
   hasLogo: boolean;
-  hasCompany: boolean;
-  hasBio: boolean;
-  hasPublishedWebsite: boolean;
-  daysSincePersonalPost: number | null;
-  daysSinceMarketUpdate: number | null;
+  hasWebsite: boolean;
+  hasLocation: boolean;
 }): BrandScore {
   const items: ScoreItem[] = [];
 
   items.push({
+    key: "profile_name",
+    label: "Agent name",
+    points: 1,
+    earned: data.hasName,
+    excluded: false,
+    actionLabel: "Add name",
+    actionHref: "/dashboard/settings",
+  });
+
+  items.push({
+    key: "profile_phone",
+    label: "Phone number",
+    points: 1,
+    earned: data.hasPhone,
+    excluded: false,
+    actionLabel: "Add phone",
+    actionHref: "/dashboard/settings",
+  });
+
+  items.push({
+    key: "profile_email",
+    label: "Email address",
+    points: 1,
+    earned: data.hasEmail,
+    excluded: false,
+    actionLabel: "Add email",
+    actionHref: "/dashboard/settings",
+  });
+
+  items.push({
+    key: "profile_company",
+    label: "Company name",
+    points: 1,
+    earned: data.hasCompany,
+    excluded: false,
+    actionLabel: "Add company",
+    actionHref: "/dashboard/settings",
+  });
+
+  items.push({
     key: "profile_headshot",
-    label: "Profile headshot uploaded",
-    points: 10,
+    label: "Profile headshot",
+    points: 1,
     earned: data.hasHeadshot,
     excluded: false,
     actionLabel: "Upload headshot",
@@ -256,8 +286,8 @@ export function calculateBrandScore(data: {
 
   items.push({
     key: "profile_logo",
-    label: "Logo uploaded",
-    points: 10,
+    label: "Company logo",
+    points: 1,
     earned: data.hasLogo,
     excluded: false,
     actionLabel: "Upload logo",
@@ -265,64 +295,47 @@ export function calculateBrandScore(data: {
   });
 
   items.push({
-    key: "profile_company",
-    label: "Company name set",
-    points: 5,
-    earned: data.hasCompany,
+    key: "profile_website",
+    label: "Website URL",
+    points: 1,
+    earned: data.hasWebsite,
     excluded: false,
-    actionLabel: "Add company",
+    actionLabel: "Add website",
     actionHref: "/dashboard/settings",
   });
 
   items.push({
-    key: "bio_written",
-    label: "Bio written",
-    points: 10,
-    earned: data.hasBio,
+    key: "profile_location",
+    label: "Market location",
+    points: 1,
+    earned: data.hasLocation,
     excluded: false,
-    actionLabel: "Write bio",
-    actionHref: "/dashboard/planner",
+    actionLabel: "Add location",
+    actionHref: "/dashboard/settings",
   });
 
-  items.push({
-    key: "published_website",
-    label: "Agent website published",
-    points: 15,
-    earned: data.hasPublishedWebsite,
-    excluded: false,
-    actionLabel: "Build website",
-    actionHref: "/dashboard/website",
-  });
+  const completedCount = items.filter((i) => i.earned).length;
+  const earned = completedCount;
+  const possible = 8;
+  const percentage = Math.round((earned / possible) * 100);
 
-  items.push({
-    key: "recent_personal_post",
-    label: "Personal post in last 14 days",
-    points: 25,
-    earned: data.daysSincePersonalPost !== null && data.daysSincePersonalPost <= 14,
-    excluded: false,
-    actionLabel: "Write one now",
-    actionHref: "/dashboard/planner",
-  });
-
-  items.push({
-    key: "recent_market_update",
-    label: "Market update in last 30 days",
-    points: 25,
-    earned: data.daysSinceMarketUpdate !== null && data.daysSinceMarketUpdate <= 30,
-    excluded: false,
-    actionLabel: "Generate one",
-    actionHref: "/dashboard/planner",
-  });
-
-  const earned = items.filter((i) => i.earned).reduce((sum, i) => sum + i.points, 0);
-  const possible = items.reduce((sum, i) => sum + i.points, 0);
-  const percentage = possible > 0 ? Math.round((earned / possible) * 100) : 0;
+  const gradeMap: Record<number, string> = {
+    0: "F",
+    1: "C-",
+    2: "C",
+    3: "C+",
+    4: "B-",
+    5: "B",
+    6: "B+",
+    7: "A",
+    8: "A+",
+  };
 
   return {
     earned,
     possible,
     percentage,
-    grade: getGrade(percentage),
+    grade: completedCount === 8 ? "A+ ⭐" : gradeMap[completedCount] || "F",
     items,
   };
 }
