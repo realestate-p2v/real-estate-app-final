@@ -1,1097 +1,863 @@
+// app/dashboard/planner/page.tsx
+// Streamlined Marketing Planner — Property → Media → Generate → Share
+// Lensy chat sidebar stays visible for agent direction changes
+
 "use client";
 
-import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { Navigation } from "@/components/navigation";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import Link from "next/link";
 import {
-  Camera,
   Sparkles,
-  Zap,
-  Clock,
-  Sofa,
-  ArrowRight,
-  ImageIcon,
   MessageSquare,
-  Play,
-  BookOpen,
-  Lock,
-  Crown,
-  PenTool,
-  Crosshair,
-  Film,
-  Gift,
-  Home,
-  ChevronRight,
-  FileText,
-  Percent,
-  ShieldCheck,
-  Video,
-  RefreshCw,
-  BarChart3,
-  Star,
-  DollarSign,
-  UserPlus,
-  Edit,
-  Building2,
-  User,
-  Mail,
-  Phone,
-  Globe,
-  Check,
-  X,
-  Loader2,
-  Pencil,
-  Upload,
-  Save,
-  Eye,
-  Copy,
-  MapPin,
-  TrendingUp,
-  Sun,
-  Moon,
   ChevronDown,
+  Loader2,
+  Send,
+  ArrowLeft,
+  Check,
+  RefreshCw,
+  Image as ImageIcon,
+  Video,
+  Palette,
+  Sofa,
+  RotateCcw,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
-/* ─── Lazy-loaded components (not needed for initial paint) ─── */
-const SignupSpin = dynamic(() => import("@/components/signup-spin").then(m => ({ default: m.SignupSpin })), { ssr: false });
-const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
-const MarketingPlannerWidget = dynamic(() => import("@/components/marketing-planner-widget"), { ssr: false });
+import Link from "next/link";
 
-/* ─────────────────────────────────────────────
-   Constants
-   ───────────────────────────────────────────── */
-const PROPERTY_SITE_BASE = "/p"; // Change to "https://" + slug + ".p2v.homes" when DNS is live
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-/* ─────────────────────────────────────────────
-   Styles
-   ───────────────────────────────────────────── */
-const mcStyles = `
-  @keyframes mc-fade-up {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes mc-chip-in {
-    from { opacity: 0; transform: translateY(10px) scale(0.96); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  @keyframes mc-glow-pulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.25), 0 0 60px rgba(34, 197, 94, 0.1); }
-    50%      { box-shadow: 0 0 28px rgba(34, 197, 94, 0.4),  0 0 80px rgba(34, 197, 94, 0.18); }
-  }
-  .mc-animate {
-    opacity: 0;
-    animation: mc-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-  .mc-chip-animate {
-    opacity: 0;
-    animation: mc-chip-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-  .mc-glow-btn {
-    animation: mc-glow-pulse 3s ease-in-out infinite;
-  }
-
-  /* ── Font size bump — everything one step larger ── */
-  .dash-root .text-\[9px\]  { font-size: 10px !important; }
-  .dash-root .text-\[10px\] { font-size: 11px !important; }
-  .dash-root .text-\[11px\] { font-size: 12px !important; }
-  .dash-root .text-xs  { font-size: 13px !important; line-height: 1.5 !important; }
-  .dash-root .text-sm  { font-size: 15px !important; line-height: 1.5 !important; }
-  .dash-root .text-base { font-size: 17px !important; }
-  .dash-root .text-lg  { font-size: 19px !important; }
-  .dash-root .text-xl  { font-size: 21px !important; }
-  .dash-root .text-2xl { font-size: 26px !important; }
-  .dash-root .text-3xl { font-size: 32px !important; }
-
-  /* ── Light mode overrides ── */
-  .dashboard-light {
-    background: #f1f5f9 !important;
-  }
-  .dashboard-light .dl-bg-overlay { display: none !important; }
-
-  /* All white text → dark slate */
-  .dashboard-light [class*="text-white"] { color: #334155 !important; }
-  .dashboard-light h1[class*="text-white"] { color: #0f172a !important; }
-  .dashboard-light [class*="font-extrabold"][class*="text-white"] { color: #0f172a !important; }
-  .dashboard-light p[class*="text-white\\/90"],
-  .dashboard-light p[class*="font-bold"][class*="text-white"] { color: #1e293b !important; }
-
-  /* Keep accent colors readable */
-  .dashboard-light [class*="text-cyan-400"] { color: #0891b2 !important; }
-  .dashboard-light [class*="text-cyan-300"] { color: #06b6d4 !important; }
-  .dashboard-light [class*="text-emerald-400"] { color: #059669 !important; }
-  .dashboard-light [class*="text-emerald-300"] { color: #10b981 !important; }
-  .dashboard-light [class*="text-purple-400"] { color: #7c3aed !important; }
-  .dashboard-light [class*="text-purple-300"] { color: #8b5cf6 !important; }
-  .dashboard-light [class*="text-indigo-400"] { color: #4f46e5 !important; }
-  .dashboard-light [class*="text-indigo-300"] { color: #6366f1 !important; }
-  .dashboard-light [class*="text-sky-400"] { color: #0284c7 !important; }
-  .dashboard-light [class*="text-sky-300"] { color: #0ea5e9 !important; }
-  .dashboard-light [class*="text-green-400"] { color: #16a34a !important; }
-  .dashboard-light [class*="text-green-300"] { color: #22c55e !important; }
-  .dashboard-light [class*="text-blue-400"] { color: #2563eb !important; }
-  .dashboard-light [class*="text-blue-300"] { color: #3b82f6 !important; }
-  .dashboard-light [class*="text-violet-400"] { color: #7c3aed !important; }
-  .dashboard-light [class*="text-amber-400"] { color: #d97706 !important; }
-  .dashboard-light [class*="text-teal-400"] { color: #0d9488 !important; }
-  .dashboard-light [class*="text-rose-400"] { color: #e11d48 !important; }
-  .dashboard-light [class*="text-orange-400"] { color: #ea580c !important; }
-  .dashboard-light [class*="text-red-400"] { color: #dc2626 !important; }
-  .dashboard-light [class*="text-red-300"] { color: #ef4444 !important; }
-  .dashboard-light [class*="text-pink-400"] { color: #db2777 !important; }
-  .dashboard-light [class*="text-lime-400"] { color: #65a30d !important; }
-
-  /* Backgrounds → white/translucent */
-  .dashboard-light [class*="bg-white\\/"] { background-color: rgba(255,255,255,0.75) !important; }
-  .dashboard-light [class*="bg-gray-900"] { background-color: #f1f5f9 !important; }
-  .dashboard-light [class*="bg-black\\/50"] { background-color: rgba(255,255,255,0.75) !important; }
-
-  /* Borders → light gray */
-  .dashboard-light [class*="border-white\\/"] { border-color: rgba(0,0,0,0.08) !important; }
-
-  /* Colored borders — keep but lighter */
-  .dashboard-light [class*="border-cyan"] { border-color: rgba(8,145,178,0.2) !important; }
-  .dashboard-light [class*="border-emerald"] { border-color: rgba(5,150,105,0.2) !important; }
-  .dashboard-light [class*="border-purple"] { border-color: rgba(124,58,237,0.15) !important; }
-  .dashboard-light [class*="border-indigo"] { border-color: rgba(79,70,229,0.15) !important; }
-  .dashboard-light [class*="border-sky"] { border-color: rgba(2,132,199,0.15) !important; }
-  .dashboard-light [class*="border-green"] { border-color: rgba(22,163,74,0.2) !important; }
-  .dashboard-light [class*="border-blue"] { border-color: rgba(37,99,235,0.15) !important; }
-  .dashboard-light [class*="border-violet"] { border-color: rgba(124,58,237,0.15) !important; }
-  .dashboard-light [class*="border-amber"] { border-color: rgba(217,119,6,0.2) !important; }
-  .dashboard-light [class*="border-red"] { border-color: rgba(220,38,38,0.2) !important; }
-
-  /* Colored bg accents — keep but lighter */
-  .dashboard-light [class*="bg-cyan-400\\/"] { background-color: rgba(8,145,178,0.08) !important; }
-  .dashboard-light [class*="bg-cyan-500\\/"] { background-color: rgba(8,145,178,0.08) !important; }
-  .dashboard-light [class*="bg-emerald-400\\/"] { background-color: rgba(5,150,105,0.08) !important; }
-  .dashboard-light [class*="bg-purple-400\\/"] { background-color: rgba(124,58,237,0.06) !important; }
-  .dashboard-light [class*="bg-indigo-400\\/"] { background-color: rgba(79,70,229,0.06) !important; }
-  .dashboard-light [class*="bg-sky-400\\/"] { background-color: rgba(2,132,199,0.06) !important; }
-  .dashboard-light [class*="bg-green-400\\/"] { background-color: rgba(22,163,74,0.08) !important; }
-  .dashboard-light [class*="bg-blue-400\\/"] { background-color: rgba(37,99,235,0.06) !important; }
-  .dashboard-light [class*="bg-violet-400\\/"] { background-color: rgba(124,58,237,0.06) !important; }
-  .dashboard-light [class*="bg-amber-400\\/"] { background-color: rgba(217,119,6,0.08) !important; }
-  .dashboard-light [class*="bg-teal-400\\/"] { background-color: rgba(13,148,136,0.06) !important; }
-
-  /* Solid bg buttons stay solid */
-  .dashboard-light .bg-cyan-500 { background-color: #0891b2 !important; }
-  .dashboard-light .bg-cyan-500:hover,
-  .dashboard-light .bg-cyan-400 { background-color: #06b6d4 !important; }
-  .dashboard-light .bg-green-500 { background-color: #16a34a !important; }
-  .dashboard-light .bg-green-500:hover,
-  .dashboard-light .bg-green-400 { background-color: #22c55e !important; }
-
-  /* Rings */
-  .dashboard-light [class*="ring-white\\/"] { --tw-ring-color: rgba(0,0,0,0.06) !important; }
-  .dashboard-light [class*="ring-cyan"] { --tw-ring-color: rgba(8,145,178,0.15) !important; }
-  .dashboard-light [class*="ring-emerald"] { --tw-ring-color: rgba(5,150,105,0.15) !important; }
-  .dashboard-light [class*="ring-purple"] { --tw-ring-color: rgba(124,58,237,0.12) !important; }
-  .dashboard-light [class*="ring-indigo"] { --tw-ring-color: rgba(79,70,229,0.12) !important; }
-  .dashboard-light [class*="ring-blue"] { --tw-ring-color: rgba(37,99,235,0.12) !important; }
-
-  /* Cards get subtle shadow */
-  .dashboard-light .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); }
-  .dashboard-light .rounded-xl { box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-
-  /* Backdrop blur — keep but lighten */
-  .dashboard-light [class*="backdrop-blur"] { backdrop-filter: blur(8px); }
-
-  /* Mode toggle */
-  .dashboard-light .dl-mode-toggle {
-    background: rgba(0,0,0,0.04) !important;
-    border-color: rgba(0,0,0,0.1) !important;
-  }
-`;
-
-/* ─────────────────────────────────────────────
-   Types
-   ───────────────────────────────────────────── */
-interface LensSubscription {
-  active: boolean;
-  plan: string | null;
-  analysesUsed: number;
-  analysesLimit: number;
-  renewsAt: string | null;
-}
-
-interface AgentProfile {
-  saved_agent_name: string;
-  saved_phone: string;
-  saved_email: string;
-  saved_company: string;
-  saved_website: string;
-  saved_headshot_url: string | null;
-  saved_logo_url: string | null;
-}
-
-interface RecentProperty {
+interface Property {
   id: string;
   address: string;
-  city: string | null;
-  state: string | null;
+  city?: string;
+  state?: string;
   status: string;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  sqft: number | null;
-  price: number | null;
-  special_features: string[] | null;
+  price?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  sqft?: number;
+  special_features?: string[];
 }
 
-interface PublishedWebsite {
+interface MediaAsset {
   id: string;
-  address: string;
-  website_slug: string;
-  website_published: boolean;
-  website_curated: any;
+  type: "photo" | "video" | "clip" | "flyer" | "staging" | "remix" | "description" | "drone";
+  propertyId?: string;
+  propertyAddress: string;
+  thumbnailUrl?: string;
+  assetUrl?: string;
+  content?: string;
+  label?: string;
+  createdAt?: string;
 }
 
-/* ─────────────────────────────────────────────
-   Tool definitions (shared by both views)
-   ───────────────────────────────────────────── */
-interface ToolDef {
-  icon: any;
-  label: string;
-  desc: string;
-  href: string;
-  color: string;
-  bg: string;
-  ring: string;
-  stat?: string | null;
-  badge?: string;
-  badgeColor?: string;
-  crown?: "silver" | "gold";
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
 }
 
-/* ─────────────────────────────────────────────
-   Access gating
-   ───────────────────────────────────────────── */
-const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-type AccessResult = {
-  allowed: boolean;
-  reason: "admin" | "pro" | "tools" | "trial" | "video_only" | "free";
-  tier: "admin" | "pro" | "tools" | "trial" | "video_only" | "free";
-  trialDaysLeft?: number;
-  hasVideo?: boolean;
+function formatPrice(n?: number) {
+  if (!n) return "";
+  return "$" + n.toLocaleString();
+}
+
+function getPostType(status: string): string {
+  if (status === "sold") return "Just Sold";
+  if (status === "price_reduced") return "Price Drop Alert";
+  if (status === "coming_soon") return "Coming Soon Preview";
+  return "Just Listed";
+}
+
+function getContentType(status: string): string {
+  if (status === "sold") return "just_sold";
+  if (status === "price_reduced") return "price_reduced";
+  if (status === "coming_soon") return "coming_soon";
+  return "new_listing";
+}
+
+// Generate a thumbnail from a Cloudinary video URL
+// https://res.cloudinary.com/xxx/video/upload/v123/file.mp4
+// → https://res.cloudinary.com/xxx/video/upload/so_0,w_400,h_300,c_fill/v123/file.jpg
+function cloudinaryVideoThumb(url: string | undefined): string | null {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/video/upload/")) return null;
+  try {
+    return url
+      .replace("/video/upload/", "/video/upload/so_0,w_400,h_300,c_fill/")
+      .replace(/\.mp4$/i, ".jpg");
+  } catch {
+    return null;
+  }
+}
+
+// Get the best thumbnail for any media asset
+function getBestThumb(m: MediaAsset): string | null {
+  const url = m.thumbnailUrl || "";
+  // If thumbnailUrl is a real image (not PDF, not mp4), use it directly
+  if (url && !url.endsWith(".pdf") && !url.endsWith(".mp4") && !url.includes("/raw/")) {
+    return url;
+  }
+  // If thumbnailUrl is an mp4 on Cloudinary, generate a thumbnail
+  if (url && url.endsWith(".mp4")) {
+    return cloudinaryVideoThumb(url);
+  }
+  // If assetUrl is a Cloudinary video, generate a thumbnail from it
+  if (m.assetUrl && m.assetUrl.includes("res.cloudinary.com") && m.assetUrl.endsWith(".mp4")) {
+    return cloudinaryVideoThumb(m.assetUrl);
+  }
+  return null;
+}
+
+const STATUS_STYLES: Record<string, { bg: string; color: string; text: string }> = {
+  active: { bg: "#166534", color: "#4ade80", text: "Active" },
+  new: { bg: "#166534", color: "#4ade80", text: "New" },
+  coming_soon: { bg: "#713f12", color: "#facc15", text: "Coming Soon" },
+  sold: { bg: "#7f1d1d", color: "#f87171", text: "Sold" },
+  price_reduced: { bg: "#581c87", color: "#c084fc", text: "Price Reduced" },
+  withdrawn: { bg: "#374151", color: "#9ca3af", text: "Withdrawn" },
 };
 
-function checkAccess(
-  email: string,
-  lensUsage: any,
-  hasPaidOrder: boolean
-): AccessResult {
-  if (ADMIN_EMAILS.includes(email)) {
-    return { allowed: true, reason: "admin", tier: "admin" };
-  }
-  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "pro") {
-    return { allowed: true, reason: "pro", tier: "pro" };
-  }
-  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "tools") {
-    return { allowed: true, reason: "tools", tier: "tools" };
-  }
-  // Legacy subscriber tiers (Individual, free_prize, etc.) — treat as tools-level
-  if (lensUsage?.is_subscriber) {
-    return { allowed: true, reason: "tools", tier: "tools" };
-  }
-  if (lensUsage?.trial_expires_at) {
-    const expires = new Date(lensUsage.trial_expires_at);
-    if (expires > new Date()) {
-      const daysLeft = Math.ceil((expires.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      return { allowed: true, reason: "trial", tier: "trial", trialDaysLeft: daysLeft };
-    }
-  }
-  if (hasPaidOrder) {
-    return { allowed: false, reason: "video_only", tier: "video_only", hasVideo: true };
-  }
-  return { allowed: false, reason: "free", tier: "free", hasVideo: false };
+const MEDIA_FILTERS = [
+  { key: "video", label: "Videos", icon: Video },
+  { key: "photo", label: "Photos", icon: ImageIcon },
+  { key: "clip", label: "Clips", icon: Video },
+  { key: "flyer", label: "Graphics", icon: Palette },
+  { key: "staging", label: "Staging", icon: Sofa },
+  { key: "all", label: "All", icon: null },
+];
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_STYLES[status] || STATUS_STYLES.active;
+  return (
+    <span
+      className="inline-block rounded-md text-[11px] font-bold uppercase tracking-wide"
+      style={{ background: s.bg, color: s.color, padding: "3px 10px" }}
+    >
+      {s.text}
+    </span>
+  );
 }
 
-const PRO_ONLY_TOOLS = ["location_value_score", "agent_website", "custom_reports"];
+// ─── Lensy Chat Component ───────────────────────────────────────────────────
 
-function checkToolAccess(toolKey: string, access: AccessResult): {
-  canUse: boolean;
-  gateType: "none" | "subscribe" | "upgrade_pro" | "buy_video";
-} {
-  if (access.tier === "admin") return { canUse: true, gateType: "none" };
-  if (access.tier === "pro") return { canUse: true, gateType: "none" };
-  if (PRO_ONLY_TOOLS.includes(toolKey)) return { canUse: false, gateType: "upgrade_pro" };
-  if (access.tier === "tools" || access.tier === "trial") return { canUse: true, gateType: "none" };
-  if (toolKey === "video_remix" && access.hasVideo) return { canUse: true, gateType: "none" };
-  if (access.tier === "video_only") return { canUse: false, gateType: "subscribe" };
-  return { canUse: false, gateType: "buy_video" };
-}
-
-/* ═══════════════════════════════════════════════
-   MAIN PAGE EXPORT
-   ═══════════════════════════════════════════════ */
-export default function DashboardPage() {
-  const [user, setUser] = useState<{ id: string; email: string; name?: string } | null>(null);
-  const [subscription, setSubscription] = useState<LensSubscription>({
-    active: false, plan: null, analysesUsed: 0, analysesLimit: 200, renewsAt: null,
-  });
-  const [agentProfile, setAgentProfile] = useState<AgentProfile>({
-    saved_agent_name: "", saved_phone: "", saved_email: "", saved_company: "",
-    saved_website: "", saved_headshot_url: null, saved_logo_url: null,
-  });
-  const [coachSessionCount, setCoachSessionCount] = useState(0);
-  const [descriptionCount, setDescriptionCount] = useState(0);
-  const [propertyCount, setPropertyCount] = useState(0);
-  const [recentProperties, setRecentProperties] = useState<RecentProperty[]>([]);
-  const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
-  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
-  const [coreReady, setCoreReady] = useState(false);
-  const [secondaryLoaded, setSecondaryLoaded] = useState(false);
-  const [isFreePrize, setIsFreePrize] = useState(false);
-  const [freeLensDaysLeft, setFreeLensDaysLeft] = useState<number | null>(null);
-  const [freeLensExpired, setFreeLensExpired] = useState(false);
-  const [signupPrizeCode, setSignupPrizeCode] = useState<string | null>(null);
-  const [signupPrizeLabel, setSignupPrizeLabel] = useState("");
-  const [hasDirectoryListing, setHasDirectoryListing] = useState<boolean | null>(null);
-  const [access, setAccess] = useState<AccessResult>({ allowed: false, reason: "free", tier: "free", hasVideo: false });
-
-  // Profile editing
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState<AgentProfile>({ ...agentProfile });
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-
-  // Active tab for tools vs quick links
-  const [activeTab, setActiveTab] = useState<"tools" | "perks">("tools");
-
-  // Subscribe banner dismiss (resets each visit — intentional gentle reminder)
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  // Show all websites toggle
-  const [showAllWebsites, setShowAllWebsites] = useState(false);
-
-  // Dark/light mode
-  const [darkMode, setDarkMode] = useState(true);
+function LensyChat({
+  property,
+  agentName,
+  userId,
+}: {
+  property: Property | null;
+  agentName: string;
+  userId: string;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastPropId = useRef<string | null>(null);
 
   useEffect(() => {
-    const init = async () => {
-      const supabase = createClient();
+    if (property?.id === lastPropId.current) return;
+    lastPropId.current = property?.id || null;
+    if (property) {
+      const postType = getPostType(property.status);
+      const firstName = agentName.split(" ")[0] || "there";
+      setMessages([{
+        id: "greeting", role: "assistant",
+        text: `Hey ${firstName}! 👋 Working on ${property.address} — great choice! Since it's ${property.status === "active" ? "an active listing" : property.status.replace(/_/g, " ")}, I'll draft "${postType}" style posts.\n\nPick a piece of media and hit Generate, or tell me if you want a different angle!`,
+      }]);
+    } else {
+      setMessages([]);
+    }
+  }, [property?.id, agentName]);
 
-      // getSession reads from local token — much faster than getUser which hits network
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { setCoreReady(true); return; }
-      const authUser = session.user;
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, isTyping]);
 
-      setUser({
-        id: authUser.id,
-        email: authUser.email || "",
-        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split("@")[0] || "",
-      });
-
-      const isAdmin = authUser.email && ADMIN_EMAILS.includes(authUser.email);
-
-      const { data: usage } = await supabase
-        .from("lens_usage")
-        .select("is_subscriber, subscription_tier, free_lens_expires_at, trial_activated_at, trial_expires_at, total_analyses, saved_agent_name, saved_phone, saved_email, saved_company, saved_website, saved_headshot_url, saved_logo_url, signup_prize_code")
-        .eq("user_id", authUser.id)
-        .single();
-
-      // Agent profile
-      if (usage) {
-        const profile: AgentProfile = {
-          saved_agent_name: usage.saved_agent_name || "",
-          saved_phone: usage.saved_phone || "",
-          saved_email: usage.saved_email || "",
-          saved_company: usage.saved_company || "",
-          saved_website: usage.saved_website || "",
-          saved_headshot_url: usage.saved_headshot_url || null,
-          saved_logo_url: usage.saved_logo_url || null,
-        };
-        setAgentProfile(profile);
-        setProfileForm(profile);
-        if (usage.signup_prize_code) {
-          setSignupPrizeCode(usage.signup_prize_code);
-          setSignupPrizeLabel("Discount on your first order");
-        }
-      }
-
-      // ── Check if user has any paid video orders ──
-      const { count: orderCount } = await supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", authUser.id)
-        .eq("payment_status", "paid");
-      const hasPaidOrder = (orderCount || 0) > 0;
-
-      // ── Build access result ──
-      const accessResult = checkAccess(authUser.email || "", usage, hasPaidOrder);
-      setAccess(accessResult);
-
-      // ── Resolve subscription status (needed for tools array) ──
-      if (isAdmin) {
-        setSubscription({ active: true, plan: "Admin", analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
-      } else if (usage?.is_subscriber) {
-        if (usage.subscription_tier === "free_prize" && usage.free_lens_expires_at) {
-          const expiresAt = new Date(usage.free_lens_expires_at);
-          const msLeft = expiresAt.getTime() - Date.now();
-          const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-          if (daysLeft <= 0) {
-            setFreeLensExpired(true);
-            supabase.from("lens_usage").update({ is_subscriber: false, subscription_tier: null }).eq("user_id", authUser.id);
-            setSubscription({ active: false, plan: null, analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
-          } else {
-            setIsFreePrize(true);
-            setFreeLensDaysLeft(daysLeft);
-            setSubscription({ active: true, plan: "Free Month", analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
-          }
-        } else {
-          setSubscription({ active: true, plan: usage.subscription_tier || "Individual", analysesUsed: usage?.total_analyses || 0, analysesLimit: 200, renewsAt: null });
-        }
-      }
-
-      // ═══ PHASE 1 DONE — show the dashboard immediately ═══
-      setCoreReady(true);
-
-      // ═══ PHASE 2 — load secondary data in background ═══
-      const [
-        sessionsResult,
-        sessionCountResult,
-        descCountResult,
-        propCountResult,
-        propsResult,
-        publishedSitesResult,
-        directoryResult,
-      ] = await Promise.all([
-        supabase.from("lens_sessions").select("total_analyses").eq("user_id", authUser.id),
-        supabase.from("lens_sessions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
-        supabase.from("lens_descriptions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
-        supabase.from("agent_properties").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
-        supabase.from("agent_properties")
-          .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features")
-          .eq("user_id", authUser.id).is("merged_into_id", null)
-          .order("updated_at", { ascending: false }).limit(5),
-        supabase.from("agent_properties")
-          .select("id, address, website_slug, website_published, website_curated")
-          .eq("user_id", authUser.id).eq("website_published", true)
-          .is("merged_into_id", null).not("website_slug", "is", null)
-          .order("updated_at", { ascending: false }).limit(6),
-        fetch("/api/directory/me").then(r => r.json()).catch(() => ({ success: false })),
-      ]);
-
-      // Update analyses count with session data
-      const totalFromSessions = (sessionsResult.data || []).reduce((sum: number, s: { total_analyses: number | null }) => sum + (s.total_analyses || 0), 0);
-      const totalAnalyses = Math.max(usage?.total_analyses || 0, totalFromSessions);
-      setSubscription(prev => ({ ...prev, analysesUsed: totalAnalyses }));
-
-      setCoachSessionCount(sessionCountResult.count || 0);
-      setDescriptionCount(descCountResult.count || 0);
-      setPropertyCount(propCountResult.count || 0);
-      if (propsResult.data) setRecentProperties(propsResult.data);
-      if (publishedSitesResult.data) setPublishedWebsites(publishedSitesResult.data);
-      setHasDirectoryListing(directoryResult.success && !!directoryResult.photographer);
-
-      setSecondaryLoaded(true);
-    };
-    init();
-  }, []);
-
-  /* ─── Copy link handler ─── */
-  const handleCopyLink = async (slug: string) => {
-    const url = `${window.location.origin}/p/${slug}`;
-    await navigator.clipboard.writeText(url);
-    setCopiedSlug(slug);
-    setTimeout(() => setCopiedSlug(null), 2000);
-  };
-
-  /* ─── Get hero image from website_curated ─── */
-  const getHeroImage = (curated: any): string | null => {
-    if (!curated) return null;
-    if (Array.isArray(curated) && curated.length > 0) return typeof curated[0] === "string" ? curated[0] : curated[0]?.url || null;
-    if (curated.photos && Array.isArray(curated.photos) && curated.photos.length > 0) return typeof curated.photos[0] === "string" ? curated.photos[0] : curated.photos[0]?.url || null;
-    if (curated.hero && Array.isArray(curated.hero) && curated.hero.length > 0) return typeof curated.hero[0] === "string" ? curated.hero[0] : curated.hero[0]?.url || null;
-    return null;
-  };
-
-  /* ─── Profile save ─── */
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    setSavingProfile(true);
-    const supabase = createClient();
-    await supabase.from("lens_usage").upsert({
-      user_id: user.id,
-      saved_agent_name: profileForm.saved_agent_name,
-      saved_phone: profileForm.saved_phone,
-      saved_email: profileForm.saved_email,
-      saved_company: profileForm.saved_company,
-      saved_website: profileForm.saved_website,
-    }, { onConflict: "user_id" });
-    setAgentProfile({ ...profileForm });
-    setEditingProfile(false);
-    setSavingProfile(false);
-  };
-
-  /* ─── Profile image upload ─── */
-  const handleProfileImageUpload = async (file: File, field: "saved_headshot_url" | "saved_logo_url", setLoading: (v: boolean) => void) => {
-    if (!user) return;
-    setLoading(true);
+  const sendMessage = useCallback(async () => {
+    if (!input.trim() || isTyping) return;
+    const userText = input.trim();
+    setMessages((prev) => [...prev, { id: "u" + Date.now(), role: "user", text: userText }]);
+    setInput("");
+    setIsTyping(true);
     try {
-      const sigRes = await fetch("/api/cloudinary-signature", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder: "photo2video/design-studio" }) });
-      const sigData = await sigRes.json();
-      if (!sigData.success) throw new Error("Signature failed");
-      const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
-      const fd = new FormData();
-      fd.append("file", file); fd.append("api_key", apiKey); fd.append("timestamp", timestamp.toString()); fd.append("signature", signature); fd.append("folder", folder); fd.append("resource_type", "auto");
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
-      const result = await res.json();
-      if (result.secure_url) {
-        const supabase = createClient();
-        await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: result.secure_url }, { onConflict: "user_id" });
-        setAgentProfile(prev => ({ ...prev, [field]: result.secure_url }));
-        setProfileForm(prev => ({ ...prev, [field]: result.secure_url }));
+      const res = await fetch("/api/planner/caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ freeform: true, message: userText, propertyAddress: property?.address || "", agentName }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages((prev) => [...prev, { id: "a" + Date.now(), role: "assistant", text: data.caption || data.response || "I can help with that! Select a photo and hit Generate." }]);
+      } else {
+        setMessages((prev) => [...prev, { id: "a" + Date.now(), role: "assistant", text: "I can help with that! Select a photo and hit Generate, or tell me what kind of post you'd like." }]);
       }
-    } catch (err) { console.error("Upload error:", err); }
-    setLoading(false);
-  };
+    } catch {
+      setMessages((prev) => [...prev, { id: "a" + Date.now(), role: "assistant", text: "I'm here to help! Pick a photo and I'll craft the perfect caption." }]);
+    }
+    setIsTyping(false);
+  }, [input, isTyping, property, agentName]);
 
-  /* ─── Build property query string for quick links ─── */
-  const buildQs = (prop: RecentProperty) => {
-    const p = new URLSearchParams();
-    p.set("propertyId", prop.id);
-    if (prop.address) p.set("address", prop.address);
-    if (prop.city) p.set("city", prop.city);
-    if (prop.state) p.set("state", prop.state);
-    if (prop.bedrooms) p.set("beds", prop.bedrooms.toString());
-    if (prop.bathrooms) p.set("baths", prop.bathrooms.toString());
-    if (prop.sqft) p.set("sqft", prop.sqft.toString());
-    if (prop.price) p.set("price", prop.price.toString());
-    if (prop.special_features?.length) p.set("specialFeatures", prop.special_features.join(", "));
-    return p.toString();
-  };
-
-  if (!coreReady) {
+  if (!property) {
     return (
-      <div className="min-h-screen bg-gray-900">
-        <Navigation />
-        <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
-        <div className="flex items-center justify-center py-32">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+      <div className="rounded-xl border border-gray-700 bg-gray-900 p-7 flex flex-col items-center justify-center text-center" style={{ minHeight: 340 }}>
+        <div className="w-12 h-12 rounded-xl bg-emerald-900 border border-emerald-700 flex items-center justify-center mb-3">
+          <MessageSquare className="w-5 h-5 text-emerald-400" />
         </div>
+        <p className="text-base font-extrabold text-white mb-1">Lensy</p>
+        <p className="text-sm text-gray-400 max-w-[240px] leading-relaxed">Select a property to get started.</p>
       </div>
     );
   }
 
-  const getTimeOfDay = () => { const h = new Date().getHours(); if (h < 12) return "Good morning"; if (h < 17) return "Good afternoon"; return "Good evening"; };
-  const firstName = user?.name?.split(" ")[0] || "there";
-  const usagePercent = subscription.analysesLimit > 0 ? Math.round((subscription.analysesUsed / subscription.analysesLimit) * 100) : 0;
-  const isSubscriber = subscription.active && !!user;
+  return (
+    <div className="rounded-xl border border-gray-700 bg-gray-900 flex flex-col" style={{ minHeight: 340, maxHeight: 500 }}>
+      <div className="px-4 py-3 border-b border-gray-700 flex items-center gap-3 shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-emerald-900 border border-emerald-700 flex items-center justify-center">
+          <MessageSquare className="w-4 h-4 text-emerald-400" />
+        </div>
+        <div>
+          <p className="text-sm font-extrabold text-white">Lensy</p>
+          <p className="text-[10px] text-gray-500 font-medium">Marketing Assistant</p>
+        </div>
+      </div>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[88%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+              msg.role === "user" ? "rounded-[14px_14px_4px_14px] bg-blue-600 text-white" : "rounded-[14px_14px_14px_4px] bg-gray-800 text-gray-200 border border-gray-600"
+            }`}>{msg.text}</div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="px-3.5 py-2.5 rounded-[14px_14px_14px_4px] bg-gray-800 border border-gray-600 text-gray-400 text-[13px] flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" /> Lensy is typing...
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="px-3 py-3 border-t border-gray-700 flex gap-2 shrink-0">
+        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Ask Lensy anything..." className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2.5 text-[13px] text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 transition-colors" />
+        <button onClick={sendMessage} disabled={!input.trim() || isTyping}
+          className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg px-4 py-2.5 text-white text-[13px] font-bold transition-colors">
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
-  /* ─────────────────────────────────────────────
-     Tools array — shared definition with gating
-     ───────────────────────────────────────────── */
-  const hasAccess = access.allowed; // admin, pro, tools, or trial
-  const isTrial = access.tier === "trial";
-  const isVideoOnly = access.tier === "video_only";
-  const isFreeAcct = access.tier === "free";
+// ─── Main Planner Page ──────────────────────────────────────────────────────
 
-  // Helper: crown tier badge (subtle visual indicator — gating is handled by GateOverlay)
-  const PRO_TOOLS = ["location_value_score", "website_builder"];
-  const NO_CROWN_TOOLS = ["order_video", "video_remix"];
+export default function PlannerPage() {
+  const supabase = createClient();
+  const [userId, setUserId] = useState("");
+  const [agentName, setAgentName] = useState("Agent");
+  const [isSubscriber, setIsSubscriber] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState("video");
+  const [selectedMedia, setSelectedMedia] = useState<MediaAsset[]>([]);
+  const [generatedCaption, setGeneratedCaption] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
+  const hasInit = useRef(false);
 
-  const gated = (toolKey: string) => {
-    const ta = checkToolAccess(toolKey, access);
-    const trialBadge = (isTrial && access.trialDaysLeft !== undefined)
-      ? `TRIAL: ${access.trialDaysLeft}d` : undefined;
+  // ─── Init ───────────────────────────────────────────────────────────────
 
-    if (NO_CROWN_TOOLS.includes(toolKey)) {
-      return { badge: trialBadge, badgeColor: trialBadge ? "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" : undefined, crown: undefined };
+  useEffect(() => {
+    if (hasInit.current) return;
+    hasInit.current = true;
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const uid = session.user.id;
+      setUserId(uid);
+      const [propsRes, profileRes] = await Promise.all([
+        supabase.from("agent_properties")
+          .select("id, address, city, state, status, price, bedrooms, bathrooms, sqft, special_features")
+          .eq("user_id", uid).is("merged_into_id", null)
+          .in("status", ["active", "new", "coming_soon", "sold", "price_reduced"])
+          .order("updated_at", { ascending: false }),
+        supabase.from("lens_usage").select("saved_agent_name, is_subscriber").eq("user_id", uid).single(),
+      ]);
+      setProperties(propsRes.data || []);
+      setAgentName(profileRes.data?.saved_agent_name || "Agent");
+      setIsSubscriber(!!profileRes.data?.is_subscriber);
+      setLoadingProperties(false);
+    };
+    init();
+  }, []);
+
+  // ─── Load media ─────────────────────────────────────────────────────────
+
+  const loadMedia = useCallback(async (property: Property) => {
+    setLoadingMedia(true);
+    const assets: MediaAsset[] = [];
+    const seen = new Set<string>();
+
+    try {
+      const supabase = createClient();
+      const addr = property.address || "";
+      const streetNum = addr.match(/^\d+/)?.[0] || "";
+      const addrWords = addr.replace(/^\d+\s*/, "").split(/[\s,]+/).filter(Boolean);
+      const firstWord = addrWords[0] || "";
+
+      const [propRes, ordersRes, exportsRes, stagingRes, descriptionsRes] = await Promise.all([
+        supabase.from("agent_properties").select("photos, optimized_photos").eq("id", property.id).single(),
+        supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, created_at")
+          .eq("user_id", userId).in("payment_status", ["paid", "admin_bypass"]),
+        supabase.from("design_exports").select("id, property_id, template_type, export_url, export_format, created_at")
+          .eq("user_id", userId).eq("property_id", property.id).not("template_type", "eq", "branding_card"),
+        supabase.from("lens_staging").select("id, staged_url, room_type, style, created_at")
+          .eq("user_id", userId).eq("property_id", property.id),
+        supabase.from("lens_descriptions").select("id, property_data, description, style, created_at")
+          .eq("user_id", userId),
+      ]);
+
+      const normalizeForMatch = (s: string) =>
+        (s || "").toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+          .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+          .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+          .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+
+      const propNorm = normalizeForMatch(addr);
+      const allOrders = ordersRes.data || [];
+      const matchedOrders = allOrders.filter((o: any) => {
+        const orderNorm = normalizeForMatch(o.property_address || "");
+        if (!orderNorm || !propNorm) return false;
+        if (streetNum && orderNorm.includes(streetNum) && firstWord && orderNorm.toLowerCase().includes(firstWord.toLowerCase())) return true;
+        const propFirst = propNorm.split(",")[0].trim();
+        const orderFirst = orderNorm.split(",")[0].trim();
+        return propFirst.length > 5 && orderFirst.length > 5 && (propFirst.includes(orderFirst) || orderFirst.includes(propFirst));
+      });
+
+      const addAsset = (a: MediaAsset) => {
+        const key = a.assetUrl || a.id;
+        if (seen.has(key)) return;
+        seen.add(key);
+        assets.push(a);
+      };
+
+      // Photos from orders
+      matchedOrders.forEach((order: any) => {
+        const photos = Array.isArray(order.photos) ? order.photos : [];
+        photos.forEach((photo: any, idx: number) => {
+          const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+          const desc = typeof photo === "object" ? photo?.description : "";
+          if (url) addAsset({ id: `photo-${order.id}-${idx}`, type: "photo", propertyAddress: order.property_address || addr, thumbnailUrl: url, assetUrl: url, label: desc || `Photo ${idx + 1}`, createdAt: order.created_at });
+        });
+
+        // Listing video — generate Cloudinary thumbnail
+        if (order.delivery_url) {
+          addAsset({
+            id: `video-${order.id}`, type: "video", propertyAddress: order.property_address || addr,
+            thumbnailUrl: cloudinaryVideoThumb(order.delivery_url) || undefined,
+            assetUrl: order.delivery_url, label: "Listing Video", createdAt: order.created_at,
+          });
+        }
+
+        // Clips — use photo_url as thumbnail
+        const clips = Array.isArray(order.clip_urls) ? order.clip_urls : [];
+        clips.forEach((clip: any, idx: number) => {
+          const clipUrl = clip?.url || clip?.clip_file || clip?.drive_url || "";
+          if (!clipUrl) return;
+          addAsset({
+            id: `clip-${order.id}-${idx}`, type: "clip", propertyAddress: order.property_address || addr,
+            thumbnailUrl: clip?.photo_url || cloudinaryVideoThumb(clipUrl) || undefined,
+            assetUrl: clipUrl, label: clip?.description || clip?.label || `Clip ${idx + 1}`, createdAt: order.created_at,
+          });
+        });
+      });
+
+      // Optimized photos
+      const propData = propRes.data;
+      if (propData) {
+        const optPhotos = Array.isArray(propData.optimized_photos) ? propData.optimized_photos : [];
+        optPhotos.forEach((photo: any, idx: number) => {
+          const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+          if (url) addAsset({ id: `opt-${idx}`, type: "photo", propertyAddress: addr, thumbnailUrl: url, assetUrl: url, label: `Optimized ${idx + 1}`, createdAt: "" });
+        });
+        if (assets.filter(a => a.type === "photo").length === 0) {
+          const rawPhotos = Array.isArray(propData.photos) ? propData.photos : [];
+          rawPhotos.forEach((photo: any, idx: number) => {
+            const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+            if (url) addAsset({ id: `raw-${idx}`, type: "photo", propertyAddress: addr, thumbnailUrl: url, assetUrl: url, label: `Photo ${idx + 1}`, createdAt: "" });
+          });
+        }
+      }
+
+      // Design exports — generate Cloudinary thumbnails for mp4 flyers
+      const FLYER_TYPES = ["just_listed", "just-listed", "open_house", "open-house", "price_reduced", "price-reduced", "just_sold", "just-sold", "yard_sign", "yard-sign", "property_pdf"];
+      const IMAGE_FORMATS = ["jpg", "jpeg", "png", "webp", "gif"];
+      const exports = (exportsRes.data || []).filter((e: any) => e.template_type !== "branding_card");
+      exports.forEach((exp: any) => {
+        if (!exp.export_url) return;
+        const isFlyer = FLYER_TYPES.some(t => exp.template_type?.includes(t));
+        const isRemix = exp.template_type?.includes("video_remix");
+        const isDrone = exp.template_type?.includes("drone");
+        const isImage = IMAGE_FORMATS.includes((exp.export_format || "").toLowerCase());
+        // For mp4 exports, generate a Cloudinary thumbnail
+        const thumb = isImage ? exp.export_url : cloudinaryVideoThumb(exp.export_url) || undefined;
+        addAsset({
+          id: `export-${exp.id}`, type: isRemix ? "remix" : isDrone ? "drone" : isFlyer ? "flyer" : "flyer",
+          propertyId: exp.property_id, propertyAddress: addr, thumbnailUrl: thumb, assetUrl: exp.export_url,
+          label: (exp.template_type || "").replace(/[-_]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()), createdAt: exp.created_at,
+        });
+      });
+
+      // Staging
+      (stagingRes.data || []).forEach((s: any) => {
+        if (s.staged_url) addAsset({ id: `staging-${s.id}`, type: "staging", propertyAddress: addr, thumbnailUrl: s.staged_url, assetUrl: s.staged_url, label: `${s.room_type || "Room"} — ${s.style || "Staged"}`, createdAt: s.created_at });
+      });
+
+      // Descriptions
+      const addrNorm = addr.toLowerCase().replace(/[^a-z0-9]/g, "");
+      (descriptionsRes.data || []).forEach((d: any) => {
+        const dAddr = (d.property_data?.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (dAddr && addrNorm && (dAddr.includes(addrNorm) || addrNorm.includes(dAddr))) {
+          addAsset({ id: `desc-${d.id}`, type: "description", propertyAddress: d.property_data?.address || addr, content: d.description, label: `${d.style || "Description"}`, createdAt: d.created_at });
+        }
+      });
+
+      assets.sort((a, b) => (!a.createdAt ? 1 : !b.createdAt ? -1 : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setMedia(assets);
+      // Smart default: show videos if they exist, then photos, then all
+      const hasVideos = assets.some(a => a.type === "video");
+      const hasPhotos = assets.some(a => a.type === "photo");
+      setMediaFilter(hasVideos ? "video" : hasPhotos ? "photo" : "all");
+    } catch (err) {
+      console.error("Failed to load media:", err);
     }
-    const crown = PRO_TOOLS.includes(toolKey) ? "gold" : "silver";
-    return { badge: trialBadge, badgeColor: trialBadge ? "text-cyan-400 bg-cyan-400/10 border-cyan-400/20" : undefined, crown };
+    setLoadingMedia(false);
+  }, [userId]);
+
+  // ─── Handlers ───────────────────────────────────────────────────────────
+
+  const handleSelectProperty = (p: Property) => {
+    setSelectedProperty(p); setSelectedMedia([]); setGeneratedCaption(""); setMediaFilter("video"); setStep(2); loadMedia(p);
   };
 
-  const tools: ToolDef[] = [
-    { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
-    { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
-    { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
-    { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
-    { icon: Globe, label: "Website Builder", desc: "Build your full agent website with AI-powered content", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", ...gated("website_builder") },
-    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "/dashboard/planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
-    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
-    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
-    { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
-    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", ...gated("virtual_staging") },
-    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("custom_reports") },
-    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
-    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "#", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
-    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "#", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
-  ];
+  const handleSelectMedia = (m: MediaAsset) => {
+    setSelectedMedia((prev) => prev.find((s) => s.id === m.id) ? prev.filter((s) => s.id !== m.id) : [...prev, m]);
+    setGeneratedCaption("");
+  };
 
-  const subscriberPerks = [
-    { icon: ImageIcon, label: "Photo Enhancement", desc: "AI brightness, color, and white balance correction", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
-    { icon: Percent, label: "10% Off Every Video", desc: "Automatic subscriber discount at checkout", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20" },
-    { icon: Zap, label: "Priority Delivery", desc: "12-hour turnaround — subscribers go first", color: "text-yellow-400", bg: "bg-yellow-400/10", ring: "ring-yellow-400/20" },
-  ];
+  // ─── Caption Templates ──────────────────────────────────────────────────
 
-  /* ═══════════════════════════════════════════════════════════════
-     SHARED DARK DASHBOARD — used by both subscriber & non-subscriber
-     ═══════════════════════════════════════════════════════════════ */
+  const generateLocalCaption = (p: Property): string => {
+    const city = p.city || "";
+    const cityTag = city.replace(/\s/g, "");
+    const details = [p.bedrooms ? `${p.bedrooms} bedrooms` : "", p.bathrooms ? `${p.bathrooms} bathrooms` : "", p.sqft ? `${p.sqft.toLocaleString()} sq ft` : ""].filter(Boolean).join(" · ");
+    const price = p.price ? formatPrice(p.price) : "";
+    const features = p.special_features?.slice(0, 3).join(", ") || "";
+    const firstName = agentName.split(" ")[0] || "";
+
+    const templates: Record<string, string[]> = {
+      "Just Listed": [
+        `✨ Just Listed in ${city}!\n${p.address}\n${details}\n${price ? `Offered at ${price}` : ""}${features ? `\n${features}` : ""}\nThis is the one you've been waiting for. Schedule your private tour today! 🔑\nListing link in first comment!\n#JustListed #${cityTag}RealEstate #NewListing #DreamHome`,
+        `🏡 NEW — ${p.address}\n${details}${price ? ` | ${price}` : ""}${features ? `\n✅ ${p.special_features?.join("\n✅ ") || ""}` : ""}\nLocated in beautiful ${city} — this home is move-in ready and priced to sell.\nDM me to see it before it's gone! 📲\nListing link in first comment!\n#JustListed #RealEstate #HomeGoals #${cityTag}`,
+        `Welcome to ${p.address} 🏠\n${details}\n${price ? `Listed at ${price}` : ""}${features ? `\nFeatures: ${features}` : ""}\nThis ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} beauty in ${city} checks every box.\nListing link in first comment! 🔗\n#NewOnTheMarket #${cityTag}Homes #RealEstateAgent`,
+        `📣 Fresh on the market!\n${p.address}, ${city}\n${details}\n${price}${features ? `\nHighlights: ${features}` : ""}\nEvery detail of this home was designed for living well.\nCall or DM ${firstName || "me"} today! 📞\nListing link in first comment!\n#JustListed #LuxuryLiving #${cityTag}RealEstate`,
+      ],
+      "Just Sold": [
+        `🎉 SOLD! ${p.address}\nCongrats to my incredible clients on closing this ${p.bedrooms ? p.bedrooms + "-bedroom " : ""}home in ${city}!\nThinking about making a move? Let's talk. 📞\n#JustSold #ClosingDay #${cityTag}RealEstate`,
+        `🔑 Keys handed over! ${p.address} is officially SOLD.\nHelping people find their perfect home never gets old.\nYour turn could be next — reach out anytime! 💛\n#Sold #RealEstateLife #${cityTag}`,
+      ],
+      "Price Drop Alert": [
+        `⚡ PRICE IMPROVED — ${p.address}\n${details}\nNow ${price}${features ? `\n${features}` : ""}\nThis ${city} gem just became an even better value!\nDM me to schedule a tour 🏃‍♂️\nListing link in first comment!\n#PriceReduced #${cityTag}Homes #OpportunityKnocks`,
+      ],
+      "Coming Soon Preview": [
+        `👀 COMING SOON to ${city}...\n${p.address}\n${details}\n${price ? `Expected at ${price}` : ""}\nGet on the early access list!\nDM ${firstName || "me"} for details! 🔥\n#ComingSoon #ExclusiveListing #${cityTag}RealEstate`,
+      ],
+    };
+    const postType = getPostType(p.status);
+    const options = templates[postType] || templates["Just Listed"];
+    return options[Math.floor(Math.random() * options.length)];
+  };
+
+  const handleGenerateCaption = async () => {
+    if (!selectedProperty || selectedMedia.length === 0) return;
+    setIsGenerating(true);
+    let caption = "";
+    try {
+      const res = await fetch("/api/planner/caption", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform: "instagram", contentType: getContentType(selectedProperty.status),
+          propertyAddress: selectedProperty.address, agentName,
+          propertyDetails: { bedrooms: selectedProperty.bedrooms, bathrooms: selectedProperty.bathrooms, sqft: selectedProperty.sqft, price: selectedProperty.price, city: selectedProperty.city, state: selectedProperty.state, special_features: selectedProperty.special_features },
+        }),
+      });
+      if (res.ok) { const data = await res.json(); caption = data.caption || ""; }
+    } catch {}
+    if (!caption || caption.includes("[key feature]") || caption.includes("[insert") || caption.includes("[your") || caption.includes("This beautiful home features") || caption.length < 50) {
+      caption = generateLocalCaption(selectedProperty);
+    }
+    setGeneratedCaption(caption); setStep(3); setIsGenerating(false);
+    try { fetch("/api/planner/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actionType: "caption_generated", propertyId: selectedProperty.id, platform: "instagram", contentType: getContentType(selectedProperty.status), metadata: { mediaCount: selectedMedia.length } }) }); } catch {}
+  };
+
+  const handleCopy = (platform: string) => {
+    navigator.clipboard.writeText(generatedCaption).then(() => { setCopied(platform); setTimeout(() => setCopied(null), 2500); });
+  };
+
+  const handleShare = (platform: string) => {
+    const text = encodeURIComponent(generatedCaption);
+    handleCopy(platform);
+    const urls: Record<string, string | null> = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?quote=${text}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://p2v.homes")}&summary=${text}`,
+      instagram: null,
+    };
+    if (urls[platform]) window.open(urls[platform]!, "_blank", "width=600,height=500");
+    try { fetch("/api/planner/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actionType: "social_share", propertyId: selectedProperty?.id, platform, contentType: getContentType(selectedProperty?.status || "active"), metadata: { mediaCount: selectedMedia.length } }) }); } catch {}
+  };
+
+  const handleStartOver = () => {
+    setSelectedProperty(null); setSelectedMedia([]); setGeneratedCaption(""); setMedia([]); setMediaFilter("all"); setStep(1);
+  };
+
+  // ─── Derived ────────────────────────────────────────────────────────────
+
+  const filteredMedia = mediaFilter === "all" ? media : media.filter((m) => m.type === mediaFilter);
+  const mediaCounts: Record<string, number> = {};
+  MEDIA_FILTERS.forEach((f) => { mediaCounts[f.key] = f.key === "all" ? media.length : media.filter((m) => m.type === f.key).length; });
+
+  // ─── Render ─────────────────────────────────────────────────────────────
+
   return (
-    <div className={`dash-root min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-900" : "dashboard-light"}`}>
-      <Navigation />
-      <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
-      {user && <SignupSpin userId={user.id} />}
-      {!isSubscriber && <LensConversionTracker />}
-
-      {/* Background */}
-      <div className="dl-bg-overlay pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(56,189,248,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 85% 80%, rgba(99,102,241,0.04) 0%, transparent 60%)" }} />
-      <div className="dl-bg-overlay pointer-events-none fixed inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(56,189,248,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
-
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-
-        {/* ═══ TOP BAR — mode toggle + subscription status only ═══ */}
-        <div className="mc-animate flex items-center justify-end gap-3 mb-4" style={{ animationDelay: "0.05s" }}>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="dl-mode-toggle flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
-            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
-          </button>
-          {isSubscriber ? (
-            <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 backdrop-blur-sm">
-              <Crown className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm font-bold text-white/80">{subscription.plan}</span>
-              <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">Active</span>
-            </div>
-          ) : (
-            <Link href="/lens">
-              <Button size="sm" className="mc-glow-btn bg-green-500 hover:bg-green-400 text-white font-extrabold text-sm px-5 py-2.5 rounded-xl">
-                Subscribe — $27.95/mo
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
+    <div className="min-h-screen bg-gray-950 text-gray-200">
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-gray-800">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-800 border border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-colors" title="Back to Dashboard">
+              <ArrowLeft className="h-5 w-5 text-gray-300" />
             </Link>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20">
+              <Sparkles className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold text-white tracking-tight">Marketing Planner</h1>
+              <p className="text-xs text-gray-500 font-medium">Select property → pick media → generate & share</p>
+            </div>
+          </div>
+          {step > 1 && (
+            <button onClick={handleStartOver} className="px-4 py-2 rounded-lg text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2">
+              <RotateCcw className="w-3.5 h-3.5" /> Start Over
+            </button>
           )}
         </div>
+      </div>
 
-        {/* ═══ MARKETING COPILOT — first thing agents see ═══ */}
-        {secondaryLoaded && user && access.allowed && (
-          <div id="planner" className="mc-animate mb-5" style={{ animationDelay: "0.07s" }}>
-            <MarketingPlannerWidget
-              isSubscriber={isSubscriber}
-              isTrial={access.tier === "trial"}
-            />
-          </div>
-        )}
-
-        {/* ═══ SIGNUP PRIZE ═══ */}
-        {signupPrizeCode && (
-          <div className="mc-animate mt-4 rounded-xl border border-green-400/20 bg-green-400/[0.06] p-4 flex items-center gap-3" style={{ animationDelay: "0.08s" }}>
-            <Gift className="h-5 w-5 text-green-400 flex-shrink-0" />
-            <div>
-              <span className="text-sm font-bold text-green-300">{signupPrizeLabel}</span>
-              <span className="ml-2 text-sm text-green-400/70">Code: <span className="font-mono font-bold bg-green-400/10 px-1.5 py-0.5 rounded text-green-300">{signupPrizeCode}</span></span>
-            </div>
-          </div>
-        )}
-
-        {/* ═══ TRIAL BANNER — active trial ═══ */}
-        {access.tier === "trial" && access.trialDaysLeft !== undefined && (
-          <div className={`mc-animate mt-4 rounded-xl border p-4 ${access.trialDaysLeft <= 3 ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-cyan-400/15 bg-cyan-400/[0.04]"}`} style={{ animationDelay: "0.08s" }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className={`h-4 w-4 ${access.trialDaysLeft <= 3 ? "text-amber-400" : "text-cyan-400"}`} />
-                <span className="text-sm font-bold text-white/90">Lens Trial</span>
-                <span className={`text-sm font-bold ${access.trialDaysLeft <= 3 ? "text-amber-400" : "text-cyan-400"}`}>{access.trialDaysLeft} day{access.trialDaysLeft !== 1 ? "s" : ""} remaining</span>
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        {/* Step Indicator */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          {[{ n: 1, label: "Choose Property" }, { n: 2, label: "Select Media" }, { n: 3, label: "Share Post" }].map((s, i) => (
+            <div key={s.n} className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-extrabold text-white border-2 transition-all ${step > s.n ? "bg-green-600 border-green-500" : step === s.n ? "bg-blue-600 border-blue-400" : "bg-gray-800 border-gray-600"}`}>
+                {step > s.n ? <Check className="w-4 h-4" /> : s.n}
               </div>
-              <Link href="/lens#pricing"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs">Subscribe now →</Button></Link>
+              <span className={`text-[13px] font-bold ${step >= s.n ? "text-gray-200" : "text-gray-600"}`}>{s.label}</span>
+              {i < 2 && <div className={`w-8 h-0.5 rounded ${step > s.n ? "bg-green-600" : "bg-gray-700"}`} />}
             </div>
-          </div>
-        )}
-
-        {/* ═══ FREE ACCOUNT BANNER — no purchase yet ═══ */}
-        {access.tier === "free" && !bannerDismissed && (
-          <div className="mc-animate mt-4 rounded-xl border border-green-400/15 bg-green-400/[0.04] p-5 relative" style={{ animationDelay: "0.08s" }}>
-            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
-            <div className="flex items-start gap-3">
-              <Film className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-bold text-white/90">Order your first listing video to unlock 10 days of every AI marketing tool — free.</p>
-                <p className="mt-1 text-xs leading-relaxed text-white/50">Your first video order comes with a 10-day trial of all P2V Lens tools. No credit card required for the trial.</p>
-                <div className="flex items-center gap-3 mt-3">
-                  <Link href="/order"><Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Order a Video — from $79 <ArrowRight className="ml-1.5 h-3 w-3" /></Button></Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══ VIDEO OWNER BANNER — trial expired, no sub ═══ */}
-        {access.tier === "video_only" && !bannerDismissed && (
-          <div className="mc-animate mt-4 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-5 relative" style={{ animationDelay: "0.08s" }}>
-            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
-            <div className="flex items-start gap-3">
-              <Lock className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-bold text-white/90">Your trial has ended</p>
-                <p className="mt-1 text-xs leading-relaxed text-white/50">Subscribe to keep using all marketing tools. Your videos and Video Remix are still available.</p>
-                <div className="flex items-center gap-3 mt-3">
-                  <Link href="/lens#pricing"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Subscribe — $27/mo</Button></Link>
-                  <Link href="/lens#pricing" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">See Plans</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══ SUBSCRIBE BANNER — non-subscribers (legacy, kept for existing subs) ═══ */}
-        {!isSubscriber && !bannerDismissed && access.tier !== "free" && access.tier !== "video_only" && access.tier !== "trial" && (
-          <div className="mc-animate mt-4 rounded-xl border border-green-400/15 bg-green-400/[0.04] p-5 relative" style={{ animationDelay: "0.08s" }}>
-            <button onClick={() => setBannerDismissed(true)} className="absolute top-3 right-3 text-white/20 hover:text-white/50 transition-colors"><X className="h-4 w-4" /></button>
-            <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-bold text-white/90">Unlock unlimited access to all tools</p>
-                <p className="mt-1 text-xs leading-relaxed text-white/50">Subscribe to P2V Lens for $27/mo and get unlimited photo coaching, design exports, descriptions, staging, and 10% off every video order.</p>
-                <div className="flex items-center gap-3 mt-3">
-                  <Link href="/lens"><Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-4 py-2 rounded-lg">Explore P2V Lens <ArrowRight className="ml-1.5 h-3 w-3" /></Button></Link>
-                  <Link href="/lens#features" className="text-xs font-semibold text-green-400/60 hover:text-green-400 transition-colors">See what&apos;s included</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══ FREE PRIZE COUNTDOWN — subscriber on free month ═══ */}
-        {isFreePrize && freeLensDaysLeft !== null && isSubscriber && (
-          <div className={`mc-animate mt-4 rounded-xl border p-4 ${freeLensDaysLeft <= 5 ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-cyan-400/15 bg-cyan-400/[0.04]"}`} style={{ animationDelay: "0.1s" }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Gift className={`h-4 w-4 ${freeLensDaysLeft <= 5 ? "text-amber-400" : "text-cyan-400"}`} />
-                <span className="text-sm font-bold text-white/90">Free Lens Month</span>
-                <span className={`text-sm font-bold ${freeLensDaysLeft <= 5 ? "text-amber-400" : "text-cyan-400"}`}>{freeLensDaysLeft} day{freeLensDaysLeft !== 1 ? "s" : ""} left</span>
-              </div>
-              {freeLensDaysLeft <= 5 && <Link href="/lens"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs">Subscribe — $27.95/mo</Button></Link>}
-            </div>
-          </div>
-        )}
-
-        {/* ═══ AGENT PROFILE CARD ═══ */}
-        <div className="mc-animate mt-6 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm" style={{ animationDelay: "0.12s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white/30">Agent Profile</p>
-            <button onClick={() => { if (editingProfile) handleSaveProfile(); else { setProfileForm({ ...agentProfile }); setEditingProfile(true); } }}
-              className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400/70 hover:text-cyan-400 transition-colors">
-              {editingProfile ? (savingProfile ? <><Loader2 className="h-3 w-3 animate-spin" />Saving...</> : <><Save className="h-3 w-3" />Save</>) : <><Pencil className="h-3 w-3" />Edit</>}
-            </button>
-          </div>
-          <div className="flex items-start gap-5 flex-wrap sm:flex-nowrap">
-            {/* Headshot */}
-            <div className="relative group flex-shrink-0">
-              <div className="h-16 w-16 rounded-full overflow-hidden bg-white/[0.06] border border-white/[0.08]">
-                {agentProfile.saved_headshot_url ? <img src={agentProfile.saved_headshot_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><User className="h-6 w-6 text-white/20" /></div>}
-              </div>
-              <label className="absolute inset-0 rounded-full cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                {uploadingHeadshot ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <Upload className="h-4 w-4 text-white" />}
-                <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleProfileImageUpload(f, "saved_headshot_url", setUploadingHeadshot); e.target.value = ""; }} />
-              </label>
-            </div>
-            {/* Info */}
-            {editingProfile ? (
-              <div className="flex-1 grid grid-cols-2 gap-3 min-w-0">
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Name</label><input value={profileForm.saved_agent_name} onChange={e => setProfileForm(p => ({ ...p, saved_agent_name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="Jane Smith" /></div>
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Company</label><input value={profileForm.saved_company} onChange={e => setProfileForm(p => ({ ...p, saved_company: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="Coldwell Banker" /></div>
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Phone</label><input value={profileForm.saved_phone} onChange={e => setProfileForm(p => ({ ...p, saved_phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="(555) 123-4567" /></div>
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Email</label><input value={profileForm.saved_email} onChange={e => setProfileForm(p => ({ ...p, saved_email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="jane@email.com" /></div>
-                <div className="col-span-2"><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Website</label><input value={profileForm.saved_website} onChange={e => setProfileForm(p => ({ ...p, saved_website: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="www.janesmith.com" /></div>
-                <button onClick={() => setEditingProfile(false)} className="text-xs text-white/30 hover:text-white/50 transition-colors">Cancel</button>
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <p className="text-base font-bold text-white/90">{agentProfile.saved_agent_name || "Add your name"}</p>
-                  {agentProfile.saved_company && <span className="text-xs text-white/40">{agentProfile.saved_company}</span>}
-                </div>
-                <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2">
-                  {agentProfile.saved_phone && <span className="flex items-center gap-1.5 text-xs text-white/50"><Phone className="h-3 w-3 text-cyan-400/50" />{agentProfile.saved_phone}</span>}
-                  {agentProfile.saved_email && <span className="flex items-center gap-1.5 text-xs text-white/50"><Mail className="h-3 w-3 text-cyan-400/50" />{agentProfile.saved_email}</span>}
-                  {agentProfile.saved_website && <span className="flex items-center gap-1.5 text-xs text-white/50"><Globe className="h-3 w-3 text-cyan-400/50" />{agentProfile.saved_website}</span>}
-                </div>
-                {!agentProfile.saved_agent_name && !agentProfile.saved_phone && (
-                  <p className="text-xs text-white/25 mt-1">Complete your profile — it auto-fills your marketing tools, branding cards, and reports.</p>
-                )}
-              </div>
-            )}
-            {/* Logo */}
-            <div className="relative group flex-shrink-0 hidden sm:block">
-              <div className="h-12 w-20 rounded-lg overflow-hidden bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
-                {agentProfile.saved_logo_url ? <img src={agentProfile.saved_logo_url} alt="" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-white/15 font-bold">LOGO</span>}
-              </div>
-              <label className="absolute inset-0 rounded-lg cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                {uploadingLogo ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Upload className="h-3 w-3 text-white" />}
-                <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleProfileImageUpload(f, "saved_logo_url", setUploadingLogo); e.target.value = ""; }} />
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* ═══ PROPERTY WEBSITES ═══ */}
-        {publishedWebsites.length > 0 && (
-          <div id="websites" className="mc-animate mt-8" style={{ animationDelay: "0.18s" }}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Property Websites</p>
-              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">Manage all →</Link>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(showAllWebsites ? publishedWebsites : publishedWebsites.slice(0, 3)).map((site, i) => {
-                const heroUrl = getHeroImage(site.website_curated);
-                const siteUrl = `${PROPERTY_SITE_BASE}/${site.website_slug}`;
-                return (
-                  <div
-                    key={site.id}
-                    className="mc-chip-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
-                    style={{ animationDelay: `${0.2 + i * 0.06}s` }}
-                  >
-                    <div className="relative h-40 w-full overflow-hidden">
-                      {heroUrl ? (
-                        <img src={heroUrl} alt={site.address} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 50%, rgba(168,85,247,0.15) 100%)" }} />
-                      )}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-[10px] font-bold text-green-400">Live</span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Your Property Website</p>
-                      <p className="text-sm font-bold text-white/90 truncate">{site.address}</p>
-                      <p className="text-[11px] text-cyan-400/60 truncate mt-0.5">{site.website_slug}.p2v.homes</p>
-                    </div>
-                    <div className="border-t border-white/[0.06] px-4 py-3 flex items-center gap-3">
-                      <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"><Eye className="h-3 w-3" />View Live Page</a>
-                      <button onClick={() => handleCopyLink(site.website_slug)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors">
-                        {copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}
-                      </button>
-                      <Link href={`/dashboard/properties/${site.id}`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings →</Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {publishedWebsites.length > 3 && (
-              <button
-                onClick={() => setShowAllWebsites(!showAllWebsites)}
-                className="mt-3 flex items-center gap-1.5 mx-auto text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors"
-              >
-                {showAllWebsites ? "Show less" : `See ${publishedWebsites.length - 3} more`}
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllWebsites ? "rotate-180" : ""}`} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ═══ TABS ═══ */}
-        <div id="tools" className="mc-animate mt-10 flex items-center gap-1 border-b border-white/[0.06]" style={{ animationDelay: "0.24s" }}>
-          {[{ id: "tools" as const, label: "Your Tools" }, { id: "perks" as const, label: "Subscriber Perks" }].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-4 py-2.5 text-sm font-bold transition-colors relative ${activeTab === t.id ? "text-cyan-400" : "text-white/40 hover:text-white/60"}`}>
-              {t.label}
-              {activeTab === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-full" />}
-            </button>
           ))}
         </div>
 
-        {/* ═══ TOOLS GRID ═══ */}
-        {activeTab === "tools" && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool, i) => {
-              const isScrollLink = tool.href.startsWith("#");
-              const Wrapper = isScrollLink ? "button" as any : Link;
-              const wrapperProps = isScrollLink
-                ? {
-                    onClick: () => {
-                      const el = document.getElementById(tool.href.slice(1));
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    },
-                    className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] text-left w-full",
-                    style: { animationDelay: `${0.28 + i * 0.05}s` },
-                  }
-                : {
-                    href: tool.href,
-                    className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
-                    style: { animationDelay: `${0.28 + i * 0.05}s` },
-                  };
+        {/* Two-column layout */}
+        <div className="grid gap-4" style={{ gridTemplateColumns: step >= 2 ? "300px 1fr" : "1fr", alignItems: "start" }}>
+          {step >= 2 && <LensyChat property={selectedProperty} agentName={agentName} userId={userId} />}
 
-              return (
-                <Wrapper key={tool.label} {...wrapperProps}>
-                  {/* Crown tier indicator + optional trial badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    {tool.badge && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
-                        {tool.badge}
-                      </span>
-                    )}
-                    {tool.crown === "gold" && <Crown className="h-3.5 w-3.5 text-amber-400/50" />}
-                    {tool.crown === "silver" && <Crown className="h-3.5 w-3.5 text-gray-400/40" />}
+          <div>
+            {/* STEP 1: Property List */}
+            {step === 1 && (
+              <div className="rounded-xl border border-gray-700 bg-gray-900 p-5">
+                <h2 className="text-[17px] font-extrabold text-white mb-4">Your Properties</h2>
+                {loadingProperties ? (
+                  <div className="flex items-center justify-center py-12 text-gray-400 gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Loading properties...</div>
+                ) : properties.length === 0 ? (
+                  <div className="text-center py-12"><div className="text-4xl mb-3">🏠</div><p className="text-base font-bold text-white">No properties yet</p><p className="text-sm text-gray-400 mt-1">Add a property to start creating marketing content</p></div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {properties.map((p) => (
+                      <button key={p.id} onClick={() => handleSelectProperty(p)} className="w-full bg-gray-800 border border-gray-600 rounded-xl px-5 py-4 flex justify-between items-center hover:border-blue-500 hover:bg-blue-950/30 transition-all text-left group">
+                        <div>
+                          <div className="text-[16px] font-bold text-white group-hover:text-blue-200 transition-colors">{p.address}</div>
+                          <div className="text-[13px] text-gray-400 mt-1 font-medium">
+                            {[p.city, p.state].filter(Boolean).join(", ")}{p.bedrooms ? ` · ${p.bedrooms}bd` : ""}{p.bathrooms ? ` / ${p.bathrooms}ba` : ""}{p.sqft ? ` · ${p.sqft.toLocaleString()} sf` : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <StatusBadge status={p.status} />
+                          {p.price && <span className="text-[16px] font-extrabold text-white">{formatPrice(p.price)}</span>}
+                          <span className="text-gray-500 text-xl group-hover:text-blue-400 transition-colors">›</span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} transition-transform group-hover:scale-110`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-white/90 group-hover:text-cyan-300 transition-colors">{tool.label}</p>
-                      {tool.stat && <p className="text-[11px] font-medium text-white/30">{tool.stat}</p>}
-                    </div>
-                  </div>
-                  <p className="text-xs leading-relaxed text-white/40">{tool.desc}</p>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-400/60 group-hover:text-cyan-400 transition-colors mt-auto pt-1">
-                    Open<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </Wrapper>
-              );
-            })}
-          </div>
-        )}
-
-        {activeTab === "perks" && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {subscriberPerks.map((tool, i) => (
-              <div key={tool.label} className="mc-chip-animate flex items-start gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5" style={{ animationDelay: `${0.05 + i * 0.06}s` }}>
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring}`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2"><p className="text-sm font-bold text-white/90">{tool.label}</p><span className="text-[9px] font-bold uppercase tracking-wider text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full border border-green-400/20">Included</span></div>
-                  <p className="mt-1 text-xs leading-relaxed text-white/40">{tool.desc}</p>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {/* ═══ RECENT PROPERTIES — quick links with auto-fill ═══ */}
-        {recentProperties.length > 0 && (
-          <div className="mc-animate mt-10" style={{ animationDelay: "0.5s" }}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/30">Recent Properties — Quick Actions</p>
-              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">View all →</Link>
-            </div>
-            <div className="space-y-2">
-              {recentProperties.map(prop => {
-                const qs = buildQs(prop);
-                return (
-                  <div key={prop.id} className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <Link href={`/dashboard/properties/${prop.id}`} className="text-sm font-bold text-white/80 hover:text-cyan-300 transition-colors truncate">{prop.address}</Link>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/20 text-green-300" : prop.status === "sold" ? "bg-blue-400/20 text-blue-300" : "bg-white/10 text-white/40"}`}>{prop.status}</span>
-                        <Link href={`/dashboard/properties/${prop.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-400/[0.08] border border-cyan-400/15 text-[11px] font-bold text-cyan-400 hover:bg-cyan-400/[0.15] hover:text-cyan-300 transition-all">
-                          <Edit className="h-3 w-3" />Edit Property
-                        </Link>
+            {/* STEP 2+: Media Grid */}
+            {step >= 2 && selectedProperty && (
+              <>
+                {/* Property bar */}
+                <div className="rounded-xl border border-gray-700 bg-gray-900 px-5 py-3.5 flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    <button onClick={handleStartOver} className="text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-5 h-5" /></button>
+                    <div>
+                      <div className="text-[17px] font-extrabold text-white">{selectedProperty.address}</div>
+                      <div className="text-[13px] text-gray-400 font-medium">
+                        {[selectedProperty.city, selectedProperty.state].filter(Boolean).join(", ")}{selectedProperty.price ? ` · ${formatPrice(selectedProperty.price)}` : ""}
+                        <span className="text-blue-400 font-bold ml-1.5">· {getPostType(selectedProperty.status)}</span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Link href={`/order?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/[0.06] border border-cyan-400/10 text-[10px] font-semibold text-cyan-400/80 hover:bg-cyan-400/[0.12] hover:text-cyan-300 transition-all"><Video className="h-3 w-3" />Order Video</Link>
-                      <Link href={`/dashboard/lens/coach?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-400/[0.06] border border-blue-400/10 text-[10px] font-semibold text-blue-400/80 hover:bg-blue-400/[0.12] hover:text-blue-300 transition-all"><Camera className="h-3 w-3" />Coach</Link>
-                      <Link href={`/dashboard/lens/descriptions?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-400/[0.06] border border-sky-400/10 text-[10px] font-semibold text-sky-400/80 hover:bg-sky-400/[0.12] hover:text-sky-300 transition-all"><FileText className="h-3 w-3" />Description</Link>
-                      <Link href={`/dashboard/lens/design-studio?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-400/[0.06] border border-indigo-400/10 text-[10px] font-semibold text-indigo-400/80 hover:bg-indigo-400/[0.12] hover:text-indigo-300 transition-all"><PenTool className="h-3 w-3" />Design</Link>
-                      <Link href={`/dashboard/lens/staging?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-400/[0.06] border border-violet-400/10 text-[10px] font-semibold text-violet-400/80 hover:bg-violet-400/[0.12] hover:text-violet-300 transition-all"><Sofa className="h-3 w-3" />Stage</Link>
+                  </div>
+                  <StatusBadge status={selectedProperty.status} />
+                </div>
+
+                {/* Filters + selection actions */}
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <div className="flex gap-1.5 flex-wrap">
+                    {MEDIA_FILTERS.map((f) => mediaCounts[f.key] > 0 || f.key === "all" ? (
+                      <button key={f.key} onClick={() => setMediaFilter(f.key)}
+                        className={`px-4 py-2 rounded-lg text-[13px] font-bold border transition-colors ${mediaFilter === f.key ? "border-blue-500 bg-blue-950/50 text-blue-300" : "border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500"}`}>
+                        {f.label}{mediaCounts[f.key] > 0 && <span className="ml-1 opacity-60">({mediaCounts[f.key]})</span>}
+                      </button>
+                    ) : null)}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {selectedMedia.length > 0 && (
+                      <button onClick={() => setSelectedMedia([])}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-600 bg-gray-800 text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+                        Clear ({selectedMedia.length})
+                      </button>
+                    )}
+                    <button onClick={() => {
+                      const visible = filteredMedia.filter(m => m.type !== "description");
+                      const allSelected = visible.every(m => selectedMedia.some(s => s.id === m.id));
+                      if (allSelected) { setSelectedMedia([]); }
+                      else { setSelectedMedia(prev => { const ids = new Set(prev.map(s => s.id)); const toAdd = visible.filter(m => !ids.has(m.id)); return [...prev, ...toAdd]; }); }
+                    }}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-600 bg-gray-800 text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+                      Select All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Media grid */}
+                {loadingMedia ? (
+                  <div className="flex items-center justify-center py-16 text-gray-400 gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Loading media...</div>
+                ) : filteredMedia.length === 0 ? (
+                  <div className="text-center py-16 rounded-xl border border-gray-700 bg-gray-900 mb-4">
+                    <div className="text-3xl mb-2">📷</div>
+                    <p className="text-sm font-bold text-white">No media found</p>
+                    <p className="text-xs text-gray-400 mt-1">{mediaFilter !== "all" ? `No ${mediaFilter} assets. Try "All".` : "Order photos or create designs to populate your library."}</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-2.5 mb-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+                    {filteredMedia.filter((m) => m.type !== "description").map((m) => {
+                      const isSel = selectedMedia.some((s) => s.id === m.id);
+                      const selIndex = selectedMedia.findIndex((s) => s.id === m.id);
+                      const isVideo = m.type === "video" || m.type === "clip" || m.type === "remix";
+                      const thumb = getBestThumb(m);
+
+                      const placeholderConfig: Record<string, { icon: string; bg: string }> = {
+                        photo: { icon: "📷", bg: "bg-blue-900/40" }, video: { icon: "🎬", bg: "bg-purple-900/40" },
+                        clip: { icon: "🎞️", bg: "bg-purple-900/40" }, flyer: { icon: "📄", bg: "bg-indigo-900/40" },
+                        staging: { icon: "🛋️", bg: "bg-teal-900/40" }, remix: { icon: "🎵", bg: "bg-pink-900/40" }, drone: { icon: "🚁", bg: "bg-sky-900/40" },
+                      };
+                      const placeholder = placeholderConfig[m.type] || placeholderConfig.photo;
+
+                      return (
+                        <button key={m.id} onClick={() => handleSelectMedia(m)}
+                          className={`rounded-xl overflow-hidden text-left border-2 transition-all relative group ${isSel ? "border-blue-500 bg-blue-950/40" : "border-gray-600 bg-gray-800 hover:border-gray-500"}`}>
+                          {thumb ? (
+                            <div className="relative w-full h-[115px] bg-gray-700">
+                              <img src={thumb} alt={m.label || ""} className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const parent = (e.target as HTMLImageElement).parentElement;
+                                  if (parent) { (e.target as HTMLImageElement).style.display = "none"; parent.classList.add("flex", "items-center", "justify-center");
+                                    const span = document.createElement("span"); span.className = "text-3xl"; span.textContent = placeholder.icon; parent.appendChild(span); }
+                                }} />
+                              {isVideo && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-10 h-10 rounded-full bg-black/60 border-2 border-white/40 flex items-center justify-center">
+                                    <div className="ml-1 w-0 h-0 border-l-[12px] border-l-white border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={`w-full h-[115px] ${placeholder.bg} flex flex-col items-center justify-center gap-1`}>
+                              <span className="text-3xl">{placeholder.icon}</span>
+                              <span className="text-[10px] text-gray-400 font-semibold uppercase">{m.type}</span>
+                            </div>
+                          )}
+                          <div className="px-3 py-2">
+                            <div className="text-[12px] font-bold text-gray-100 truncate">{m.label || m.type}</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold mt-0.5">{m.type}</div>
+                          </div>
+                          {isSel && (
+                            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-600 border-2 border-blue-300 flex items-center justify-center text-[11px] font-bold text-white">
+                              {selectedMedia.length > 1 ? selIndex + 1 : <Check className="w-3.5 h-3.5" />}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Generate button */}
+                {step === 2 && (
+                  <div className="sticky bottom-0 pt-3 pb-1 bg-gray-950">
+                    <button disabled={selectedMedia.length === 0 || isGenerating} onClick={handleGenerateCaption}
+                      className={`w-full py-4 rounded-xl text-[16px] font-extrabold tracking-tight transition-all ${selectedMedia.length === 0 || isGenerating ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"}`}>
+                      {isGenerating ? (
+                        <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating your post...</span>
+                      ) : selectedMedia.length > 0 ? (
+                        <span className="flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Generate {getPostType(selectedProperty.status)} Post{selectedMedia.length > 1 && ` (${selectedMedia.length} items)`}</span>
+                      ) : "Select media above to generate a post"}
+                    </button>
+                  </div>
+                )}
+
+                {/* STEP 3: Post Preview + Share */}
+                {step === 3 && generatedCaption && (
+                  <div className="rounded-xl border border-gray-700 bg-gray-900 p-5">
+                    <div className="flex justify-between items-center mb-5">
+                      <div>
+                        <h2 className="text-[17px] font-extrabold text-white">Your Post</h2>
+                        <p className="text-[12px] text-gray-400 mt-0.5">{selectedMedia.length} {selectedMedia.length === 1 ? "item" : "items"} selected · Edit caption below</p>
+                      </div>
+                      <button onClick={() => { if (selectedProperty) setGeneratedCaption(generateLocalCaption(selectedProperty)); }}
+                        className="px-5 py-2.5 rounded-xl text-[13px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5" /> New Version
+                      </button>
+                    </div>
+
+                    {/* Media preview strip */}
+                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                      {selectedMedia.map((m) => {
+                        const thumb = getBestThumb(m);
+                        const placeholders: Record<string, string> = { video: "🎬", clip: "🎞️", flyer: "📄", staging: "🛋️", remix: "🎵", drone: "🚁", photo: "📷" };
+                        return (
+                          <div key={m.id} className="shrink-0 rounded-lg overflow-hidden border border-gray-600 bg-gray-800 relative group" style={{ width: 120, height: 80 }}>
+                            {thumb ? (
+                              <img src={thumb} alt={m.label || ""} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                            ) : (
+                              <div className="w-full h-full bg-gray-700 flex flex-col items-center justify-center">
+                                <span className="text-2xl">{placeholders[m.type] || "📷"}</span>
+                                <span className="text-[9px] text-gray-400 font-semibold mt-0.5">{m.type.toUpperCase()}</span>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setSelectedMedia((prev) => prev.filter((s) => s.id !== m.id))}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-600 flex items-center justify-center transition-colors"
+                              title="Remove"
+                            >
+                              <span className="text-white text-[11px] font-bold leading-none">✕</span>
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                              <span className="text-[9px] text-white font-semibold truncate block">{m.label}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <textarea value={generatedCaption} onChange={(e) => setGeneratedCaption(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors mb-1"
+                      style={{ minHeight: 160, fontFamily: "inherit" }} />
+                    <div className="flex justify-between items-center mb-4 px-1">
+                      <span className={`text-[11px] font-medium ${generatedCaption.length > 2200 ? "text-red-400" : "text-gray-500"}`}>
+                        {generatedCaption.length} / 2,200 characters
+                      </span>
+                      {generatedCaption.length > 2200 && (
+                        <span className="text-[11px] text-red-400 font-medium">Over Instagram limit</span>
+                      )}
+                    </div>
+
+                    {/* Step 1: Copy & Download */}
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(generatedCaption); setCopied("caption"); setTimeout(() => setCopied(null), 2500); }}
+                        className={`flex-1 py-3 rounded-xl text-[14px] font-extrabold flex items-center justify-center gap-2 transition-all ${
+                          copied === "caption" ? "bg-green-600 text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                        }`}
+                      >
+                        {copied === "caption" ? <><Check className="w-4 h-4" /> Caption Copied!</> : <><Copy className="w-4 h-4" /> Copy Caption</>}
+                      </button>
+                      <button
+                        onClick={() => { selectedMedia.forEach((m) => { if (m.assetUrl) window.open(m.assetUrl, "_blank"); }); }}
+                        className="flex-1 py-3 rounded-xl text-[14px] font-extrabold bg-gray-800 border border-gray-500 text-gray-200 hover:bg-gray-700 flex items-center justify-center gap-2 transition-all"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download Media {selectedMedia.length > 1 ? `(${selectedMedia.length})` : ""}
+                      </button>
+                    </div>
+
+                    {/* Coming soon banner */}
+                    <div className="my-4 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-950/60 to-purple-950/60 border border-blue-500/20 flex items-center gap-3">
+                      <span className="text-lg">🚀</span>
+                      <div>
+                        <p className="text-[13px] font-bold text-blue-200">One-click posting is coming soon</p>
+                        <p className="text-[11px] text-blue-300/60">Post directly to Facebook, Instagram & LinkedIn without leaving P2V</p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Share to platform */}
+                    <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2">Share to</p>
+                    <div className="flex gap-2">
+                      {[{ key: "facebook", label: "Facebook", color: "#1877F2" }, { key: "instagram", label: "Instagram", color: "#E4405F" }, { key: "linkedin", label: "LinkedIn", color: "#0A66C2" }].map((p) => (
+                        <button key={p.key}
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedCaption);
+                            setCopied(p.key); setTimeout(() => setCopied(null), 2500);
+                            const text = encodeURIComponent(generatedCaption);
+                            const urls: Record<string, string | null> = {
+                              facebook: `https://www.facebook.com/sharer/sharer.php?quote=${text}`,
+                              linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://p2v.homes")}&summary=${text}`,
+                              instagram: null,
+                            };
+                            if (urls[p.key]) window.open(urls[p.key]!, "_blank", "width=600,height=500");
+                            try { fetch("/api/planner/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actionType: "social_share", propertyId: selectedProperty?.id, platform: p.key, contentType: getContentType(selectedProperty?.status || "active"), metadata: { mediaCount: selectedMedia.length } }) }); } catch {}
+                          }}
+                          className="flex-1 py-3 rounded-xl text-[13px] font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                          style={{ background: copied === p.key ? "#16a34a" : p.color }}>
+                          {copied === p.key ? <><Check className="w-4 h-4" /> Copied!</> : <><ExternalLink className="w-3.5 h-3.5" />{p.label}</>}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2 text-center">
+                      Caption is auto-copied when you click a platform · Paste it into your post along with the downloaded media
+                    </p>
+
+                    <div className="mt-5 pt-5 border-t border-gray-700">
+                      <button onClick={() => { setSelectedMedia([]); setGeneratedCaption(""); setStep(2); }}
+                        className="w-full py-3 rounded-xl text-[14px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">
+                        Create another post for {selectedProperty.address}
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ═══ MORE TOOLS — Realtor & Photographer links ═══ */}
-        <div id="more-tools" className="mc-animate mt-10" style={{ animationDelay: "0.55s" }}>
-          <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-4">More Tools & Resources</p>
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              { icon: Video, label: "My Videos", desc: "Watch, download & share", href: "/dashboard/videos" },
-              { icon: FileText, label: "Saved Drafts", desc: "Resume unfinished orders", href: "/dashboard/drafts" },
-              { icon: RefreshCw, label: "Request Revisions", desc: "Recut clips & update", href: "/dashboard/videos" },
-              { icon: BarChart3, label: "Order History", desc: "Track all your orders", href: "/dashboard/videos" },
-              { icon: Star, label: "Leave Reviews", desc: "Earn up to 25% off", href: "/dashboard/reviews" },
-              { icon: DollarSign, label: "Referral Program", desc: "Earn 20% commission", href: "/dashboard/referral-earnings" },
-              { icon: Building2, label: "Brokerage Dashboard", desc: "Team usage & billing", href: "/dashboard/brokerage" },
-              ...(hasDirectoryListing ? [
-                { icon: Edit, label: "Edit Directory Listing", desc: "Update your profile", href: "/directory/edit" },
-                { icon: BarChart3, label: "Directory Analytics", desc: "Views & inquiries", href: "/dashboard/directory-analytics" },
-              ] : [
-                { icon: UserPlus, label: "Join the Directory", desc: "Get discovered by agents", href: "/directory/join" },
-              ]),
-              { icon: BookOpen, label: "Photography Guide", desc: "32-page free guide", href: "/resources/photography-guide" },
-            ].map((item, i) => (
-              <Link key={item.label} href={item.href} className="group flex items-center gap-3.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3.5 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] backdrop-blur-sm">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/[0.06] ring-1 ring-cyan-400/10">
-                  <item.icon className="h-3.5 w-3.5 text-cyan-400/60 group-hover:text-cyan-400 transition-colors" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white/70 group-hover:text-cyan-300 transition-colors">{item.label}</p>
-                  <p className="text-[10px] text-white/30">{item.desc}</p>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 text-white/15 group-hover:text-cyan-400/50 transition-all group-hover:translate-x-0.5 flex-shrink-0" />
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* ═══ PERKS SECTION — subscriber sees current perks, non-subscriber sees what they'd unlock ═══ */}
-        <div className="mc-animate mt-8 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm" style={{ animationDelay: "0.6s" }}>
-          {isSubscriber ? (
-            <>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/25 mb-3">Your Subscriber Perks</p>
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                {[
-                  { icon: Percent, text: "10% off every video order" },
-                  { icon: ImageIcon, text: "Free photo enhancement" },
-                  { icon: Clock, text: "Priority 12hr processing" },
-                  { icon: Film, text: "Quick Videos from $4.95/clip" },
-                  { icon: ShieldCheck, text: "Satisfaction guarantee" },
-                ].map((perk) => (
-                  <div key={perk.text} className="flex items-center gap-2 text-xs text-white/45">
-                    <perk.icon className="h-3 w-3 text-cyan-400/50" />{perk.text}
-                  </div>
-                ))}
-              </div>
-              {/* Photo Analyses usage inline */}
-              <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center gap-2">
-                <Sparkles className="h-3 w-3 text-cyan-400/40" />
-                <span className="text-xs text-white/30">Photo Analyses: <span className="font-bold text-white/50">{subscription.analysesUsed}/{subscription.analysesLimit}</span></span>
-                <div className="h-1 w-20 rounded-full bg-white/[0.06] overflow-hidden ml-1">
-                  <div className={`h-full rounded-full ${usagePercent > 95 ? "bg-red-400" : usagePercent > 80 ? "bg-amber-400" : "bg-cyan-400"}`} style={{ width: `${Math.max(Math.min(usagePercent, 100), 2)}%` }} />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/25 mb-3">What You Get with P2V Lens — $27.95/mo</p>
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 mb-4">
-                {[
-                  "Unlimited Photo Coach sessions",
-                  "Unlimited Design Studio exports",
-                  "Unlimited descriptions & staging",
-                  "Quick Videos from $4.95/clip",
-                  "10% off every video order",
-                  "Location Value Score & Value Boost",
-                  "Priority 12hr processing",
-                ].map((perk) => (
-                  <div key={perk} className="flex items-center gap-2 text-xs text-white/50">
-                    <Check className="h-3 w-3 text-green-400/70 flex-shrink-0" />{perk}
-                  </div>
-                ))}
-              </div>
-              <Link href="/lens">
-                <Button size="sm" className="bg-green-500 hover:bg-green-400 text-white font-bold text-xs px-5 py-2 rounded-lg">
-                  Subscribe to P2V Lens <ArrowRight className="ml-1.5 h-3 w-3" />
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-12 border-t border-white/[0.04] pt-6 pb-8 text-center">
-          <p className="text-xs text-white/20">&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/lens" className="text-xs text-white/25 hover:text-white/50 transition-colors">P2V Lens</Link>
-            <Link href="/support" className="text-xs text-white/25 hover:text-white/50 transition-colors">Support</Link>
-            <Link href="/portfolio" className="text-xs text-white/25 hover:text-white/50 transition-colors">Portfolio</Link>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
