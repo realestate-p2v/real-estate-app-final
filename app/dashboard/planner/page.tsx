@@ -732,7 +732,7 @@ export default function PlannerPage() {
                         const thumb = getBestThumb(m);
                         const placeholders: Record<string, string> = { video: "🎬", clip: "🎞️", flyer: "📄", staging: "🛋️", remix: "🎵", drone: "🚁", photo: "📷" };
                         return (
-                          <div key={m.id} className="shrink-0 rounded-lg overflow-hidden border border-gray-600 bg-gray-800 relative" style={{ width: 120, height: 80 }}>
+                          <div key={m.id} className="shrink-0 rounded-lg overflow-hidden border border-gray-600 bg-gray-800 relative group" style={{ width: 120, height: 80 }}>
                             {thumb ? (
                               <img src={thumb} alt={m.label || ""} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                             ) : (
@@ -741,6 +741,13 @@ export default function PlannerPage() {
                                 <span className="text-[9px] text-gray-400 font-semibold mt-0.5">{m.type.toUpperCase()}</span>
                               </div>
                             )}
+                            <button
+                              onClick={() => setSelectedMedia((prev) => prev.filter((s) => s.id !== m.id))}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-600 flex items-center justify-center transition-colors"
+                              title="Remove"
+                            >
+                              <span className="text-white text-[11px] font-bold leading-none">✕</span>
+                            </button>
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
                               <span className="text-[9px] text-white font-semibold truncate block">{m.label}</span>
                             </div>
@@ -750,50 +757,55 @@ export default function PlannerPage() {
                     </div>
 
                     <textarea value={generatedCaption} onChange={(e) => setGeneratedCaption(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors mb-5"
-                      style={{ minHeight: 180, fontFamily: "inherit" }} />
+                      className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors mb-4"
+                      style={{ minHeight: 160, fontFamily: "inherit" }} />
 
-                    {/* Share buttons */}
+                    {/* Step 1: Copy & Download */}
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(generatedCaption); setCopied("caption"); setTimeout(() => setCopied(null), 2500); }}
+                        className={`flex-1 py-3 rounded-xl text-[14px] font-extrabold flex items-center justify-center gap-2 transition-all ${
+                          copied === "caption" ? "bg-green-600 text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                        }`}
+                      >
+                        {copied === "caption" ? <><Check className="w-4 h-4" /> Caption Copied!</> : <><Copy className="w-4 h-4" /> Copy Caption</>}
+                      </button>
+                      <button
+                        onClick={() => { selectedMedia.forEach((m) => { if (m.assetUrl) window.open(m.assetUrl, "_blank"); }); }}
+                        className="flex-1 py-3 rounded-xl text-[14px] font-extrabold bg-gray-800 border border-gray-500 text-gray-200 hover:bg-gray-700 flex items-center justify-center gap-2 transition-all"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download Media {selectedMedia.length > 1 ? `(${selectedMedia.length})` : ""}
+                      </button>
+                    </div>
+
+                    {/* Step 2: Share to platform */}
+                    <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2">Share to</p>
                     <div className="flex gap-2">
                       {[{ key: "facebook", label: "Facebook", color: "#1877F2" }, { key: "instagram", label: "Instagram", color: "#E4405F" }, { key: "linkedin", label: "LinkedIn", color: "#0A66C2" }].map((p) => (
-                        <button key={p.key} onClick={() => handleShare(p.key)}
-                          className="flex-1 py-3.5 rounded-xl text-[14px] font-extrabold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                        <button key={p.key}
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedCaption);
+                            setCopied(p.key); setTimeout(() => setCopied(null), 2500);
+                            const text = encodeURIComponent(generatedCaption);
+                            const urls: Record<string, string | null> = {
+                              facebook: `https://www.facebook.com/sharer/sharer.php?quote=${text}`,
+                              linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://p2v.homes")}&summary=${text}`,
+                              instagram: null,
+                            };
+                            if (urls[p.key]) window.open(urls[p.key]!, "_blank", "width=600,height=500");
+                            try { fetch("/api/planner/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ actionType: "social_share", propertyId: selectedProperty?.id, platform: p.key, contentType: getContentType(selectedProperty?.status || "active"), metadata: { mediaCount: selectedMedia.length } }) }); } catch {}
+                          }}
+                          className="flex-1 py-3 rounded-xl text-[13px] font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
                           style={{ background: copied === p.key ? "#16a34a" : p.color }}>
-                          {copied === p.key ? <><Check className="w-4 h-4" /> Copied!</> : <>{p.key === "instagram" ? <Copy className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}{p.label}</>}
+                          {copied === p.key ? <><Check className="w-4 h-4" /> Copied!</> : <><ExternalLink className="w-3.5 h-3.5" />{p.label}</>}
                         </button>
                       ))}
                     </div>
-
-                    {/* Download selected media */}
-                    <div className="mt-3 flex gap-2 flex-wrap">
-                      {selectedMedia.map((m) => {
-                        const downloadUrl = m.assetUrl || "";
-                        if (!downloadUrl) return null;
-                        const isVideo = downloadUrl.endsWith(".mp4");
-                        const fileName = m.label?.replace(/\s+/g, "_").toLowerCase() || m.type;
-                        return (
-                          <a
-                            key={m.id}
-                            href={downloadUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download={fileName}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:border-gray-500 transition-colors"
-                          >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                              <polyline points="7 10 12 15 17 10" />
-                              <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                            Download {isVideo ? "Video" : m.type === "flyer" ? "Flyer" : m.type === "clip" ? "Clip" : "Photo"}
-                            {selectedMedia.length > 1 && ` — ${m.label}`}
-                          </a>
-                        );
-                      })}
-                    </div>
-
-                    <p className="text-xs text-gray-500 mt-3 text-center font-medium">
-                      1. Copy caption with a share button above · 2. Download your media · 3. Upload to your post
+                    <p className="text-[11px] text-gray-500 mt-2 text-center">
+                      Caption is auto-copied when you click a platform · Paste it into your post along with the downloaded media
                     </p>
 
                     <div className="mt-5 pt-5 border-t border-gray-700">
