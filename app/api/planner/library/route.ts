@@ -17,12 +17,10 @@ export interface LibraryAsset {
   createdAt: string;
 }
 
-// Only real listing flyers from Design Studio (not branding cards, remixes, drone)
 const FLYER_TEMPLATE_TYPES = [
   "just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf",
 ];
 
-// Normalize an address string for loose matching
 function normalizeAddr(s: string): string {
   return (s || "")
     .toLowerCase()
@@ -32,11 +30,23 @@ function normalizeAddr(s: string): string {
     .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
 }
 
-// Returns true if two address strings refer to the same property
 function addressesMatch(a: string, b: string): boolean {
   const na = normalizeAddr(a).split(",")[0];
   const nb = normalizeAddr(b).split(",")[0];
   return na.length > 3 && nb.length > 3 && (na.includes(nb) || nb.includes(na));
+}
+
+// Generate a thumbnail URL from a Cloudinary video URL
+// e.g. .../video/upload/v123/file.mp4 → .../video/upload/so_0,w_400,h_300,c_fill/v123/file.jpg
+function cloudinaryVideoThumb(videoUrl: string): string | undefined {
+  if (!videoUrl || !videoUrl.includes("res.cloudinary.com")) return undefined;
+  try {
+    return videoUrl
+      .replace("/video/upload/", "/video/upload/so_0,w_400,h_300,c_fill/")
+      .replace(/\.mp4$/i, ".jpg");
+  } catch {
+    return undefined;
+  }
 }
 
 export async function GET(req: Request) {
@@ -54,13 +64,14 @@ export async function GET(req: Request) {
       supabase.from("agent_properties")
         .select("id, address, address_normalized, photos, optimized_photos")
         .eq("user_id", userId)
-        .is("merged_into_id", null), // exclude merged properties
+        .is("merged_into_id", null),
+      // FIXED: include admin_bypass orders
       supabase.from("orders")
         .select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at")
         .eq("user_id", userId)
-        .eq("payment_status", "paid"),
+        .in("payment_status", ["paid", "admin_bypass"]),
       supabase.from("design_exports")
-        .select("id, property_id, template_type, export_url, created_at")
+        .select("id, property_id, template_type, export_url, export_format, created_at")
         .eq("user_id", userId),
       supabase.from("lens_staging")
         .select("id, property_id, staged_url, room_type, style, created_at")
@@ -80,24 +91,20 @@ export async function GET(req: Request) {
       properties.map((p: { id: string; address: string }) => [p.id, p.address])
     );
 
-    // Only show orders that match a currently active (non-merged) property
     const activeOrders = allOrders.filter((o: { property_address: string }) =>
       properties.some((p: { address: string }) => addressesMatch(o.property_address, p.address))
     );
 
-    // When filtering by a specific property, get its address for matching
     let filterProp: { address: string; address_normalized?: string } | null = null;
     if (propertyId) {
       filterProp = properties.find((p: { id: string }) => p.id === propertyId) || null;
     }
 
-    // Does an order match the selected property filter?
     const orderMatchesFilter = (orderAddr: string): boolean => {
       if (!filterProp) return true;
       return addressesMatch(orderAddr, filterProp.address);
     };
 
-    // Does a description match the selected property filter?
     const descMatchesFilter = (desc: { property_data?: { address?: string } }): boolean => {
       if (!filterProp) return true;
       const descAddr = desc.property_data?.address || "";
@@ -106,40 +113,37 @@ export async function GET(req: Request) {
 
     const assets: LibraryAsset[] = [];
 
-    // ── Photos from orders ──────────────────────────────────────────────────
+    // ── Photos from orders ──
     if (filterType === "all" || filterType === "photos") {
       activeOrders
         .filter((o: { property_address: string }) => orderMatchesFilter(o.property_address))
         .forEach((order: { id: string; property_address: string; photos: unknown; created_at: string }) => {
           const photos = Array.isArray(order.photos) ? order.photos : [];
-          photos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
-            const photoUrl = typeof photo === "string"
-              ? photo
-              : photo?.secure_url || photo?.url || "";
+          photos.forEach((photo: string | { url?: string; secure_url?: string; description?: string }, idx: number) => {
+            const photoUrl = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
             if (!photoUrl) return;
+            const desc = typeof photo === "object" ? (photo as any)?.description : "";
             assets.push({
               id: `photo-${order.id}-${idx}`,
               type: "photo",
               propertyAddress: order.property_address || "Unknown",
               thumbnailUrl: photoUrl,
               assetUrl: photoUrl,
-              label: `Photo ${idx + 1}`,
+              label: desc || `Photo ${idx + 1}`,
               createdAt: order.created_at,
             });
           });
         });
     }
 
-    // ── Optimized photos from agent_properties ──────────────────────────────
+    // ── Optimized photos from agent_properties ──
     if (filterType === "all" || filterType === "photos") {
       properties
         .filter((p: { id: string }) => !propertyId || p.id === propertyId)
         .forEach((prop: { id: string; address: string; optimized_photos: unknown }) => {
           const photos = Array.isArray(prop.optimized_photos) ? prop.optimized_photos : [];
           photos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
-            const photoUrl = typeof photo === "string"
-              ? photo
-              : photo?.secure_url || photo?.url || "";
+            const photoUrl = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
             if (!photoUrl) return;
             assets.push({
               id: `opt-${prop.id}-${idx}`,
@@ -155,7 +159,7 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Videos from orders ──────────────────────────────────────────────────
+    // ── Videos from orders — with Cloudinary thumbnail ──
     if (filterType === "all" || filterType === "videos") {
       activeOrders
         .filter((o: { property_address: string }) => orderMatchesFilter(o.property_address))
@@ -165,6 +169,7 @@ export async function GET(req: Request) {
               id: `video-${order.id}`,
               type: "video",
               propertyAddress: order.property_address || "Unknown",
+              thumbnailUrl: cloudinaryVideoThumb(order.delivery_url),
               assetUrl: order.delivery_url,
               label: "Listing Video",
               createdAt: order.created_at,
@@ -173,24 +178,22 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Clips from orders ───────────────────────────────────────────────────
+    // ── Clips from orders — use photo_url as thumbnail ──
     if (filterType === "all" || filterType === "clips") {
       activeOrders
         .filter((o: { property_address: string }) => orderMatchesFilter(o.property_address))
         .forEach((order: { id: string; property_address: string; clip_urls: unknown; created_at: string }) => {
           const clips = Array.isArray(order.clip_urls) ? order.clip_urls : [];
-          clips.forEach((clip: string | { url?: string; clip_file?: string; drive_url?: string; photo_url?: string; label?: string }, idx: number) => {
-            const clipUrl = typeof clip === "string"
-              ? clip
-              : clip?.url || clip?.clip_file || clip?.drive_url || "";
-            const clipLabel = typeof clip === "object" && clip?.label ? clip.label : `Clip ${idx + 1}`;
+          clips.forEach((clip: any, idx: number) => {
+            const clipUrl = typeof clip === "string" ? clip : clip?.url || clip?.clip_file || clip?.drive_url || "";
+            const clipLabel = typeof clip === "object" ? (clip?.description || clip?.label || `Clip ${idx + 1}`) : `Clip ${idx + 1}`;
             const thumbUrl = typeof clip === "object" ? (clip?.photo_url || "") : "";
             if (!clipUrl) return;
             assets.push({
               id: `clip-${order.id}-${idx}`,
               type: "clip",
               propertyAddress: order.property_address || "Unknown",
-              thumbnailUrl: thumbUrl || undefined,
+              thumbnailUrl: thumbUrl || cloudinaryVideoThumb(clipUrl),
               assetUrl: clipUrl,
               label: clipLabel,
               createdAt: order.created_at,
@@ -199,7 +202,7 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Graphics / Flyers — Design Studio listing flyers only ───────────────
+    // ── Graphics / Flyers — with Cloudinary video thumbnails for mp4 exports ──
     if (filterType === "all" || filterType === "flyers") {
       exports_
         .filter((e: { template_type?: string; property_id?: string }) =>
@@ -207,21 +210,22 @@ export async function GET(req: Request) {
           FLYER_TEMPLATE_TYPES.includes(e.template_type) &&
           (!propertyId || e.property_id === propertyId)
         )
-        .forEach((exp: { id: string; property_id?: string; template_type: string; export_url: string; created_at: string }) => {
+        .forEach((exp: { id: string; property_id?: string; template_type: string; export_url: string; export_format?: string; created_at: string }) => {
+          const isVideo = (exp.export_format || "").toLowerCase() === "mp4" || exp.export_url?.endsWith(".mp4");
           assets.push({
             id: `flyer-${exp.id}`,
             type: "flyer",
             propertyId: exp.property_id || undefined,
             propertyAddress: exp.property_id ? propertyMap.get(exp.property_id) || "Unknown" : "Personal",
-            thumbnailUrl: exp.export_url,
+            thumbnailUrl: isVideo ? cloudinaryVideoThumb(exp.export_url) : exp.export_url,
             assetUrl: exp.export_url,
-            label: exp.template_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            label: exp.template_type.replace(/[-_]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
             createdAt: exp.created_at,
           });
         });
     }
 
-    // ── Staging ─────────────────────────────────────────────────────────────
+    // ── Staging ──
     if (filterType === "all" || filterType === "staging") {
       staging
         .filter((s: { property_id?: string }) => !propertyId || s.property_id === propertyId)
@@ -239,7 +243,7 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Remixes ─────────────────────────────────────────────────────────────
+    // ── Remixes — with Cloudinary video thumbnails ──
     if (filterType === "all" || filterType === "remixes") {
       exports_
         .filter((e: { template_type?: string; property_id?: string }) =>
@@ -252,6 +256,7 @@ export async function GET(req: Request) {
             type: "remix",
             propertyId: exp.property_id || undefined,
             propertyAddress: exp.property_id ? propertyMap.get(exp.property_id) || "Unknown" : "Personal",
+            thumbnailUrl: cloudinaryVideoThumb(exp.export_url),
             assetUrl: exp.export_url,
             label: "Video Remix",
             createdAt: exp.created_at,
@@ -259,7 +264,7 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Descriptions ────────────────────────────────────────────────────────
+    // ── Descriptions ──
     if (filterType === "all" || filterType === "descriptions") {
       descriptions
         .filter(descMatchesFilter)
@@ -275,7 +280,7 @@ export async function GET(req: Request) {
         });
     }
 
-    // ── Drone ────────────────────────────────────────────────────────────────
+    // ── Drone ──
     if (filterType === "all" || filterType === "drone") {
       exports_
         .filter((e: { template_type?: string; property_id?: string }) =>
@@ -288,7 +293,7 @@ export async function GET(req: Request) {
             type: "drone",
             propertyId: exp.property_id || undefined,
             propertyAddress: exp.property_id ? propertyMap.get(exp.property_id) || "Unknown" : "Personal",
-            thumbnailUrl: exp.export_url,
+            thumbnailUrl: cloudinaryVideoThumb(exp.export_url) || exp.export_url,
             assetUrl: exp.export_url,
             label: "Drone Annotation",
             createdAt: exp.created_at,
