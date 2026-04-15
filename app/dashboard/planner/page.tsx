@@ -574,9 +574,51 @@ export default function PlannerPage() {
     setGeneratedCaption("");
   };
 
+  // ─── Caption Templates (unique, property-specific, randomized) ──────────
+
+  const generateLocalCaption = (p: Property): string => {
+    const city = p.city || "";
+    const cityTag = city.replace(/\s/g, "");
+    const details = [
+      p.bedrooms ? `${p.bedrooms} bedrooms` : "",
+      p.bathrooms ? `${p.bathrooms} bathrooms` : "",
+      p.sqft ? `${p.sqft.toLocaleString()} sq ft` : "",
+    ].filter(Boolean).join(" · ");
+    const price = p.price ? formatPrice(p.price) : "";
+    const features = p.special_features?.slice(0, 3).join(", ") || "";
+    const firstName = agentName.split(" ")[0] || "";
+
+    const templates: Record<string, string[]> = {
+      "Just Listed": [
+        `✨ Just Listed in ${city}!\n\n${p.address}\n${details}\n${features ? `\n${features}\n` : ""}\n${price ? `Offered at ${price}` : ""}\n\nThis is the one you've been waiting for. Schedule your private tour today! 🔑\n\n#JustListed #${cityTag}RealEstate #NewListing #DreamHome`,
+        `🏡 NEW — ${p.address}\n\n${details}${price ? ` | ${price}` : ""}\n${features ? `\n✅ ${p.special_features?.join("\n✅ ") || ""}` : ""}\n\nLocated in beautiful ${city} — this home is move-in ready and priced to sell.\n\nDM me to see it before it's gone! 📲\n\n#JustListed #RealEstate #HomeGoals #${cityTag}`,
+        `Welcome to ${p.address} 🏠\n\n${details}\n${price ? `\nListed at ${price}` : ""}\n${features ? `\nFeatures: ${features}` : ""}\n\nThis ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} beauty in ${city} checks every box. Open the door to your next chapter.\n\nLink in bio for details! 🔗\n\n#NewOnTheMarket #${cityTag}Homes #RealEstateAgent`,
+        `📣 Fresh on the market!\n\n${p.address}, ${city}\n${details}\n${price ? `${price}` : ""}\n${features ? `\nHighlights: ${features}` : ""}\n\nEvery detail of this home was designed for living well. Ready to see it in person?\n\nCall or DM ${firstName || "me"} today! 📞\n\n#JustListed #LuxuryLiving #${cityTag}RealEstate`,
+      ],
+      "Just Sold": [
+        `🎉 SOLD! ${p.address}\n\nCongratulations to my incredible clients on closing this beautiful ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} home in ${city}!\n\nAnother family, another dream fulfilled. This is the work that keeps me going.\n\nThinking about making a move? Let's talk about your goals. 📞\n\n#JustSold #ClosingDay #${cityTag}RealEstate #HappyClients`,
+        `🔑 Keys handed over! ${p.address} is officially SOLD.\n\nHelping people find their perfect home never gets old. So grateful for the trust my clients place in me.\n\nYour turn could be next — reach out anytime! 💛\n\n#Sold #RealEstateLife #${cityTag} #DreamHomeAchieved`,
+      ],
+      "Price Drop Alert": [
+        `⚡ PRICE IMPROVED — ${p.address}\n\n${details}\nNow ${price}\n${features ? `\n${features}` : ""}\n\nThis ${city} gem just became an even better value. Don't wait — opportunities like this move fast!\n\nDM me to schedule a tour 🏃‍♂️\n\n#PriceReduced #${cityTag}Homes #RealEstateDeal #OpportunityKnocks`,
+        `💰 New price alert!\n\n${p.address}, ${city}\n${details}\n${price ? `Now offered at ${price}` : ""}\n\nThe seller is motivated and this home is ready for its new owner. Could that be you?\n\nLet's chat! 📲\n\n#PriceDrop #${cityTag}RealEstate #HomeForSale`,
+      ],
+      "Coming Soon Preview": [
+        `👀 COMING SOON to ${city}...\n\n${p.address}\n${details}\n${price ? `Expected at ${price}` : ""}\n${features ? `\n${features}` : ""}\n\nGet on the early access list before this one hits the market. The best homes go to those who move first.\n\nDM ${firstName || "me"} for details! 🔥\n\n#ComingSoon #ExclusiveListing #${cityTag}RealEstate #BeFirst`,
+        `🏗️ Something exciting is coming...\n\n${p.address} in ${city}\n${details}\n\nThis listing isn't public yet — but it will be soon. Want a head start?\n\nReach out now for early access! 📩\n\n#ComingSoon #${cityTag}Homes #OffMarket #RealEstate`,
+      ],
+    };
+
+    const postType = getPostType(p.status);
+    const options = templates[postType] || templates["Just Listed"];
+    return options[Math.floor(Math.random() * options.length)];
+  };
+
   const handleGenerateCaption = async () => {
     if (!selectedProperty || !selectedMedia) return;
     setIsGenerating(true);
+
+    let caption = "";
 
     try {
       const contentType = getContentType(selectedProperty.status);
@@ -584,7 +626,7 @@ export default function PlannerPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          platform: "instagram", // default — works for all platforms
+          platform: "instagram",
           contentType,
           propertyAddress: selectedProperty.address,
           agentName,
@@ -602,36 +644,33 @@ export default function PlannerPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setGeneratedCaption(data.caption || "");
-        setStep(3);
-      } else {
-        // Fallback caption with real property data
-        const pt = getPostType(selectedProperty.status);
-        const features = selectedProperty.special_features?.slice(0, 3).join(", ") || "";
-        const details = [
-          selectedProperty.bedrooms ? `${selectedProperty.bedrooms} bedrooms` : "",
-          selectedProperty.bathrooms ? `${selectedProperty.bathrooms} bathrooms` : "",
-          selectedProperty.sqft ? `${selectedProperty.sqft.toLocaleString()} sq ft` : "",
-        ].filter(Boolean).join(" · ");
-
-        setGeneratedCaption(
-          `✨ ${pt}!\n\n${selectedProperty.address}${selectedProperty.city ? `, ${selectedProperty.city}` : ""}\n${details}${features ? `\n\nHighlights: ${features}` : ""}\n\n${selectedProperty.price ? `Offered at ${formatPrice(selectedProperty.price)}` : ""}\n\nDM me for a private showing! 🔑\n\n#${pt.replace(/\s/g, "")} #RealEstate #${(selectedProperty.city || "").replace(/\s/g, "")}Homes`
-        );
-        setStep(3);
+        caption = data.caption || "";
       }
     } catch {
-      const pt = getPostType(selectedProperty.status);
-      setGeneratedCaption(
-        `✨ ${pt}!\n\n${selectedProperty.address}\n${selectedProperty.bedrooms || ""}bd / ${selectedProperty.bathrooms || ""}ba\n\n${selectedProperty.price ? formatPrice(selectedProperty.price) : ""}\n\nContact me for a showing! 🔑\n\n#RealEstate #${pt.replace(/\s/g, "")}`
-      );
-      setStep(3);
+      // API failed — will use local generator
     }
 
+    // Quality check — reject garbage captions with placeholders or too-generic text
+    const isGarbage =
+      !caption ||
+      caption.includes("[key feature]") ||
+      caption.includes("[insert") ||
+      caption.includes("[your") ||
+      caption.includes("[address") ||
+      caption.includes("This beautiful home features") ||
+      caption.length < 50;
+
+    if (isGarbage) {
+      caption = generateLocalCaption(selectedProperty);
+    }
+
+    setGeneratedCaption(caption);
+    setStep(3);
     setIsGenerating(false);
 
     // Log action
     try {
-      await fetch("/api/planner/action", {
+      fetch("/api/planner/action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1002,21 +1041,27 @@ export default function PlannerPage() {
                       <h2 className="text-[17px] font-extrabold text-white">Your Post</h2>
                       <button
                         onClick={handleGenerateCaption}
-                        className="px-4 py-1.5 rounded-lg text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+                        className="px-5 py-2 rounded-lg text-[13px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2"
                       >
-                        <RefreshCw className="w-3.5 h-3.5" /> Regenerate
+                        <RefreshCw className="w-3.5 h-3.5" /> New Version
                       </button>
                     </div>
 
-                    {/* Preview */}
+                    {/* Preview — only show image if it's a real image URL */}
                     <div className="flex gap-4 mb-5">
-                      {selectedMedia && (selectedMedia.thumbnailUrl || selectedMedia.assetUrl) && (
-                        <img
-                          src={selectedMedia.thumbnailUrl || selectedMedia.assetUrl}
-                          alt=""
-                          className="w-[140px] h-[105px] object-cover rounded-xl border border-gray-600 shrink-0"
-                        />
-                      )}
+                      {selectedMedia && (() => {
+                        const url = selectedMedia.thumbnailUrl || "";
+                        const isImg = url && !url.endsWith(".pdf") && !url.endsWith(".mp4") && !url.includes("/raw/");
+                        if (!isImg) return null;
+                        return (
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-[140px] h-[105px] object-cover rounded-xl border border-gray-600 shrink-0"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          />
+                        );
+                      })()}
                       <textarea
                         value={generatedCaption}
                         onChange={(e) => setGeneratedCaption(e.target.value)}
