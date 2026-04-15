@@ -38,6 +38,7 @@ interface Property {
   bedrooms?: number;
   bathrooms?: number;
   sqft?: number;
+  special_features?: string[];
 }
 
 interface MediaAsset {
@@ -318,7 +319,7 @@ export default function PlannerPage() {
       const [propsRes, profileRes] = await Promise.all([
         supabase
           .from("agent_properties")
-          .select("id, address, city, state, status, price, bedrooms, bathrooms, sqft")
+          .select("id, address, city, state, status, price, bedrooms, bathrooms, sqft, special_features")
           .eq("user_id", uid)
           .is("merged_into_id", null)
           .in("status", ["active", "new", "coming_soon", "sold", "price_reduced"])
@@ -363,12 +364,12 @@ export default function PlannerPage() {
             .select("photos, optimized_photos")
             .eq("id", property.id)
             .single(),
-          // ALL paid orders for this user — filter client-side for better matching
+          // ALL orders for this user — include paid and admin_bypass
           supabase
             .from("orders")
             .select("id, property_address, photos, delivery_url, clip_urls, created_at")
             .eq("user_id", userId)
-            .eq("payment_status", "paid"),
+            .in("payment_status", ["paid", "admin_bypass"]),
           // Design exports matched by property_id FK — exclude branding cards
           supabase
             .from("design_exports")
@@ -487,18 +488,21 @@ export default function PlannerPage() {
 
         // ── Design exports (flyers, graphics) ──
         const FLYER_TYPES = ["just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf"];
+        const IMAGE_FORMATS = ["jpg", "jpeg", "png", "webp", "gif"];
         const exports = (exportsRes.data || []).filter((e: any) => e.template_type !== "branding_card");
         exports.forEach((exp: any) => {
           if (!exp.export_url) return;
           const isFlyer = FLYER_TYPES.some(t => exp.template_type?.includes(t));
           const isRemix = exp.template_type?.includes("video_remix");
           const isDrone = exp.template_type?.includes("drone");
+          // Only use export_url as thumbnail if it's an actual image format
+          const isImage = IMAGE_FORMATS.includes((exp.export_format || "").toLowerCase());
           addAsset({
             id: `export-${exp.id}`,
             type: isRemix ? "remix" : isDrone ? "drone" : isFlyer ? "flyer" : "flyer",
             propertyId: exp.property_id,
             propertyAddress: addr,
-            thumbnailUrl: exp.export_format === "mp4" ? undefined : exp.export_url,
+            thumbnailUrl: isImage ? exp.export_url : undefined,
             assetUrl: exp.export_url,
             label: (exp.template_type || "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
             createdAt: exp.created_at,
@@ -591,6 +595,7 @@ export default function PlannerPage() {
             price: selectedProperty.price,
             city: selectedProperty.city,
             state: selectedProperty.state,
+            special_features: selectedProperty.special_features,
           },
         }),
       });
@@ -600,16 +605,24 @@ export default function PlannerPage() {
         setGeneratedCaption(data.caption || "");
         setStep(3);
       } else {
-        // Fallback caption
+        // Fallback caption with real property data
         const pt = getPostType(selectedProperty.status);
+        const features = selectedProperty.special_features?.slice(0, 3).join(", ") || "";
+        const details = [
+          selectedProperty.bedrooms ? `${selectedProperty.bedrooms} bedrooms` : "",
+          selectedProperty.bathrooms ? `${selectedProperty.bathrooms} bathrooms` : "",
+          selectedProperty.sqft ? `${selectedProperty.sqft.toLocaleString()} sq ft` : "",
+        ].filter(Boolean).join(" · ");
+
         setGeneratedCaption(
-          `✨ ${pt}! ${selectedProperty.address}\n\n${selectedProperty.bedrooms || ""}bd / ${selectedProperty.bathrooms || ""}ba${selectedProperty.sqft ? " · " + selectedProperty.sqft.toLocaleString() + " sf" : ""}\n\n${selectedProperty.price ? formatPrice(selectedProperty.price) : ""}\n\nDM me for details! 🔑\n\n#RealEstate #${(selectedProperty.city || "").replace(/\s/g, "")}Homes`
+          `✨ ${pt}!\n\n${selectedProperty.address}${selectedProperty.city ? `, ${selectedProperty.city}` : ""}\n${details}${features ? `\n\nHighlights: ${features}` : ""}\n\n${selectedProperty.price ? `Offered at ${formatPrice(selectedProperty.price)}` : ""}\n\nDM me for a private showing! 🔑\n\n#${pt.replace(/\s/g, "")} #RealEstate #${(selectedProperty.city || "").replace(/\s/g, "")}Homes`
         );
         setStep(3);
       }
     } catch {
+      const pt = getPostType(selectedProperty.status);
       setGeneratedCaption(
-        `🏡 ${selectedProperty.address}\n\n${selectedProperty.bedrooms || ""}bd / ${selectedProperty.bathrooms || ""}ba\n\nContact me for a showing!\n\n#RealEstate #NewListing`
+        `✨ ${pt}!\n\n${selectedProperty.address}\n${selectedProperty.bedrooms || ""}bd / ${selectedProperty.bathrooms || ""}ba\n\n${selectedProperty.price ? formatPrice(selectedProperty.price) : ""}\n\nContact me for a showing! 🔑\n\n#RealEstate #${pt.replace(/\s/g, "")}`
       );
       setStep(3);
     }
@@ -879,8 +892,25 @@ export default function PlannerPage() {
                       .filter((m) => m.type !== "description") // descriptions aren't visual media
                       .map((m) => {
                         const isSel = selectedMedia?.id === m.id;
-                        const thumb = m.thumbnailUrl || m.assetUrl;
                         const isVideo = m.type === "video" || m.type === "clip" || m.type === "remix";
+                        const isFlyer = m.type === "flyer";
+                        // Only use thumbnail if it looks like an image URL (not PDF/mp4)
+                        const thumbUrl = m.thumbnailUrl || "";
+                        const looksLikeImage = thumbUrl && !thumbUrl.endsWith(".pdf") && !thumbUrl.endsWith(".mp4") && !thumbUrl.includes("/raw/");
+                        const thumb = looksLikeImage ? thumbUrl : null;
+
+                        // Type-specific placeholder icons and colors
+                        const placeholderConfig: Record<string, { icon: string; bg: string }> = {
+                          photo: { icon: "📷", bg: "bg-blue-900/40" },
+                          video: { icon: "🎬", bg: "bg-purple-900/40" },
+                          clip: { icon: "🎞️", bg: "bg-purple-900/40" },
+                          flyer: { icon: "📄", bg: "bg-indigo-900/40" },
+                          staging: { icon: "🛋️", bg: "bg-teal-900/40" },
+                          remix: { icon: "🎵", bg: "bg-pink-900/40" },
+                          drone: { icon: "🚁", bg: "bg-sky-900/40" },
+                        };
+                        const placeholder = placeholderConfig[m.type] || placeholderConfig.photo;
+
                         return (
                           <button
                             key={m.id}
@@ -898,28 +928,22 @@ export default function PlannerPage() {
                                   alt={m.label || ""}
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
-                                    // Replace broken image with placeholder
                                     const parent = (e.target as HTMLImageElement).parentElement;
                                     if (parent) {
                                       (e.target as HTMLImageElement).style.display = "none";
                                       parent.classList.add("flex", "items-center", "justify-center");
-                                      const icon = document.createElement("div");
-                                      icon.className = "flex flex-col items-center gap-1";
-                                      icon.innerHTML = isVideo
-                                        ? '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>'
-                                        : '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
-                                      parent.appendChild(icon);
+                                      const span = document.createElement("span");
+                                      span.className = "text-3xl";
+                                      span.textContent = placeholder.icon;
+                                      parent.appendChild(span);
                                     }
                                   }}
                                 />
                               </div>
                             ) : (
-                              <div className="w-full h-[115px] bg-gray-700 flex items-center justify-center">
-                                {isVideo ? (
-                                  <Video className="w-8 h-8 text-gray-500" />
-                                ) : (
-                                  <ImageIcon className="w-8 h-8 text-gray-500" />
-                                )}
+                              <div className={`w-full h-[115px] ${placeholder.bg} flex flex-col items-center justify-center gap-1`}>
+                                <span className="text-3xl">{placeholder.icon}</span>
+                                <span className="text-[10px] text-gray-400 font-semibold uppercase">{m.type}</span>
                               </div>
                             )}
                             <div className="px-3 py-2">
