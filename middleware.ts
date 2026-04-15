@@ -56,10 +56,18 @@ export async function middleware(request: NextRequest) {
   if (isP2vHomesSubdomain(hostname)) {
     const handle = hostname.split(".")[0];
     if (handle && handle !== "www") {
-      // Editor route: [handle].p2v.homes/editor → /editor/[handle]
+      // Editor routes: [handle].p2v.homes/editor/* → /editor/[handle]/*
+      // Catches /editor, /editor/, and /editor/[handle]/auth-callback
       if (pathname === "/editor" || pathname === "/editor/") {
         return NextResponse.rewrite(
           new URL(`/editor/${handle}`, request.url)
+        );
+      }
+      if (pathname.startsWith("/editor/")) {
+        // e.g. /editor/mattsrealty/auth-callback → /editor/mattsrealty/auth-callback
+        // The path already matches the app directory structure, just pass through
+        return NextResponse.rewrite(
+          new URL(pathname, request.url)
         );
       }
       // Everything else → public agent site
