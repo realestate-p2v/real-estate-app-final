@@ -18,7 +18,8 @@ export interface LibraryAsset {
 }
 
 const FLYER_TEMPLATE_TYPES = [
-  "just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf",
+  "just_listed", "just-listed", "open_house", "open-house", "price_reduced", "price-reduced",
+  "just_sold", "just-sold", "yard_sign", "yard-sign", "property_pdf",
 ];
 
 function normalizeAddr(s: string): string {
