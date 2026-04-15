@@ -342,7 +342,60 @@ export default function PlannerPage() {
         const res = await fetch(`/api/planner/library?type=all&propertyId=${property.id}`);
         if (res.ok) {
           const data = await res.json();
-          setMedia(data.assets || []);
+          let assets: MediaAsset[] = data.assets || [];
+
+          // Debug: log what came back
+          console.log("[Planner] Library returned:", assets.length, "assets", assets.map((a: MediaAsset) => ({ type: a.type, thumb: a.thumbnailUrl?.slice(0, 60) })));
+
+          // Fallback: if we got very few visual assets, load photos directly from agent_properties
+          const visualAssets = assets.filter((a: MediaAsset) => a.type !== "description");
+          if (visualAssets.length < 3) {
+            console.log("[Planner] Few visual assets, loading property photos directly...");
+            const supabase = createClient();
+            const { data: propData } = await supabase
+              .from("agent_properties")
+              .select("photos, optimized_photos")
+              .eq("id", property.id)
+              .single();
+
+            if (propData) {
+              // Optimized photos first (these are Cloudinary-processed)
+              const optPhotos = Array.isArray(propData.optimized_photos) ? propData.optimized_photos : [];
+              optPhotos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
+                const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+                if (url && !assets.find((a: MediaAsset) => a.assetUrl === url)) {
+                  assets.push({
+                    id: `opt-photo-${idx}`,
+                    type: "photo",
+                    propertyAddress: property.address,
+                    thumbnailUrl: url,
+                    assetUrl: url,
+                    label: `Photo ${idx + 1} (Optimized)`,
+                    createdAt: new Date().toISOString(),
+                  });
+                }
+              });
+
+              // Raw photos as additional fallback
+              const rawPhotos = Array.isArray(propData.photos) ? propData.photos : [];
+              rawPhotos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
+                const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+                if (url && !assets.find((a: MediaAsset) => a.assetUrl === url)) {
+                  assets.push({
+                    id: `raw-photo-${idx}`,
+                    type: "photo",
+                    propertyAddress: property.address,
+                    thumbnailUrl: url,
+                    assetUrl: url,
+                    label: `Photo ${idx + 1}`,
+                    createdAt: new Date().toISOString(),
+                  });
+                }
+              });
+            }
+          }
+
+          setMedia(assets);
         }
       } catch (err) {
         console.error("Failed to load media:", err);
@@ -683,14 +736,27 @@ export default function PlannerPage() {
                             }`}
                           >
                             {thumb ? (
-                              <img
-                                src={thumb}
-                                alt={m.label || ""}
-                                className="w-full h-[115px] object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = "none";
-                                }}
-                              />
+                              <div className="relative w-full h-[115px] bg-gray-700">
+                                <img
+                                  src={thumb}
+                                  alt={m.label || ""}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Replace broken image with placeholder
+                                    const parent = (e.target as HTMLImageElement).parentElement;
+                                    if (parent) {
+                                      (e.target as HTMLImageElement).style.display = "none";
+                                      parent.classList.add("flex", "items-center", "justify-center");
+                                      const icon = document.createElement("div");
+                                      icon.className = "flex flex-col items-center gap-1";
+                                      icon.innerHTML = isVideo
+                                        ? '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>'
+                                        : '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                                      parent.appendChild(icon);
+                                    }
+                                  }}
+                                />
+                              </div>
                             ) : (
                               <div className="w-full h-[115px] bg-gray-700 flex items-center justify-center">
                                 {isVideo ? (
