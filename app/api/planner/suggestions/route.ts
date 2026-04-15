@@ -1,7 +1,5 @@
 // app/api/planner/suggestions/route.ts
 // Server-side suggestion engine for the marketing planner
-// Replaces client-side loadSuggestions() from v1
-// All Supabase queries in parallel via Promise.all()
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -37,26 +35,21 @@ export async function POST(req: Request) {
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
     const [
-      propertiesRes,
-      ordersRes,
-      descriptionsRes,
-      stagingRes,
-      exportsRes,
-      actionsRes,
-      scheduleRes,
-      profileRes,
+      propertiesRes, ordersRes, descriptionsRes, stagingRes,
+      exportsRes, actionsRes, scheduleRes, profileRes,
     ] = await Promise.all([
-      supabase.from("agent_properties").select("id, address, status, photos, optimized_photos, website_published, updated_at").eq("user_id", userId),
-      // FIXED: removed branded_video_url (doesn't exist); clip_urls is correct
-      supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at").eq("user_id", userId),
-      // FIXED: property_data (JSONB) not property_address
+      supabase.from("agent_properties").select("id, address, status, photos, optimized_photos, website_published, updated_at")
+        .eq("user_id", userId).is("merged_into_id", null),
+      supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, payment_status, created_at")
+        .eq("user_id", userId).in("payment_status", ["paid", "admin_bypass"]),
       supabase.from("lens_descriptions").select("id, property_data").eq("user_id", userId),
       supabase.from("lens_staging").select("id, property_id, created_at").eq("user_id", userId),
       supabase.from("design_exports").select("id, property_id, template_type, export_url, created_at").eq("user_id", userId),
       supabase.from("marketing_actions").select("id, property_id, action_type, content_type, platform, created_at").eq("user_id", userId),
-      // REMOVED: blog_posts — table has no user_id or property_id
       supabase.from("marketing_schedule").select("*").eq("user_id", userId).gte("scheduled_date", today).order("scheduled_date", { ascending: true }).limit(10),
-      supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, saved_company, saved_agent_name").eq("user_id", userId).single(),
+      supabase.from("lens_usage")
+        .select("saved_agent_name, saved_phone, saved_email, saved_company, saved_headshot_url, saved_logo_url, saved_website, saved_location")
+        .eq("user_id", userId).single(),
     ]);
 
     const properties = propertiesRes.data || [];
@@ -105,6 +98,7 @@ export async function POST(req: Request) {
             (a.content_type === "just_sold" || a.content_type === "price_reduced")
         );
         if (!hasStatusAction) {
+          const shortAddr = prop.address.split(",")[0] || prop.address;
           suggestions.push({
             id: nextId(),
             type: "status_trigger",
@@ -114,12 +108,12 @@ export async function POST(req: Request) {
             contentType: prop.status === "sold" ? "just_sold" : "price_reduced",
             title:
               prop.status === "sold"
-                ? `🎉 ${addressShort} is sold — let's celebrate!`
-                : `Fresh opportunity at ${addressShort}`,
+                ? `🎉 ${shortAddr} is sold — let's celebrate!`
+                : `Fresh opportunity at ${shortAddr}`,
             description:
               prop.status === "sold"
                 ? "A Just Sold post builds your reputation and shows future clients you get results. Let's make it shine."
-                : "A Price Reduced post can reignite interest and bring in new buyers who were on the fence. This could be the nudge they needed.",
+                : "A Price Reduced post can reignite interest and bring in new buyers who were on the fence.",
             actionLabel: "Create Post",
             actionType: "create_post",
             buttons: ["Create Post", "Skip"],
@@ -165,7 +159,6 @@ export async function POST(req: Request) {
         );
         const propExports = exports_.filter((e: { property_id?: string }) => e.property_id === prop.id);
         const propStaging = staging.filter((s: { property_id?: string }) => s.property_id === prop.id);
-        // FIXED: property_data is JSONB — extract .address
         const propDescs = descriptions.filter((d: { property_data?: { address?: string } }) => {
           const descAddr = d.property_data?.address || "";
           return descAddr && prop.address &&
@@ -181,78 +174,44 @@ export async function POST(req: Request) {
         const daysSinceAction = lastAction ? daysSince(lastAction.created_at) : null;
         const addressShort = prop.address.split(",")[0] || prop.address;
 
-        // ZERO TOUCH — no actions AND no content created at all
+        // ZERO TOUCH
         if (propActions.length === 0 && propExports.length === 0 && propStaging.length === 0 && propDescs.length === 0) {
           if (hasVideo || hasPhotos) {
             suggestions.push({
-              id: nextId(),
-              type: "nudge",
-              priority: 3,
-              propertyId: prop.id,
-              propertyAddress: prop.address,
+              id: nextId(), type: "nudge", priority: 3, propertyId: prop.id, propertyAddress: prop.address,
               title: `${addressShort} is ready for its debut`,
-              description: `You have ${hasVideo ? "a video and " : ""}${photoCount > 0 ? photoCount + " photos" : "great content"} ready to go — consistent marketing gets listings sold faster. Let's get this one in front of buyers.`,
-              actionLabel: "Start Marketing",
-              actionType: "zero_touch",
-              buttons: [
-                hasVideo ? "Create a story reel" : "Make a photo teaser",
-                "Create a Just Listed graphic",
-                "Write a listing description",
-                "This listing is no longer active",
-              ],
+              description: `You have ${hasVideo ? "a video and " : ""}${photoCount > 0 ? photoCount + " photos" : "great content"} ready to go — consistent marketing gets listings sold faster.`,
+              actionLabel: "Start Marketing", actionType: "zero_touch",
+              buttons: [hasVideo ? "Create a story reel" : "Make a photo teaser", "Create a Just Listed graphic", "Write a listing description", "This listing is no longer active"],
             });
           } else {
             suggestions.push({
-              id: nextId(),
-              type: "nudge",
-              priority: 4,
-              propertyId: prop.id,
-              propertyAddress: prop.address,
+              id: nextId(), type: "nudge", priority: 4, propertyId: prop.id, propertyAddress: prop.address,
               title: `Let's build momentum for ${addressShort}`,
-              description: `Every great listing starts with great content. Adding photos and a video can increase showing requests by up to 40% — let's get this one set up right.`,
-              actionLabel: "Get Started",
-              actionType: "no_content",
+              description: `Every great listing starts with great content. Adding photos and a video can increase showing requests by up to 40%.`,
+              actionLabel: "Get Started", actionType: "no_content",
               buttons: ["Order a listing video", "Upload photos", "Skip"],
             });
           }
           return;
         }
 
-        // STALE — has some history but nothing in 14+ days
+        // STALE — 14+ days
         if (daysSinceAction !== null && daysSinceAction > 14) {
           const specificButtons: string[] = [];
-
-          if (hasPhotos && photoCount >= 5) {
-            specificButtons.push(`Create a ${photoCount >= 8 ? "photo carousel" : "5-photo teaser"} for socials`);
-          }
-          if (hasVideo && !propExports.some((e: { template_type?: string }) => e.template_type?.includes("video_remix"))) {
-            specificButtons.push("Make a story reel from the video");
-          }
-          if (hasClips) {
-            specificButtons.push("Create a remix with the Just Listed template");
-          }
-          if (propStaging.length > 0 && !propActions.some((a: { content_type?: string }) => a.content_type === "staging_reveal")) {
-            specificButtons.push("Share the staging before/after");
-          }
-          if (propDescs.length === 0) {
-            specificButtons.push("Write a listing description first");
-          }
-          if (specificButtons.length === 0) {
-            specificButtons.push("Write a new caption");
-            specificButtons.push("Create a price update graphic");
-          }
+          if (hasPhotos && photoCount >= 5) specificButtons.push(`Create a ${photoCount >= 8 ? "photo carousel" : "5-photo teaser"} for socials`);
+          if (hasVideo && !propExports.some((e: { template_type?: string }) => e.template_type?.includes("video_remix"))) specificButtons.push("Make a story reel from the video");
+          if (hasClips) specificButtons.push("Create a remix with the Just Listed template");
+          if (propStaging.length > 0 && !propActions.some((a: { content_type?: string }) => a.content_type === "staging_reveal")) specificButtons.push("Share the staging before/after");
+          if (propDescs.length === 0) specificButtons.push("Write a listing description first");
+          if (specificButtons.length === 0) { specificButtons.push("Write a new caption"); specificButtons.push("Create a price update graphic"); }
           specificButtons.push("This listing is no longer active");
 
           suggestions.push({
-            id: nextId(),
-            type: "nudge",
-            priority: 4,
-            propertyId: prop.id,
-            propertyAddress: prop.address,
+            id: nextId(), type: "nudge", priority: 4, propertyId: prop.id, propertyAddress: prop.address,
             title: `${addressShort} deserves some fresh attention`,
-            description: `It's been ${daysSinceAction} days since your last push — listings that stay active on social sell faster. You have ${hasVideo ? "video, " : ""}${photoCount > 0 ? photoCount + " photos" : ""}${propStaging.length > 0 ? ", staging" : ""}${propExports.length > 0 ? ", " + propExports.length + " graphics" : ""} ready to use. One post today could make all the difference.`,
-            actionLabel: "Promote Now",
-            actionType: "stale_listing",
+            description: `It's been ${daysSinceAction} days since your last push — listings that stay active on social sell faster. One post today could make all the difference.`,
+            actionLabel: "Promote Now", actionType: "stale_listing",
             buttons: specificButtons.slice(0, 4),
           });
         }
@@ -269,15 +228,10 @@ export async function POST(req: Request) {
           );
           if (recentUnsharedExports.length > 0) {
             suggestions.push({
-              id: nextId(),
-              type: "nudge",
-              priority: 5,
-              propertyId: prop.id,
-              propertyAddress: prop.address,
+              id: nextId(), type: "nudge", priority: 5, propertyId: prop.id, propertyAddress: prop.address,
               title: `${addressShort} has content ready to impress`,
-              description: `You created ${recentUnsharedExports.length} marketing graphic${recentUnsharedExports.length > 1 ? "s" : ""} this week — sharing them now builds visibility while the listing is fresh in people's minds.`,
-              actionLabel: "Share Now",
-              actionType: "unshared_content",
+              description: `You created ${recentUnsharedExports.length} marketing graphic${recentUnsharedExports.length > 1 ? "s" : ""} this week — sharing them now builds visibility while the listing is fresh.`,
+              actionLabel: "Share Now", actionType: "unshared_content",
               buttons: ["Post to Instagram", "Post to Facebook", "Schedule for later", "Skip"],
             });
           }
@@ -293,13 +247,10 @@ export async function POST(req: Request) {
 
     if (nudge.shouldNudge) {
       suggestions.push({
-        id: nextId(),
-        type: "self_marketing",
-        priority: 5,
+        id: nextId(), type: "self_marketing", priority: 5,
         title: "Your audience wants to hear from you",
         description: nudge.message,
-        actionLabel: "Write a Post",
-        actionType: "self_marketing",
+        actionLabel: "Write a Post", actionType: "self_marketing",
         buttons: nudge.suggestedTypes.slice(0, 4).map((t) => t.label).concat(["Not now"]),
       });
     }
@@ -311,36 +262,38 @@ export async function POST(req: Request) {
     const scores = properties
       .filter((p: { status: string }) => p.status === "active" || p.status === "new" || p.status === "coming_soon")
       .slice(0, 5)
-      .map((prop: { id: string; address: string; status: string; photos: unknown[] | null; optimized_photos: unknown[] | null; website_published?: boolean }) => {
-        const propOrders = orders.filter((o: { property_address?: string }) =>
+      .map((prop: any) => {
+        const propOrders = orders.filter((o: any) =>
           o.property_address && prop.address &&
           o.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
         );
-        const paidOrder = propOrders.find((o: { payment_status?: string }) => o.payment_status === "paid");
-        const propExports = exports_.filter((e: { property_id?: string }) => e.property_id === prop.id);
-        const propActions = actions.filter((a: { property_id?: string }) => a.property_id === prop.id);
-        const propStaging = staging.filter((s: { property_id?: string }) => s.property_id === prop.id);
+        const propExports = exports_.filter((e: any) => e.property_id === prop.id);
+        const propActions = actions.filter((a: any) => a.property_id === prop.id);
+        const propStaging = staging.filter((s: any) => s.property_id === prop.id);
         const photoCount = prop.photos ? prop.photos.length : 0;
 
         return calculateContentScore(prop, {
           hasOrder: propOrders.length > 0,
-          hasVideoDelivery: !!(paidOrder && (paidOrder as { delivery_url?: string }).delivery_url),
-          hasRemix: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("video_remix")),
-          // FIXED: property_data is JSONB — extract .address
-          hasDescription: descriptions.some((d: { property_data?: { address?: string } }) => {
+          hasVideoDelivery: propOrders.some((o: any) => !!o.delivery_url),
+          hasRemix: propExports.some((e: any) => e.template_type?.includes("video_remix")),
+          hasDescription: descriptions.some((d: any) => {
             const descAddr = d.property_data?.address || "";
-            return descAddr && prop.address &&
-              descAddr.toLowerCase().includes(prop.address.toLowerCase().split(",")[0]);
+            return descAddr && prop.address && descAddr.toLowerCase().includes(prop.address.toLowerCase().split(",")[0]);
           }),
-          hasFlyer: propExports.some((e: { template_type?: string }) => e.template_type && !e.template_type.includes("video_remix") && !e.template_type.includes("drone")),
+          hasFlyer: propExports.some((e: any) => {
+            const t = e.template_type || "";
+            return t.includes("just_listed") || t.includes("just-listed") || t.includes("open_house") || t.includes("open-house") ||
+              t.includes("price_reduced") || t.includes("price-reduced") || t.includes("just_sold") || t.includes("just-sold") ||
+              t.includes("yard_sign") || t.includes("yard-sign") || t.includes("property_pdf");
+          }),
           hasOptimizedPhotos: !!(prop.optimized_photos && prop.optimized_photos.length > 0),
-          hasSocialShare: propActions.some((a: { action_type?: string }) => a.action_type === "social_share"),
+          hasSocialShare: propActions.some((a: any) => a.action_type === "social_share"),
           hasStaging: propStaging.length > 0,
-          hasDroneAnnotation: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("drone")),
+          hasDroneAnnotation: propExports.some((e: any) => e.template_type?.includes("drone")),
           hasWebsite: !!prop.website_published,
           hasBlogPost: false,
-          hasJustSoldGraphic: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("sold")),
-          hasPriceReducedGraphic: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("price")),
+          hasJustSoldGraphic: propExports.some((e: any) => e.template_type && (e.template_type.includes("sold") || e.template_type.includes("just-sold"))),
+          hasPriceReducedGraphic: propExports.some((e: any) => e.template_type && (e.template_type.includes("price") || e.template_type.includes("price-reduced"))),
           photoCount,
           hasAgentWebsite,
           hasAerialPhotos: photoCount > 10,
@@ -348,19 +301,16 @@ export async function POST(req: Request) {
         });
       });
 
-    // Brand score
-    const lastMarket = personalActions
-      .filter((a: { content_type?: string }) => a.content_type === "market_update")
-      .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-
+    // Brand score — 8 profile fields
     const brandScore = calculateBrandScore({
-      hasHeadshot: !!(profile && profile.saved_headshot_url),
-      hasLogo: !!(profile && profile.saved_logo_url),
-      hasCompany: !!(profile && profile.saved_company),
-      hasBio: !!(profile && profile.saved_agent_name),
-      hasPublishedWebsite: hasAgentWebsite,
-      daysSincePersonalPost: daysSince(lastPersonal ? lastPersonal.created_at : null),
-      daysSinceMarketUpdate: daysSince(lastMarket ? lastMarket.created_at : null),
+      hasName: !!(profile?.saved_agent_name),
+      hasPhone: !!(profile?.saved_phone),
+      hasEmail: !!(profile?.saved_email),
+      hasCompany: !!(profile?.saved_company),
+      hasHeadshot: !!(profile?.saved_headshot_url),
+      hasLogo: !!(profile?.saved_logo_url),
+      hasWebsite: !!(profile?.saved_website),
+      hasLocation: !!(profile?.saved_location),
     });
 
     return NextResponse.json({ suggestions: capped, scores, brandScore, agentName });
