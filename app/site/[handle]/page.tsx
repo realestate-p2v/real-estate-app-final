@@ -1,9 +1,49 @@
-// app/site/[handle]/page.tsx
+// ============================================================
+// FILE: app/site/[handle]/page.tsx
+// ============================================================
 import { notFound } from "next/navigation";
-import { getAgentSiteData } from "./data";
+import { getAgentSiteData, getSite, getProfile } from "./data";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{ handle: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle } = await params;
+  const site = await getSite(handle);
+  if (!site) return {};
+  const profile = await getProfile(site.user_id);
+  const agent = profile.agent_name || site.site_title || "Real Estate Agent";
+  const title = site.seo_title || site.site_title || agent;
+  const description = site.seo_description
+    || site.tagline
+    || `${agent}${profile.company ? " at " + profile.company : ""} — browse listings, view property photos and videos, and get in touch.`;
+  const image = site.og_image_url || (site.hero_photos.length > 0 ? site.hero_photos[0] : null) || (profile.headshot_url || null);
+  const siteUrl = site.custom_domain
+    ? `https://${site.custom_domain}`
+    : `https://${handle}.p2v.homes`;
+
+  return {
+    title,
+    description,
+    metadataBase: new URL(siteUrl),
+    alternates: { canonical: "/" },
+    openGraph: {
+      title,
+      description,
+      url: siteUrl,
+      siteName: title,
+      type: "website",
+      ...(image && { images: [{ url: image, width: 1200, height: 630 }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(image && { images: [image] }),
+    },
+  };
 }
 
 export default async function AgentHomePage({ params }: Props) {
@@ -15,7 +55,8 @@ export default async function AgentHomePage({ params }: Props) {
   const primary = site.primary_color || "#334155";
   const featured = listings.filter((l) => l.photos.length > 0).slice(0, 6);
 
-  // Hero: CMS hero_photos first, then first listing photo
+  // Hero: video first, then CMS hero_photos, then first listing photo
+  const heroVideo = site.hero_video_url || null;
   const heroImage = site.hero_photos.length > 0
     ? site.hero_photos[0]
     : featured[0]?.photos[0] || null;
@@ -29,7 +70,20 @@ export default async function AgentHomePage({ params }: Props) {
     <div>
       {/* HERO */}
       <section style={{ position: "relative", minHeight: "75vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: primary, overflow: "hidden" }}>
-        {heroImage ? (
+        {heroVideo ? (
+          <>
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+            >
+              <source src={heroVideo} />
+            </video>
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0.75) 100%)" }} />
+          </>
+        ) : heroImage ? (
           <>
             <img src={heroImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0.75) 100%)" }} />
@@ -61,20 +115,28 @@ export default async function AgentHomePage({ params }: Props) {
             <p style={{ fontSize: 16, color: "#777", margin: 0 }}>Professional photography for every listing</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
-            {featured.map((l) => (
-              <div key={l.id} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-                <div style={{ position: "relative", paddingBottom: "66%", overflow: "hidden" }}>
-                  <img src={l.photos[0]} alt={l.address} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                  {l.photos.length > 1 ? <div style={{ position: "absolute", bottom: 8, right: 8, padding: "4px 10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 6, fontSize: 12, color: "#fff", fontWeight: 600 }}>{l.photos.length} photos</div> : null}
-                </div>
-                <div style={{ padding: "16px 20px" }}>
-                  {l.price ? <p style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>{fmtPrice(l.price)}</p> : null}
-                  <p style={{ fontSize: 15, color: "#444", margin: "0 0 4px", fontWeight: 600 }}>{l.address}</p>
-                  {(l.city || l.state) ? <p style={{ fontSize: 14, color: "#888", margin: "0 0 8px" }}>{[l.city, l.state].filter(Boolean).join(", ")}</p> : null}
-                  {fmtDetails(l) ? <p style={{ fontSize: 13, color: "#aaa", margin: 0, letterSpacing: "0.04em" }}>{fmtDetails(l)}</p> : null}
-                </div>
-              </div>
-            ))}
+            {featured.map((l) => {
+              const href = l.website_slug ? `/listings/${l.website_slug}` : null;
+              const CardTag = href ? "a" : "div";
+              const cardProps = href
+                ? { href, style: { display: "block", borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", textDecoration: "none", color: "inherit" } as React.CSSProperties }
+                : { style: { borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" } as React.CSSProperties };
+              return (
+                <CardTag key={l.id} {...cardProps}>
+                  <div style={{ position: "relative", paddingBottom: "66%", overflow: "hidden" }}>
+                    <img src={l.photos[0]} alt={l.address} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    {l.photos.length > 1 ? <div style={{ position: "absolute", bottom: 8, right: 8, padding: "4px 10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 6, fontSize: 12, color: "#fff", fontWeight: 600 }}>{l.photos.length} photos</div> : null}
+                  </div>
+                  <div style={{ padding: "16px 20px" }}>
+                    {l.price ? <p style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>{fmtPrice(l.price)}</p> : null}
+                    <p style={{ fontSize: 15, color: "#444", margin: "0 0 4px", fontWeight: 600 }}>{l.address}</p>
+                    {(l.city || l.state) ? <p style={{ fontSize: 14, color: "#888", margin: "0 0 8px" }}>{[l.city, l.state].filter(Boolean).join(", ")}</p> : null}
+                    {fmtDetails(l) ? <p style={{ fontSize: 13, color: "#aaa", margin: 0, letterSpacing: "0.04em" }}>{fmtDetails(l)}</p> : null}
+                    {href ? <p style={{ fontSize: 13, color: primary, fontWeight: 600, margin: "12px 0 0" }}>View Details →</p> : null}
+                  </div>
+                </CardTag>
+              );
+            })}
           </div>
           {listings.length > featured.length ? (
             <div style={{ textAlign: "center", marginTop: 36 }}>
@@ -144,6 +206,25 @@ export default async function AgentHomePage({ params }: Props) {
           {profile.email ? <a href={"mailto:" + profile.email} style={{ display: "inline-block", padding: "14px 36px", backgroundColor: "rgba(255,255,255,0.12)", color: "#fff", borderRadius: 8, fontWeight: 600, fontSize: 16, textDecoration: "none", border: "1px solid rgba(255,255,255,0.2)" }}>Email Me</a> : null}
         </div>
       </section>
+
+      {/* JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "RealEstateAgent",
+            name: profile.agent_name || site.site_title || "Agent",
+            url: site.custom_domain ? `https://${site.custom_domain}` : `https://${handle}.p2v.homes`,
+            ...(profile.headshot_url && { image: profile.headshot_url }),
+            ...(profile.phone && { telephone: profile.phone }),
+            ...(profile.email && { email: profile.email }),
+            ...(profile.company && {
+              worksFor: { "@type": "Organization", name: profile.company },
+            }),
+          }),
+        }}
+      />
     </div>
   );
 }
