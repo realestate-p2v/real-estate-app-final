@@ -5,7 +5,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { calculateContentScore, calculateBrandScore } from "@/lib/planner/score";
-import { daysSince } from "@/lib/planner/self-marketing";
 
 export async function GET(req: Request) {
   try {
@@ -20,31 +19,26 @@ export async function GET(req: Request) {
     let propertyQuery = supabase
       .from("agent_properties")
       .select("id, address, status, photos, optimized_photos, website_published")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .is("merged_into_id", null);
 
     if (propertyId) {
       propertyQuery = propertyQuery.eq("id", propertyId);
     }
 
-    const [
-      propertiesRes,
-      ordersRes,
-      descriptionsRes,
-      stagingRes,
-      exportsRes,
-      actionsRes,
-      profileRes,
-    ] = await Promise.all([
+    const [propertiesRes, ordersRes, descriptionsRes, stagingRes, exportsRes, actionsRes, profileRes] = await Promise.all([
       propertyQuery,
-      // FIXED: removed branded_video_url (doesn't exist); clip_urls is correct
-      supabase.from("orders").select("id, property_address, photos, delivery_url, clip_urls, payment_status").eq("user_id", userId),
-      // FIXED: property_data (JSONB) not property_address
+      supabase.from("orders")
+        .select("id, property_address, photos, delivery_url, clip_urls, payment_status")
+        .eq("user_id", userId)
+        .in("payment_status", ["paid", "admin_bypass"]),
       supabase.from("lens_descriptions").select("id, property_data").eq("user_id", userId),
       supabase.from("lens_staging").select("id, property_id").eq("user_id", userId),
       supabase.from("design_exports").select("id, property_id, template_type, export_url").eq("user_id", userId),
       supabase.from("marketing_actions").select("id, property_id, action_type, content_type, created_at").eq("user_id", userId),
-      // REMOVED: blog_posts query — table has no user_id or property_id
-      supabase.from("lens_usage").select("saved_headshot_url, saved_logo_url, saved_company, saved_agent_name").eq("user_id", userId).single(),
+      supabase.from("lens_usage")
+        .select("saved_agent_name, saved_phone, saved_email, saved_company, saved_headshot_url, saved_logo_url, saved_website, saved_location")
+        .eq("user_id", userId).single(),
     ]);
 
     const properties = propertiesRes.data || [];
@@ -57,43 +51,51 @@ export async function GET(req: Request) {
 
     const hasAgentWebsite = properties.some((p: { website_published?: boolean }) => p.website_published);
 
-    const scores = properties.map((prop: {
-      id: string;
-      address: string;
-      status: string;
-      photos: unknown[] | null;
-      optimized_photos: unknown[] | null;
-      website_published?: boolean;
-    }) => {
-      const propOrders = orders.filter((o: { property_address?: string }) =>
-        o.property_address && prop.address &&
-        o.property_address.toLowerCase().includes(prop.address.toLowerCase().split(",")[0])
-      );
-      const paidOrder = propOrders.find((o: { payment_status?: string }) => o.payment_status === "paid");
-      const propExports = exports_.filter((e: { property_id?: string }) => e.property_id === prop.id);
-      const propActions = actions.filter((a: { property_id?: string }) => a.property_id === prop.id);
-      const propStaging = staging.filter((s: { property_id?: string }) => s.property_id === prop.id);
-      const photoCount = prop.photos ? prop.photos.length : 0;
+    // Normalize address for matching
+    const normalizeAddr = (s: string) =>
+      (s || "").toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+        .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+        .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+        .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
 
-      return calculateContentScore(prop, {
+    const addressesMatch = (a: string, b: string) => {
+      const na = normalizeAddr(a).split(",")[0];
+      const nb = normalizeAddr(b).split(",")[0];
+      return na.length > 3 && nb.length > 3 && (na.includes(nb) || nb.includes(na));
+    };
+
+    // Per-property content scores
+    const scores = properties.map((property: any) => {
+      const propOrders = orders.filter((o: any) => addressesMatch(o.property_address || "", property.address || ""));
+      const propExports = exports_.filter((e: any) => e.property_id === property.id);
+      const propStaging = staging.filter((s: any) => s.property_id === property.id);
+      const propDescriptions = descriptions.filter((d: any) => {
+        const descAddr = d.property_data?.address || "";
+        return addressesMatch(descAddr, property.address || "");
+      });
+      const propActions = actions.filter((a: any) => a.property_id === property.id);
+
+      const photoCount = Array.isArray(property.photos) ? property.photos.length : 0;
+
+      return calculateContentScore(property, {
         hasOrder: propOrders.length > 0,
-        hasVideoDelivery: !!(paidOrder && (paidOrder as { delivery_url?: string }).delivery_url),
-        hasRemix: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("video_remix")),
-        // FIXED: property_data is JSONB — extract .address
-        hasDescription: descriptions.some((d: { property_data?: { address?: string } }) => {
-          const descAddr = d.property_data?.address || "";
-          return descAddr && prop.address &&
-            descAddr.toLowerCase().includes(prop.address.toLowerCase().split(",")[0]);
+        hasVideoDelivery: propOrders.some((o: any) => !!o.delivery_url),
+        hasRemix: propExports.some((e: any) => e.template_type?.includes("video_remix")),
+        hasDescription: propDescriptions.length > 0,
+        hasFlyer: propExports.some((e: any) => {
+          const t = e.template_type || "";
+          return t.includes("just_listed") || t.includes("just-listed") || t.includes("open_house") || t.includes("open-house") ||
+            t.includes("price_reduced") || t.includes("price-reduced") || t.includes("just_sold") || t.includes("just-sold") ||
+            t.includes("yard_sign") || t.includes("yard-sign") || t.includes("property_pdf");
         }),
-        hasFlyer: propExports.some((e: { template_type?: string }) => e.template_type && !e.template_type.includes("video_remix") && !e.template_type.includes("drone")),
-        hasOptimizedPhotos: !!(prop.optimized_photos && prop.optimized_photos.length > 0),
-        hasSocialShare: propActions.some((a: { action_type?: string }) => a.action_type === "social_share"),
+        hasOptimizedPhotos: Array.isArray(property.optimized_photos) && property.optimized_photos.length > 0,
+        hasSocialShare: propActions.some((a: any) => a.action_type === "social_share"),
         hasStaging: propStaging.length > 0,
-        hasDroneAnnotation: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("drone")),
-        hasWebsite: !!prop.website_published,
-        hasBlogPost: false, // blog_posts has no user_id/property_id — not queryable per agent
-        hasJustSoldGraphic: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("sold")),
-        hasPriceReducedGraphic: propExports.some((e: { template_type?: string }) => e.template_type && e.template_type.includes("price")),
+        hasDroneAnnotation: propExports.some((e: any) => e.template_type?.includes("drone")),
+        hasWebsite: !!property.website_published,
+        hasBlogPost: false, // blog_posts table has no user_id — hardcoded false
+        hasJustSoldGraphic: propExports.some((e: any) => e.template_type && (e.template_type.includes("sold") || e.template_type.includes("just-sold"))),
+        hasPriceReducedGraphic: propExports.some((e: any) => e.template_type && (e.template_type.includes("price") || e.template_type.includes("price-reduced"))),
         photoCount,
         hasAgentWebsite,
         hasAerialPhotos: photoCount > 10,
@@ -101,22 +103,16 @@ export async function GET(req: Request) {
       });
     });
 
-    const personalActions = actions.filter((a: { property_id?: string | null }) => !a.property_id);
-    const lastPersonalPost = personalActions
-      .filter((a: { action_type?: string }) => a.action_type === "social_share")
-      .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-    const lastMarketUpdate = personalActions
-      .filter((a: { content_type?: string }) => a.content_type === "market_update")
-      .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-
+    // Brand score — based on 8 profile fields
     const brandScore = calculateBrandScore({
-      hasHeadshot: !!(profile && profile.saved_headshot_url),
-      hasLogo: !!(profile && profile.saved_logo_url),
-      hasCompany: !!(profile && profile.saved_company),
-      hasBio: !!(profile && profile.saved_agent_name),
-      hasPublishedWebsite: hasAgentWebsite,
-      daysSincePersonalPost: daysSince(lastPersonalPost ? lastPersonalPost.created_at : null),
-      daysSinceMarketUpdate: daysSince(lastMarketUpdate ? lastMarketUpdate.created_at : null),
+      hasName: !!(profile?.saved_agent_name),
+      hasPhone: !!(profile?.saved_phone),
+      hasEmail: !!(profile?.saved_email),
+      hasCompany: !!(profile?.saved_company),
+      hasHeadshot: !!(profile?.saved_headshot_url),
+      hasLogo: !!(profile?.saved_logo_url),
+      hasWebsite: !!(profile?.saved_website),
+      hasLocation: !!(profile?.saved_location),
     });
 
     return NextResponse.json({ scores, brandScore });
