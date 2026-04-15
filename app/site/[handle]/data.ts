@@ -1,4 +1,6 @@
-// app/site/[handle]/data.ts
+// ============================================================
+// FILE: app/site/[handle]/data.ts
+// ============================================================
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -22,6 +24,7 @@ export interface AgentSite {
   custom_css: string | null;
   custom_domain: string | null;
   hero_photos: string[];
+  hero_video_url: string | null;
   faq_items: { question: string; answer: string }[];
   social_links: Record<string, string>;
   contact_info: any | null;
@@ -66,6 +69,20 @@ export interface Listing {
   photos: string[];
 }
 
+export interface ListingDetail extends Listing {
+  description: string | null;
+  ai_description: string | null;
+  year_built: number | null;
+  lot_size: string | null;
+  garage: string | null;
+  property_type: string | null;
+  mls_number: string | null;
+  status: string | null;
+  video_url: string | null;
+  virtual_tour_url: string | null;
+  website_modules: any | null;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -75,6 +92,26 @@ export interface BlogPost {
   featured_image: string | null;
   published_at: string | null;
   created_at: string;
+}
+
+export interface LocationPage {
+  id: string;
+  location_name: string;
+  location_slug: string;
+  region: string | null;
+  country: string | null;
+  page_title: string | null;
+  meta_description: string | null;
+  hero_heading: string | null;
+  intro_text: string | null;
+  body_content: string | null;
+  highlights: any | null;
+  keywords: string[] | null;
+  hero_photo_url: string | null;
+  photos: string[] | null;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export async function getSite(handle: string): Promise<AgentSite | null> {
@@ -93,6 +130,7 @@ export async function getSite(handle: string): Promise<AgentSite | null> {
     primary_color: r.primary_color || null, brand_colors: r.brand_colors || null,
     custom_css: r.custom_css || null, custom_domain: r.custom_domain || null,
     hero_photos: Array.isArray(r.hero_photos) ? r.hero_photos : [],
+    hero_video_url: r.hero_video_url || null,
     faq_items: Array.isArray(r.faq_items) ? r.faq_items : [],
     social_links: r.social_links || {}, contact_info: r.contact_info || null,
     blog_enabled: r.blog_enabled ?? true, calendar_enabled: r.calendar_enabled ?? false,
@@ -156,6 +194,93 @@ export async function getListings(userId: string): Promise<Listing[]> {
       website_published: p.website_published ?? null, website_curated: p.website_curated || null,
       photos };
   });
+}
+
+// ── NEW: Get single listing by slug (for listing detail page) ──
+export async function getListing(userId: string, slug: string): Promise<ListingDetail | null> {
+  const { data: props } = await supabase
+    .from("agent_properties")
+    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated, description, ai_description, year_built, lot_size, garage, property_type, mls_number, status, video_url, virtual_tour_url, website_modules")
+    .eq("user_id", userId)
+    .eq("website_slug", slug)
+    .is("merged_into_id", null)
+    .limit(1);
+  if (!props || props.length === 0) return null;
+  const p = props[0];
+
+  // Gather photos same way as getListings but allow more
+  let photos: string[] = [];
+  const cur = p.website_curated?.photos || [];
+  if (cur.length) photos = [...cur];
+  if (photos.length < 20) {
+    const { data: orders } = await supabase
+      .from("orders").select("photos, property_address")
+      .eq("user_id", userId).eq("payment_status", "paid");
+    const prefix = (p.address || "").substring(0, 15).toLowerCase();
+    if (prefix) {
+      for (const o of (orders || [])) {
+        if ((o.property_address || "").toLowerCase().includes(prefix)) {
+          const urls = (o.photos || []).map((x: any) => x.secure_url || x.url).filter(Boolean);
+          photos = [...photos, ...urls];
+        }
+      }
+    }
+    photos = [...new Set(photos)];
+  }
+
+  // Get video from orders if not on property record
+  let video_url = p.video_url || null;
+  if (!video_url) {
+    const prefix = (p.address || "").substring(0, 15).toLowerCase();
+    if (prefix) {
+      const { data: orders } = await supabase
+        .from("orders").select("delivery_url, property_address")
+        .eq("user_id", userId).eq("payment_status", "paid");
+      for (const o of (orders || [])) {
+        if ((o.property_address || "").toLowerCase().includes(prefix) && o.delivery_url) {
+          video_url = o.delivery_url;
+          break;
+        }
+      }
+    }
+  }
+
+  return {
+    id: p.id, address: p.address || "", city: p.city || null, state: p.state || null,
+    bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, sqft: p.sqft ?? null,
+    price: p.price ?? null, special_features: p.special_features || null,
+    amenities: p.amenities || null, website_slug: p.website_slug || null,
+    website_published: p.website_published ?? null, website_curated: p.website_curated || null,
+    photos,
+    description: p.description || null, ai_description: p.ai_description || null,
+    year_built: p.year_built ?? null, lot_size: p.lot_size || null,
+    garage: p.garage || null, property_type: p.property_type || null,
+    mls_number: p.mls_number || null, status: p.status || null,
+    video_url, virtual_tour_url: p.virtual_tour_url || null,
+    website_modules: p.website_modules || null,
+  };
+}
+
+// ── NEW: Count published location pages (for nav conditional) ──
+export async function getLocationPageCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("agent_location_pages")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("published", true);
+  if (error) return 0;
+  return count || 0;
+}
+
+// ── NEW: Get all published location pages (for sitemap + index) ──
+export async function getLocationPages(userId: string): Promise<LocationPage[]> {
+  const { data } = await supabase
+    .from("agent_location_pages")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+  return (data || []) as LocationPage[];
 }
 
 export async function getBlogPosts(userId: string): Promise<BlogPost[]> {
