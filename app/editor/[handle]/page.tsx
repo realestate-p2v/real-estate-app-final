@@ -40,6 +40,9 @@ export default function EditorPage(){
   // Locations state
   const [newLoc,setNewLoc]=useState("");
   const [newReg,setNewReg]=useState("");
+  const [newZip,setNewZip]=useState("");
+  const [newCounty,setNewCounty]=useState("");
+  const [newCountry,setNewCountry]=useState("USA");
   const [genning,setGenning]=useState(false);
   const [genErr,setGenErr]=useState("");
   const [editLoc,setEditLoc]=useState<string|null>(null);
@@ -91,7 +94,7 @@ export default function EditorPage(){
   function useHero(m:MItem){if(!site)return;if(m.type==="image"){const u={...site,hero_photos:[...site.hero_photos,m.url]};setSite(u);autoSave(u)}else{const u={...site,hero_video_url:m.url};setSite(u);autoSave(u)}}
 
   // ─── Location helpers ───
-  async function genLoc(){if(!newLoc.trim())return;setGenning(true);setGenErr("");try{const res=await fetch("https://realestatephoto2video.com/api/websites/generate-location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({location_name:newLoc.trim(),region:newReg.trim()||null,country:"Costa Rica",agent_name:lens?.saved_agent_name,company:lens?.saved_company,handle,user_id:user.id})});const d=await res.json();if(!res.ok)throw new Error(d.error);if(d.page){setLocs([...locs,d.page]);setNewLoc("");setNewReg("");setEditLoc(d.page.id)}}catch(e:any){setGenErr(e.message)}setGenning(false)}
+  async function genLoc(){if(!newLoc.trim())return;setGenning(true);setGenErr("");try{const res=await fetch("https://realestatephoto2video.com/api/websites/generate-location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({location_name:newLoc.trim(),region:newReg.trim()||null,zip_code:newZip.trim()||null,county:newCounty.trim()||null,country:newCountry.trim()||"USA",agent_name:lens?.saved_agent_name,company:lens?.saved_company,handle,user_id:user.id})});const d=await res.json();if(!res.ok)throw new Error(d.error);if(d.page){setLocs([...locs,d.page]);setNewLoc("");setNewReg("");setNewZip("");setNewCounty("");setEditLoc(d.page.id)}}catch(e:any){setGenErr(e.message)}setGenning(false)}
   async function togglePub(loc:LocPage){const nv=!loc.published;const{error}=await supabase.from("agent_location_pages").update({published:nv}).eq("id",loc.id);if(!error)setLocs(locs.map(l=>l.id===loc.id?{...l,published:nv}:l))}
   async function upLocF(id:string,f:string,v:any){const{error}=await supabase.from("agent_location_pages").update({[f]:v,updated_at:new Date().toISOString()}).eq("id",id);if(!error)setLocs(locs.map(l=>l.id===id?{...l,[f]:v}:l))}
   async function delLoc(id:string){const{error}=await supabase.from("agent_location_pages").delete().eq("id",id);if(!error){setLocs(locs.filter(l=>l.id!==id));if(editLoc===id)setEditLoc(null)}}
@@ -151,7 +154,12 @@ export default function EditorPage(){
           <Cd t="Generate New Location" s="Enter a location — AI writes the full SEO page">
             <div style={{display:"flex",gap:8,marginBottom:8}}>
               <input type="text" value={newLoc} onChange={e=>setNewLoc(e.target.value)} placeholder="e.g. Playa Hermosa" style={{...S.inp,flex:2}} onKeyDown={e=>e.key==="Enter"&&genLoc()}/>
-              <input type="text" value={newReg} onChange={e=>setNewReg(e.target.value)} placeholder="Region (optional)" style={{...S.inp,flex:1}}/>
+              <input type="text" value={newReg} onChange={e=>setNewReg(e.target.value)} placeholder="State / Region" style={{...S.inp,flex:1}}/>
+            </div>
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <input type="text" value={newZip} onChange={e=>setNewZip(e.target.value)} placeholder="Zip code (helps disambiguate)" style={{...S.inp,flex:1}}/>
+              <input type="text" value={newCounty} onChange={e=>setNewCounty(e.target.value)} placeholder="County (optional)" style={{...S.inp,flex:1}}/>
+              <input type="text" value={newCountry} onChange={e=>setNewCountry(e.target.value)} placeholder="Country" style={{...S.inp,flex:1}}/>
             </div>
             <button onClick={genLoc} disabled={genning||!newLoc.trim()} style={{width:"100%",padding:12,borderRadius:10,border:"none",background:genning?"#a5b4fc":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",fontSize:14,fontWeight:600,cursor:genning?"wait":"pointer",fontFamily:"inherit"}}>{genning?"✨ Generating content…":"✨ Generate with AI"}</button>
             {genErr&&<p style={{color:"#dc2626",fontSize:13,marginTop:8}}>{genErr}</p>}
@@ -191,7 +199,10 @@ export default function EditorPage(){
               <div style={S.fg}><label style={S.lb}>Keywords</label><p style={{fontSize:12,color:"#6b7280",margin:0}}>{eLoc.keywords?.join(", ")||"None"}</p></div>
             </Cd>
 
-            <Cd t="Hero Photo">{eLoc.hero_photo_url?<div><img src={eLoc.hero_photo_url} alt="" style={{width:"100%",height:200,objectFit:"cover",borderRadius:8}}/><button onClick={()=>upLocF(eLoc.id,"hero_photo_url",null)} style={S.dng}>Remove</button></div>:<button onClick={()=>setLocPicker({locId:eLoc.id,idx:-1})} style={{width:"100%",padding:14,borderRadius:12,border:"2px dashed #d1d5db",background:"#fafafa",cursor:"pointer",fontSize:13,color:"#6b7280",fontWeight:500,fontFamily:"inherit"}}>📂 Choose from your photos</button>}</Cd>
+            <Cd t="Hero Photo">{eLoc.hero_photo_url?<div><img src={eLoc.hero_photo_url} alt="" style={{width:"100%",height:200,objectFit:"cover",borderRadius:8}}/><button onClick={()=>upLocF(eLoc.id,"hero_photo_url",null)} style={S.dng}>Remove</button></div>:<div style={{display:"flex",gap:8}}>
+              <UZ accept="image/*" label="Upload photo" onChange={async(e)=>{const f=e.target.files?.[0];if(!f)return;setUTgt("loc_hero");setUProg(0);try{const url=await upCld(f,"photo2video/locations",setUProg);setUProg(null);setUTgt(null);upLocF(eLoc.id,"hero_photo_url",url)}catch{setUProg(null);setUTgt(null)}}} uping={uTgt==="loc_hero"} prog={uTgt==="loc_hero"?uProg:null} compact/>
+              <button onClick={()=>setLocPicker({locId:eLoc.id,idx:-1})} style={{flex:1,padding:14,borderRadius:12,border:"2px dashed #d1d5db",background:"#fafafa",cursor:"pointer",fontSize:13,color:"#6b7280",fontWeight:500,fontFamily:"inherit"}}>📂 From your photos</button>
+            </div>}</Cd>
 
             <Cd t="Content">
               <Fl l="Heading" v={eLoc.hero_heading??""} onChange={v=>upLocF(eLoc.id,"hero_heading",v)}/>
