@@ -398,7 +398,7 @@ export default function PlannerPage() {
       }
 
       // Design exports — generate Cloudinary thumbnails for mp4 flyers
-      const FLYER_TYPES = ["just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf"];
+      const FLYER_TYPES = ["just_listed", "just-listed", "open_house", "open-house", "price_reduced", "price-reduced", "just_sold", "just-sold", "yard_sign", "yard-sign", "property_pdf"];
       const IMAGE_FORMATS = ["jpg", "jpeg", "png", "webp", "gif"];
       const exports = (exportsRes.data || []).filter((e: any) => e.template_type !== "branding_card");
       exports.forEach((exp: any) => {
@@ -763,7 +763,38 @@ export default function PlannerPage() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-2.5 text-center font-medium">Facebook & LinkedIn open share dialogs · Instagram copies caption to clipboard</p>
+
+                    {/* Download selected media */}
+                    <div className="mt-3 flex gap-2 flex-wrap">
+                      {selectedMedia.map((m) => {
+                        const downloadUrl = m.assetUrl || "";
+                        if (!downloadUrl) return null;
+                        const isVideo = downloadUrl.endsWith(".mp4");
+                        const fileName = m.label?.replace(/\s+/g, "_").toLowerCase() || m.type;
+                        return (
+                          <a
+                            key={m.id}
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={fileName}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700 hover:border-gray-500 transition-colors"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Download {isVideo ? "Video" : m.type === "flyer" ? "Flyer" : m.type === "clip" ? "Clip" : "Photo"}
+                            {selectedMedia.length > 1 && ` — ${m.label}`}
+                          </a>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs text-gray-500 mt-3 text-center font-medium">
+                      1. Copy caption with a share button above · 2. Download your media · 3. Upload to your post
+                    </p>
 
                     <div className="mt-5 pt-5 border-t border-gray-700">
                       <button onClick={() => { setSelectedMedia([]); setGeneratedCaption(""); setStep(2); }}
