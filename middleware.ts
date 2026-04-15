@@ -155,9 +155,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // If logged in user visits /login, redirect to the redirect param or /dashboard
+  // ─── SESSION 5 FIX: Handle absolute URLs (e.g. p2v.homes editor auth callback) ───
   if (user && pathname === "/login") {
-    const url = request.nextUrl.clone();
     const redirectTo = request.nextUrl.searchParams.get("redirect");
+
+    if (redirectTo && (redirectTo.startsWith("https://") || redirectTo.startsWith("http://"))) {
+      // Absolute URL (cross-domain, e.g. p2v.homes editor)
+      // Send through /auth/callback so it can forward session tokens
+      const callbackUrl = request.nextUrl.clone();
+      callbackUrl.pathname = "/auth/callback";
+      callbackUrl.search = `?next=${encodeURIComponent(redirectTo)}`;
+      return NextResponse.redirect(callbackUrl);
+    }
+
+    // Relative URL → same domain redirect
+    const url = request.nextUrl.clone();
     url.pathname = redirectTo || "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
