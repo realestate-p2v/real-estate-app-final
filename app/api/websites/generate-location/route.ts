@@ -10,13 +10,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { location_name, region, country, agent_name, company, handle, user_id } = body;
 
     if (!location_name || !user_id || !handle) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders });
     }
 
     // Generate slug
@@ -64,7 +74,7 @@ Write a comprehensive, engaging location page. Respond ONLY with a JSON object (
     if (!claudeResponse.ok) {
       const err = await claudeResponse.text();
       console.error("Claude API error:", err);
-      return NextResponse.json({ error: "AI generation failed" }, { status: 500 });
+      return NextResponse.json({ error: "AI generation failed" }, { status: 500, headers: corsHeaders });
     }
 
     const claudeData = await claudeResponse.json();
@@ -79,7 +89,7 @@ Write a comprehensive, engaging location page. Respond ONLY with a JSON object (
       content = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error("Failed to parse Claude response:", responseText.substring(0, 500));
-      return NextResponse.json({ error: "Failed to parse generated content" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to parse generated content" }, { status: 500, headers: corsHeaders });
     }
 
     // Get the website ID
@@ -124,17 +134,17 @@ Write a comprehensive, engaging location page. Respond ONLY with a JSON object (
 
     if (saveErr) {
       console.error("Save error:", saveErr.message);
-      return NextResponse.json({ error: "Failed to save location page" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to save location page" }, { status: 500, headers: corsHeaders });
     }
 
     return NextResponse.json({
       success: true,
       page: page?.[0] || null,
       content,
-    });
+    }, { headers: corsHeaders });
 
   } catch (err: any) {
     console.error("Generate location error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500, headers: corsHeaders });
   }
 }
