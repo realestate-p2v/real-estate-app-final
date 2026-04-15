@@ -70,17 +70,15 @@ export interface Listing {
 }
 
 export interface ListingDetail extends Listing {
-  description: string | null;
-  ai_description: string | null;
   year_built: number | null;
   lot_size: string | null;
-  garage: string | null;
   property_type: string | null;
-  mls_number: string | null;
+  listing_type: string | null;
   status: string | null;
-  video_url: string | null;
-  virtual_tour_url: string | null;
+  booking_enabled: boolean;
+  qr_code_url: string | null;
   website_modules: any | null;
+  video_url: string | null;
 }
 
 export interface BlogPost {
@@ -196,11 +194,11 @@ export async function getListings(userId: string): Promise<Listing[]> {
   });
 }
 
-// ── NEW: Get single listing by slug (for listing detail page) ──
+// ── Get single listing by slug (for listing detail page) ──
 export async function getListing(userId: string, slug: string): Promise<ListingDetail | null> {
   const { data: props } = await supabase
     .from("agent_properties")
-    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated, description, ai_description, year_built, lot_size, garage, property_type, mls_number, status, video_url, virtual_tour_url, website_modules")
+    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated, year_built, lot_size, property_type, listing_type, status, booking_enabled, qr_code_url, website_modules")
     .eq("user_id", userId)
     .eq("website_slug", slug)
     .is("merged_into_id", null)
@@ -208,42 +206,25 @@ export async function getListing(userId: string, slug: string): Promise<ListingD
   if (!props || props.length === 0) return null;
   const p = props[0];
 
-  // Gather photos same way as getListings but allow more
+  // Gather all photos (not capped at 7 like grid view)
   let photos: string[] = [];
   const cur = p.website_curated?.photos || [];
   if (cur.length) photos = [...cur];
-  if (photos.length < 20) {
-    const { data: orders } = await supabase
-      .from("orders").select("photos, property_address")
-      .eq("user_id", userId).eq("payment_status", "paid");
-    const prefix = (p.address || "").substring(0, 15).toLowerCase();
-    if (prefix) {
-      for (const o of (orders || [])) {
-        if ((o.property_address || "").toLowerCase().includes(prefix)) {
-          const urls = (o.photos || []).map((x: any) => x.secure_url || x.url).filter(Boolean);
-          photos = [...photos, ...urls];
-        }
-      }
-    }
-    photos = [...new Set(photos)];
-  }
-
-  // Get video from orders if not on property record
-  let video_url = p.video_url || null;
-  if (!video_url) {
-    const prefix = (p.address || "").substring(0, 15).toLowerCase();
-    if (prefix) {
-      const { data: orders } = await supabase
-        .from("orders").select("delivery_url, property_address")
-        .eq("user_id", userId).eq("payment_status", "paid");
-      for (const o of (orders || [])) {
-        if ((o.property_address || "").toLowerCase().includes(prefix) && o.delivery_url) {
-          video_url = o.delivery_url;
-          break;
-        }
+  const { data: orders } = await supabase
+    .from("orders").select("photos, delivery_url, property_address")
+    .eq("user_id", userId).eq("payment_status", "paid");
+  const prefix = (p.address || "").substring(0, 15).toLowerCase();
+  let video_url: string | null = null;
+  if (prefix) {
+    for (const o of (orders || [])) {
+      if ((o.property_address || "").toLowerCase().includes(prefix)) {
+        const urls = (o.photos || []).map((x: any) => x.secure_url || x.url).filter(Boolean);
+        photos = [...photos, ...urls];
+        if (!video_url && o.delivery_url) video_url = o.delivery_url;
       }
     }
   }
+  photos = [...new Set(photos)];
 
   return {
     id: p.id, address: p.address || "", city: p.city || null, state: p.state || null,
@@ -251,17 +232,15 @@ export async function getListing(userId: string, slug: string): Promise<ListingD
     price: p.price ?? null, special_features: p.special_features || null,
     amenities: p.amenities || null, website_slug: p.website_slug || null,
     website_published: p.website_published ?? null, website_curated: p.website_curated || null,
-    photos,
-    description: p.description || null, ai_description: p.ai_description || null,
-    year_built: p.year_built ?? null, lot_size: p.lot_size || null,
-    garage: p.garage || null, property_type: p.property_type || null,
-    mls_number: p.mls_number || null, status: p.status || null,
-    video_url, virtual_tour_url: p.virtual_tour_url || null,
-    website_modules: p.website_modules || null,
+    photos, year_built: p.year_built ?? null, lot_size: p.lot_size || null,
+    property_type: p.property_type || null, listing_type: p.listing_type || null,
+    status: p.status || null, booking_enabled: p.booking_enabled ?? false,
+    qr_code_url: p.qr_code_url || null, website_modules: p.website_modules || null,
+    video_url,
   };
 }
 
-// ── NEW: Count published location pages (for nav conditional) ──
+// ── Count published location pages (for nav conditional) ──
 export async function getLocationPageCount(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from("agent_location_pages")
@@ -272,7 +251,7 @@ export async function getLocationPageCount(userId: string): Promise<number> {
   return count || 0;
 }
 
-// ── NEW: Get all published location pages (for sitemap + index) ──
+// ── Get all published location pages (for sitemap + index) ──
 export async function getLocationPages(userId: string): Promise<LocationPage[]> {
   const { data } = await supabase
     .from("agent_location_pages")
