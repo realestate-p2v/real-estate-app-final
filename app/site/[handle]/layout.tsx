@@ -1,5 +1,7 @@
-// app/site/[handle]/layout.tsx
-import { getSite, getProfile } from "./data";
+// ============================================================
+// FILE: app/site/[handle]/layout.tsx
+// ============================================================
+import { getSite, getProfile, getLocationPageCount } from "./data";
 
 interface Props {
   params: Promise<{ handle: string }>;
@@ -10,18 +12,21 @@ export default async function AgentSiteLayout({ params, children }: Props) {
   const { handle } = await params;
   const site = await getSite(handle);
   if (!site) return <>{children}</>;
-  const profile = await getProfile(site.user_id);
+  const [profile, locationCount] = await Promise.all([
+    getProfile(site.user_id),
+    getLocationPageCount(site.user_id),
+  ]);
 
   const title = site.site_title || profile.agent_name || "Agent Site";
   const primary = site.primary_color || "#334155";
   const logoSrc = profile.logo_url || null;
-  const headshotSrc = profile.headshot_url || null;
 
   const navLinks = [
     { label: "Home", href: "/" },
     { label: "About", href: "/about" },
     { label: "Listings", href: "/listings" },
   ];
+  if (locationCount > 0) navLinks.push({ label: "Locations", href: "/locations" });
   if (site.blog_enabled) navLinks.push({ label: "Blog", href: "/blog" });
   navLinks.push({ label: "Contact", href: "/contact" });
   if (site.calendar_enabled) navLinks.push({ label: "Calendar", href: "/calendar" });
