@@ -1046,51 +1046,69 @@ export default function PlannerPage() {
                 {/* ── STEP 3: Caption + Share ── */}
                 {step === 3 && generatedCaption && (
                   <div className="rounded-xl border border-gray-700 bg-gray-900 p-5">
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-[17px] font-extrabold text-white">Your Post</h2>
+                    {/* Header with New Version */}
+                    <div className="flex justify-between items-center mb-5">
+                      <div>
+                        <h2 className="text-[17px] font-extrabold text-white">Your Post</h2>
+                        <p className="text-[12px] text-gray-400 mt-0.5">
+                          {selectedMedia.length} {selectedMedia.length === 1 ? "item" : "items"} selected · Edit caption below
+                        </p>
+                      </div>
                       <button
                         onClick={handleGenerateCaption}
-                        className="px-5 py-2 rounded-lg text-[13px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2"
+                        disabled={isGenerating}
+                        className="px-5 py-2.5 rounded-xl text-[13px] font-bold bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white transition-colors flex items-center gap-2"
                       >
-                        <RefreshCw className="w-3.5 h-3.5" /> New Version
+                        {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        New Version
                       </button>
                     </div>
 
-                    {/* Preview — show selected media thumbnails */}
-                    <div className="flex gap-4 mb-5">
-                      {selectedMedia.length > 0 && (
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          {selectedMedia.slice(0, 4).map((m, i) => {
-                            const url = m.thumbnailUrl || "";
-                            const isImg = url && !url.endsWith(".pdf") && !url.endsWith(".mp4") && !url.includes("/raw/");
-                            return isImg ? (
-                              <img
-                                key={m.id}
-                                src={url}
-                                alt=""
-                                className="w-[100px] h-[65px] object-cover rounded-lg border border-gray-600"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                              />
-                            ) : (
-                              <div key={m.id} className="w-[100px] h-[65px] rounded-lg border border-gray-600 bg-gray-700 flex items-center justify-center">
-                                <span className="text-xs text-gray-400 font-semibold">{m.type}</span>
+                    {/* Selected media preview strip */}
+                    {selectedMedia.length > 0 && (
+                      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                        {selectedMedia.map((m) => {
+                          const url = m.thumbnailUrl || m.assetUrl || "";
+                          const isImg = url && !url.endsWith(".pdf") && !url.endsWith(".mp4") && !url.includes("/raw/") && !url.includes("drive.google");
+                          const isVideoFile = url.endsWith(".mp4") || url.includes("drive.google") || m.type === "video";
+
+                          return (
+                            <div key={m.id} className="shrink-0 rounded-lg overflow-hidden border border-gray-600 bg-gray-800 relative" style={{ width: 120, height: 80 }}>
+                              {isImg ? (
+                                <img
+                                  src={url}
+                                  alt={m.label || ""}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : isVideoFile ? (
+                                <div className="w-full h-full bg-purple-900/40 flex flex-col items-center justify-center">
+                                  <span className="text-2xl">🎬</span>
+                                  <span className="text-[9px] text-purple-300 font-semibold mt-0.5">{m.type === "clip" ? "CLIP" : "VIDEO"}</span>
+                                </div>
+                              ) : (
+                                <div className="w-full h-full bg-gray-700 flex flex-col items-center justify-center">
+                                  <span className="text-xl">📄</span>
+                                  <span className="text-[9px] text-gray-400 font-semibold mt-0.5">{m.type.toUpperCase()}</span>
+                                </div>
+                              )}
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                                <span className="text-[9px] text-white font-semibold truncate block">{m.label}</span>
                               </div>
-                            );
-                          })}
-                          {selectedMedia.length > 4 && (
-                            <div className="w-[100px] h-[30px] flex items-center justify-center text-xs text-gray-400">
-                              +{selectedMedia.length - 4} more
                             </div>
-                          )}
-                        </div>
-                      )}
-                      <textarea
-                        value={generatedCaption}
-                        onChange={(e) => setGeneratedCaption(e.target.value)}
-                        className="flex-1 bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors"
-                        style={{ minHeight: 150, fontFamily: "inherit" }}
-                      />
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Caption editor */}
+                    <textarea
+                      value={generatedCaption}
+                      onChange={(e) => setGeneratedCaption(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors mb-5"
+                      style={{ minHeight: 180, fontFamily: "inherit" }}
+                      placeholder="Your caption will appear here..."
+                    />
 
                     {/* Share buttons */}
                     <div className="flex gap-2">
