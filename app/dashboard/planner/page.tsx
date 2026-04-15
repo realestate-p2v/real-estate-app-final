@@ -289,7 +289,7 @@ export default function PlannerPage() {
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [mediaFilter, setMediaFilter] = useState("all");
-  const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaAsset[]>([]);
 
   // Caption
   const [generatedCaption, setGeneratedCaption] = useState("");
@@ -562,7 +562,7 @@ export default function PlannerPage() {
 
   const handleSelectProperty = (p: Property) => {
     setSelectedProperty(p);
-    setSelectedMedia(null);
+    setSelectedMedia([]);
     setGeneratedCaption("");
     setMediaFilter("all");
     setStep(2);
@@ -570,7 +570,11 @@ export default function PlannerPage() {
   };
 
   const handleSelectMedia = (m: MediaAsset) => {
-    setSelectedMedia(m);
+    setSelectedMedia((prev) => {
+      const exists = prev.find((s) => s.id === m.id);
+      if (exists) return prev.filter((s) => s.id !== m.id);
+      return [...prev, m];
+    });
     setGeneratedCaption("");
   };
 
@@ -615,7 +619,7 @@ export default function PlannerPage() {
   };
 
   const handleGenerateCaption = async () => {
-    if (!selectedProperty || !selectedMedia) return;
+    if (!selectedProperty || selectedMedia.length === 0) return;
     setIsGenerating(true);
 
     let caption = "";
@@ -678,7 +682,7 @@ export default function PlannerPage() {
           propertyId: selectedProperty.id,
           platform: "instagram",
           contentType: getContentType(selectedProperty.status),
-          metadata: { mediaType: selectedMedia.type, mediaLabel: selectedMedia.label },
+          metadata: { mediaCount: selectedMedia.length, mediaTypes: selectedMedia.map(m => m.type) },
         }),
       });
     } catch {}
@@ -715,7 +719,7 @@ export default function PlannerPage() {
           propertyId: selectedProperty?.id,
           platform,
           contentType: getContentType(selectedProperty?.status || "active"),
-          metadata: { mediaType: selectedMedia?.type },
+          metadata: { mediaCount: selectedMedia.length },
         }),
       });
     } catch {}
@@ -723,7 +727,7 @@ export default function PlannerPage() {
 
   const handleStartOver = () => {
     setSelectedProperty(null);
-    setSelectedMedia(null);
+    setSelectedMedia([]);
     setGeneratedCaption("");
     setMedia([]);
     setMediaFilter("all");
@@ -930,7 +934,8 @@ export default function PlannerPage() {
                     {filteredMedia
                       .filter((m) => m.type !== "description") // descriptions aren't visual media
                       .map((m) => {
-                        const isSel = selectedMedia?.id === m.id;
+                        const isSel = selectedMedia.some((s) => s.id === m.id);
+                        const selIndex = selectedMedia.findIndex((s) => s.id === m.id);
                         const isVideo = m.type === "video" || m.type === "clip" || m.type === "remix";
                         const isFlyer = m.type === "flyer";
                         // Only use thumbnail if it looks like an image URL (not PDF/mp4)
@@ -994,8 +999,8 @@ export default function PlannerPage() {
                               </div>
                             </div>
                             {isSel && (
-                              <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-600 border-2 border-blue-300 flex items-center justify-center">
-                                <Check className="w-3.5 h-3.5 text-white" />
+                              <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-600 border-2 border-blue-300 flex items-center justify-center text-[11px] font-bold text-white">
+                                {selectedMedia.length > 1 ? selIndex + 1 : <Check className="w-3.5 h-3.5" />}
                               </div>
                             )}
                             {isVideo && thumb && (
@@ -1009,29 +1014,33 @@ export default function PlannerPage() {
                   </div>
                 )}
 
-                {/* Generate button */}
+                {/* Generate button — sticky at bottom */}
                 {step === 2 && (
-                  <button
-                    disabled={!selectedMedia || isGenerating}
-                    onClick={handleGenerateCaption}
-                    className={`w-full py-4 rounded-xl text-[16px] font-extrabold tracking-tight transition-all ${
-                      !selectedMedia || isGenerating
-                        ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
-                    }`}
-                  >
-                    {isGenerating ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" /> Generating your post...
-                      </span>
-                    ) : selectedMedia ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Sparkles className="w-4 h-4" /> Generate {getPostType(selectedProperty.status)} Post
-                      </span>
-                    ) : (
-                      "Select media above to generate a post"
-                    )}
-                  </button>
+                  <div className="sticky bottom-0 pt-3 pb-1 bg-gray-950">
+                    <button
+                      disabled={selectedMedia.length === 0 || isGenerating}
+                      onClick={handleGenerateCaption}
+                      className={`w-full py-4 rounded-xl text-[16px] font-extrabold tracking-tight transition-all ${
+                        selectedMedia.length === 0 || isGenerating
+                          ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                      }`}
+                    >
+                      {isGenerating ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Generating your post...
+                        </span>
+                      ) : selectedMedia.length > 0 ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Sparkles className="w-4 h-4" />
+                          Generate {getPostType(selectedProperty.status)} Post
+                          {selectedMedia.length > 1 && ` (${selectedMedia.length} items)`}
+                        </span>
+                      ) : (
+                        "Select media above to generate a post"
+                      )}
+                    </button>
+                  </div>
                 )}
 
                 {/* ── STEP 3: Caption + Share ── */}
@@ -1047,21 +1056,34 @@ export default function PlannerPage() {
                       </button>
                     </div>
 
-                    {/* Preview — only show image if it's a real image URL */}
+                    {/* Preview — show selected media thumbnails */}
                     <div className="flex gap-4 mb-5">
-                      {selectedMedia && (() => {
-                        const url = selectedMedia.thumbnailUrl || "";
-                        const isImg = url && !url.endsWith(".pdf") && !url.endsWith(".mp4") && !url.includes("/raw/");
-                        if (!isImg) return null;
-                        return (
-                          <img
-                            src={url}
-                            alt=""
-                            className="w-[140px] h-[105px] object-cover rounded-xl border border-gray-600 shrink-0"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                          />
-                        );
-                      })()}
+                      {selectedMedia.length > 0 && (
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          {selectedMedia.slice(0, 4).map((m, i) => {
+                            const url = m.thumbnailUrl || "";
+                            const isImg = url && !url.endsWith(".pdf") && !url.endsWith(".mp4") && !url.includes("/raw/");
+                            return isImg ? (
+                              <img
+                                key={m.id}
+                                src={url}
+                                alt=""
+                                className="w-[100px] h-[65px] object-cover rounded-lg border border-gray-600"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                              />
+                            ) : (
+                              <div key={m.id} className="w-[100px] h-[65px] rounded-lg border border-gray-600 bg-gray-700 flex items-center justify-center">
+                                <span className="text-xs text-gray-400 font-semibold">{m.type}</span>
+                              </div>
+                            );
+                          })}
+                          {selectedMedia.length > 4 && (
+                            <div className="w-[100px] h-[30px] flex items-center justify-center text-xs text-gray-400">
+                              +{selectedMedia.length - 4} more
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <textarea
                         value={generatedCaption}
                         onChange={(e) => setGeneratedCaption(e.target.value)}
@@ -1105,7 +1127,7 @@ export default function PlannerPage() {
                     <div className="mt-5 pt-5 border-t border-gray-700">
                       <button
                         onClick={() => {
-                          setSelectedMedia(null);
+                          setSelectedMedia([]);
                           setGeneratedCaption("");
                           setStep(2);
                         }}
