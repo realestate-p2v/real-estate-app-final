@@ -334,75 +334,197 @@ export default function PlannerPage() {
   }, []);
 
   // ─── Load media when property selected ──────────────────────────────────
+  // Queries all source tables directly (same pattern as Design Studio)
+  // Uses ilike for address matching on orders, property_id FK for exports/staging
 
   const loadMedia = useCallback(
     async (property: Property) => {
       setLoadingMedia(true);
+      const assets: MediaAsset[] = [];
+      const seen = new Set<string>(); // deduplicate by URL
+
       try {
-        const res = await fetch(`/api/planner/library?type=all&propertyId=${property.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          let assets: MediaAsset[] = data.assets || [];
+        const supabase = createClient();
+        const addr = property.address || "";
+        // Use first 15 chars for ilike matching (same as Design Studio)
+        const addrPrefix = addr.substring(0, 15).trim();
 
-          // Debug: log what came back
-          console.log("[Planner] Library returned:", assets.length, "assets", assets.map((a: MediaAsset) => ({ type: a.type, thumb: a.thumbnailUrl?.slice(0, 60) })));
+        // Parallel fetch from all source tables
+        const [propRes, ordersRes, exportsRes, stagingRes, descriptionsRes] = await Promise.all([
+          // Property's own photos
+          supabase
+            .from("agent_properties")
+            .select("photos, optimized_photos")
+            .eq("id", property.id)
+            .single(),
+          // Orders matched by address (ilike — same pattern as Design Studio)
+          addrPrefix.length > 3
+            ? supabase
+                .from("orders")
+                .select("id, property_address, photos, delivery_url, clip_urls, created_at")
+                .eq("user_id", userId)
+                .eq("payment_status", "paid")
+                .ilike("property_address", `%${addrPrefix}%`)
+            : Promise.resolve({ data: [] }),
+          // Design exports matched by property_id FK
+          supabase
+            .from("design_exports")
+            .select("id, property_id, template_type, export_url, export_format, created_at")
+            .eq("user_id", userId)
+            .eq("property_id", property.id),
+          // Virtual staging matched by property_id FK
+          supabase
+            .from("lens_staging")
+            .select("id, staged_url, room_type, style, created_at")
+            .eq("user_id", userId)
+            .eq("property_id", property.id),
+          // Descriptions matched by user (will filter by address client-side)
+          supabase
+            .from("lens_descriptions")
+            .select("id, property_data, description, style, created_at")
+            .eq("user_id", userId),
+        ]);
 
-          // Fallback: if we got very few visual assets, load photos directly from agent_properties
-          const visualAssets = assets.filter((a: MediaAsset) => a.type !== "description");
-          if (visualAssets.length < 3) {
-            console.log("[Planner] Few visual assets, loading property photos directly...");
-            const supabase = createClient();
-            const { data: propData } = await supabase
-              .from("agent_properties")
-              .select("photos, optimized_photos")
-              .eq("id", property.id)
-              .single();
+        const addAsset = (a: MediaAsset) => {
+          const key = a.assetUrl || a.id;
+          if (seen.has(key)) return;
+          seen.add(key);
+          assets.push(a);
+        };
 
-            if (propData) {
-              // Optimized photos first (these are Cloudinary-processed)
-              const optPhotos = Array.isArray(propData.optimized_photos) ? propData.optimized_photos : [];
-              optPhotos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
-                const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
-                if (url && !assets.find((a: MediaAsset) => a.assetUrl === url)) {
-                  assets.push({
-                    id: `opt-photo-${idx}`,
-                    type: "photo",
-                    propertyAddress: property.address,
-                    thumbnailUrl: url,
-                    assetUrl: url,
-                    label: `Photo ${idx + 1} (Optimized)`,
-                    createdAt: new Date().toISOString(),
-                  });
-                }
-              });
+        // ── Photos from orders (secure_url — confirmed from Design Studio) ──
+        const orders = ordersRes.data || [];
+        orders.forEach((order: any) => {
+          const photos = Array.isArray(order.photos) ? order.photos : [];
+          photos.forEach((photo: any, idx: number) => {
+            const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+            if (!url) return;
+            addAsset({
+              id: `photo-${order.id}-${idx}`,
+              type: "photo",
+              propertyAddress: order.property_address || addr,
+              thumbnailUrl: url,
+              assetUrl: url,
+              label: `Photo ${idx + 1}`,
+              createdAt: order.created_at,
+            });
+          });
 
-              // Raw photos as additional fallback
-              const rawPhotos = Array.isArray(propData.photos) ? propData.photos : [];
-              rawPhotos.forEach((photo: string | { url?: string; secure_url?: string }, idx: number) => {
-                const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
-                if (url && !assets.find((a: MediaAsset) => a.assetUrl === url)) {
-                  assets.push({
-                    id: `raw-photo-${idx}`,
-                    type: "photo",
-                    propertyAddress: property.address,
-                    thumbnailUrl: url,
-                    assetUrl: url,
-                    label: `Photo ${idx + 1}`,
-                    createdAt: new Date().toISOString(),
-                  });
-                }
-              });
-            }
+          // Listing video
+          if (order.delivery_url) {
+            addAsset({
+              id: `video-${order.id}`,
+              type: "video",
+              propertyAddress: order.property_address || addr,
+              assetUrl: order.delivery_url,
+              label: "Listing Video",
+              createdAt: order.created_at,
+            });
           }
 
-          setMedia(assets);
+          // Clips
+          const clips = Array.isArray(order.clip_urls) ? order.clip_urls : [];
+          clips.forEach((clip: any, idx: number) => {
+            const clipUrl = clip?.url || clip?.clip_file || clip?.drive_url || "";
+            if (!clipUrl) return;
+            addAsset({
+              id: `clip-${order.id}-${idx}`,
+              type: "clip",
+              propertyAddress: order.property_address || addr,
+              thumbnailUrl: clip?.photo_url || undefined,
+              assetUrl: clipUrl,
+              label: clip?.label || `Clip ${idx + 1}`,
+              createdAt: order.created_at,
+            });
+          });
+        });
+
+        // ── Optimized photos from agent_properties ──
+        const propData = propRes.data;
+        if (propData) {
+          const optPhotos = Array.isArray(propData.optimized_photos) ? propData.optimized_photos : [];
+          optPhotos.forEach((photo: any, idx: number) => {
+            const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+            if (url) addAsset({ id: `opt-${idx}`, type: "photo", propertyAddress: addr, thumbnailUrl: url, assetUrl: url, label: `Optimized ${idx + 1}`, createdAt: "" });
+          });
+
+          // Raw property photos as fallback if no order photos
+          if (assets.filter(a => a.type === "photo").length === 0) {
+            const rawPhotos = Array.isArray(propData.photos) ? propData.photos : [];
+            rawPhotos.forEach((photo: any, idx: number) => {
+              const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
+              if (url) addAsset({ id: `raw-${idx}`, type: "photo", propertyAddress: addr, thumbnailUrl: url, assetUrl: url, label: `Photo ${idx + 1}`, createdAt: "" });
+            });
+          }
         }
+
+        // ── Design exports (flyers, graphics) ──
+        const FLYER_TYPES = ["just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf"];
+        const exports = exportsRes.data || [];
+        exports.forEach((exp: any) => {
+          if (!exp.export_url) return;
+          const isFlyer = FLYER_TYPES.some(t => exp.template_type?.includes(t));
+          const isRemix = exp.template_type?.includes("video_remix");
+          const isDrone = exp.template_type?.includes("drone");
+          addAsset({
+            id: `export-${exp.id}`,
+            type: isRemix ? "remix" : isDrone ? "drone" : isFlyer ? "flyer" : "flyer",
+            propertyId: exp.property_id,
+            propertyAddress: addr,
+            thumbnailUrl: exp.export_format === "mp4" ? undefined : exp.export_url,
+            assetUrl: exp.export_url,
+            label: (exp.template_type || "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            createdAt: exp.created_at,
+          });
+        });
+
+        // ── Virtual staging ──
+        const staging = stagingRes.data || [];
+        staging.forEach((s: any) => {
+          if (!s.staged_url) return;
+          addAsset({
+            id: `staging-${s.id}`,
+            type: "staging",
+            propertyAddress: addr,
+            thumbnailUrl: s.staged_url,
+            assetUrl: s.staged_url,
+            label: `${s.room_type || "Room"} — ${s.style || "Staged"}`,
+            createdAt: s.created_at,
+          });
+        });
+
+        // ── Descriptions (filter by address client-side) ──
+        const addrNorm = addr.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const descriptions = descriptionsRes.data || [];
+        descriptions.forEach((d: any) => {
+          const dAddr = (d.property_data?.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (dAddr && addrNorm && (dAddr.includes(addrNorm) || addrNorm.includes(dAddr))) {
+            addAsset({
+              id: `desc-${d.id}`,
+              type: "description",
+              propertyAddress: d.property_data?.address || addr,
+              content: d.description,
+              label: `${d.style || "Description"}`,
+              createdAt: d.created_at,
+            });
+          }
+        });
+
+        // Sort: newest first
+        assets.sort((a, b) => {
+          if (!a.createdAt) return 1;
+          if (!b.createdAt) return -1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        console.log("[Planner] Loaded", assets.length, "assets:", assets.map(a => a.type));
+        setMedia(assets);
       } catch (err) {
         console.error("Failed to load media:", err);
       }
       setLoadingMedia(false);
     },
-    []
+    [userId]
   );
 
   // ─── Handlers ───────────────────────────────────────────────────────────
