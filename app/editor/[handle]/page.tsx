@@ -1,12 +1,26 @@
+// app/editor/[handle]/page.tsx
+// Repo: p2v.homes app
+//
+// Site editor CMS for agent websites.
+// Session 4: Built. Session 5: Added "View site →" link (Priority 3).
+
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { useParams } from "next/navigation";
 
-interface FaqItem { question: string; answer: string; }
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-interface SiteData {
+type FaqItem = { question: string; answer: string };
+
+type SiteData = {
   id: string;
+  user_id: string;
+  handle: string;
   site_title: string | null;
   tagline: string | null;
   bio: string | null;
@@ -16,310 +30,587 @@ interface SiteData {
   blog_enabled: boolean;
   calendar_enabled: boolean;
   listings_opt_in: boolean;
-}
+};
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+export default function EditorPage() {
+  const params = useParams();
+  const handle = params.handle as string;
 
-export default function SiteEditor({ params }: { params: Promise<{ handle: string }> }) {
-  const [handle, setHandle] = useState<string>("");
-  const [site, setSite] = useState<SiteData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [loginUrl, setLoginUrl] = useState<string>("");
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [siteData, setSiteData] = useState<SiteData | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const siteIdRef = useRef<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"brand" | "content" | "faq" | "features">("brand");
 
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ─── Auth Check ───
   useEffect(() => {
-    (async () => {
-      const { handle: h } = await params;
-      setHandle(h);
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setAuthLoading(false);
+    }
+    checkAuth();
+  }, []);
 
-      // Login redirects to auth-callback which sets the session on p2v.homes
-      const callbackUrl = `https://${h}.p2v.homes/editor/auth-callback`;
-      setLoginUrl(
-        `https://realestatephoto2video.com/login?redirect=${encodeURIComponent(callbackUrl)}`
-      );
+  // ─── Load Site Data ───
+  useEffect(() => {
+    if (!user) return;
 
-      const supabase = getSupabase();
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr || !user) {
-        setAuthError("not_logged_in");
-        setLoading(false);
-        return;
-      }
-
+    async function loadSite() {
       const { data, error } = await supabase
         .from("agent_websites")
         .select("*")
-        .eq("handle", h)
+        .eq("handle", handle)
         .limit(1);
 
-      if (error || !data || data.length === 0) {
-        setAuthError("not_found");
-        setLoading(false);
+      if (error) {
+        setLoadError(`Failed to load site: ${error.message}`);
+        return;
+      }
+      if (!data || data.length === 0) {
+        setLoadError(`No site found for handle "${handle}".`);
         return;
       }
 
-      const row = data[0];
-      if (row.user_id !== user.id) {
-        setAuthError("not_owner");
-        setLoading(false);
+      const site = data[0];
+
+      // Ownership check
+      if (site.user_id !== user.id) {
+        setLoadError("You don't have permission to edit this site.");
         return;
       }
 
-      siteIdRef.current = row.id;
-      setSite({
-        id: row.id,
-        site_title: row.site_title ?? "",
-        tagline: row.tagline ?? "",
-        bio: row.bio ?? "",
-        about_content: row.about_content ?? "",
-        primary_color: row.primary_color ?? "#334155",
-        faq_items: Array.isArray(row.faq_items) ? row.faq_items : [],
-        blog_enabled: row.blog_enabled ?? false,
-        calendar_enabled: row.calendar_enabled ?? false,
-        listings_opt_in: row.listings_opt_in ?? false,
+      setSiteData({
+        ...site,
+        faq_items: site.faq_items ?? [],
       });
-      setLoading(false);
-    })();
-  }, [params]);
+    }
+    loadSite();
+  }, [user, handle]);
 
-  const triggerSave = useCallback((updated: SiteData) => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    setSaveStatus("saving");
-    saveTimer.current = setTimeout(async () => {
-      if (!siteIdRef.current) return;
-      const supabase = getSupabase();
-      const { error } = await supabase
-        .from("agent_websites")
-        .update({
-          site_title: updated.site_title,
-          tagline: updated.tagline,
-          bio: updated.bio,
-          about_content: updated.about_content,
-          primary_color: updated.primary_color,
-          faq_items: updated.faq_items,
-          blog_enabled: updated.blog_enabled,
-          calendar_enabled: updated.calendar_enabled,
-          listings_opt_in: updated.listings_opt_in,
-        })
-        .eq("id", siteIdRef.current);
-      setSaveStatus(error ? "error" : "saved");
-      if (!error) setTimeout(() => setSaveStatus("idle"), 2500);
-    }, 1500);
-  }, []);
+  // ─── Auto-Save (1.5s debounce) ───
+  const autoSave = useCallback(
+    (updatedData: Partial<SiteData>) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
-  function update<K extends keyof SiteData>(key: K, value: SiteData[K]) {
-    if (!site) return;
-    const updated = { ...site, [key]: value };
-    setSite(updated);
-    triggerSave(updated);
+      saveTimerRef.current = setTimeout(async () => {
+        setSaveStatus("saving");
+
+        const { error } = await supabase
+          .from("agent_websites")
+          .update({
+            site_title: updatedData.site_title,
+            tagline: updatedData.tagline,
+            bio: updatedData.bio,
+            about_content: updatedData.about_content,
+            primary_color: updatedData.primary_color,
+            faq_items: updatedData.faq_items,
+            blog_enabled: updatedData.blog_enabled,
+            calendar_enabled: updatedData.calendar_enabled,
+            listings_opt_in: updatedData.listings_opt_in,
+          })
+          .eq("handle", handle);
+
+        if (error) {
+          console.error("Save failed:", error.message);
+          setSaveStatus("error");
+        } else {
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        }
+      }, 1500);
+    },
+    [handle]
+  );
+
+  // ─── Field Update Helper ───
+  function updateField<K extends keyof SiteData>(key: K, value: SiteData[K]) {
+    if (!siteData) return;
+    const updated = { ...siteData, [key]: value };
+    setSiteData(updated);
+    autoSave(updated);
   }
 
-  function faqUpdate(index: number, field: "question" | "answer", value: string) {
-    if (!site) return;
-    update("faq_items", site.faq_items.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
-    ));
-  }
-
-  function faqAdd() {
-    if (!site) return;
-    update("faq_items", [...site.faq_items, { question: "", answer: "" }]);
-  }
-
-  function faqRemove(index: number) {
-    if (!site) return;
-    update("faq_items", site.faq_items.filter((_, i) => i !== index));
-  }
-
-  if (loading) {
-    return (
-      <div style={styles.centered}>
-        <div style={styles.spinner} />
-        <p style={styles.loadingText}>Loading your site editor…</p>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    );
-  }
-
-  if (authError) {
-    const messages: Record<string, string> = {
-      not_logged_in: "You must be logged in to edit your site.",
-      not_found: "Site not found.",
-      not_owner: "You don't have permission to edit this site.",
+  // ─── FAQ Helpers ───
+  function addFaqItem() {
+    if (!siteData) return;
+    const updated = {
+      ...siteData,
+      faq_items: [...siteData.faq_items, { question: "", answer: "" }],
     };
+    setSiteData(updated);
+    autoSave(updated);
+  }
+
+  function updateFaqItem(index: number, field: "question" | "answer", value: string) {
+    if (!siteData) return;
+    const items = [...siteData.faq_items];
+    items[index] = { ...items[index], [field]: value };
+    const updated = { ...siteData, faq_items: items };
+    setSiteData(updated);
+    autoSave(updated);
+  }
+
+  function removeFaqItem(index: number) {
+    if (!siteData) return;
+    const items = siteData.faq_items.filter((_, i) => i !== index);
+    const updated = { ...siteData, faq_items: items };
+    setSiteData(updated);
+    autoSave(updated);
+  }
+
+  // ─── Styles ───
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      backgroundColor: "#f8fafc",
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    } as React.CSSProperties,
+    header: {
+      backgroundColor: "#ffffff",
+      borderBottom: "1px solid #e2e8f0",
+      padding: "0.75rem 1.5rem",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      position: "sticky" as const,
+      top: 0,
+      zIndex: 50,
+    } as React.CSSProperties,
+    headerLeft: {
+      display: "flex",
+      alignItems: "center",
+      gap: "1rem",
+    } as React.CSSProperties,
+    headerRight: {
+      display: "flex",
+      alignItems: "center",
+      gap: "1rem",
+    } as React.CSSProperties,
+    logo: {
+      fontWeight: 700,
+      fontSize: "0.875rem",
+      color: "#0f172a",
+      letterSpacing: "-0.02em",
+    } as React.CSSProperties,
+    viewSiteLink: {
+      fontSize: "0.8125rem",
+      color: "#64748b",
+      textDecoration: "none",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.25rem",
+      transition: "color 0.15s",
+    } as React.CSSProperties,
+    saveIndicator: {
+      fontSize: "0.75rem",
+      padding: "0.25rem 0.75rem",
+      borderRadius: "9999px",
+    } as React.CSSProperties,
+    container: {
+      maxWidth: "720px",
+      margin: "0 auto",
+      padding: "2rem 1.5rem",
+    } as React.CSSProperties,
+    tabs: {
+      display: "flex",
+      gap: "0.25rem",
+      marginBottom: "1.5rem",
+      backgroundColor: "#f1f5f9",
+      borderRadius: "0.5rem",
+      padding: "0.25rem",
+    } as React.CSSProperties,
+    tab: (active: boolean) => ({
+      padding: "0.5rem 1rem",
+      borderRadius: "0.375rem",
+      fontSize: "0.8125rem",
+      fontWeight: active ? 600 : 400,
+      color: active ? "#0f172a" : "#64748b",
+      backgroundColor: active ? "#ffffff" : "transparent",
+      border: "none",
+      cursor: "pointer",
+      transition: "all 0.15s",
+      boxShadow: active ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+    } as React.CSSProperties),
+    card: {
+      backgroundColor: "#ffffff",
+      border: "1px solid #e2e8f0",
+      borderRadius: "0.75rem",
+      padding: "1.5rem",
+      marginBottom: "1rem",
+    } as React.CSSProperties,
+    fieldGroup: {
+      marginBottom: "1.25rem",
+    } as React.CSSProperties,
+    label: {
+      display: "block",
+      fontSize: "0.8125rem",
+      fontWeight: 500,
+      color: "#374151",
+      marginBottom: "0.375rem",
+    } as React.CSSProperties,
+    input: {
+      width: "100%",
+      padding: "0.5rem 0.75rem",
+      border: "1px solid #d1d5db",
+      borderRadius: "0.375rem",
+      fontSize: "0.875rem",
+      color: "#0f172a",
+      outline: "none",
+      boxSizing: "border-box" as const,
+      transition: "border-color 0.15s",
+    } as React.CSSProperties,
+    textarea: {
+      width: "100%",
+      padding: "0.5rem 0.75rem",
+      border: "1px solid #d1d5db",
+      borderRadius: "0.375rem",
+      fontSize: "0.875rem",
+      color: "#0f172a",
+      outline: "none",
+      boxSizing: "border-box" as const,
+      resize: "vertical" as const,
+      minHeight: "100px",
+      fontFamily: "inherit",
+    } as React.CSSProperties,
+    colorRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "0.75rem",
+    } as React.CSSProperties,
+    colorPicker: {
+      width: "40px",
+      height: "40px",
+      border: "1px solid #d1d5db",
+      borderRadius: "0.375rem",
+      cursor: "pointer",
+      padding: 0,
+    } as React.CSSProperties,
+    toggleRow: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0.75rem 0",
+      borderBottom: "1px solid #f1f5f9",
+    } as React.CSSProperties,
+    toggleLabel: {
+      fontSize: "0.875rem",
+      color: "#374151",
+    } as React.CSSProperties,
+    toggle: (on: boolean) => ({
+      width: "44px",
+      height: "24px",
+      borderRadius: "9999px",
+      backgroundColor: on ? "#3b82f6" : "#d1d5db",
+      border: "none",
+      cursor: "pointer",
+      position: "relative" as const,
+      transition: "background-color 0.2s",
+    } as React.CSSProperties),
+    toggleDot: (on: boolean) => ({
+      width: "18px",
+      height: "18px",
+      borderRadius: "9999px",
+      backgroundColor: "#ffffff",
+      position: "absolute" as const,
+      top: "3px",
+      left: on ? "23px" : "3px",
+      transition: "left 0.2s",
+      boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+    } as React.CSSProperties),
+    faqCard: {
+      backgroundColor: "#f8fafc",
+      border: "1px solid #e2e8f0",
+      borderRadius: "0.5rem",
+      padding: "1rem",
+      marginBottom: "0.75rem",
+    } as React.CSSProperties,
+    removeBtn: {
+      fontSize: "0.75rem",
+      color: "#ef4444",
+      border: "none",
+      background: "none",
+      cursor: "pointer",
+      padding: "0.25rem 0",
+    } as React.CSSProperties,
+    addBtn: {
+      fontSize: "0.8125rem",
+      color: "#3b82f6",
+      border: "1px dashed #93c5fd",
+      background: "none",
+      cursor: "pointer",
+      padding: "0.5rem 1rem",
+      borderRadius: "0.375rem",
+      width: "100%",
+    } as React.CSSProperties,
+    centerMessage: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "column" as const,
+      gap: "1rem",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      padding: "2rem",
+      textAlign: "center" as const,
+    } as React.CSSProperties,
+    loginLink: {
+      display: "inline-block",
+      padding: "0.5rem 1.5rem",
+      backgroundColor: "#0f172a",
+      color: "#ffffff",
+      borderRadius: "0.375rem",
+      textDecoration: "none",
+      fontSize: "0.875rem",
+      fontWeight: 500,
+    } as React.CSSProperties,
+  };
+
+  // ─── Save Status Badge ───
+  function SaveBadge() {
+    const config = {
+      idle: { text: "", bg: "transparent", color: "transparent" },
+      saving: { text: "Saving…", bg: "#fef3c7", color: "#92400e" },
+      saved: { text: "Saved ✓", bg: "#dcfce7", color: "#166534" },
+      error: { text: "Save failed", bg: "#fef2f2", color: "#991b1b" },
+    };
+    const c = config[saveStatus];
+    if (saveStatus === "idle") return null;
     return (
-      <div style={styles.centered}>
-        <div style={styles.errorBox}>
-          <p style={styles.errorText}>{messages[authError] ?? "Something went wrong."}</p>
-          {authError === "not_logged_in" && (
-            <a href={loginUrl} style={styles.loginLink}>Log in →</a>
-          )}
-        </div>
+      <span style={{ ...styles.saveIndicator, backgroundColor: c.bg, color: c.color }}>
+        {c.text}
+      </span>
+    );
+  }
+
+  // ─── Auth Loading ───
+  if (authLoading) {
+    return (
+      <div style={styles.centerMessage}>
+        <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading…</p>
       </div>
     );
   }
 
-  if (!site) return null;
+  // ─── Not Logged In ───
+  if (!user) {
+    const redirectUrl = `https://${handle}.p2v.homes/editor/${handle}/auth-callback`;
+    const loginUrl = `https://realestatephoto2video.com/login?redirect=${encodeURIComponent(redirectUrl)}`;
 
+    return (
+      <div style={styles.centerMessage}>
+        <p style={{ color: "#374151", fontSize: "1rem", fontWeight: 500 }}>
+          You must be logged in to edit this site.
+        </p>
+        <a href={loginUrl} style={styles.loginLink}>
+          Log in →
+        </a>
+      </div>
+    );
+  }
+
+  // ─── Load Error ───
+  if (loadError) {
+    return (
+      <div style={styles.centerMessage}>
+        <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>{loadError}</p>
+      </div>
+    );
+  }
+
+  // ─── Loading Site Data ───
+  if (!siteData) {
+    return (
+      <div style={styles.centerMessage}>
+        <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>Loading site data…</p>
+      </div>
+    );
+  }
+
+  // ─── Editor ───
   return (
     <div style={styles.page}>
+      {/* Header */}
       <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <div>
-            <p style={styles.headerEyebrow}>Site Editor</p>
-            <h1 style={styles.headerTitle}>{handle}.p2v.homes</h1>
-          </div>
-          <SaveIndicator status={saveStatus} />
+        <div style={styles.headerLeft}>
+          <span style={styles.logo}>Site Editor</span>
+          <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+            {handle}.p2v.homes
+          </span>
+        </div>
+        <div style={styles.headerRight}>
+          <SaveBadge />
+          {/* ─── Priority 3: View Site Link ─── */}
+          <a
+            href={`https://${handle}.p2v.homes`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.viewSiteLink}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#0f172a")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#64748b")}
+          >
+            View site
+            <span style={{ fontSize: "0.875rem" }}>↗</span>
+          </a>
         </div>
       </header>
 
-      <main style={styles.main}>
-
-        <Section title="Brand" description="Your site's headline identity.">
-          <Field label="Site title">
-            <input style={styles.input} value={site.site_title ?? ""} onChange={e => update("site_title", e.target.value)} placeholder="e.g. Wall to Wall Real Estate" />
-          </Field>
-          <Field label="Tagline">
-            <input style={styles.input} value={site.tagline ?? ""} onChange={e => update("tagline", e.target.value)} placeholder="e.g. Living the life!" />
-          </Field>
-          <Field label="Primary color" hint="Used for buttons and accents across your site.">
-            <div style={styles.colorRow}>
-              <input type="color" value={site.primary_color ?? "#334155"} onChange={e => update("primary_color", e.target.value)} style={styles.colorSwatch} />
-              <input style={{ ...styles.input, flex: 1 }} value={site.primary_color ?? ""} onChange={e => update("primary_color", e.target.value)} placeholder="#334155" maxLength={7} />
-            </div>
-          </Field>
-        </Section>
-
-        <Section title="Content" description="Your bio and about page copy.">
-          <Field label="Bio" hint="Short intro shown on your homepage and about page.">
-            <textarea style={{ ...styles.input, ...styles.textarea }} value={site.bio ?? ""} onChange={e => update("bio", e.target.value)} placeholder="Tell visitors a bit about yourself…" rows={4} />
-          </Field>
-          <Field label="About page content" hint="Longer copy shown only on your About page.">
-            <textarea style={{ ...styles.input, ...styles.textarea }} value={site.about_content ?? ""} onChange={e => update("about_content", e.target.value)} placeholder="Share your story, experience, and what makes you different…" rows={7} />
-          </Field>
-        </Section>
-
-        <Section title="FAQ" description="Questions and answers shown on your homepage and about page.">
-          {site.faq_items.length === 0 && (
-            <p style={styles.emptyHint}>No FAQ items yet. Add your first one below.</p>
-          )}
-          {site.faq_items.map((item, i) => (
-            <div key={i} style={styles.faqItem}>
-              <div style={styles.faqHeader}>
-                <span style={styles.faqIndex}>Q{i + 1}</span>
-                <button onClick={() => faqRemove(i)} style={styles.removeBtn}>✕</button>
-              </div>
-              <input style={{ ...styles.input, marginBottom: 8 }} value={item.question} onChange={e => faqUpdate(i, "question", e.target.value)} placeholder="Question" />
-              <textarea style={{ ...styles.input, ...styles.textarea }} value={item.answer} onChange={e => faqUpdate(i, "answer", e.target.value)} placeholder="Answer" rows={3} />
-            </div>
+      {/* Main Content */}
+      <main style={styles.container}>
+        {/* Tabs */}
+        <div style={styles.tabs}>
+          {(["brand", "content", "faq", "features"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={styles.tab(activeTab === tab)}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
           ))}
-          <button onClick={faqAdd} style={styles.addBtn}>+ Add FAQ item</button>
-        </Section>
+        </div>
 
-        <Section title="Features" description="Toggle sections on or off for your site.">
-          <Toggle label="Blog" description="Show a blog section and nav link." checked={site.blog_enabled} onChange={v => update("blog_enabled", v)} />
-          <Toggle label="Calendar" description="Show a calendar section and nav link." checked={site.calendar_enabled} onChange={v => update("calendar_enabled", v)} />
-          <Toggle label="Listings" description="Show your property listings on the site." checked={site.listings_opt_in} onChange={v => update("listings_opt_in", v)} />
-        </Section>
+        {/* ─── Brand Tab ─── */}
+        {activeTab === "brand" && (
+          <div style={styles.card}>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Site Title</label>
+              <input
+                type="text"
+                value={siteData.site_title ?? ""}
+                onChange={(e) => updateField("site_title", e.target.value)}
+                placeholder="e.g. Wall to Wall Real Estate"
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Tagline</label>
+              <input
+                type="text"
+                value={siteData.tagline ?? ""}
+                onChange={(e) => updateField("tagline", e.target.value)}
+                placeholder="e.g. Your dream home awaits"
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Primary Color</label>
+              <div style={styles.colorRow}>
+                <input
+                  type="color"
+                  value={siteData.primary_color ?? "#334155"}
+                  onChange={(e) => updateField("primary_color", e.target.value)}
+                  style={styles.colorPicker}
+                />
+                <input
+                  type="text"
+                  value={siteData.primary_color ?? "#334155"}
+                  onChange={(e) => updateField("primary_color", e.target.value)}
+                  placeholder="#334155"
+                  style={{ ...styles.input, width: "120px" }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
+        {/* ─── Content Tab ─── */}
+        {activeTab === "content" && (
+          <div style={styles.card}>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Bio (short — shown on homepage)</label>
+              <textarea
+                value={siteData.bio ?? ""}
+                onChange={(e) => updateField("bio", e.target.value)}
+                placeholder="A brief intro about yourself…"
+                style={{ ...styles.textarea, minHeight: "80px" }}
+              />
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>About Content (long — about page only)</label>
+              <textarea
+                value={siteData.about_content ?? ""}
+                onChange={(e) => updateField("about_content", e.target.value)}
+                placeholder="Full about page content…"
+                style={{ ...styles.textarea, minHeight: "180px" }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ─── FAQ Tab ─── */}
+        {activeTab === "faq" && (
+          <div>
+            {siteData.faq_items.map((item, index) => (
+              <div key={index} style={styles.faqCard}>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Question</label>
+                  <input
+                    type="text"
+                    value={item.question}
+                    onChange={(e) => updateFaqItem(index, "question", e.target.value)}
+                    placeholder="e.g. What areas do you serve?"
+                    style={styles.input}
+                  />
+                </div>
+                <div style={{ ...styles.fieldGroup, marginBottom: "0.5rem" }}>
+                  <label style={styles.label}>Answer</label>
+                  <textarea
+                    value={item.answer}
+                    onChange={(e) => updateFaqItem(index, "answer", e.target.value)}
+                    placeholder="Your answer…"
+                    style={{ ...styles.textarea, minHeight: "60px" }}
+                  />
+                </div>
+                <button onClick={() => removeFaqItem(index)} style={styles.removeBtn}>
+                  Remove this question
+                </button>
+              </div>
+            ))}
+            <button onClick={addFaqItem} style={styles.addBtn}>
+              + Add FAQ item
+            </button>
+          </div>
+        )}
+
+        {/* ─── Features Tab ─── */}
+        {activeTab === "features" && (
+          <div style={styles.card}>
+            <div style={styles.toggleRow}>
+              <span style={styles.toggleLabel}>Blog</span>
+              <button
+                onClick={() => updateField("blog_enabled", !siteData.blog_enabled)}
+                style={styles.toggle(siteData.blog_enabled)}
+              >
+                <span style={styles.toggleDot(siteData.blog_enabled)} />
+              </button>
+            </div>
+            <div style={styles.toggleRow}>
+              <span style={styles.toggleLabel}>Calendar</span>
+              <button
+                onClick={() => updateField("calendar_enabled", !siteData.calendar_enabled)}
+                style={styles.toggle(siteData.calendar_enabled)}
+              >
+                <span style={styles.toggleDot(siteData.calendar_enabled)} />
+              </button>
+            </div>
+            <div style={{ ...styles.toggleRow, borderBottom: "none" }}>
+              <span style={styles.toggleLabel}>Listings opt-in</span>
+              <button
+                onClick={() => updateField("listings_opt_in", !siteData.listings_opt_in)}
+                style={styles.toggle(siteData.listings_opt_in)}
+              >
+                <span style={styles.toggleDot(siteData.listings_opt_in)} />
+              </button>
+            </div>
+          </div>
+        )}
       </main>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
-
-function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return (
-    <section style={styles.section}>
-      <div style={styles.sectionHeader}>
-        <h2 style={styles.sectionTitle}>{title}</h2>
-        <p style={styles.sectionDesc}>{description}</p>
-      </div>
-      <div style={styles.sectionBody}>{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div style={styles.field}>
-      <label style={styles.label}>{label}</label>
-      {hint && <p style={styles.hint}>{hint}</p>}
-      {children}
-    </div>
-  );
-}
-
-function Toggle({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div style={styles.toggleRow}>
-      <div style={styles.toggleText}>
-        <span style={styles.toggleLabel}>{label}</span>
-        <span style={styles.toggleDesc}>{description}</span>
-      </div>
-      <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)} style={{ ...styles.toggleTrack, background: checked ? "#334155" : "#d1d5db" }}>
-        <span style={{ ...styles.toggleThumb, transform: checked ? "translateX(20px)" : "translateX(2px)" }} />
-      </button>
-    </div>
-  );
-}
-
-function SaveIndicator({ status }: { status: SaveStatus }) {
-  const map: Record<SaveStatus, { text: string; color: string }> = {
-    idle: { text: "", color: "transparent" },
-    saving: { text: "Saving…", color: "#6b7280" },
-    saved: { text: "Saved ✓", color: "#16a34a" },
-    error: { text: "Save failed", color: "#dc2626" },
-  };
-  const { text, color } = map[status];
-  return <span style={{ fontSize: 13, color, transition: "color 0.2s", minWidth: 80, textAlign: "right" }}>{text}</span>;
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", background: "#f8fafc", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" },
-  header: { background: "#ffffff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 10 },
-  headerInner: { maxWidth: 720, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" },
-  headerEyebrow: { margin: 0, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#94a3b8" },
-  headerTitle: { margin: "2px 0 0", fontSize: 18, fontWeight: 600, color: "#0f172a" },
-  main: { maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px", display: "flex", flexDirection: "column" as const, gap: 32 },
-  section: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" },
-  sectionHeader: { padding: "20px 24px 16px", borderBottom: "1px solid #f1f5f9" },
-  sectionTitle: { margin: 0, fontSize: 15, fontWeight: 600, color: "#0f172a" },
-  sectionDesc: { margin: "2px 0 0", fontSize: 13, color: "#64748b" },
-  sectionBody: { padding: "20px 24px", display: "flex", flexDirection: "column" as const, gap: 20 },
-  field: { display: "flex", flexDirection: "column" as const, gap: 4 },
-  label: { fontSize: 13, fontWeight: 500, color: "#374151" },
-  hint: { margin: 0, fontSize: 12, color: "#94a3b8" },
-  input: { width: "100%", padding: "8px 12px", fontSize: 14, color: "#0f172a", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit", transition: "border-color 0.15s" },
-  textarea: { resize: "vertical" as const, lineHeight: 1.6 },
-  colorRow: { display: "flex", alignItems: "center", gap: 10 },
-  colorSwatch: { width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", background: "none" },
-  faqItem: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column" as const, gap: 0 },
-  faqHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  faqIndex: { fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "#94a3b8" },
-  removeBtn: { background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#94a3b8", padding: "2px 6px", borderRadius: 4 },
-  addBtn: { alignSelf: "flex-start" as const, background: "none", border: "1px dashed #cbd5e1", borderRadius: 8, padding: "8px 16px", fontSize: 13, color: "#64748b", cursor: "pointer", fontFamily: "inherit" },
-  emptyHint: { margin: 0, fontSize: 13, color: "#94a3b8", fontStyle: "italic" },
-  toggleRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "4px 0" },
-  toggleText: { display: "flex", flexDirection: "column" as const, gap: 1 },
-  toggleLabel: { fontSize: 14, fontWeight: 500, color: "#0f172a" },
-  toggleDesc: { fontSize: 12, color: "#64748b" },
-  toggleTrack: { width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", padding: 0, position: "relative" as const, flexShrink: 0, transition: "background 0.2s" },
-  toggleThumb: { position: "absolute" as const, top: 2, width: 20, height: 20, borderRadius: 10, background: "#ffffff", transition: "transform 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" },
-  centered: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" as const, gap: 16, background: "#f8fafc" },
-  spinner: { width: 32, height: 32, border: "3px solid #e2e8f0", borderTop: "3px solid #334155", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
-  loadingText: { margin: 0, fontSize: 14, color: "#64748b" },
-  errorBox: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "32px 40px", textAlign: "center" as const, display: "flex", flexDirection: "column" as const, gap: 16 },
-  errorText: { margin: 0, fontSize: 15, color: "#374151" },
-  loginLink: { fontSize: 14, color: "#334155", fontWeight: 500 },
-};
