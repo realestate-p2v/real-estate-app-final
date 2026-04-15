@@ -122,12 +122,12 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; text: string }>
 };
 
 const MEDIA_FILTERS = [
-  { key: "all", label: "All", icon: null },
-  { key: "photo", label: "Photos", icon: ImageIcon },
   { key: "video", label: "Videos", icon: Video },
+  { key: "photo", label: "Photos", icon: ImageIcon },
   { key: "clip", label: "Clips", icon: Video },
   { key: "flyer", label: "Graphics", icon: Palette },
   { key: "staging", label: "Staging", icon: Sofa },
+  { key: "all", label: "All", icon: null },
 ];
 
 function StatusBadge({ status }: { status: string }) {
@@ -265,7 +265,7 @@ export default function PlannerPage() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
-  const [mediaFilter, setMediaFilter] = useState("all");
+  const [mediaFilter, setMediaFilter] = useState("video");
   const [selectedMedia, setSelectedMedia] = useState<MediaAsset[]>([]);
   const [generatedCaption, setGeneratedCaption] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -432,6 +432,10 @@ export default function PlannerPage() {
 
       assets.sort((a, b) => (!a.createdAt ? 1 : !b.createdAt ? -1 : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setMedia(assets);
+      // Smart default: show videos if they exist, then photos, then all
+      const hasVideos = assets.some(a => a.type === "video");
+      const hasPhotos = assets.some(a => a.type === "photo");
+      setMediaFilter(hasVideos ? "video" : hasPhotos ? "photo" : "all");
     } catch (err) {
       console.error("Failed to load media:", err);
     }
@@ -441,7 +445,7 @@ export default function PlannerPage() {
   // ─── Handlers ───────────────────────────────────────────────────────────
 
   const handleSelectProperty = (p: Property) => {
-    setSelectedProperty(p); setSelectedMedia([]); setGeneratedCaption(""); setMediaFilter("all"); setStep(2); loadMedia(p);
+    setSelectedProperty(p); setSelectedMedia([]); setGeneratedCaption(""); setMediaFilter("video"); setStep(2); loadMedia(p);
   };
 
   const handleSelectMedia = (m: MediaAsset) => {
@@ -624,14 +628,33 @@ export default function PlannerPage() {
                   <StatusBadge status={selectedProperty.status} />
                 </div>
 
-                {/* Filters */}
-                <div className="flex gap-1.5 mb-4 flex-wrap">
-                  {MEDIA_FILTERS.map((f) => mediaCounts[f.key] > 0 || f.key === "all" ? (
-                    <button key={f.key} onClick={() => setMediaFilter(f.key)}
-                      className={`px-4 py-2 rounded-lg text-[13px] font-bold border transition-colors ${mediaFilter === f.key ? "border-blue-500 bg-blue-950/50 text-blue-300" : "border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500"}`}>
-                      {f.label}{mediaCounts[f.key] > 0 && <span className="ml-1 opacity-60">({mediaCounts[f.key]})</span>}
+                {/* Filters + selection actions */}
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <div className="flex gap-1.5 flex-wrap">
+                    {MEDIA_FILTERS.map((f) => mediaCounts[f.key] > 0 || f.key === "all" ? (
+                      <button key={f.key} onClick={() => setMediaFilter(f.key)}
+                        className={`px-4 py-2 rounded-lg text-[13px] font-bold border transition-colors ${mediaFilter === f.key ? "border-blue-500 bg-blue-950/50 text-blue-300" : "border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500"}`}>
+                        {f.label}{mediaCounts[f.key] > 0 && <span className="ml-1 opacity-60">({mediaCounts[f.key]})</span>}
+                      </button>
+                    ) : null)}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {selectedMedia.length > 0 && (
+                      <button onClick={() => setSelectedMedia([])}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-600 bg-gray-800 text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+                        Clear ({selectedMedia.length})
+                      </button>
+                    )}
+                    <button onClick={() => {
+                      const visible = filteredMedia.filter(m => m.type !== "description");
+                      const allSelected = visible.every(m => selectedMedia.some(s => s.id === m.id));
+                      if (allSelected) { setSelectedMedia([]); }
+                      else { setSelectedMedia(prev => { const ids = new Set(prev.map(s => s.id)); const toAdd = visible.filter(m => !ids.has(m.id)); return [...prev, ...toAdd]; }); }
+                    }}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-600 bg-gray-800 text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+                      Select All
                     </button>
-                  ) : null)}
+                  </div>
                 </div>
 
                 {/* Media grid */}
@@ -757,8 +780,16 @@ export default function PlannerPage() {
                     </div>
 
                     <textarea value={generatedCaption} onChange={(e) => setGeneratedCaption(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors mb-4"
+                      className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors mb-1"
                       style={{ minHeight: 160, fontFamily: "inherit" }} />
+                    <div className="flex justify-between items-center mb-4 px-1">
+                      <span className={`text-[11px] font-medium ${generatedCaption.length > 2200 ? "text-red-400" : "text-gray-500"}`}>
+                        {generatedCaption.length} / 2,200 characters
+                      </span>
+                      {generatedCaption.length > 2200 && (
+                        <span className="text-[11px] text-red-400 font-medium">Over Instagram limit</span>
+                      )}
+                    </div>
 
                     {/* Step 1: Copy & Download */}
                     <div className="flex gap-2 mb-3">
