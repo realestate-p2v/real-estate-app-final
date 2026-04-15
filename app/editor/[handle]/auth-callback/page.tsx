@@ -1,81 +1,105 @@
+// app/editor/[handle]/auth-callback/page.tsx
+// Repo: p2v.homes app
+//
+// PURPOSE: Receives access_token + refresh_token as query params
+// from the main app's OAuth callback, calls setSession() to
+// establish a Supabase session on the p2v.homes domain, then
+// redirects to the editor.
+//
+// IMPORTANT: This is a client component because setSession()
+// needs to set cookies in the browser context.
+
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { useSearchParams, useParams, useRouter } from "next/navigation";
 
-// This page lives at app/editor/[handle]/auth-callback/page.tsx
-// Supabase OAuth / magic link redirects here with tokens in the URL hash:
-//   #access_token=...&refresh_token=...&type=...
-// We call setSession() to store the session cookie on p2v.homes,
-// then redirect to the editor.
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export default function AuthCallback({
-  params,
-}: {
-  params: Promise<{ handle: string }>;
-}) {
+export default function AuthCallbackPage() {
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const router = useRouter();
+  const [status, setStatus] = useState<"loading" | "error">("loading");
+  const [errorMsg, setErrorMsg] = useState("");
+
   useEffect(() => {
-    (async () => {
-      const { handle } = await params;
+    async function establishSession() {
+      // Read tokens from query params (NOT from URL hash)
+      const access_token = searchParams.get("access_token");
+      const refresh_token = searchParams.get("refresh_token");
 
-      // Parse tokens from the URL hash
-      const hash = window.location.hash.substring(1);
-      const hashParams = new URLSearchParams(hash);
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
-
-      if (accessToken && refreshToken) {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (error) {
-          // Session failed — send back to login
-          window.location.href = `https://realestatephoto2video.com/login?redirect=${encodeURIComponent(
-            `https://${handle}.p2v.homes/editor/auth-callback`
-          )}&error=session_failed`;
-          return;
-        }
+      if (!access_token || !refresh_token) {
+        setStatus("error");
+        setErrorMsg("Missing authentication tokens. Please try logging in again.");
+        return;
       }
 
-      // Session set (or no tokens — already logged in) → go to editor
-      window.location.href = `https://${handle}.p2v.homes/editor`;
-    })();
-  }, [params]);
+      const { error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
 
-  return (
-    <div
-      style={{
+      if (error) {
+        console.error("setSession error:", error.message);
+        setStatus("error");
+        setErrorMsg(`Authentication failed: ${error.message}`);
+        return;
+      }
+
+      // Session established — redirect to the editor
+      const handle = params.handle as string;
+      router.replace(`/editor`);
+    }
+
+    establishSession();
+  }, [searchParams, params.handle, router]);
+
+  if (status === "error") {
+    return (
+      <div style={{
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        flexDirection: "column",
-        gap: 16,
-        background: "#f8fafc",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: 32,
-          height: 32,
-          border: "3px solid #e2e8f0",
-          borderTop: "3px solid #334155",
-          borderRadius: "50%",
-          animation: "spin 0.8s linear infinite",
-        }}
-      />
-      <p style={{ margin: 0, fontSize: 14, color: "#64748b" }}>
-        Logging you in…
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        padding: "2rem",
+      }}>
+        <div style={{ textAlign: "center", maxWidth: "400px" }}>
+          <p style={{ color: "#ef4444", fontSize: "1rem", marginBottom: "1rem" }}>
+            {errorMsg}
+          </p>
+          <a
+            href={`https://${params.handle}.p2v.homes/editor`}
+            style={{
+              color: "#3b82f6",
+              textDecoration: "underline",
+              fontSize: "0.875rem",
+            }}
+          >
+            ← Back to editor
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+    }}>
+      <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+        Signing you in…
       </p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
