@@ -1,9 +1,31 @@
-// app/site/[handle]/listings/page.tsx
+// ============================================================
+// FILE: app/site/[handle]/listings/page.tsx
+// ============================================================
 import { notFound } from "next/navigation";
 import { getSite, getProfile, getListings } from "../data";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{ handle: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle } = await params;
+  const site = await getSite(handle);
+  if (!site) return {};
+  const profile = await getProfile(site.user_id);
+  const agent = profile.agent_name || site.site_title || "Agent";
+  const title = `Listings | ${agent}`;
+  const description = `Browse all properties listed by ${agent}${profile.company ? " at " + profile.company : ""}. Professional real estate photography and video for every listing.`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(site.og_image_url && { images: [{ url: site.og_image_url }] }),
+    },
+  };
 }
 
 export default async function ListingsPage({ params }: Props) {
@@ -14,7 +36,6 @@ export default async function ListingsPage({ params }: Props) {
     getProfile(site.user_id),
     getListings(site.user_id),
   ]);
-
   const primary = site.primary_color || "#334155";
   const fmtPrice = (p: number | null) => p ? "$" + p.toLocaleString("en-US") : null;
   const fmtDetails = (l: (typeof listings)[0]) =>
@@ -32,24 +53,35 @@ export default async function ListingsPage({ params }: Props) {
         <p style={{ textAlign: "center", color: "#999", fontSize: 16, padding: "60px 0" }}>No listings available right now. Check back soon.</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
-          {listings.map((l) => (
-            <div key={l.id} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-              {l.photos.length > 0 ? (
-                <div style={{ position: "relative", paddingBottom: "66%", overflow: "hidden" }}>
-                  <img src={l.photos[0]} alt={l.address} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                  {l.photos.length > 1 ? <div style={{ position: "absolute", bottom: 8, right: 8, padding: "4px 10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 6, fontSize: 12, color: "#fff", fontWeight: 600 }}>{l.photos.length} photos</div> : null}
+          {listings.map((l) => {
+            const href = l.website_slug ? `/listings/${l.website_slug}` : null;
+            const CardWrapper = href ? "a" : "div";
+            const wrapperProps = href
+              ? { href, style: { display: "block", borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", textDecoration: "none", color: "inherit", transition: "box-shadow 0.2s, transform 0.2s" } as React.CSSProperties }
+              : { style: { borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", backgroundColor: "#fff", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" } as React.CSSProperties };
+
+            return (
+              <CardWrapper key={l.id} {...wrapperProps}>
+                {l.photos.length > 0 ? (
+                  <div style={{ position: "relative", paddingBottom: "66%", overflow: "hidden" }}>
+                    <img src={l.photos[0]} alt={l.address} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    {l.photos.length > 1 ? <div style={{ position: "absolute", bottom: 8, right: 8, padding: "4px 10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 6, fontSize: 12, color: "#fff", fontWeight: 600 }}>{l.photos.length} photos</div> : null}
+                  </div>
+                ) : (
+                  <div style={{ paddingBottom: "66%", backgroundColor: "#f1f5f9" }} />
+                )}
+                <div style={{ padding: "16px 20px" }}>
+                  {l.price ? <p style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>{fmtPrice(l.price)}</p> : null}
+                  <p style={{ fontSize: 15, color: "#444", margin: "0 0 4px", fontWeight: 600 }}>{l.address}</p>
+                  {(l.city || l.state) ? <p style={{ fontSize: 14, color: "#888", margin: "0 0 8px" }}>{[l.city, l.state].filter(Boolean).join(", ")}</p> : null}
+                  {fmtDetails(l) ? <p style={{ fontSize: 13, color: "#aaa", margin: 0, letterSpacing: "0.04em" }}>{fmtDetails(l)}</p> : null}
+                  {href ? (
+                    <p style={{ fontSize: 13, color: primary, fontWeight: 600, margin: "12px 0 0", letterSpacing: "0.02em" }}>View Details →</p>
+                  ) : null}
                 </div>
-              ) : (
-                <div style={{ paddingBottom: "66%", backgroundColor: "#f1f5f9" }} />
-              )}
-              <div style={{ padding: "16px 20px" }}>
-                {l.price ? <p style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>{fmtPrice(l.price)}</p> : null}
-                <p style={{ fontSize: 15, color: "#444", margin: "0 0 4px", fontWeight: 600 }}>{l.address}</p>
-                {(l.city || l.state) ? <p style={{ fontSize: 14, color: "#888", margin: "0 0 8px" }}>{[l.city, l.state].filter(Boolean).join(", ")}</p> : null}
-                {fmtDetails(l) ? <p style={{ fontSize: 13, color: "#aaa", margin: 0, letterSpacing: "0.04em" }}>{fmtDetails(l)}</p> : null}
-              </div>
-            </div>
-          ))}
+              </CardWrapper>
+            );
+          })}
         </div>
       )}
     </div>
