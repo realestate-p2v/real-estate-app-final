@@ -1,518 +1,835 @@
-import { useState, useEffect, useRef } from "react";
+// app/dashboard/planner/page.tsx
+// Streamlined Marketing Planner — Property → Media → Generate → Share
+// Lensy chat sidebar stays visible for agent direction changes
 
-// Mock data for prototype — in production these come from your Supabase queries
-const MOCK_PROPERTIES = [
-  { id: "1", address: "142 Maple Drive", city: "Westfield", state: "NJ", status: "active", price: 725000, bedrooms: 4, bathrooms: 3, sqft: 2800 },
-  { id: "2", address: "88 Ocean Blvd", city: "Long Branch", state: "NJ", status: "active", price: 1250000, bedrooms: 5, bathrooms: 4, sqft: 3600 },
-  { id: "3", address: "310 Park Ave", city: "Scotch Plains", state: "NJ", status: "coming_soon", price: 549000, bedrooms: 3, bathrooms: 2, sqft: 1950 },
-];
+"use client";
 
-const MOCK_MEDIA = {
-  "1": [
-    { id: "m1", type: "photo", url: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop", label: "Front Exterior" },
-    { id: "m2", type: "photo", url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop", label: "Living Room" },
-    { id: "m3", type: "photo", url: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=300&fit=crop", label: "Kitchen" },
-    { id: "m4", type: "photo", url: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=300&fit=crop", label: "Master Bedroom" },
-    { id: "m5", type: "flyer", url: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop", label: "Just Listed Flyer" },
-    { id: "m6", type: "video", url: "https://example.com/tour.mp4", label: "Listing Video", thumbnail: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop" },
-    { id: "m7", type: "staging", url: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=400&h=300&fit=crop", label: "Virtual Staging — Living Room" },
-  ],
-  "2": [
-    { id: "m8", type: "photo", url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop", label: "Ocean View Front" },
-    { id: "m9", type: "photo", url: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop", label: "Pool & Deck" },
-    { id: "m10", type: "photo", url: "https://images.unsplash.com/photo-1600607687644-aac4c3eac7f4?w=400&h=300&fit=crop", label: "Open Floor Plan" },
-    { id: "m11", type: "flyer", url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop", label: "Open House Flyer" },
-  ],
-  "3": [
-    { id: "m12", type: "photo", url: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=400&h=300&fit=crop", label: "Charming Front" },
-    { id: "m13", type: "photo", url: "https://images.unsplash.com/photo-1600573472591-ee6b68d14c68?w=400&h=300&fit=crop", label: "Backyard" },
-  ],
-};
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  Sparkles,
+  MessageSquare,
+  ChevronDown,
+  Loader2,
+  Send,
+  ArrowLeft,
+  Check,
+  RefreshCw,
+  Image as ImageIcon,
+  Video,
+  Palette,
+  Sofa,
+  RotateCcw,
+  Copy,
+  ExternalLink,
+} from "lucide-react";
 
-const PLATFORMS = [
-  { key: "facebook", label: "Facebook", icon: "f", color: "#1877F2" },
-  { key: "instagram", label: "Instagram", icon: "📷", color: "#E4405F" },
-  { key: "linkedin", label: "LinkedIn", icon: "in", color: "#0A66C2" },
-];
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-const MEDIA_FILTERS = [
-  { key: "all", label: "All" },
-  { key: "photo", label: "Photos" },
-  { key: "video", label: "Videos" },
-  { key: "flyer", label: "Graphics" },
-  { key: "staging", label: "Staging" },
-];
+interface Property {
+  id: string;
+  address: string;
+  city?: string;
+  state?: string;
+  status: string;
+  price?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  sqft?: number;
+}
 
-function formatPrice(n) {
+interface MediaAsset {
+  id: string;
+  type: "photo" | "video" | "clip" | "flyer" | "staging" | "remix" | "description" | "drone";
+  propertyId?: string;
+  propertyAddress: string;
+  thumbnailUrl?: string;
+  assetUrl?: string;
+  content?: string;
+  label?: string;
+  createdAt?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function formatPrice(n?: number) {
+  if (!n) return "";
   return "$" + n.toLocaleString();
 }
 
-function StatusBadge({ status }) {
-  const styles = {
-    active: { bg: "rgba(34,197,94,0.15)", color: "#22c55e", text: "Active" },
-    coming_soon: { bg: "rgba(234,179,8,0.15)", color: "#eab308", text: "Coming Soon" },
-    sold: { bg: "rgba(239,68,68,0.15)", color: "#ef4444", text: "Sold" },
-    price_reduced: { bg: "rgba(168,85,247,0.15)", color: "#a855f7", text: "Price Reduced" },
-  };
-  const s = styles[status] || styles.active;
+function getPostType(status: string): string {
+  if (status === "sold") return "Just Sold";
+  if (status === "price_reduced") return "Price Drop Alert";
+  if (status === "coming_soon") return "Coming Soon Preview";
+  return "Just Listed";
+}
+
+function getContentType(status: string): string {
+  if (status === "sold") return "just_sold";
+  if (status === "price_reduced") return "price_reduced";
+  if (status === "coming_soon") return "coming_soon";
+  return "new_listing";
+}
+
+const STATUS_STYLES: Record<string, { bg: string; color: string; text: string }> = {
+  active: { bg: "#166534", color: "#4ade80", text: "Active" },
+  new: { bg: "#166534", color: "#4ade80", text: "New" },
+  coming_soon: { bg: "#713f12", color: "#facc15", text: "Coming Soon" },
+  sold: { bg: "#7f1d1d", color: "#f87171", text: "Sold" },
+  price_reduced: { bg: "#581c87", color: "#c084fc", text: "Price Reduced" },
+  withdrawn: { bg: "#374151", color: "#9ca3af", text: "Withdrawn" },
+};
+
+const MEDIA_FILTERS = [
+  { key: "all", label: "All", icon: null },
+  { key: "photo", label: "Photos", icon: ImageIcon },
+  { key: "video", label: "Videos", icon: Video },
+  { key: "clip", label: "Clips", icon: Video },
+  { key: "flyer", label: "Graphics", icon: Palette },
+  { key: "staging", label: "Staging", icon: Sofa },
+];
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_STYLES[status] || STATUS_STYLES.active;
   return (
-    <span style={{ background: s.bg, color: s.color, padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase" }}>
+    <span
+      className="inline-block rounded-md text-[11px] font-bold uppercase tracking-wide"
+      style={{ background: s.bg, color: s.color, padding: "3px 10px" }}
+    >
       {s.text}
     </span>
   );
 }
 
-export default function MarketingPlannerV3() {
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const [selectedMedia, setSelectedMedia] = useState(null);
+// ─── Lensy Chat Component ───────────────────────────────────────────────────
+
+function LensyChat({
+  property,
+  agentName,
+  userId,
+  onCaptionOverride,
+}: {
+  property: Property | null;
+  agentName: string;
+  userId: string;
+  onCaptionOverride?: (caption: string) => void;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastPropId = useRef<string | null>(null);
+
+  // Greet on property change
+  useEffect(() => {
+    if (property?.id === lastPropId.current) return;
+    lastPropId.current = property?.id || null;
+
+    if (property) {
+      const postType = getPostType(property.status);
+      const firstName = agentName.split(" ")[0] || "there";
+      setMessages([
+        {
+          id: "greeting",
+          role: "assistant",
+          text: `Hey ${firstName}! 👋 Working on ${property.address} — great choice! Since it's ${property.status === "active" ? "an active listing" : property.status.replace(/_/g, " ")}, I'll draft "${postType}" style posts.\n\nPick a piece of media and hit Generate, or tell me if you want a different angle!`,
+        },
+      ]);
+    } else {
+      setMessages([]);
+    }
+  }, [property?.id, agentName]);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages, isTyping]);
+
+  const sendMessage = useCallback(async () => {
+    if (!input.trim() || isTyping) return;
+    const userText = input.trim();
+    const userMsg: ChatMessage = { id: "u" + Date.now(), role: "user", text: userText };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setIsTyping(true);
+
+    try {
+      // Use caption API in freeform chat mode
+      const res = await fetch("/api/planner/caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freeform: true,
+          message: userText,
+          propertyAddress: property?.address || "",
+          agentName,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.caption || data.reply || "I can help with that! Try selecting a photo and generating a post, or tell me what kind of content you'd like.";
+        setMessages((prev) => [...prev, { id: "a" + Date.now(), role: "assistant", text: reply }]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { id: "a" + Date.now(), role: "assistant", text: "I can help with that! Select a photo and hit Generate, or tell me what kind of post you'd like to create." },
+        ]);
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { id: "a" + Date.now(), role: "assistant", text: "I'm here to help! Pick a photo from the library and I'll craft the perfect caption for it." },
+      ]);
+    }
+
+    setIsTyping(false);
+  }, [input, isTyping, property, agentName]);
+
+  // Empty state
+  if (!property) {
+    return (
+      <div className="rounded-xl border border-gray-700 bg-gray-900 p-7 flex flex-col items-center justify-center text-center" style={{ minHeight: 340 }}>
+        <div className="w-12 h-12 rounded-xl bg-emerald-900 border border-emerald-700 flex items-center justify-center mb-3">
+          <MessageSquare className="w-5 h-5 text-emerald-400" />
+        </div>
+        <p className="text-base font-extrabold text-white mb-1">Lensy</p>
+        <p className="text-sm text-gray-400 max-w-[240px] leading-relaxed">
+          Select a property to get started. I'll help you craft the perfect post and share it everywhere.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-700 bg-gray-900 flex flex-col" style={{ minHeight: 340, maxHeight: 500 }}>
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-700 flex items-center gap-3 shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-emerald-900 border border-emerald-700 flex items-center justify-center">
+          <MessageSquare className="w-4 h-4 text-emerald-400" />
+        </div>
+        <div>
+          <p className="text-sm font-extrabold text-white">Lensy</p>
+          <p className="text-[10px] text-gray-500 font-medium">Marketing Assistant</p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div
+              className={`max-w-[88%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "rounded-[14px_14px_4px_14px] bg-blue-600 text-white"
+                  : "rounded-[14px_14px_14px_4px] bg-gray-800 text-gray-200 border border-gray-600"
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="px-3.5 py-2.5 rounded-[14px_14px_14px_4px] bg-gray-800 border border-gray-600 text-gray-400 text-[13px] flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" /> Lensy is typing...
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="px-3 py-3 border-t border-gray-700 flex gap-2 shrink-0">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Ask Lensy anything..."
+          className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2.5 text-[13px] text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 transition-colors"
+        />
+        <button
+          onClick={sendMessage}
+          disabled={!input.trim() || isTyping}
+          className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg px-4 py-2.5 text-white text-[13px] font-bold transition-colors"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Planner Page ──────────────────────────────────────────────────────
+
+export default function PlannerPage() {
+  const supabase = createClient();
+
+  // Auth & profile
+  const [userId, setUserId] = useState("");
+  const [agentName, setAgentName] = useState("Agent");
+  const [isSubscriber, setIsSubscriber] = useState(false);
+
+  // Properties
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
+
+  // Flow state
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
   const [mediaFilter, setMediaFilter] = useState("all");
+  const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
+
+  // Caption
   const [generatedCaption, setGeneratedCaption] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [copied, setCopied] = useState(null);
-  const [step, setStep] = useState(1); // 1=pick property, 2=pick media, 3=post ready
-  const captionRef = useRef(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const properties = MOCK_PROPERTIES;
-  const media = selectedProperty ? (MOCK_MEDIA[selectedProperty.id] || []) : [];
-  const filteredMedia = mediaFilter === "all" ? media : media.filter(m => m.type === mediaFilter);
+  // Step tracking
+  const [step, setStep] = useState(1); // 1=property, 2=media, 3=share
 
-  // Count media by type for filter badges
-  const mediaCounts = {};
-  MEDIA_FILTERS.forEach(f => {
-    mediaCounts[f.key] = f.key === "all" ? media.length : media.filter(m => m.type === f.key).length;
-  });
+  const hasInit = useRef(false);
 
-  function handleSelectProperty(p) {
+  // ─── Init: load session + properties ────────────────────────────────────
+
+  useEffect(() => {
+    if (hasInit.current) return;
+    hasInit.current = true;
+
+    const init = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const uid = session.user.id;
+      setUserId(uid);
+
+      const [propsRes, profileRes] = await Promise.all([
+        supabase
+          .from("agent_properties")
+          .select("id, address, city, state, status, price, bedrooms, bathrooms, sqft")
+          .eq("user_id", uid)
+          .is("merged_into_id", null)
+          .in("status", ["active", "new", "coming_soon", "sold", "price_reduced"])
+          .order("updated_at", { ascending: false }),
+        supabase.from("lens_usage").select("saved_agent_name, is_subscriber").eq("user_id", uid).single(),
+      ]);
+
+      setProperties(propsRes.data || []);
+      setAgentName(profileRes.data?.saved_agent_name || "Agent");
+      setIsSubscriber(!!profileRes.data?.is_subscriber);
+      setLoadingProperties(false);
+    };
+
+    init();
+  }, []);
+
+  // ─── Load media when property selected ──────────────────────────────────
+
+  const loadMedia = useCallback(
+    async (property: Property) => {
+      setLoadingMedia(true);
+      try {
+        const res = await fetch(`/api/planner/library?type=all&propertyId=${property.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMedia(data.assets || []);
+        }
+      } catch (err) {
+        console.error("Failed to load media:", err);
+      }
+      setLoadingMedia(false);
+    },
+    []
+  );
+
+  // ─── Handlers ───────────────────────────────────────────────────────────
+
+  const handleSelectProperty = (p: Property) => {
     setSelectedProperty(p);
     setSelectedMedia(null);
     setGeneratedCaption("");
     setMediaFilter("all");
     setStep(2);
-  }
+    loadMedia(p);
+  };
 
-  function handleSelectMedia(m) {
+  const handleSelectMedia = (m: MediaAsset) => {
     setSelectedMedia(m);
     setGeneratedCaption("");
-    setStep(2);
-  }
+  };
 
-  function handleGenerateCaption() {
+  const handleGenerateCaption = async () => {
+    if (!selectedProperty || !selectedMedia) return;
     setIsGenerating(true);
-    // Simulate AI generation — in production this calls /api/planner/caption
-    setTimeout(() => {
-      const captions = [
-        `✨ Just listed! This stunning ${selectedProperty.bedrooms}-bed, ${selectedProperty.bathrooms}-bath home at ${selectedProperty.address} is everything you've been looking for.\n\n🏡 ${selectedProperty.sqft.toLocaleString()} sq ft of beautifully designed living space in the heart of ${selectedProperty.city}.\n\n💰 Offered at ${formatPrice(selectedProperty.price)}\n\nDM me for a private showing! 🔑\n\n#JustListed #RealEstate #${selectedProperty.city.replace(/\s/g, "")}Homes #DreamHome`,
-        `🏠 NEW on the market in ${selectedProperty.city}!\n\n${selectedProperty.address} — ${selectedProperty.bedrooms} BR / ${selectedProperty.bathrooms} BA / ${selectedProperty.sqft.toLocaleString()} SF\n\nThis home checks every box. Don't wait — schedule your tour today.\n\n${formatPrice(selectedProperty.price)} | Link in bio\n\n#NewListing #HomesForSale #${selectedProperty.state}RealEstate`,
-        `Welcome home to ${selectedProperty.address} 🏡\n\n${selectedProperty.bedrooms} bedrooms · ${selectedProperty.bathrooms} bathrooms · ${selectedProperty.sqft.toLocaleString()} sq ft\n\nLocated in beautiful ${selectedProperty.city}, ${selectedProperty.state}, this property won't last long at ${formatPrice(selectedProperty.price)}.\n\nReady to see it in person? Let's connect! 📲\n\n#OpenHouse #${selectedProperty.city.replace(/\s/g, "")} #RealEstateAgent #HomeGoals`,
-      ];
-      setGeneratedCaption(captions[Math.floor(Math.random() * captions.length)]);
-      setIsGenerating(false);
+
+    try {
+      const contentType = getContentType(selectedProperty.status);
+      const res = await fetch("/api/planner/caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform: "instagram", // default — works for all platforms
+          contentType,
+          propertyAddress: selectedProperty.address,
+          agentName,
+          propertyDetails: {
+            bedrooms: selectedProperty.bedrooms,
+            bathrooms: selectedProperty.bathrooms,
+            sqft: selectedProperty.sqft,
+            price: selectedProperty.price,
+            city: selectedProperty.city,
+            state: selectedProperty.state,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedCaption(data.caption || "");
+        setStep(3);
+      } else {
+        // Fallback caption
+        const pt = getPostType(selectedProperty.status);
+        setGeneratedCaption(
+          `✨ ${pt}! ${selectedProperty.address}\n\n${selectedProperty.bedrooms || ""}bd / ${selectedProperty.bathrooms || ""}ba${selectedProperty.sqft ? " · " + selectedProperty.sqft.toLocaleString() + " sf" : ""}\n\n${selectedProperty.price ? formatPrice(selectedProperty.price) : ""}\n\nDM me for details! 🔑\n\n#RealEstate #${(selectedProperty.city || "").replace(/\s/g, "")}Homes`
+        );
+        setStep(3);
+      }
+    } catch {
+      setGeneratedCaption(
+        `🏡 ${selectedProperty.address}\n\n${selectedProperty.bedrooms || ""}bd / ${selectedProperty.bathrooms || ""}ba\n\nContact me for a showing!\n\n#RealEstate #NewListing`
+      );
       setStep(3);
-    }, 1500);
-  }
-
-  function handleCopy(platform) {
-    const text = generatedCaption;
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(platform);
-      setTimeout(() => setCopied(null), 2000);
-    });
-  }
-
-  function handleBack() {
-    if (step === 3) {
-      setGeneratedCaption("");
-      setStep(2);
-    } else if (step === 2) {
-      setSelectedProperty(null);
-      setSelectedMedia(null);
-      setGeneratedCaption("");
-      setMediaFilter("all");
-      setStep(1);
     }
-  }
 
-  function handleStartOver() {
+    setIsGenerating(false);
+
+    // Log action
+    try {
+      await fetch("/api/planner/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actionType: "caption_generated",
+          propertyId: selectedProperty.id,
+          platform: "instagram",
+          contentType: getContentType(selectedProperty.status),
+          metadata: { mediaType: selectedMedia.type, mediaLabel: selectedMedia.label },
+        }),
+      });
+    } catch {}
+  };
+
+  const handleCopy = (platform: string) => {
+    navigator.clipboard.writeText(generatedCaption).then(() => {
+      setCopied(platform);
+      setTimeout(() => setCopied(null), 2500);
+    });
+  };
+
+  const handleShare = (platform: string) => {
+    const text = encodeURIComponent(generatedCaption);
+    const urls: Record<string, string | null> = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?quote=${text}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://p2v.homes")}&summary=${text}`,
+      instagram: null, // no deep link — copy only
+    };
+
+    handleCopy(platform);
+
+    if (urls[platform]) {
+      window.open(urls[platform]!, "_blank", "width=600,height=500");
+    }
+
+    // Log share action
+    try {
+      fetch("/api/planner/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actionType: "social_share",
+          propertyId: selectedProperty?.id,
+          platform,
+          contentType: getContentType(selectedProperty?.status || "active"),
+          metadata: { mediaType: selectedMedia?.type },
+        }),
+      });
+    } catch {}
+  };
+
+  const handleStartOver = () => {
     setSelectedProperty(null);
     setSelectedMedia(null);
     setGeneratedCaption("");
+    setMedia([]);
     setMediaFilter("all");
     setStep(1);
-  }
-
-  // ── Styles ──
-  const root = {
-    fontFamily: "'DM Sans', 'Inter', -apple-system, sans-serif",
-    background: "transparent",
-    minHeight: "100vh",
-    color: "#e2e8f0",
-    maxWidth: 900,
-    margin: "0 auto",
-    padding: "24px 16px",
   };
 
-  const card = {
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-  };
+  // ─── Derived ────────────────────────────────────────────────────────────
 
-  const heading = {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#f1f5f9",
-    margin: 0,
-    letterSpacing: "-0.02em",
-  };
-
-  const subtext = {
-    fontSize: 13,
-    color: "#94a3b8",
-    margin: "4px 0 0",
-  };
-
-  const stepIndicator = {
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
-    marginBottom: 20,
-  };
-
-  const stepDot = (active, done) => ({
-    width: 28,
-    height: 28,
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 700,
-    background: done ? "#22c55e" : active ? "#3b82f6" : "rgba(255,255,255,0.06)",
-    color: done || active ? "#fff" : "#64748b",
-    border: active ? "2px solid #60a5fa" : "2px solid transparent",
-    transition: "all 0.3s",
+  const filteredMedia = mediaFilter === "all" ? media : media.filter((m) => m.type === mediaFilter);
+  const mediaCounts: Record<string, number> = {};
+  MEDIA_FILTERS.forEach((f) => {
+    mediaCounts[f.key] = f.key === "all" ? media.length : media.filter((m) => m.type === f.key).length;
   });
 
-  const stepLine = (done) => ({
-    width: 32,
-    height: 2,
-    background: done ? "#22c55e" : "rgba(255,255,255,0.08)",
-    borderRadius: 1,
-    transition: "all 0.3s",
-  });
-
-  const propertyCard = (isSelected) => ({
-    background: isSelected ? "rgba(59,130,246,0.1)" : "rgba(255,255,255,0.03)",
-    border: isSelected ? "1px solid rgba(59,130,246,0.4)" : "1px solid rgba(255,255,255,0.06)",
-    borderRadius: 12,
-    padding: 16,
-    cursor: "pointer",
-    transition: "all 0.2s",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  });
-
-  const mediaCard = (isSelected) => ({
-    borderRadius: 10,
-    overflow: "hidden",
-    cursor: "pointer",
-    border: isSelected ? "2px solid #3b82f6" : "2px solid transparent",
-    background: "rgba(255,255,255,0.03)",
-    transition: "all 0.2s",
-    position: "relative",
-  });
-
-  const pillBtn = (active) => ({
-    padding: "6px 14px",
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-    border: "none",
-    cursor: "pointer",
-    background: active ? "#3b82f6" : "rgba(255,255,255,0.06)",
-    color: active ? "#fff" : "#94a3b8",
-    transition: "all 0.2s",
-  });
-
-  const primaryBtn = (disabled) => ({
-    padding: "14px 28px",
-    borderRadius: 12,
-    fontSize: 15,
-    fontWeight: 700,
-    border: "none",
-    cursor: disabled ? "not-allowed" : "pointer",
-    background: disabled ? "rgba(59,130,246,0.3)" : "linear-gradient(135deg, #3b82f6, #2563eb)",
-    color: "#fff",
-    opacity: disabled ? 0.5 : 1,
-    transition: "all 0.2s",
-    width: "100%",
-    letterSpacing: "-0.01em",
-  });
-
-  const shareBtn = (color) => ({
-    flex: 1,
-    padding: "12px 16px",
-    borderRadius: 10,
-    fontSize: 13,
-    fontWeight: 700,
-    border: "none",
-    cursor: "pointer",
-    background: color,
-    color: "#fff",
-    transition: "all 0.15s",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  });
-
-  const backBtn = {
-    background: "none",
-    border: "none",
-    color: "#64748b",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 600,
-    padding: "6px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 12,
-  };
+  // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div style={root}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <h1 style={heading}>Marketing Planner</h1>
-            <p style={subtext}>Select a property → pick media → generate & share</p>
+    <div className="min-h-screen bg-gray-950 text-gray-200">
+      {/* ── Header ── */}
+      <div className="px-6 py-5 border-b border-gray-800">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20">
+              <Sparkles className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold text-white tracking-tight">Marketing Planner</h1>
+              <p className="text-xs text-gray-500 font-medium">Select property → pick media → generate & share</p>
+            </div>
           </div>
           {step > 1 && (
-            <button onClick={handleStartOver} style={{ ...pillBtn(false), fontSize: 11 }}>
-              ↺ Start Over
+            <button
+              onClick={handleStartOver}
+              className="px-4 py-2 rounded-lg text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Start Over
             </button>
           )}
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <div style={stepIndicator}>
-        <div style={stepDot(step === 1, step > 1)}>{step > 1 ? "✓" : "1"}</div>
-        <div style={stepLine(step > 1)} />
-        <div style={stepDot(step === 2, step > 2)}>{step > 2 ? "✓" : "2"}</div>
-        <div style={stepLine(step > 2)} />
-        <div style={stepDot(step === 3, false)}>3</div>
-        <div style={{ fontSize: 12, color: "#64748b", marginLeft: 12 }}>
-          {step === 1 ? "Choose property" : step === 2 ? "Select media & generate" : "Share your post"}
-        </div>
-      </div>
-
-      {/* ── STEP 1: Property Selection ── */}
-      {step === 1 && (
-        <div style={card}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", margin: "0 0 12px" }}>
-            Your Active Properties
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {properties.map(p => (
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        {/* ── Step Indicator ── */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          {[
+            { n: 1, label: "Choose Property" },
+            { n: 2, label: "Select Media" },
+            { n: 3, label: "Share Post" },
+          ].map((s, i) => (
+            <div key={s.n} className="flex items-center gap-2">
               <div
-                key={p.id}
-                style={propertyCard(false)}
-                onClick={() => handleSelectProperty(p)}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(59,130,246,0.08)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-extrabold text-white border-2 transition-all ${
+                  step > s.n
+                    ? "bg-green-600 border-green-500"
+                    : step === s.n
+                    ? "bg-blue-600 border-blue-400"
+                    : "bg-gray-800 border-gray-600"
+                }`}
               >
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "#f1f5f9" }}>{p.address}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-                    {p.city}, {p.state} · {p.bedrooms}bd / {p.bathrooms}ba · {p.sqft.toLocaleString()} sf
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <StatusBadge status={p.status} />
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{formatPrice(p.price)}</span>
-                  <span style={{ color: "#475569", fontSize: 18 }}>›</span>
-                </div>
+                {step > s.n ? <Check className="w-4 h-4" /> : s.n}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP 2: Media + Generate ── */}
-      {step >= 2 && selectedProperty && (
-        <>
-          {/* Selected property summary */}
-          <div style={{ ...card, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button onClick={handleBack} style={{ ...backBtn, marginBottom: 0, fontSize: 18, padding: 0 }}>←</button>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{selectedProperty.address}</div>
-                <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                  {selectedProperty.city}, {selectedProperty.state} · {formatPrice(selectedProperty.price)}
-                </div>
-              </div>
-            </div>
-            <StatusBadge status={selectedProperty.status} />
-          </div>
-
-          {/* Media filters */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-            {MEDIA_FILTERS.map(f => (
-              mediaCounts[f.key] > 0 || f.key === "all" ? (
-                <button
-                  key={f.key}
-                  style={pillBtn(mediaFilter === f.key)}
-                  onClick={() => setMediaFilter(f.key)}
-                >
-                  {f.label} {mediaCounts[f.key] > 0 && <span style={{ opacity: 0.6, marginLeft: 2 }}>({mediaCounts[f.key]})</span>}
-                </button>
-              ) : null
-            ))}
-          </div>
-
-          {/* Media grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
-            {filteredMedia.map(m => (
-              <div
-                key={m.id}
-                style={mediaCard(selectedMedia?.id === m.id)}
-                onClick={() => handleSelectMedia(m)}
-              >
-                <img
-                  src={m.thumbnail || m.url}
-                  alt={m.label}
-                  style={{ width: "100%", height: 110, objectFit: "cover", display: "block" }}
-                  onError={(e) => { e.target.style.display = "none"; }}
-                />
-                <div style={{ padding: "8px 10px" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {m.label}
-                  </div>
-                  <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", marginTop: 2 }}>{m.type}</div>
-                </div>
-                {selectedMedia?.id === m.id && (
-                  <div style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: "50%", background: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff" }}>✓</div>
-                )}
-                {m.type === "video" && (
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -70%)", width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>▶</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Generate button */}
-          {step === 2 && (
-            <button
-              style={primaryBtn(!selectedMedia || isGenerating)}
-              disabled={!selectedMedia || isGenerating}
-              onClick={handleGenerateCaption}
-            >
-              {isGenerating ? (
-                <span>✨ Generating your post...</span>
-              ) : selectedMedia ? (
-                <span>✨ Generate Post for "{selectedMedia.label}"</span>
-              ) : (
-                <span>Select media above to generate a post</span>
+              <span className={`text-[13px] font-bold ${step >= s.n ? "text-gray-200" : "text-gray-600"}`}>
+                {s.label}
+              </span>
+              {i < 2 && (
+                <div className={`w-8 h-0.5 rounded ${step > s.n ? "bg-green-600" : "bg-gray-700"}`} />
               )}
-            </button>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Two-column layout ── */}
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: step >= 2 ? "300px 1fr" : "1fr", alignItems: "start" }}
+        >
+          {/* Left: Lensy Chat */}
+          {step >= 2 && (
+            <LensyChat property={selectedProperty} agentName={agentName} userId={userId} />
           )}
-        </>
-      )}
 
-      {/* ── STEP 3: Caption + Share ── */}
-      {step === 3 && generatedCaption && (
-        <div style={{ ...card, marginTop: 4 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>Your Post</h2>
-            <button
-              onClick={handleGenerateCaption}
-              style={{ ...pillBtn(false), display: "flex", alignItems: "center", gap: 4 }}
-            >
-              ↻ Regenerate
-            </button>
-          </div>
+          {/* Right: Main flow */}
+          <div>
+            {/* ── STEP 1: Property List ── */}
+            {step === 1 && (
+              <div className="rounded-xl border border-gray-700 bg-gray-900 p-5">
+                <h2 className="text-[17px] font-extrabold text-white mb-4">Your Properties</h2>
 
-          {/* Preview */}
-          <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
-            {selectedMedia && (
-              <img
-                src={selectedMedia.thumbnail || selectedMedia.url}
-                alt=""
-                style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
-              />
+                {loadingProperties ? (
+                  <div className="flex items-center justify-center py-12 text-gray-400 gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" /> Loading properties...
+                  </div>
+                ) : properties.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-4xl mb-3">🏠</div>
+                    <p className="text-base font-bold text-white">No properties yet</p>
+                    <p className="text-sm text-gray-400 mt-1">Add a property to start creating marketing content</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {properties.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleSelectProperty(p)}
+                        className="w-full bg-gray-800 border border-gray-600 rounded-xl px-5 py-4 flex justify-between items-center hover:border-blue-500 hover:bg-blue-950/30 transition-all text-left group"
+                      >
+                        <div>
+                          <div className="text-[16px] font-bold text-white group-hover:text-blue-200 transition-colors">
+                            {p.address}
+                          </div>
+                          <div className="text-[13px] text-gray-400 mt-1 font-medium">
+                            {[p.city, p.state].filter(Boolean).join(", ")}
+                            {p.bedrooms ? ` · ${p.bedrooms}bd` : ""}
+                            {p.bathrooms ? ` / ${p.bathrooms}ba` : ""}
+                            {p.sqft ? ` · ${p.sqft.toLocaleString()} sf` : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <StatusBadge status={p.status} />
+                          {p.price && (
+                            <span className="text-[16px] font-extrabold text-white">{formatPrice(p.price)}</span>
+                          )}
+                          <span className="text-gray-500 text-xl group-hover:text-blue-400 transition-colors">›</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
-            <textarea
-              ref={captionRef}
-              value={generatedCaption}
-              onChange={e => setGeneratedCaption(e.target.value)}
-              style={{
-                flex: 1,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 10,
-                padding: 12,
-                color: "#e2e8f0",
-                fontSize: 13,
-                lineHeight: 1.6,
-                resize: "vertical",
-                minHeight: 120,
-                fontFamily: "inherit",
-              }}
-            />
-          </div>
 
-          {/* Share buttons */}
-          <div style={{ display: "flex", gap: 8 }}>
-            {PLATFORMS.map(p => (
-              <button
-                key={p.key}
-                style={shareBtn(copied === p.key ? "#22c55e" : p.color)}
-                onClick={() => handleCopy(p.key)}
-              >
-                {p.key === "facebook" && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                )}
-                {p.key === "instagram" && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                )}
-                {p.key === "linkedin" && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                )}
-                {copied === p.key ? "Copied!" : `Share to ${p.label}`}
-              </button>
-            ))}
-          </div>
+            {/* ── STEP 2+: Property header + Media + Generate ── */}
+            {step >= 2 && selectedProperty && (
+              <>
+                {/* Property bar */}
+                <div className="rounded-xl border border-gray-700 bg-gray-900 px-5 py-3.5 flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleStartOver}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                      <div className="text-[17px] font-extrabold text-white">{selectedProperty.address}</div>
+                      <div className="text-[13px] text-gray-400 font-medium">
+                        {[selectedProperty.city, selectedProperty.state].filter(Boolean).join(", ")}
+                        {selectedProperty.price ? ` · ${formatPrice(selectedProperty.price)}` : ""}
+                        <span className="text-blue-400 font-bold ml-1.5">
+                          · {getPostType(selectedProperty.status)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <StatusBadge status={selectedProperty.status} />
+                </div>
 
-          <p style={{ fontSize: 11, color: "#475569", marginTop: 10, textAlign: "center" }}>
-            Caption is copied to clipboard — paste it when sharing on the platform
-          </p>
+                {/* Media filters */}
+                <div className="flex gap-1.5 mb-4 flex-wrap">
+                  {MEDIA_FILTERS.map((f) =>
+                    mediaCounts[f.key] > 0 || f.key === "all" ? (
+                      <button
+                        key={f.key}
+                        onClick={() => setMediaFilter(f.key)}
+                        className={`px-4 py-2 rounded-lg text-[13px] font-bold border transition-colors ${
+                          mediaFilter === f.key
+                            ? "border-blue-500 bg-blue-950/50 text-blue-300"
+                            : "border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500"
+                        }`}
+                      >
+                        {f.label}
+                        {mediaCounts[f.key] > 0 && (
+                          <span className="ml-1 opacity-60">({mediaCounts[f.key]})</span>
+                        )}
+                      </button>
+                    ) : null
+                  )}
+                </div>
 
-          {/* New post button */}
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <button
-              onClick={() => { setSelectedMedia(null); setGeneratedCaption(""); setStep(2); }}
-              style={{ ...pillBtn(false), width: "100%", padding: "10px", fontSize: 13 }}
-            >
-              Create another post for {selectedProperty.address}
-            </button>
+                {/* Media grid */}
+                {loadingMedia ? (
+                  <div className="flex items-center justify-center py-16 text-gray-400 gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" /> Loading media...
+                  </div>
+                ) : filteredMedia.length === 0 ? (
+                  <div className="text-center py-16 rounded-xl border border-gray-700 bg-gray-900 mb-4">
+                    <div className="text-3xl mb-2">📷</div>
+                    <p className="text-sm font-bold text-white">No media found</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {mediaFilter !== "all"
+                        ? `No ${mediaFilter} assets for this property. Try "All".`
+                        : "Order photos or create designs to populate your library."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-2.5 mb-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+                    {filteredMedia
+                      .filter((m) => m.type !== "description") // descriptions aren't visual media
+                      .map((m) => {
+                        const isSel = selectedMedia?.id === m.id;
+                        const thumb = m.thumbnailUrl || m.assetUrl;
+                        const isVideo = m.type === "video" || m.type === "clip" || m.type === "remix";
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => handleSelectMedia(m)}
+                            className={`rounded-xl overflow-hidden text-left border-2 transition-all relative group ${
+                              isSel
+                                ? "border-blue-500 bg-blue-950/40"
+                                : "border-gray-600 bg-gray-800 hover:border-gray-500"
+                            }`}
+                          >
+                            {thumb ? (
+                              <img
+                                src={thumb}
+                                alt={m.label || ""}
+                                className="w-full h-[115px] object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-[115px] bg-gray-700 flex items-center justify-center">
+                                {isVideo ? (
+                                  <Video className="w-8 h-8 text-gray-500" />
+                                ) : (
+                                  <ImageIcon className="w-8 h-8 text-gray-500" />
+                                )}
+                              </div>
+                            )}
+                            <div className="px-3 py-2">
+                              <div className="text-[12px] font-bold text-gray-100 truncate">
+                                {m.label || m.type}
+                              </div>
+                              <div className="text-[10px] text-gray-400 uppercase font-semibold mt-0.5">
+                                {m.type}
+                              </div>
+                            </div>
+                            {isSel && (
+                              <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-600 border-2 border-blue-300 flex items-center justify-center">
+                                <Check className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            )}
+                            {isVideo && thumb && (
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[70%] w-9 h-9 rounded-full bg-black/70 border-2 border-white/30 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                                <div className="ml-0.5 w-0 h-0 border-l-[10px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* Generate button */}
+                {step === 2 && (
+                  <button
+                    disabled={!selectedMedia || isGenerating}
+                    onClick={handleGenerateCaption}
+                    className={`w-full py-4 rounded-xl text-[16px] font-extrabold tracking-tight transition-all ${
+                      !selectedMedia || isGenerating
+                        ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                    }`}
+                  >
+                    {isGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Generating your post...
+                      </span>
+                    ) : selectedMedia ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Sparkles className="w-4 h-4" /> Generate {getPostType(selectedProperty.status)} Post
+                      </span>
+                    ) : (
+                      "Select media above to generate a post"
+                    )}
+                  </button>
+                )}
+
+                {/* ── STEP 3: Caption + Share ── */}
+                {step === 3 && generatedCaption && (
+                  <div className="rounded-xl border border-gray-700 bg-gray-900 p-5">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-[17px] font-extrabold text-white">Your Post</h2>
+                      <button
+                        onClick={handleGenerateCaption}
+                        className="px-4 py-1.5 rounded-lg text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Regenerate
+                      </button>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="flex gap-4 mb-5">
+                      {selectedMedia && (selectedMedia.thumbnailUrl || selectedMedia.assetUrl) && (
+                        <img
+                          src={selectedMedia.thumbnailUrl || selectedMedia.assetUrl}
+                          alt=""
+                          className="w-[140px] h-[105px] object-cover rounded-xl border border-gray-600 shrink-0"
+                        />
+                      )}
+                      <textarea
+                        value={generatedCaption}
+                        onChange={(e) => setGeneratedCaption(e.target.value)}
+                        className="flex-1 bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-gray-100 text-[14px] leading-relaxed resize-y outline-none focus:border-blue-500 transition-colors"
+                        style={{ minHeight: 150, fontFamily: "inherit" }}
+                      />
+                    </div>
+
+                    {/* Share buttons */}
+                    <div className="flex gap-2">
+                      {[
+                        { key: "facebook", label: "Facebook", color: "#1877F2", icon: "f" },
+                        { key: "instagram", label: "Instagram", color: "#E4405F", icon: "ig" },
+                        { key: "linkedin", label: "LinkedIn", color: "#0A66C2", icon: "in" },
+                      ].map((p) => (
+                        <button
+                          key={p.key}
+                          onClick={() => handleShare(p.key)}
+                          className="flex-1 py-3.5 rounded-xl text-[14px] font-extrabold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                          style={{ background: copied === p.key ? "#16a34a" : p.color }}
+                        >
+                          {copied === p.key ? (
+                            <>
+                              <Check className="w-4 h-4" /> Copied!
+                            </>
+                          ) : (
+                            <>
+                              {p.key === "instagram" && <Copy className="w-4 h-4" />}
+                              {p.key !== "instagram" && <ExternalLink className="w-4 h-4" />}
+                              {p.label}
+                            </>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2.5 text-center font-medium">
+                      Facebook & LinkedIn open share dialogs · Instagram copies caption to clipboard
+                    </p>
+
+                    {/* Another post */}
+                    <div className="mt-5 pt-5 border-t border-gray-700">
+                      <button
+                        onClick={() => {
+                          setSelectedMedia(null);
+                          setGeneratedCaption("");
+                          setStep(2);
+                        }}
+                        className="w-full py-3 rounded-xl text-[14px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                      >
+                        Create another post for {selectedProperty.address}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
-      )}
-
-      {/* Empty state */}
-      {step === 1 && properties.length === 0 && (
-        <div style={{ ...card, textAlign: "center", padding: 40 }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🏠</div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: "0 0 8px" }}>No active properties</h3>
-          <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Add a property to start creating marketing content</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
