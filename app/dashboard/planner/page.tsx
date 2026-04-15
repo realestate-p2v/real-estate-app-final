@@ -461,20 +461,20 @@ export default function PlannerPage() {
 
     const templates: Record<string, string[]> = {
       "Just Listed": [
-        `✨ Just Listed in ${city}!\n\n${p.address}\n${details}\n${features ? `\n${features}\n` : ""}\n${price ? `Offered at ${price}` : ""}\n\nThis is the one you've been waiting for. Schedule your private tour today! 🔑\n\n#JustListed #${cityTag}RealEstate #NewListing #DreamHome`,
-        `🏡 NEW — ${p.address}\n\n${details}${price ? ` | ${price}` : ""}\n${features ? `\n✅ ${p.special_features?.join("\n✅ ") || ""}` : ""}\n\nLocated in beautiful ${city} — this home is move-in ready and priced to sell.\n\nDM me to see it before it's gone! 📲\n\n#JustListed #RealEstate #HomeGoals #${cityTag}`,
-        `Welcome to ${p.address} 🏠\n\n${details}\n${price ? `\nListed at ${price}` : ""}\n${features ? `\nFeatures: ${features}` : ""}\n\nThis ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} beauty in ${city} checks every box.\n\nListing link in first comment! 🔗\n\n#NewOnTheMarket #${cityTag}Homes #RealEstateAgent`,
-        `📣 Fresh on the market!\n\n${p.address}, ${city}\n${details}\n${price}\n${features ? `\nHighlights: ${features}` : ""}\n\nEvery detail of this home was designed for living well.\n\nCall or DM ${firstName || "me"} today! 📞\n\n#JustListed #LuxuryLiving #${cityTag}RealEstate`,
+        `✨ Just Listed in ${city}!\n${p.address}\n${details}\n${price ? `Offered at ${price}` : ""}${features ? `\n${features}` : ""}\nThis is the one you've been waiting for. Schedule your private tour today! 🔑\nListing link in first comment!\n#JustListed #${cityTag}RealEstate #NewListing #DreamHome`,
+        `🏡 NEW — ${p.address}\n${details}${price ? ` | ${price}` : ""}${features ? `\n✅ ${p.special_features?.join("\n✅ ") || ""}` : ""}\nLocated in beautiful ${city} — this home is move-in ready and priced to sell.\nDM me to see it before it's gone! 📲\nListing link in first comment!\n#JustListed #RealEstate #HomeGoals #${cityTag}`,
+        `Welcome to ${p.address} 🏠\n${details}\n${price ? `Listed at ${price}` : ""}${features ? `\nFeatures: ${features}` : ""}\nThis ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} beauty in ${city} checks every box.\nListing link in first comment! 🔗\n#NewOnTheMarket #${cityTag}Homes #RealEstateAgent`,
+        `📣 Fresh on the market!\n${p.address}, ${city}\n${details}\n${price}${features ? `\nHighlights: ${features}` : ""}\nEvery detail of this home was designed for living well.\nCall or DM ${firstName || "me"} today! 📞\nListing link in first comment!\n#JustListed #LuxuryLiving #${cityTag}RealEstate`,
       ],
       "Just Sold": [
-        `🎉 SOLD! ${p.address}\n\nCongrats to my incredible clients on closing this ${p.bedrooms ? p.bedrooms + "-bedroom " : ""}home in ${city}!\n\nThinking about making a move? Let's talk. 📞\n\n#JustSold #ClosingDay #${cityTag}RealEstate`,
-        `🔑 Keys handed over! ${p.address} is officially SOLD.\n\nHelping people find their perfect home never gets old.\n\nYour turn could be next — reach out anytime! 💛\n\n#Sold #RealEstateLife #${cityTag}`,
+        `🎉 SOLD! ${p.address}\nCongrats to my incredible clients on closing this ${p.bedrooms ? p.bedrooms + "-bedroom " : ""}home in ${city}!\nThinking about making a move? Let's talk. 📞\n#JustSold #ClosingDay #${cityTag}RealEstate`,
+        `🔑 Keys handed over! ${p.address} is officially SOLD.\nHelping people find their perfect home never gets old.\nYour turn could be next — reach out anytime! 💛\n#Sold #RealEstateLife #${cityTag}`,
       ],
       "Price Drop Alert": [
-        `⚡ PRICE IMPROVED — ${p.address}\n\n${details}\nNow ${price}\n${features ? `\n${features}` : ""}\n\nThis ${city} gem just became an even better value!\n\nDM me to schedule a tour 🏃‍♂️\n\n#PriceReduced #${cityTag}Homes #OpportunityKnocks`,
+        `⚡ PRICE IMPROVED — ${p.address}\n${details}\nNow ${price}${features ? `\n${features}` : ""}\nThis ${city} gem just became an even better value!\nDM me to schedule a tour 🏃‍♂️\nListing link in first comment!\n#PriceReduced #${cityTag}Homes #OpportunityKnocks`,
       ],
       "Coming Soon Preview": [
-        `👀 COMING SOON to ${city}...\n\n${p.address}\n${details}\n${price ? `Expected at ${price}` : ""}\n\nGet on the early access list!\n\nDM ${firstName || "me"} for details! 🔥\n\n#ComingSoon #ExclusiveListing #${cityTag}RealEstate`,
+        `👀 COMING SOON to ${city}...\n${p.address}\n${details}\n${price ? `Expected at ${price}` : ""}\nGet on the early access list!\nDM ${firstName || "me"} for details! 🔥\n#ComingSoon #ExclusiveListing #${cityTag}RealEstate`,
       ],
     };
     const postType = getPostType(p.status);
