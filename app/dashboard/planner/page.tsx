@@ -24,6 +24,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+import Link from "next/link";
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Property {
@@ -346,8 +348,12 @@ export default function PlannerPage() {
       try {
         const supabase = createClient();
         const addr = property.address || "";
-        // Use first 15 chars for ilike matching (same as Design Studio)
-        const addrPrefix = addr.substring(0, 15).trim();
+
+        // Extract street number for matching — most reliable part of an address
+        const streetNum = addr.match(/^\d+/)?.[0] || "";
+        // Also extract first meaningful word after the number
+        const addrWords = addr.replace(/^\d+\s*/, "").split(/[\s,]+/).filter(Boolean);
+        const firstWord = addrWords[0] || "";
 
         // Parallel fetch from all source tables
         const [propRes, ordersRes, exportsRes, stagingRes, descriptionsRes] = await Promise.all([
@@ -357,21 +363,19 @@ export default function PlannerPage() {
             .select("photos, optimized_photos")
             .eq("id", property.id)
             .single(),
-          // Orders matched by address (ilike — same pattern as Design Studio)
-          addrPrefix.length > 3
-            ? supabase
-                .from("orders")
-                .select("id, property_address, photos, delivery_url, clip_urls, created_at")
-                .eq("user_id", userId)
-                .eq("payment_status", "paid")
-                .ilike("property_address", `%${addrPrefix}%`)
-            : Promise.resolve({ data: [] }),
-          // Design exports matched by property_id FK
+          // ALL paid orders for this user — filter client-side for better matching
+          supabase
+            .from("orders")
+            .select("id, property_address, photos, delivery_url, clip_urls, created_at")
+            .eq("user_id", userId)
+            .eq("payment_status", "paid"),
+          // Design exports matched by property_id FK — exclude branding cards
           supabase
             .from("design_exports")
             .select("id, property_id, template_type, export_url, export_format, created_at")
             .eq("user_id", userId)
-            .eq("property_id", property.id),
+            .eq("property_id", property.id)
+            .not("template_type", "eq", "branding_card"),
           // Virtual staging matched by property_id FK
           supabase
             .from("lens_staging")
@@ -385,6 +389,30 @@ export default function PlannerPage() {
             .eq("user_id", userId),
         ]);
 
+        // ── Match orders by address (client-side for reliability) ──
+        const normalizeForMatch = (s: string) =>
+          (s || "").toLowerCase().replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+            .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr")
+            .replace(/\blane\b/g, "ln").replace(/\broad\b/g, "rd")
+            .replace(/[.,\-#]/g, "").replace(/\s+/g, " ").trim();
+
+        const propNorm = normalizeForMatch(addr);
+        const allOrders = ordersRes.data || [];
+
+        // Filter orders that match this property's address
+        const matchedOrders = allOrders.filter((o: any) => {
+          const orderNorm = normalizeForMatch(o.property_address || "");
+          if (!orderNorm || !propNorm) return false;
+          // Match if: same street number + first word appears in both
+          if (streetNum && orderNorm.includes(streetNum) && firstWord && orderNorm.toLowerCase().includes(firstWord.toLowerCase())) return true;
+          // Or if normalized addresses overlap substantially
+          const propFirst = propNorm.split(",")[0].trim();
+          const orderFirst = orderNorm.split(",")[0].trim();
+          return propFirst.length > 5 && orderFirst.length > 5 && (propFirst.includes(orderFirst) || orderFirst.includes(propFirst));
+        });
+
+        console.log("[Planner] Address matching:", { addr, streetNum, firstWord, totalOrders: allOrders.length, matched: matchedOrders.length, orderAddresses: allOrders.map((o: any) => o.property_address) });
+
         const addAsset = (a: MediaAsset) => {
           const key = a.assetUrl || a.id;
           if (seen.has(key)) return;
@@ -393,8 +421,7 @@ export default function PlannerPage() {
         };
 
         // ── Photos from orders (secure_url — confirmed from Design Studio) ──
-        const orders = ordersRes.data || [];
-        orders.forEach((order: any) => {
+        matchedOrders.forEach((order: any) => {
           const photos = Array.isArray(order.photos) ? order.photos : [];
           photos.forEach((photo: any, idx: number) => {
             const url = typeof photo === "string" ? photo : photo?.secure_url || photo?.url || "";
@@ -460,7 +487,7 @@ export default function PlannerPage() {
 
         // ── Design exports (flyers, graphics) ──
         const FLYER_TYPES = ["just_listed", "open_house", "price_reduced", "just_sold", "yard_sign", "property_pdf"];
-        const exports = exportsRes.data || [];
+        const exports = (exportsRes.data || []).filter((e: any) => e.template_type !== "branding_card");
         exports.forEach((exp: any) => {
           if (!exp.export_url) return;
           const isFlyer = FLYER_TYPES.some(t => exp.template_type?.includes(t));
@@ -667,6 +694,13 @@ export default function PlannerPage() {
       <div className="px-6 py-5 border-b border-gray-800">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-800 border border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-colors"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-300" />
+            </Link>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20">
               <Sparkles className="h-5 w-5 text-emerald-400" />
             </div>
