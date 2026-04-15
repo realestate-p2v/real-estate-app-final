@@ -463,7 +463,7 @@ export default function PlannerPage() {
       "Just Listed": [
         `✨ Just Listed in ${city}!\n\n${p.address}\n${details}\n${features ? `\n${features}\n` : ""}\n${price ? `Offered at ${price}` : ""}\n\nThis is the one you've been waiting for. Schedule your private tour today! 🔑\n\n#JustListed #${cityTag}RealEstate #NewListing #DreamHome`,
         `🏡 NEW — ${p.address}\n\n${details}${price ? ` | ${price}` : ""}\n${features ? `\n✅ ${p.special_features?.join("\n✅ ") || ""}` : ""}\n\nLocated in beautiful ${city} — this home is move-in ready and priced to sell.\n\nDM me to see it before it's gone! 📲\n\n#JustListed #RealEstate #HomeGoals #${cityTag}`,
-        `Welcome to ${p.address} 🏠\n\n${details}\n${price ? `\nListed at ${price}` : ""}\n${features ? `\nFeatures: ${features}` : ""}\n\nThis ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} beauty in ${city} checks every box.\n\nLink in bio for details! 🔗\n\n#NewOnTheMarket #${cityTag}Homes #RealEstateAgent`,
+        `Welcome to ${p.address} 🏠\n\n${details}\n${price ? `\nListed at ${price}` : ""}\n${features ? `\nFeatures: ${features}` : ""}\n\nThis ${p.bedrooms ? p.bedrooms + "-bedroom" : ""} beauty in ${city} checks every box.\n\nListing link in first comment! 🔗\n\n#NewOnTheMarket #${cityTag}Homes #RealEstateAgent`,
         `📣 Fresh on the market!\n\n${p.address}, ${city}\n${details}\n${price}\n${features ? `\nHighlights: ${features}` : ""}\n\nEvery detail of this home was designed for living well.\n\nCall or DM ${firstName || "me"} today! 📞\n\n#JustListed #LuxuryLiving #${cityTag}RealEstate`,
       ],
       "Just Sold": [
