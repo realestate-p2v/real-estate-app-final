@@ -207,15 +207,15 @@ function generateFallbackCaption(
 
   switch (contentType) {
     case "new_listing":
-      return `✨ Just listed in ${city || "a great neighborhood"}!\n\n${addr}\n${detailLine}\n${price ? `Offered at ${price}` : ""}\n${features ? `\nHighlights: ${features}` : ""}\n\nThis home checks every box. Schedule your private tour today!\n\nDM ${firstName || "me"} for details 🔑\n\n#JustListed #RealEstate #${(city || "Home").replace(/\s/g, "")}`;
+      return `✨ Just listed in ${city || "a great neighborhood"}!\n${addr}\n${detailLine}\n${price ? `Offered at ${price}` : ""}${features ? `\nHighlights: ${features}` : ""}\nThis home checks every box. Schedule your private tour today!\nListing link in first comment! 🔑\n#JustListed #RealEstate #${(city || "Home").replace(/\s/g, "")}`;
     case "just_sold":
-      return `🎉 SOLD — ${addr}!\n\nCongratulations to my amazing clients on closing this ${beds ? beds + "-bedroom " : ""}home${city ? ` in ${city}` : ""}.\n\nAnother dream home, another happy family. This is why I love what I do.\n\nThinking of making a move? Let's talk! 📞\n\n#JustSold #ClosingDay #RealEstate`;
+      return `🎉 SOLD — ${addr}!\nCongratulations to my amazing clients on closing this ${beds ? beds + "-bedroom " : ""}home${city ? ` in ${city}` : ""}.\nAnother dream home, another happy family. This is why I love what I do.\nThinking of making a move? Let's talk! 📞\n#JustSold #ClosingDay #RealEstate`;
     case "price_reduced":
-      return `⚡ Price improved — ${addr}\n\n${detailLine}\n${price ? `Now ${price}` : ""}\n${features ? `\n${features}` : ""}\n\nThis ${city || ""} gem just became an even better value. Don't wait!\n\nDM ${firstName || "me"} to schedule a tour\n\n#PriceReduced #RealEstate #Opportunity`;
+      return `⚡ Price improved — ${addr}\n${detailLine}\n${price ? `Now ${price}` : ""}${features ? `\n${features}` : ""}\nThis ${city || ""} gem just became an even better value. Don't wait!\nListing link in first comment!\n#PriceReduced #RealEstate #Opportunity`;
     case "coming_soon":
-      return `👀 Coming soon to ${city || "the market"}...\n\n${addr}\n${detailLine}\n${price ? `Expected at ${price}` : ""}\n\nGet on the early access list before this one goes public!\n\nDM ${firstName || "me"} for details 🔥\n\n#ComingSoon #ExclusiveListing #RealEstate`;
+      return `👀 Coming soon to ${city || "the market"}...\n${addr}\n${detailLine}\n${price ? `Expected at ${price}` : ""}\nGet on the early access list before this one goes public!\nDM ${firstName || "me"} for details! 🔥\n#ComingSoon #ExclusiveListing #RealEstate`;
     default:
-      return `🏡 ${addr}\n\n${detailLine}\n${price || ""}\n\nInterested? Reach out — I'd love to show you around!\n\n#RealEstate #NewListing`;
+      return `🏡 ${addr}\n${detailLine}\n${price || ""}\nInterested? Reach out — I'd love to show you around!\n#RealEstate #NewListing`;
   }
 }
 
