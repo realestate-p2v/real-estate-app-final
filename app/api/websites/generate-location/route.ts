@@ -23,26 +23,37 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { location_name, region, country, agent_name, company, handle, user_id } = body;
+    const { location_name, region, country, zip_code, county, agent_name, company, handle, user_id } = body;
 
     if (!location_name || !user_id || !handle) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders });
     }
 
-    // Generate slug
-    const location_slug = location_name
+    // Generate slug — include region/zip for disambiguation
+    const slugParts = [location_name];
+    if (region) slugParts.push(region);
+    const location_slug = slugParts.join(" ")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
+    // Build location context for Claude
+    const locationContext = [
+      `Location: ${location_name}`,
+      region ? `State/Region: ${region}` : "",
+      county ? `County: ${county}` : "",
+      zip_code ? `Zip Code: ${zip_code}` : "",
+      `Country: ${country || "USA"}`,
+    ].filter(Boolean).join("\n");
+
     // Call Claude API to generate content
     const prompt = `You are writing an SEO-optimized location page for a real estate agent's website. The agent helps people buy and sell property in this area.
 
-Location: ${location_name}
-Region: ${region || ""}
-Country: ${country || "Costa Rica"}
+${locationContext}
 Agent: ${agent_name || ""}
 Company: ${company || ""}
+
+IMPORTANT: Use the zip code, county, and state to identify the EXACT location. There may be multiple places with similar names — write about the specific one identified by these details.
 
 Write a comprehensive, engaging location page. Respond ONLY with a JSON object (no markdown, no backticks) with these exact fields:
 
@@ -111,7 +122,7 @@ Write a comprehensive, engaging location page. Respond ONLY with a JSON object (
         location_name,
         location_slug,
         region: region || null,
-        country: country || "Costa Rica",
+        country: country || "USA",
         page_title: content.page_title,
         meta_description: content.meta_description,
         hero_heading: content.hero_heading,
