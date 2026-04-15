@@ -1,20 +1,19 @@
 // components/marketing-planner-widget.tsx
-// Conversational marketing copilot — sits at the top of the dashboard
-// Greets the agent by name, shows what needs doing today, offers quick actions
+// Streamlined dashboard copilot — matches the new planner flow
+// Shows greeting, active properties needing marketing, quick action to open planner
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowRight, AlertTriangle, Loader2, Sparkles, Calendar, BarChart3, ChevronRight } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles, ChevronRight, Home, Image as ImageIcon, Share2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-interface WidgetSuggestion {
+interface Property {
   id: string;
-  title: string;
-  description: string;
-  buttons?: string[];
-  propertyAddress?: string;
-  type: string;
+  address: string;
+  city?: string;
+  state?: string;
+  status: string;
 }
 
 interface BrandScore {
@@ -28,37 +27,17 @@ interface MarketingPlannerWidgetProps {
   scores?: { propertyId: string; propertyAddress: string; percentage: number; grade: string }[];
 }
 
-const QUICK_ACTIONS = [
-  { label: "Order a video", href: "/order", color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5 hover:bg-cyan-400/10" },
-  { label: "My properties", href: "/dashboard/properties", color: "text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10" },
-  { label: "My videos", href: "/dashboard/videos", color: "text-purple-400 border-purple-400/20 bg-purple-400/5 hover:bg-purple-400/10" },
-  { label: "Make a video remix", href: "/dashboard/lens/remix", color: "text-pink-400 border-pink-400/20 bg-pink-400/5 hover:bg-pink-400/10" },
-  { label: "Write a description", href: "/dashboard/lens/descriptions", color: "text-sky-400 border-sky-400/20 bg-sky-400/5 hover:bg-sky-400/10" },
-  { label: "Create a graphic", href: "/dashboard/lens/design-studio", color: "text-indigo-400 border-indigo-400/20 bg-indigo-400/5 hover:bg-indigo-400/10" },
-  { label: "Stage a room", href: "/dashboard/lens/staging", color: "text-violet-400 border-violet-400/20 bg-violet-400/5 hover:bg-violet-400/10" },
-  { label: "Full planner", href: "/dashboard/planner", color: "text-white/40 border-white/10 bg-white/[0.02] hover:bg-white/[0.05]" },
-];
-
 function getGreeting(name: string): string {
   const h = new Date().getHours();
   const time = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
   const firstName = name?.split(" ")[0] || "there";
-  return `Good ${time}, ${firstName}`;
-}
-
-function getStatusMessage(suggestions: WidgetSuggestion[], overdueCount: number, todayCount: number): string {
-  if (overdueCount > 0) return `You have ${overdueCount} post${overdueCount > 1 ? "s" : ""} ready to go — agents who post consistently close more deals. Let's keep your streak alive!`;
-  if (todayCount > 0) return `You have ${todayCount} post${todayCount > 1 ? "s" : ""} lined up for today — staying visible keeps you top of mind with buyers and sellers.`;
-  if (suggestions.length > 0) return suggestions[0].description;
-  return "Your marketing is looking great — consistent agents build the strongest brands. What shall we create today?";
+  return `Good ${time}, ${firstName}!`;
 }
 
 export default function MarketingPlannerWidget({ isSubscriber, isTrial }: MarketingPlannerWidgetProps) {
   const [agentName, setAgentName] = useState("");
-  const [suggestions, setSuggestions] = useState<WidgetSuggestion[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [brandScore, setBrandScore] = useState<BrandScore | null>(null);
-  const [overdueCount, setOverdueCount] = useState(0);
-  const [todayCount, setTodayCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -67,38 +46,33 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Get agent name
-      const { data: profile } = await supabase
-        .from("lens_usage")
-        .select("saved_agent_name")
-        .eq("user_id", session.user.id)
-        .single();
-      if (profile?.saved_agent_name) setAgentName(profile.saved_agent_name);
+      const [profileRes, propsRes] = await Promise.all([
+        supabase.from("lens_usage").select("saved_agent_name").eq("user_id", session.user.id).single(),
+        supabase
+          .from("agent_properties")
+          .select("id, address, city, state, status")
+          .eq("user_id", session.user.id)
+          .is("merged_into_id", null)
+          .in("status", ["active", "new", "coming_soon", "price_reduced"])
+          .order("updated_at", { ascending: false })
+          .limit(3),
+      ]);
 
-      // Get today's schedule counts
-      const today = new Date().toISOString().split("T")[0];
-      const { data: schedule } = await supabase
-        .from("marketing_schedule")
-        .select("id, scheduled_date, status")
-        .eq("user_id", session.user.id)
-        .eq("status", "pending");
+      if (profileRes.data?.saved_agent_name) setAgentName(profileRes.data.saved_agent_name);
+      setProperties(propsRes.data || []);
 
-      if (schedule) {
-        setTodayCount(schedule.filter((s: { scheduled_date: string }) => s.scheduled_date === today).length);
-        setOverdueCount(schedule.filter((s: { scheduled_date: string }) => s.scheduled_date < today).length);
-      }
-
-      // Get suggestions + brand score
-      const res = await fetch("/api/planner/suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentName: profile?.saved_agent_name || "Agent" }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSuggestions((data.suggestions || []).slice(0, 2));
-        setBrandScore(data.brandScore || null);
-      }
+      // Get brand score
+      try {
+        const res = await fetch("/api/planner/suggestions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agentName: profileRes.data?.saved_agent_name || "Agent" }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBrandScore(data.brandScore || null);
+        }
+      } catch {}
     } catch (err) {
       console.error("Widget load error:", err);
     } finally {
@@ -111,16 +85,14 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
   if (!isSubscriber && !isTrial) return null;
 
   const greeting = getGreeting(agentName);
-  const statusMessage = getStatusMessage(suggestions, overdueCount, todayCount);
-  const hasUrgent = overdueCount > 0;
+  const propertyCount = properties.length;
 
   return (
     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-sm overflow-hidden">
-      {/* ── Copilot header ── */}
+      {/* ── Header ── */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0">
-            {/* Lensy avatar */}
             <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/20 flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-emerald-400" />
             </div>
@@ -132,13 +104,14 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
                 </div>
               ) : (
                 <>
-                  {/* Greeting */}
-                  <p className="text-[11px] font-bold text-emerald-400/70 uppercase tracking-wider mb-0.5">Lensy · Your Marketing Copilot</p>
-                  <p className="text-base font-bold text-white/90">{greeting} — what are we working on today?</p>
-                  {/* Status message */}
-                  <p className={`text-sm mt-1 leading-relaxed ${hasUrgent ? "text-red-400" : "text-white/50"}`}>
-                    {hasUrgent && <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
-                    {statusMessage}
+                  <p className="text-[11px] font-bold text-emerald-400/70 uppercase tracking-wider mb-0.5">
+                    Lensy · Marketing Planner
+                  </p>
+                  <p className="text-base font-bold text-white/90">{greeting}</p>
+                  <p className="text-sm mt-1 leading-relaxed text-white/50">
+                    {propertyCount > 0
+                      ? `You have ${propertyCount} active ${propertyCount === 1 ? "listing" : "listings"} ready for marketing. Pick one and create a post in seconds!`
+                      : "Your marketing hub is ready — add a property to start creating content that builds your brand."}
                   </p>
                 </>
               )}
@@ -147,8 +120,14 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
 
           {/* Brand score pill */}
           {!loading && brandScore && (
-            <Link href="/dashboard/planner" className="flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
-              <span className={`text-lg font-black ${brandScore.percentage >= 70 ? "text-emerald-400" : brandScore.percentage >= 50 ? "text-amber-400" : "text-red-400"}`}>
+            <Link
+              href="/dashboard/planner"
+              className="flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+            >
+              <span className={`text-lg font-black ${
+                brandScore.percentage >= 70 ? "text-emerald-400" :
+                brandScore.percentage >= 50 ? "text-amber-400" : "text-red-400"
+              }`}>
                 {brandScore.grade}
               </span>
               <span className="text-[9px] font-bold text-white/25 uppercase tracking-wider">Brand</span>
@@ -156,67 +135,50 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
           )}
         </div>
 
-        {/* Top suggestions */}
-        {!loading && suggestions.length > 0 && (
+        {/* Property quick-picks */}
+        {!loading && properties.length > 0 && (
           <div className="mt-4 space-y-2">
-            {suggestions.map((s) => (
+            {properties.slice(0, 3).map((p) => (
               <Link
-                key={s.id}
+                key={p.id}
                 href="/dashboard/planner"
-                className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] hover:border-emerald-400/20 transition-all group"
+                className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] hover:border-blue-400/20 transition-all group"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white/80 group-hover:text-white/95 transition-colors truncate">{s.title}</p>
-                  {s.propertyAddress && (
-                    <p className="text-[11px] text-white/30 truncate">{s.propertyAddress.split(",")[0]}</p>
-                  )}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center">
+                    <Home className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white/80 group-hover:text-white/95 transition-colors truncate">
+                      {p.address}
+                    </p>
+                    <p className="text-[11px] text-white/30 truncate">
+                      {[p.city, p.state].filter(Boolean).join(", ")} · Create a post
+                    </p>
+                  </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-emerald-400/60 flex-shrink-0 transition-colors" />
+                <ChevronRight className="h-4 w-4 text-white/15 group-hover:text-blue-400/60 flex-shrink-0 transition-colors" />
               </Link>
             ))}
           </div>
         )}
       </div>
 
-      {/* ── Quick action buttons ── */}
-      <div className="border-t border-white/[0.05] px-4 py-3">
-        <p className="text-[10px] font-bold text-white/20 uppercase tracking-wider mb-2.5">Quick Actions</p>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_ACTIONS.map((action) => (
-            <Link
-              key={action.label}
-              href={action.href}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${action.color}`}
-            >
-              {action.label}
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Stats footer ── */}
-      {!loading && (todayCount > 0 || overdueCount > 0) && (
-        <div className="border-t border-white/[0.05] px-5 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {todayCount > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-emerald-400/60" />
-                <span className="text-xs text-white/40">{todayCount} scheduled today</span>
-              </div>
-            )}
-            {overdueCount > 0 && (
-              <div className="flex items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5 text-red-400/70" />
-                <span className="text-xs text-red-400/70">{overdueCount} overdue</span>
-              </div>
-            )}
+      {/* ── CTA ── */}
+      <div className="border-t border-white/[0.05] px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <ImageIcon className="h-3.5 w-3.5 text-white/20" />
+            <span className="text-xs text-white/35">Select → Generate → Share</span>
           </div>
-          <Link href="/dashboard/planner" className="flex items-center gap-1 text-xs font-semibold text-white/25 hover:text-emerald-400/70 transition-colors">
-            View all <ArrowRight className="h-3 w-3" />
-          </Link>
         </div>
-      )}
+        <Link
+          href="/dashboard/planner"
+          className="flex items-center gap-1.5 text-xs font-bold text-emerald-400/80 hover:text-emerald-400 transition-colors"
+        >
+          Open Planner <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
     </div>
   );
 }
