@@ -812,6 +812,15 @@ export default function PlannerPage() {
                       </button>
                     </div>
 
+                    {/* Coming soon banner */}
+                    <div className="my-4 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-950/60 to-purple-950/60 border border-blue-500/20 flex items-center gap-3">
+                      <span className="text-lg">🚀</span>
+                      <div>
+                        <p className="text-[13px] font-bold text-blue-200">One-click posting is coming soon</p>
+                        <p className="text-[11px] text-blue-300/60">Post directly to Facebook, Instagram & LinkedIn without leaving P2V</p>
+                      </div>
+                    </div>
+
                     {/* Step 2: Share to platform */}
                     <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2">Share to</p>
                     <div className="flex gap-2">
