@@ -153,7 +153,7 @@ export default function EditorPage(){
           {/* Generator */}
           <Cd t="Generate New Location" s="Enter a location — AI writes the full SEO page">
             <div style={{display:"flex",gap:8,marginBottom:8}}>
-              <input type="text" value={newLoc} onChange={e=>setNewLoc(e.target.value)} placeholder="e.g. Playa Hermosa" style={{...S.inp,flex:2}} onKeyDown={e=>e.key==="Enter"&&genLoc()}/>
+              <input type="text" value={newLoc} onChange={e=>setNewLoc(e.target.value)} placeholder="Anytown, USA" style={{...S.inp,flex:2}} onKeyDown={e=>e.key==="Enter"&&genLoc()}/>
               <input type="text" value={newReg} onChange={e=>setNewReg(e.target.value)} placeholder="State / Region" style={{...S.inp,flex:1}}/>
             </div>
             <div style={{display:"flex",gap:8,marginBottom:8}}>
