@@ -720,9 +720,9 @@ export default function PlannerPage() {
                         <h2 className="text-[17px] font-extrabold text-white">Your Post</h2>
                         <p className="text-[12px] text-gray-400 mt-0.5">{selectedMedia.length} {selectedMedia.length === 1 ? "item" : "items"} selected · Edit caption below</p>
                       </div>
-                      <button onClick={handleGenerateCaption} disabled={isGenerating}
-                        className="px-5 py-2.5 rounded-xl text-[13px] font-bold bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white transition-colors flex items-center gap-2">
-                        {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} New Version
+                      <button onClick={() => { if (selectedProperty) setGeneratedCaption(generateLocalCaption(selectedProperty)); }}
+                        className="px-5 py-2.5 rounded-xl text-[13px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5" /> New Version
                       </button>
                     </div>
 
