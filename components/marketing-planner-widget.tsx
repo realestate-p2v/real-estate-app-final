@@ -230,7 +230,7 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
                   {dayPosts.length > 0 && (
                     <div className="flex justify-center gap-0.5 mt-1">
                       {dayPosts.slice(0, 3).map(p => (
-                        <span key={p.id} className="text-[11px]">{PLATFORM_ICONS[p.platform] || "📌"}</span>
+                        <span key={p.id} className="text-[22px] leading-none">{PLATFORM_ICONS[p.platform] || "📌"}</span>
                       ))}
                     </div>
                   )}
