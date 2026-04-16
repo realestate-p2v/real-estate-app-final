@@ -162,6 +162,7 @@ export default async function AgentListingDetailPage({ params }: Props) {
         stagings={stagings}
         designExports={designExports}
         template={property.website_template || "modern_clean"}
+        agentSiteMode={true}
       />
     </>
   );
