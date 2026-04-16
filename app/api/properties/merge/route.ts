@@ -103,6 +103,38 @@ export async function POST(req: NextRequest) {
         assetsMoved.sessions = sessionsMoved?.length || 0;
       }
 
+      // NEW: Update orders.property_address to primary's address
+      // Orders match by address string, not FK — without this, the planner won't find media after merge
+      if (merged?.address && primary.address) {
+        // Match orders using the first part of the merged address (street number + street name)
+        const mergedFirstPart = merged.address.split(",")[0].trim();
+
+        // Get all orders for this user that contain the merged address
+        const { data: userOrders } = await supabase
+          .from("orders")
+          .select("id, property_address")
+          .eq("user_id", user.id);
+
+        const ordersToUpdate = (userOrders || []).filter((o: any) => {
+          const orderAddr = (o.property_address || "").toLowerCase();
+          const mergedAddr = mergedFirstPart.toLowerCase();
+          return orderAddr.includes(mergedAddr) || mergedAddr.includes(orderAddr.split(",")[0].trim());
+        });
+
+        if (ordersToUpdate.length > 0) {
+          const orderIds = ordersToUpdate.map((o: any) => o.id);
+          const { data: ordersUpdated } = await supabase
+            .from("orders")
+            .update({ property_address: primary.address })
+            .in("id", orderIds)
+            .eq("user_id", user.id)
+            .select("id");
+          assetsMoved.orders = ordersUpdated?.length || 0;
+        } else {
+          assetsMoved.orders = 0;
+        }
+      }
+
       // Mark the merged property
       const { error: mergeErr } = await supabase
         .from("agent_properties")
@@ -112,6 +144,7 @@ export async function POST(req: NextRequest) {
           merge_history: {
             merged_at: new Date().toISOString(),
             original_status: merged?.status,
+            original_address: merged?.address, // Store for undo
             assets_moved: assetsMoved,
           },
         })
