@@ -210,7 +210,7 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
               const allSkipped = dayPosts.length > 0 && dayPosts.every(s => s.status === "skipped");
 
               return (
-                <div key={day} className="text-center">
+                <Link key={day} href={dayPosts.length > 0 ? `/dashboard/planner?post=${dayPosts[0].id}` : "/dashboard/planner"} className="text-center block">
                   <p className="text-[9px] text-white/20 font-semibold mb-1">{DAY_NAMES[i]}</p>
                   <div className={`mx-auto w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold border transition-all ${
                     allPosted
@@ -234,7 +234,7 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
                       ))}
                     </div>
                   )}
-                </div>
+                </Link>
               );
             })}
           </div>
