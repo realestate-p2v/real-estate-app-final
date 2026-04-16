@@ -206,7 +206,6 @@ export async function getListing(userId: string, slug: string): Promise<ListingD
   if (!props || props.length === 0) return null;
   const p = props[0];
 
-  // Gather all photos (not capped at 7 like grid view)
   let photos: string[] = [];
   const cur = p.website_curated?.photos || [];
   if (cur.length) photos = [...cur];
@@ -238,6 +237,58 @@ export async function getListing(userId: string, slug: string): Promise<ListingD
     qr_code_url: p.qr_code_url || null, website_modules: p.website_modules || null,
     video_url,
   };
+}
+
+// ── Get full property data for PropertyWebsiteClient (mirrors main site's getPropertyData) ──
+export async function getPropertyWebsiteData(slug: string, userId: string) {
+  const { data: props } = await supabase
+    .from("agent_properties")
+    .select("*")
+    .eq("website_slug", slug)
+    .eq("user_id", userId)
+    .is("merged_into_id", null)
+    .limit(1);
+  if (!props || props.length === 0) return null;
+  const property = props[0];
+
+  const { data: agentRows } = await supabase
+    .from("lens_usage")
+    .select("saved_agent_name, saved_phone, saved_email, saved_company, saved_logo_url, saved_headshot_url, saved_branding_cards")
+    .eq("user_id", property.user_id)
+    .limit(1);
+  const agent = agentRows?.[0] || null;
+
+  const modules = (property.website_modules || {}) as Record<string, boolean>;
+  const curated = (property.website_curated || {}) as Record<string, string[]>;
+
+  let descriptions: any[] = [];
+  if (modules.description && curated.descriptions?.length) {
+    const { data } = await supabase
+      .from("lens_descriptions")
+      .select("id, description, style")
+      .in("id", curated.descriptions);
+    descriptions = data || [];
+  }
+
+  let stagings: any[] = [];
+  if (modules.staging && curated.staging?.length) {
+    const { data } = await supabase
+      .from("lens_staging")
+      .select("id, original_url, staged_url, room_type, style")
+      .in("id", curated.staging);
+    stagings = data || [];
+  }
+
+  let designExports: any[] = [];
+  if (modules.exports && curated.exports?.length) {
+    const { data } = await supabase
+      .from("design_exports")
+      .select("id, export_url, overlay_video_url, template_type, export_format")
+      .in("id", curated.exports);
+    designExports = data || [];
+  }
+
+  return { property, agent, modules, curated, descriptions, stagings, designExports };
 }
 
 // ── Count published location pages (for nav conditional) ──
