@@ -1,9 +1,34 @@
-// app/site/[handle]/about/page.tsx
+// ============================================================
+// FILE: app/site/[handle]/about/page.tsx
+// ============================================================
 import { notFound } from "next/navigation";
 import { getSite, getProfile } from "../data";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{ handle: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle } = await params;
+  const site = await getSite(handle);
+  if (!site) return {};
+  const profile = await getProfile(site.user_id);
+  const agent = profile.agent_name || site.site_title || "Agent";
+  const title = `About ${agent} | ${site.site_title || agent}`;
+  const description = site.about_content?.slice(0, 155).replace(/\n/g, " ").trim()
+    || site.bio?.slice(0, 155).replace(/\n/g, " ").trim()
+    || `Learn about ${agent}${profile.company ? " at " + profile.company : ""}, your trusted real estate professional.`;
+  const image = site.about_photo_url || profile.headshot_url || site.og_image_url || null;
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `About ${agent}`,
+      description,
+      ...(image && { images: [{ url: image }] }),
+    },
+  };
 }
 
 export default async function AboutPage({ params }: Props) {
@@ -13,7 +38,6 @@ export default async function AboutPage({ params }: Props) {
   const profile = await getProfile(site.user_id);
   const primary = site.primary_color || "#334155";
   const photoUrl = site.about_photo_url || profile.headshot_url || null;
-
   return (
     <div style={{ padding: "64px 24px", maxWidth: 900, margin: "0 auto" }}>
       <div style={{ display: "flex", gap: 40, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -27,10 +51,8 @@ export default async function AboutPage({ params }: Props) {
           {profile.company ? <p style={{ fontSize: 17, color: "#666", margin: "0 0 4px", fontWeight: 600 }}>{profile.company}</p> : null}
           {profile.phone ? <p style={{ fontSize: 15, color: "#888", margin: "0 0 4px" }}>{profile.phone}</p> : null}
           {profile.email ? <p style={{ fontSize: 15, color: "#888", margin: "0 0 20px" }}>{profile.email}</p> : null}
-
           {site.bio ? <p style={{ fontSize: 17, color: "#333", margin: "0 0 16px", lineHeight: 1.7 }}>{site.bio}</p> : null}
           {site.about_content ? <p style={{ fontSize: 16, color: "#555", margin: "0 0 24px", lineHeight: 1.7 }}>{site.about_content}</p> : null}
-
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             {profile.phone ? (
               <a href={"tel:" + profile.phone.replace(/\D/g, "")} style={{ display: "inline-block", padding: "12px 28px", backgroundColor: primary, color: "#fff", borderRadius: 8, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Call {profile.phone}</a>
@@ -41,8 +63,6 @@ export default async function AboutPage({ params }: Props) {
           </div>
         </div>
       </div>
-
-      {/* FAQ on about page too */}
       {site.faq_items.length > 0 ? (
         <div style={{ marginTop: 64 }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111", margin: "0 0 24px" }}>FAQ</h2>
