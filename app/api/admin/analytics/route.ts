@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: app/api/admin/analytics/route.ts
+// ============================================================
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -9,7 +12,7 @@ export async function GET() {
   try {
     const supabase = createAdminClient();
 
-    const [ordersRes, blogsRes] = await Promise.all([
+    const [ordersRes, blogsRes, sitesRes, locationPagesRes] = await Promise.all([
       supabase
         .from("orders")
         .select("id, status, total_price, created_at, delivered_at, customer_email, brokerage_id, photos, resolution, orientation, referral_code")
@@ -20,12 +23,21 @@ export async function GET() {
         .select("id, title, slug, view_count, status, created_at")
         .order("view_count", { ascending: false })
         .limit(10),
+      supabase
+        .from("agent_websites")
+        .select("id, handle, site_title, published, status, user_id, primary_color, custom_domain, created_at, updated_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("agent_location_pages")
+        .select("id, user_id, published")
     ]);
 
     if (ordersRes.error) throw ordersRes.error;
 
     const allOrders = ordersRes.data || [];
     const blogs = blogsRes.data || [];
+    const allSites = sitesRes.data || [];
+    const allLocationPages = locationPagesRes.data || [];
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -111,6 +123,71 @@ export async function GET() {
       });
     }
 
+    // ── Agent Sites Data ──────────────────────────────────────────
+    // Get listing counts per user
+    const siteUserIds = allSites.map((s: any) => s.user_id);
+    let listingsByUser: Record<string, number> = {};
+    let totalListingsCount = 0;
+    if (siteUserIds.length > 0) {
+      const { data: allListings } = await supabase
+        .from("agent_properties")
+        .select("id, user_id")
+        .in("user_id", siteUserIds)
+        .is("merged_into_id", null);
+      if (allListings) {
+        totalListingsCount = allListings.length;
+        allListings.forEach((l: any) => {
+          listingsByUser[l.user_id] = (listingsByUser[l.user_id] || 0) + 1;
+        });
+      }
+    }
+
+    // Location page counts per user
+    const locationsByUser: Record<string, { total: number; published: number }> = {};
+    let totalLocationPagesCount = 0;
+    let publishedLocationPagesCount = 0;
+    allLocationPages.forEach((lp: any) => {
+      if (!locationsByUser[lp.user_id]) locationsByUser[lp.user_id] = { total: 0, published: 0 };
+      locationsByUser[lp.user_id].total++;
+      totalLocationPagesCount++;
+      if (lp.published) {
+        locationsByUser[lp.user_id].published++;
+        publishedLocationPagesCount++;
+      }
+    });
+
+    // Get agent names for each site
+    let agentNamesByUser: Record<string, string> = {};
+    if (siteUserIds.length > 0) {
+      const { data: agents } = await supabase
+        .from("lens_usage")
+        .select("user_id, saved_agent_name")
+        .in("user_id", siteUserIds);
+      if (agents) {
+        agents.forEach((a: any) => {
+          if (a.saved_agent_name) agentNamesByUser[a.user_id] = a.saved_agent_name;
+        });
+      }
+    }
+
+    const publishedSites = allSites.filter((s: any) => s.published).length;
+
+    const agentSites = allSites.map((s: any) => ({
+      id: s.id,
+      handle: s.handle,
+      siteTitle: s.site_title || null,
+      agentName: agentNamesByUser[s.user_id] || null,
+      published: s.published || false,
+      status: s.status || "draft",
+      customDomain: s.custom_domain || null,
+      primaryColor: s.primary_color || "#334155",
+      listingCount: listingsByUser[s.user_id] || 0,
+      locationPages: locationsByUser[s.user_id]?.published || 0,
+      locationPagesTotal: locationsByUser[s.user_id]?.total || 0,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+    }));
+
     return NextResponse.json({
       success: true,
       revenue: {
@@ -148,6 +225,15 @@ export async function GET() {
         views: b.view_count || 0,
         status: b.status,
       })),
+      agentSites: {
+        total: allSites.length,
+        published: publishedSites,
+        draft: allSites.length - publishedSites,
+        totalListings: totalListingsCount,
+        totalLocationPages: totalLocationPagesCount,
+        publishedLocationPages: publishedLocationPagesCount,
+        sites: agentSites,
+      },
     });
   } catch (error) {
     console.error("Admin analytics error:", error);
