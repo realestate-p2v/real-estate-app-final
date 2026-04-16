@@ -1,9 +1,23 @@
-// app/site/[handle]/blog/page.tsx
+// ============================================================
+// FILE: app/site/[handle]/blog/page.tsx
+// ============================================================
 import { notFound } from "next/navigation";
-import { getSite, getBlogPosts } from "../data";
+import { getSite, getProfile, getBlogPosts } from "../data";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{ handle: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle } = await params;
+  const site = await getSite(handle);
+  if (!site) return {};
+  const profile = await getProfile(site.user_id);
+  const agent = profile.agent_name || site.site_title || "Agent";
+  const title = `Blog | ${site.site_title || agent}`;
+  const description = `Real estate insights and market updates from ${agent}${profile.company ? " at " + profile.company : ""}.`;
+  return { title, description, openGraph: { title, description } };
 }
 
 export default async function BlogPage({ params }: Props) {
@@ -12,12 +26,10 @@ export default async function BlogPage({ params }: Props) {
   if (!site) return notFound();
   if (!site.blog_enabled) return notFound();
   const posts = await getBlogPosts(site.user_id);
-
   return (
     <div style={{ padding: "48px 24px", maxWidth: 900, margin: "0 auto" }}>
       <h1 style={{ fontSize: 32, fontWeight: 700, color: "#111", margin: "0 0 8px", textAlign: "center" }}>Blog</h1>
       <p style={{ fontSize: 16, color: "#777", margin: "0 0 40px", textAlign: "center" }}>{posts.length} {posts.length === 1 ? "post" : "posts"}</p>
-
       {posts.length === 0 ? (
         <p style={{ textAlign: "center", color: "#999", fontSize: 16, padding: "60px 0" }}>No posts yet. Check back soon.</p>
       ) : (
