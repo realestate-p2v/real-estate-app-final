@@ -1,5 +1,7 @@
-// app/editor/[handle]/page.tsx  —  v4 (Session 5)
-// Full editor with: Hero, Brand, Content, Media, Locations, FAQ, Features
+// ============================================================
+// FILE: app/editor/[handle]/page.tsx
+// ============================================================
+// Full editor with: Hero, Brand, Content, Media, Locations, FAQ, Features, Listings
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -9,12 +11,14 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 const CLD = "dh6ztnoue", PRESET = "p2v_unsigned";
 
 type FaqItem = { question: string; answer: string };
-type SiteData = { id:string; user_id:string; handle:string; site_title:string|null; tagline:string|null; bio:string|null; about_content:string|null; primary_color:string|null; faq_items:FaqItem[]; blog_enabled:boolean; calendar_enabled:boolean; listings_opt_in:boolean; hero_photos:string[]; hero_video_url:string|null; about_photo_url:string|null };
+type SocialLinks = { instagram?: string; facebook?: string; linkedin?: string; youtube?: string; tiktok?: string };
+type SiteData = { id:string; user_id:string; handle:string; site_title:string|null; tagline:string|null; bio:string|null; about_content:string|null; primary_color:string|null; faq_items:FaqItem[]; social_links:SocialLinks; blog_enabled:boolean; calendar_enabled:boolean; listings_opt_in:boolean; hero_photos:string[]; hero_video_url:string|null; about_photo_url:string|null };
 type LensData = { saved_headshot_url:string|null; saved_logo_url:string|null; saved_agent_name:string|null; saved_phone:string|null; saved_email:string|null; saved_company:string|null; saved_website:string|null; saved_company_colors:string[]|null };
 type MItem = { id:string; label:string; url:string; thumb:string; type:"image"|"video"; source:string; date:string; property?:string };
 type LocPage = { id:string; location_name:string; location_slug:string; region:string|null; country:string|null; page_title:string|null; meta_description:string|null; hero_heading:string|null; intro_text:string|null; body_content:string|null; highlights:string[]; keywords:string[]; hero_photo_url:string|null; photos:{url:string|null;alt:string;caption:string}[]; published:boolean };
+type ListingItem = { id:string; address:string; city:string|null; state:string|null; bedrooms:number|null; bathrooms:number|null; sqft:number|null; price:number|null; status:string|null; website_slug:string|null; website_published:boolean; website_featured:boolean; website_sort_order:number };
 type SaveSt = "idle"|"saving"|"saved"|"error";
-type Tab = "hero"|"brand"|"content"|"media"|"locations"|"faq"|"features";
+type Tab = "hero"|"brand"|"content"|"media"|"locations"|"faq"|"features"|"listings";
 
 async function upCld(file:File, folder:string, onP?:(n:number)=>void):Promise<string>{return new Promise((r,j)=>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",PRESET);fd.append("folder",folder);const x=new XMLHttpRequest();x.open("POST",`https://api.cloudinary.com/v1_1/${CLD}/auto/upload`);x.upload.onprogress=e=>{if(e.lengthComputable&&onP)onP(Math.round(e.loaded/e.total*100))};x.onload=()=>x.status===200?r(JSON.parse(x.responseText).secure_url):j(new Error("fail"));x.onerror=()=>j(new Error("fail"));x.send(fd)})}
 
@@ -26,6 +30,7 @@ export default function EditorPage(){
   const [lens,setLens]=useState<LensData|null>(null);
   const [media,setMedia]=useState<MItem[]>([]);
   const [locs,setLocs]=useState<LocPage[]>([]);
+  const [props,setProps]=useState<ListingItem[]>([]);
   const [loadErr,setLoadErr]=useState("");
   const [ss,setSs]=useState<SaveSt>("idle");
   const [tab,setTab]=useState<Tab>("hero");
@@ -47,6 +52,10 @@ export default function EditorPage(){
   const [genErr,setGenErr]=useState("");
   const [editLoc,setEditLoc]=useState<string|null>(null);
   const [locPicker,setLocPicker]=useState<{locId:string;idx:number}|null>(null);
+  // Listings state
+  const [editProp,setEditProp]=useState<string|null>(null);
+  const [editPrice,setEditPrice]=useState("");
+  const [editStatus,setEditStatus]=useState("");
   const sRef=useRef<NodeJS.Timeout|null>(null);
 
   useEffect(()=>{(async()=>{const{data:{user}}=await supabase.auth.getUser();setUser(user);setAuthL(false)})()},[]);
@@ -57,7 +66,7 @@ export default function EditorPage(){
       const{data:rows,error}=await supabase.from("agent_websites").select("*").eq("handle",handle).limit(1);
       if(error||!rows?.length){setLoadErr(error?.message||"Site not found");return}
       const s=rows[0]; if(s.user_id!==user.id){setLoadErr("No permission");return}
-      setSite({...s,faq_items:s.faq_items??[],hero_photos:Array.isArray(s.hero_photos)?s.hero_photos:[],hero_video_url:s.hero_video_url??null,about_photo_url:s.about_photo_url??null});
+      setSite({...s,faq_items:s.faq_items??[],social_links:s.social_links??{},hero_photos:Array.isArray(s.hero_photos)?s.hero_photos:[],hero_video_url:s.hero_video_url??null,about_photo_url:s.about_photo_url??null});
 
       const{data:lr}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).limit(1);
       if(lr?.length)setLens(lr[0]);
@@ -73,14 +82,19 @@ export default function EditorPage(){
       // Location pages
       const{data:locRows}=await supabase.from("agent_location_pages").select("*").eq("handle",handle).order("location_name");
       if(locRows)setLocs(locRows);
+
+      // Listings
+      const{data:propRows}=await supabase.from("agent_properties").select("id,address,city,state,bedrooms,bathrooms,sqft,price,status,website_slug,website_published,website_featured,website_sort_order").eq("user_id",user.id).is("merged_into_id",null).order("website_sort_order",{ascending:true}).order("updated_at",{ascending:false});
+      if(propRows)setProps(propRows.map((p:any)=>({...p,website_published:p.website_published??false,website_featured:p.website_featured??false,website_sort_order:p.website_sort_order??0})));
     })();
   },[user,handle]);
 
-  const autoSave=useCallback((d:Partial<SiteData>)=>{if(sRef.current)clearTimeout(sRef.current);sRef.current=setTimeout(async()=>{setSs("saving");const{error}=await supabase.from("agent_websites").update({site_title:d.site_title,tagline:d.tagline,bio:d.bio,about_content:d.about_content,primary_color:d.primary_color,faq_items:d.faq_items,blog_enabled:d.blog_enabled,calendar_enabled:d.calendar_enabled,listings_opt_in:d.listings_opt_in,hero_photos:d.hero_photos,hero_video_url:d.hero_video_url,about_photo_url:d.about_photo_url}).eq("handle",handle);if(error){console.error("Save:",error.message);setSs("error")}else{setSs("saved");setTimeout(()=>setSs("idle"),2000)}},1500)},[handle]);
+  const autoSave=useCallback((d:Partial<SiteData>)=>{if(sRef.current)clearTimeout(sRef.current);sRef.current=setTimeout(async()=>{setSs("saving");const{error}=await supabase.from("agent_websites").update({site_title:d.site_title,tagline:d.tagline,bio:d.bio,about_content:d.about_content,primary_color:d.primary_color,faq_items:d.faq_items,social_links:d.social_links,blog_enabled:d.blog_enabled,calendar_enabled:d.calendar_enabled,listings_opt_in:d.listings_opt_in,hero_photos:d.hero_photos,hero_video_url:d.hero_video_url,about_photo_url:d.about_photo_url}).eq("handle",handle);if(error){console.error("Save:",error.message);setSs("error")}else{setSs("saved");setTimeout(()=>setSs("idle"),2000)}},1500)},[handle]);
 
   async function saveLens(f:string,v:string){if(!user)return;setSs("saving");const{error}=await supabase.from("lens_usage").update({[f]:v}).eq("user_id",user.id);if(error)setSs("error");else{setSs("saved");setTimeout(()=>setSs("idle"),2000)}}
 
   function up<K extends keyof SiteData>(k:K,v:SiteData[K]){if(!site)return;const u={...site,[k]:v};setSite(u);autoSave(u)}
+  function upSocial(k:string,v:string){if(!site)return;const sl={...site.social_links,[k]:v};const u={...site,social_links:sl};setSite(u);autoSave(u)}
   function addFaq(){if(!site)return;const u={...site,faq_items:[...site.faq_items,{question:"",answer:""}]};setSite(u);autoSave(u)}
   function upFaq(i:number,f:"question"|"answer",v:string){if(!site)return;const it=[...site.faq_items];it[i]={...it[i],[f]:v};const u={...site,faq_items:it};setSite(u);autoSave(u)}
   function rmFaq(i:number){if(!site)return;const u={...site,faq_items:site.faq_items.filter((_,x)=>x!==i)};setSite(u);autoSave(u)}
@@ -100,11 +114,59 @@ export default function EditorPage(){
   async function delLoc(id:string){const{error}=await supabase.from("agent_location_pages").delete().eq("id",id);if(!error){setLocs(locs.filter(l=>l.id!==id));if(editLoc===id)setEditLoc(null)}}
   function setLocPhoto(locId:string,idx:number,url:string){if(idx===-1){upLocF(locId,"hero_photo_url",url)}else{const loc=locs.find(l=>l.id===locId);if(!loc)return;const ph=[...loc.photos];ph[idx]={...ph[idx],url};upLocF(locId,"photos",ph)}}
 
+  // ─── Listing helpers ───
+  async function toggleListingVisible(p:ListingItem){
+    const nv=!p.website_published;
+    const{error}=await supabase.from("agent_properties").update({website_published:nv}).eq("id",p.id);
+    if(!error)setProps(props.map(x=>x.id===p.id?{...x,website_published:nv}:x));
+  }
+  async function toggleListingFeatured(p:ListingItem){
+    const nv=!p.website_featured;
+    const featuredCount=props.filter(x=>x.website_featured&&x.id!==p.id).length;
+    if(nv&&featuredCount>=6)return; // max 6 featured
+    const{error}=await supabase.from("agent_properties").update({website_featured:nv}).eq("id",p.id);
+    if(!error)setProps(props.map(x=>x.id===p.id?{...x,website_featured:nv}:x));
+  }
+  async function moveListingUp(idx:number){
+    if(idx===0)return;
+    const arr=[...props];
+    [arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];
+    arr.forEach((p,i)=>p.website_sort_order=i);
+    setProps(arr);
+    for(const p of arr){await supabase.from("agent_properties").update({website_sort_order:p.website_sort_order}).eq("id",p.id)}
+  }
+  async function moveListingDown(idx:number){
+    if(idx>=props.length-1)return;
+    const arr=[...props];
+    [arr[idx],arr[idx+1]]=[arr[idx+1],arr[idx]];
+    arr.forEach((p,i)=>p.website_sort_order=i);
+    setProps(arr);
+    for(const p of arr){await supabase.from("agent_properties").update({website_sort_order:p.website_sort_order}).eq("id",p.id)}
+  }
+  function startEditProp(p:ListingItem){
+    setEditProp(p.id);
+    setEditPrice(p.price?.toString()||"");
+    setEditStatus(p.status||"active");
+  }
+  async function saveEditProp(){
+    if(!editProp)return;
+    const updates:any={};
+    const newPrice=editPrice?parseInt(editPrice.replace(/\D/g,"")):null;
+    updates.price=newPrice;
+    updates.status=editStatus||"active";
+    const{error}=await supabase.from("agent_properties").update(updates).eq("id",editProp);
+    if(!error){
+      setProps(props.map(p=>p.id===editProp?{...p,price:newPrice,status:editStatus}:p));
+      setEditProp(null);
+    }
+  }
+
   const fMedia=mFilt==="all"?media:media.filter(m=>m.type===mFilt);
   const pkMedia=pkFilt==="all"?media:media.filter(m=>m.type===pkFilt);
   const eLoc=locs.find(l=>l.id===editLoc);
+  const featuredCount=props.filter(p=>p.website_featured).length;
 
-  const tabs:{key:Tab;label:string}[]=[{key:"hero",label:"Hero"},{key:"brand",label:"Brand"},{key:"content",label:"Content"},{key:"media",label:`Media (${media.length})`},{key:"locations",label:`Locations (${locs.length})`},{key:"faq",label:"FAQ"},{key:"features",label:"Features"}];
+  const tabs:{key:Tab;label:string}[]=[{key:"hero",label:"Hero"},{key:"brand",label:"Brand"},{key:"content",label:"Content"},{key:"media",label:`Media (${media.length})`},{key:"listings",label:`Listings (${props.length})`},{key:"locations",label:`Locations (${locs.length})`},{key:"faq",label:"FAQ"},{key:"features",label:"Features"}];
 
   if(authL)return<Ctr><p style={{color:"#9ca3af"}}>Loading…</p></Ctr>;
   if(!user){const r=`https://${handle}.p2v.homes/editor/${handle}/auth-callback`;return<Ctr><p style={{fontSize:18,fontWeight:600,color:"#1e293b",marginBottom:4}}>Site Editor</p><p style={{color:"#94a3b8",marginBottom:20}}>Sign in to edit {handle}.p2v.homes</p><a href={`https://realestatephoto2video.com/login?redirect=${encodeURIComponent(r)}`} style={S.pBtn}>Log in →</a></Ctr>}
@@ -125,13 +187,19 @@ export default function EditorPage(){
         </>}
 
         {/* ═══ BRAND ═══ */}
-        {tab==="brand"&&<><Hd t="Brand & Identity" s="Your photos, colors, and site info"/>
+        {tab==="brand"&&<><Hd t="Brand & Identity" s="Your photos, colors, site info, and social links"/>
           <Cd t="Agent Photos" s="From your Design Studio — replace anytime"><div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
             <div style={{flex:"1 1 180px"}}><label style={S.lb}>Headshot</label>{lens?.saved_headshot_url?<img src={lens.saved_headshot_url} alt="" style={{width:110,height:110,borderRadius:"50%",objectFit:"cover",border:"3px solid #e5e7eb",display:"block"}}/>:<div style={{width:110,height:110,borderRadius:"50%",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:12}}>No headshot</div>}<div style={{display:"flex",gap:6,marginTop:10}}><SU accept="image/*" label="Upload" onChange={e=>doUp(e,"headshot","photo2video/design-studio")} uping={uTgt==="headshot"}/><button onClick={()=>openPk("headshot","image")} style={S.sm}>Library</button></div></div>
             <div style={{flex:"1 1 180px"}}><label style={S.lb}>Logo</label>{lens?.saved_logo_url?<img src={lens.saved_logo_url} alt="" style={{height:70,maxWidth:180,objectFit:"contain",borderRadius:8,border:"1px solid #e5e7eb",padding:8,background:"#fff",display:"block"}}/>:<div style={{width:150,height:70,borderRadius:8,background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:12}}>No logo</div>}<div style={{display:"flex",gap:6,marginTop:10}}><SU accept="image/*" label="Upload" onChange={e=>doUp(e,"logo","photo2video/agent-profiles")} uping={uTgt==="logo"}/><button onClick={()=>openPk("logo","image")} style={S.sm}>Library</button></div></div>
           </div></Cd>
           <Cd t="Site Info"><Fl l="Site Title" v={site.site_title??""} onChange={v=>up("site_title",v)} ph="e.g. Wall to Wall Real Estate"/><Fl l="Tagline" v={site.tagline??""} onChange={v=>up("tagline",v)} ph="e.g. Your dream home in Costa Rica"/>
             <div style={S.fg}><label style={S.lb}>Primary Color</label><div style={{display:"flex",alignItems:"center",gap:10}}><input type="color" value={site.primary_color??"#334155"} onChange={e=>up("primary_color",e.target.value)} style={{width:42,height:42,border:"1px solid #d1d5db",borderRadius:10,cursor:"pointer",padding:2}}/><input type="text" value={site.primary_color??"#334155"} onChange={e=>up("primary_color",e.target.value)} style={{...S.inp,width:110}}/>{lens?.saved_company_colors?.length?<div style={{display:"flex",gap:5,marginLeft:8}}>{lens.saved_company_colors.map((c,i)=><button key={i} onClick={()=>up("primary_color",c)} title={c} style={{width:26,height:26,borderRadius:6,background:c,border:site.primary_color===c?"2px solid #0f172a":"1px solid #d1d5db",cursor:"pointer"}}/>)}<span style={{fontSize:11,color:"#9ca3af",alignSelf:"center"}}>brand</span></div>:null}</div></div>
+          </Cd>
+          {/* Social Links */}
+          <Cd t="Social Links" s="Add your social media profiles — shown in site footer">
+            {[{k:"instagram",l:"Instagram",ph:"https://instagram.com/yourhandle"},{k:"facebook",l:"Facebook",ph:"https://facebook.com/yourpage"},{k:"linkedin",l:"LinkedIn",ph:"https://linkedin.com/in/yourname"},{k:"youtube",l:"YouTube",ph:"https://youtube.com/@yourchannel"},{k:"tiktok",l:"TikTok",ph:"https://tiktok.com/@yourhandle"}].map(s=>(
+              <Fl key={s.k} l={s.l} v={(site.social_links as any)?.[s.k]??""} onChange={v=>upSocial(s.k,v)} ph={s.ph}/>
+            ))}
           </Cd>
           {lens&&<Cd t="Agent Profile" s="From your Design Studio" muted><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Inf l="Name" v={lens.saved_agent_name}/><Inf l="Company" v={lens.saved_company}/><Inf l="Phone" v={lens.saved_phone}/><Inf l="Email" v={lens.saved_email}/></div></Cd>}
         </>}
@@ -146,11 +214,63 @@ export default function EditorPage(){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>{fMedia.map(m=><div key={m.id} style={{borderRadius:12,overflow:"hidden",border:"1px solid #e5e7eb",background:"#fff"}}><div onClick={()=>setPrev(m)} style={{cursor:"pointer",position:"relative"}}>{m.type==="video"?<div style={{width:"100%",height:120,background:"#0f172a",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>{m.thumb?<img src={m.thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity:.4}}/>:null}<span style={{position:"absolute",width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:"#fff"}}>▶</span></div>:<img src={m.thumb} alt={m.label} style={{width:"100%",height:120,objectFit:"cover"}}/>}</div><div style={{padding:"10px 12px"}}><p style={{fontSize:13,fontWeight:500,color:"#1e293b",margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.label}</p><p style={{fontSize:11,color:"#9ca3af",margin:"2px 0 8px"}}>{m.source}</p><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button onClick={()=>setPrev(m)} style={S.aBtn}>{m.type==="video"?"▶ Play":"🔍 Preview"}</button><button onClick={()=>useHero(m)} style={S.aBtn}>🖼 Hero</button><button onClick={()=>cpUrl(m.url)} style={S.aBtn}>{copied===m.url?"✓ Copied":"🔗 Copy"}</button></div></div></div>)}</div>}
         </>}
 
+        {/* ═══ LISTINGS ═══ */}
+        {tab==="listings"&&<>
+          <Hd t="Listings" s={`${props.length} properties · ${featuredCount}/6 featured · ${props.filter(p=>p.website_published).length} visible`}/>
+          {props.length===0?<Cd><div style={{textAlign:"center",padding:32,color:"#9ca3af"}}><p style={{fontSize:32,marginBottom:8}}>🏠</p><p>No properties found. Add listings from your dashboard.</p></div></Cd>:
+          props.map((p,idx)=>(
+            <div key={p.id} style={{...cardS,marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                {/* Reorder buttons */}
+                <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
+                  <button onClick={()=>moveListingUp(idx)} disabled={idx===0} style={{...S.arrBtn,opacity:idx===0?.3:1}} title="Move up">▲</button>
+                  <button onClick={()=>moveListingDown(idx)} disabled={idx>=props.length-1} style={{...S.arrBtn,opacity:idx>=props.length-1?.3:1}} title="Move down">▼</button>
+                </div>
+                {/* Info */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:15,fontWeight:600,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.address}</span>
+                    {p.status&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:p.status==="active"?"#dcfce7":p.status==="sold"?"#fef3c7":"#f1f5f9",color:p.status==="active"?"#166534":p.status==="sold"?"#92400e":"#64748b",fontWeight:500,textTransform:"capitalize"}}>{p.status}</span>}
+                    {p.price?<span style={{fontSize:14,fontWeight:700,color:"#111"}}>${p.price.toLocaleString()}</span>:null}
+                  </div>
+                  <p style={{fontSize:12,color:"#9ca3af",margin:"2px 0 0"}}>
+                    {[p.bedrooms&&p.bedrooms+"bd",p.bathrooms&&p.bathrooms+"ba",p.sqft&&p.sqft.toLocaleString()+"sf"].filter(Boolean).join(" · ")}
+                    {(p.city||p.state)?` · ${[p.city,p.state].filter(Boolean).join(", ")}`:""}
+                  </p>
+                </div>
+                {/* Actions */}
+                <div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                  <button onClick={()=>toggleListingFeatured(p)} style={{...S.aBtn,background:p.website_featured?"#fef3c7":"#f5f3ff",color:p.website_featured?"#92400e":"#4f46e5",borderColor:p.website_featured?"#fde68a":"#e0e7ff"}} title={p.website_featured?"Remove featured":"Mark as featured (max 6)"}>{p.website_featured?"★ Featured":"☆ Feature"}</button>
+                  <button onClick={()=>toggleListingVisible(p)} style={{...S.aBtn,background:p.website_published?"#dcfce7":"#fef2f2",color:p.website_published?"#166534":"#991b1b",borderColor:p.website_published?"#bbf7d0":"#fecaca"}}>{p.website_published?"✅ Visible":"❌ Hidden"}</button>
+                  <button onClick={()=>editProp===p.id?setEditProp(null):startEditProp(p)} style={S.aBtn}>{editProp===p.id?"Cancel":"Edit"}</button>
+                </div>
+              </div>
+              {/* Inline edit */}
+              {editProp===p.id&&(
+                <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #f1f5f9",display:"flex",gap:12,alignItems:"flex-end",flexWrap:"wrap"}}>
+                  <div style={{flex:"1 1 140px"}}>
+                    <label style={{...S.lb,fontSize:12}}>Price</label>
+                    <input type="text" value={editPrice} onChange={e=>setEditPrice(e.target.value)} placeholder="e.g. 450000" style={{...S.inp,fontSize:13}}/>
+                  </div>
+                  <div style={{flex:"1 1 140px"}}>
+                    <label style={{...S.lb,fontSize:12}}>Status</label>
+                    <select value={editStatus} onChange={e=>setEditStatus(e.target.value)} style={{...S.inp,fontSize:13}}>
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="sold">Sold</option>
+                      <option value="withdrawn">Withdrawn</option>
+                    </select>
+                  </div>
+                  <button onClick={saveEditProp} style={{padding:"9px 20px",borderRadius:8,border:"none",background:"#4f46e5",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Save</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </>}
+
         {/* ═══ LOCATIONS ═══ */}
         {tab==="locations"&&<>
           <Hd t="Location Pages" s="AI-generated SEO pages for areas you serve"/>
-
-          {/* Generator */}
           <Cd t="Generate New Location" s="Enter a location — AI writes the full SEO page">
             <div style={{display:"flex",gap:8,marginBottom:8}}>
               <input type="text" value={newLoc} onChange={e=>setNewLoc(e.target.value)} placeholder="Anytown, USA" style={{...S.inp,flex:2}} onKeyDown={e=>e.key==="Enter"&&genLoc()}/>
@@ -164,8 +284,6 @@ export default function EditorPage(){
             <button onClick={genLoc} disabled={genning||!newLoc.trim()} style={{width:"100%",padding:12,borderRadius:10,border:"none",background:genning?"#a5b4fc":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",fontSize:14,fontWeight:600,cursor:genning?"wait":"pointer",fontFamily:"inherit"}}>{genning?"✨ Generating content…":"✨ Generate with AI"}</button>
             {genErr&&<p style={{color:"#dc2626",fontSize:13,marginTop:8}}>{genErr}</p>}
           </Cd>
-
-          {/* Location list (when not editing) */}
           {!editLoc&&locs.map(loc=>(
             <div key={loc.id} style={{...cardS,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
               <div style={{flex:1,minWidth:0}}>
@@ -182,8 +300,6 @@ export default function EditorPage(){
               </div>
             </div>
           ))}
-
-          {/* Editing a location */}
           {eLoc&&<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
               <button onClick={()=>setEditLoc(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#6366f1",fontFamily:"inherit",fontWeight:500}}>← Back to list</button>
@@ -192,24 +308,20 @@ export default function EditorPage(){
                 <button onClick={()=>{if(confirm("Delete this location page?"))delLoc(eLoc.id)}} style={{...S.aBtn,color:"#ef4444",borderColor:"#fecaca"}}>Delete</button>
               </div>
             </div>
-
             <Cd t="SEO">
               <Fl l="Page Title" v={eLoc.page_title??""} onChange={v=>upLocF(eLoc.id,"page_title",v)}/><span style={{fontSize:11,color:(eLoc.page_title?.length||0)>60?"#ef4444":"#9ca3af"}}>{eLoc.page_title?.length||0}/60</span>
               <TA l="Meta Description" v={eLoc.meta_description??""} onChange={v=>upLocF(eLoc.id,"meta_description",v)} rows={2}/><span style={{fontSize:11,color:(eLoc.meta_description?.length||0)>160?"#ef4444":"#9ca3af"}}>{eLoc.meta_description?.length||0}/160</span>
               <div style={S.fg}><label style={S.lb}>Keywords</label><p style={{fontSize:12,color:"#6b7280",margin:0}}>{eLoc.keywords?.join(", ")||"None"}</p></div>
             </Cd>
-
             <Cd t="Hero Photo">{eLoc.hero_photo_url?<div><img src={eLoc.hero_photo_url} alt="" style={{width:"100%",height:200,objectFit:"cover",borderRadius:8}}/><button onClick={()=>upLocF(eLoc.id,"hero_photo_url",null)} style={S.dng}>Remove</button></div>:<div style={{display:"flex",gap:8}}>
               <UZ accept="image/*" label="Upload photo" onChange={async(e)=>{const f=e.target.files?.[0];if(!f)return;setUTgt("loc_hero");setUProg(0);try{const url=await upCld(f,"photo2video/locations",setUProg);setUProg(null);setUTgt(null);upLocF(eLoc.id,"hero_photo_url",url)}catch{setUProg(null);setUTgt(null)}}} uping={uTgt==="loc_hero"} prog={uTgt==="loc_hero"?uProg:null} compact/>
               <button onClick={()=>setLocPicker({locId:eLoc.id,idx:-1})} style={{flex:1,padding:14,borderRadius:12,border:"2px dashed #d1d5db",background:"#fafafa",cursor:"pointer",fontSize:13,color:"#6b7280",fontWeight:500,fontFamily:"inherit"}}>📂 From your photos</button>
             </div>}</Cd>
-
             <Cd t="Content">
               <Fl l="Heading" v={eLoc.hero_heading??""} onChange={v=>upLocF(eLoc.id,"hero_heading",v)}/>
               <TA l="Intro Text" v={eLoc.intro_text??""} onChange={v=>upLocF(eLoc.id,"intro_text",v)} rows={3}/>
               <TA l="Body Content (Markdown)" v={eLoc.body_content??""} onChange={v=>upLocF(eLoc.id,"body_content",v)} rows={16}/>
             </Cd>
-
             <Cd t="Photos & Alt Tags" s="AI-suggested photos with SEO alt text — add your own">
               {eLoc.photos.map((ph,i)=>(
                 <div key={i} style={{display:"flex",gap:12,alignItems:"center",padding:"10px 0",borderBottom:i<eLoc.photos.length-1?"1px solid #f1f5f9":"none"}}>
@@ -223,7 +335,6 @@ export default function EditorPage(){
                 </div>
               ))}
             </Cd>
-
             <Cd t="Highlights">
               {eLoc.highlights.map((h,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:6}}><span style={{color:"#6366f1",marginTop:10}}>✦</span><input type="text" value={h} onChange={e=>{const hl=[...eLoc.highlights];hl[i]=e.target.value;upLocF(eLoc.id,"highlights",hl)}} style={{...S.inp,flex:1}}/></div>)}
             </Cd>
@@ -280,5 +391,6 @@ const S:Record<string,React.CSSProperties>={
   dng:{fontSize:12,color:"#ef4444",border:"none",background:"none",cursor:"pointer",padding:"4px 0",fontFamily:"inherit",marginTop:8,display:"block"},
   aBtn:{fontSize:11,color:"#4f46e5",border:"1px solid #e0e7ff",background:"#f5f3ff",cursor:"pointer",padding:"4px 10px",borderRadius:6,fontFamily:"inherit",fontWeight:500,whiteSpace:"nowrap"},
   aBtnL:{fontSize:13,color:"#4f46e5",border:"1px solid #e0e7ff",background:"#f5f3ff",cursor:"pointer",padding:"8px 16px",borderRadius:8,fontFamily:"inherit",fontWeight:500,display:"inline-block"},
+  arrBtn:{background:"none",border:"1px solid #e5e7eb",borderRadius:4,cursor:"pointer",padding:"2px 6px",fontSize:10,color:"#9ca3af",fontFamily:"inherit",lineHeight:1},
 };
-const CSS=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box}body{margin:0}input:focus,textarea:focus{border-color:#6366f1!important;outline:none;box-shadow:0 0 0 3px rgba(99,102,241,0.1)}.uz{border:2px dashed #d1d5db;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa}.uz:hover{border-color:#6366f1;background:#f5f3ff}.tw{position:relative;display:inline-block}.tw .tx{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}.tw:hover .tx{opacity:1}.pb{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden}.pf{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .3s}.mbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.mbox{background:#fff;border-radius:16px;width:90%;max-width:780px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:0 25px 50px rgba(0,0,0,.25)}.ptb:hover img,.ptb:hover div{outline:2px solid #6366f1;outline-offset:-2px;border-radius:8px}`;
+const CSS=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box}body{margin:0}input:focus,textarea:focus,select:focus{border-color:#6366f1!important;outline:none;box-shadow:0 0 0 3px rgba(99,102,241,0.1)}.uz{border:2px dashed #d1d5db;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa}.uz:hover{border-color:#6366f1;background:#f5f3ff}.tw{position:relative;display:inline-block}.tw .tx{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}.tw:hover .tx{opacity:1}.pb{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden}.pf{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .3s}.mbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.mbox{background:#fff;border-radius:16px;width:90%;max-width:780px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:0 25px 50px rgba(0,0,0,.25)}.ptb:hover img,.ptb:hover div{outline:2px solid #6366f1;outline-offset:-2px;border-radius:8px}`;
