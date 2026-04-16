@@ -1,7 +1,7 @@
 // ============================================================
 // FILE: app/editor/[handle]/page.tsx
 // ============================================================
-// Full editor with: Hero, Brand, Content, Media, Locations, FAQ, Features, Listings
+// Full editor with: Hero, Brand, Content, Media, Listings, Locations, Blog, FAQ, Features
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -9,6 +9,7 @@ import { useParams } from "next/navigation";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const CLD = "dh6ztnoue", PRESET = "p2v_unsigned";
+const API_BASE = "https://realestatephoto2video.com";
 
 type FaqItem = { question: string; answer: string };
 type SocialLinks = { instagram?: string; facebook?: string; linkedin?: string; youtube?: string; tiktok?: string };
@@ -17,10 +18,16 @@ type LensData = { saved_headshot_url:string|null; saved_logo_url:string|null; sa
 type MItem = { id:string; label:string; url:string; thumb:string; type:"image"|"video"; source:string; date:string; property?:string };
 type LocPage = { id:string; location_name:string; location_slug:string; region:string|null; country:string|null; page_title:string|null; meta_description:string|null; hero_heading:string|null; intro_text:string|null; body_content:string|null; highlights:string[]; keywords:string[]; hero_photo_url:string|null; photos:{url:string|null;alt:string;caption:string}[]; published:boolean };
 type ListingItem = { id:string; address:string; city:string|null; state:string|null; bedrooms:number|null; bathrooms:number|null; sqft:number|null; price:number|null; status:string|null; website_slug:string|null; website_published:boolean; website_featured:boolean; website_sort_order:number };
+type BlogPost = { id?:string; title:string; slug:string; content:string; excerpt:string; cover_image_url:string|null; tags:string[]; status:"draft"|"published"; ai_generated?:boolean; published_at?:string|null; created_at?:string; updated_at?:string };
+type PexelsImage = { id:number; url:string; medium:string; small:string; thumbnail:string; alt:string; photographer:string; photographer_url:string };
 type SaveSt = "idle"|"saving"|"saved"|"error";
-type Tab = "hero"|"brand"|"content"|"media"|"locations"|"faq"|"features"|"listings";
+type Tab = "hero"|"brand"|"content"|"media"|"locations"|"faq"|"features"|"listings"|"blog";
+
+const EMPTY_POST:BlogPost = { title:"", slug:"", content:"", excerpt:"", cover_image_url:null, tags:[], status:"draft" };
 
 async function upCld(file:File, folder:string, onP?:(n:number)=>void):Promise<string>{return new Promise((r,j)=>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",PRESET);fd.append("folder",folder);const x=new XMLHttpRequest();x.open("POST",`https://api.cloudinary.com/v1_1/${CLD}/auto/upload`);x.upload.onprogress=e=>{if(e.lengthComputable&&onP)onP(Math.round(e.loaded/e.total*100))};x.onload=()=>x.status===200?r(JSON.parse(x.responseText).secure_url):j(new Error("fail"));x.onerror=()=>j(new Error("fail"));x.send(fd)})}
+
+async function getAuthToken():Promise<string|null>{const{data:{session}}=await supabase.auth.getSession();return session?.access_token||null}
 
 export default function EditorPage(){
   const params=useParams(); const handle=params.handle as string;
@@ -42,7 +49,6 @@ export default function EditorPage(){
   const [prev,setPrev]=useState<MItem|null>(null);
   const [copied,setCopied]=useState<string|null>(null);
   const [mFilt,setMFilt]=useState<"all"|"image"|"video">("all");
-  // Locations state
   const [newLoc,setNewLoc]=useState("");
   const [newReg,setNewReg]=useState("");
   const [newZip,setNewZip]=useState("");
@@ -52,10 +58,23 @@ export default function EditorPage(){
   const [genErr,setGenErr]=useState("");
   const [editLoc,setEditLoc]=useState<string|null>(null);
   const [locPicker,setLocPicker]=useState<{locId:string;idx:number}|null>(null);
-  // Listings state
   const [editProp,setEditProp]=useState<string|null>(null);
   const [editPrice,setEditPrice]=useState("");
   const [editStatus,setEditStatus]=useState("");
+  // Blog
+  const [posts,setPosts]=useState<BlogPost[]>([]);
+  const [editingPost,setEditingPost]=useState<BlogPost|null>(null);
+  const [postSaving,setPostSaving]=useState(false);
+  const [postSaved,setPostSaved]=useState(false);
+  const [aiTopic,setAiTopic]=useState("");
+  const [aiSubtopics,setAiSubtopics]=useState("");
+  const [aiKeywords,setAiKeywords]=useState("");
+  const [aiGenning,setAiGenning]=useState(false);
+  const [aiErr,setAiErr]=useState("");
+  const [imgQuery,setImgQuery]=useState("");
+  const [imgs,setImgs]=useState<PexelsImage[]>([]);
+  const [imgSearching,setImgSearching]=useState(false);
+  const postEditorRef=useRef<HTMLTextAreaElement>(null);
   const sRef=useRef<NodeJS.Timeout|null>(null);
 
   useEffect(()=>{(async()=>{const{data:{user}}=await supabase.auth.getUser();setUser(user);setAuthL(false)})()},[]);
@@ -67,29 +86,25 @@ export default function EditorPage(){
       if(error||!rows?.length){setLoadErr(error?.message||"Site not found");return}
       const s=rows[0]; if(s.user_id!==user.id){setLoadErr("No permission");return}
       setSite({...s,faq_items:s.faq_items??[],social_links:s.social_links??{},hero_photos:Array.isArray(s.hero_photos)?s.hero_photos:[],hero_video_url:s.hero_video_url??null,about_photo_url:s.about_photo_url??null});
-
       const{data:lr}=await supabase.from("lens_usage").select("saved_headshot_url,saved_logo_url,saved_agent_name,saved_phone,saved_email,saved_company,saved_website,saved_company_colors").eq("user_id",user.id).limit(1);
       if(lr?.length)setLens(lr[0]);
-
-      // Media
       const items:MItem[]=[];
       const{data:orders}=await supabase.from("orders").select("id,property_address,photos,delivery_url,clip_urls,created_at").eq("user_id",user.id).eq("payment_status","paid").order("created_at",{ascending:false});
       if(orders)for(const o of orders){const a=o.property_address||"Order";const ph=Array.isArray(o.photos)?o.photos:[];ph.forEach((p:any,i:number)=>{const u=p.secure_url||p.url;if(u)items.push({id:`op-${o.id}-${i}`,label:p.description||a,url:u,thumb:u,type:"image",source:"Order",date:o.created_at,property:a})});if(o.delivery_url)items.push({id:`ov-${o.id}`,label:a,url:o.delivery_url,thumb:ph[0]?.secure_url||"",type:"video",source:"Video",date:o.created_at,property:a})}
       const{data:exps}=await supabase.from("design_exports").select("id,template_type,export_url,overlay_video_url,export_format,created_at").eq("user_id",user.id).order("created_at",{ascending:false});
       if(exps)for(const e of exps){if(e.export_url){const iv=e.export_format==="video"||/\.(mp4|webm|mov)$/i.test(e.export_url);items.push({id:`de-${e.id}`,label:e.template_type||"Design Export",url:e.export_url,thumb:iv?"":e.export_url,type:iv?"video":"image",source:"Design Studio",date:e.created_at})}if(e.overlay_video_url)items.push({id:`dv-${e.id}`,label:(e.template_type||"Design")+" Video",url:e.overlay_video_url,thumb:"",type:"video",source:"Design Studio",date:e.created_at})}
       setMedia(items);
-
-      // Location pages
       const{data:locRows}=await supabase.from("agent_location_pages").select("*").eq("handle",handle).order("location_name");
       if(locRows)setLocs(locRows);
-
-      // Listings
       const{data:propRows}=await supabase.from("agent_properties").select("id,address,city,state,bedrooms,bathrooms,sqft,price,status,website_slug,website_published,website_featured,website_sort_order").eq("user_id",user.id).is("merged_into_id",null).order("website_sort_order",{ascending:true}).order("updated_at",{ascending:false});
       if(propRows)setProps(propRows.map((p:any)=>({...p,website_published:p.website_published??false,website_featured:p.website_featured??false,website_sort_order:p.website_sort_order??0})));
+      fetchPosts();
     })();
   },[user,handle]);
 
-  const autoSave=useCallback((d:Partial<SiteData>)=>{if(sRef.current)clearTimeout(sRef.current);sRef.current=setTimeout(async()=>{setSs("saving");const{error}=await supabase.from("agent_websites").update({site_title:d.site_title,tagline:d.tagline,bio:d.bio,about_content:d.about_content,primary_color:d.primary_color,faq_items:d.faq_items,social_links:d.social_links,blog_enabled:d.blog_enabled,calendar_enabled:d.calendar_enabled,listings_opt_in:d.listings_opt_in,hero_photos:d.hero_photos,hero_video_url:d.hero_video_url,about_photo_url:d.about_photo_url}).eq("handle",handle);if(error){console.error("Save:",error.message);setSs("error")}else{setSs("saved");setTimeout(()=>setSs("idle"),2000)}},1500)},[handle]);
+  async function fetchPosts(){const token=await getAuthToken();if(!token)return;try{const res=await fetch(`${API_BASE}/api/websites/blog`,{headers:{Authorization:`Bearer ${token}`}});const d=await res.json();if(d.success)setPosts(d.posts||[])}catch(e){console.error(e)}}
+
+  const autoSave=useCallback((d:Partial<SiteData>)=>{if(sRef.current)clearTimeout(sRef.current);sRef.current=setTimeout(async()=>{setSs("saving");const{error}=await supabase.from("agent_websites").update({site_title:d.site_title,tagline:d.tagline,bio:d.bio,about_content:d.about_content,primary_color:d.primary_color,faq_items:d.faq_items,social_links:d.social_links,blog_enabled:d.blog_enabled,calendar_enabled:d.calendar_enabled,listings_opt_in:d.listings_opt_in,hero_photos:d.hero_photos,hero_video_url:d.hero_video_url,about_photo_url:d.about_photo_url}).eq("handle",handle);if(error){setSs("error")}else{setSs("saved");setTimeout(()=>setSs("idle"),2000)}},1500)},[handle]);
 
   async function saveLens(f:string,v:string){if(!user)return;setSs("saving");const{error}=await supabase.from("lens_usage").update({[f]:v}).eq("user_id",user.id);if(error)setSs("error");else{setSs("saved");setTimeout(()=>setSs("idle"),2000)}}
 
@@ -100,73 +115,58 @@ export default function EditorPage(){
   function rmFaq(i:number){if(!site)return;const u={...site,faq_items:site.faq_items.filter((_,x)=>x!==i)};setSite(u);autoSave(u)}
   function rmHero(i:number){if(!site)return;const u={...site,hero_photos:site.hero_photos.filter((_,x)=>x!==i)};setSite(u);autoSave(u)}
 
-  async function doUp(e:React.ChangeEvent<HTMLInputElement>,t:string,folder:string){const f=e.target.files?.[0];if(!f)return;setUTgt(t);setUProg(0);try{const url=await upCld(f,folder,setUProg);setUProg(null);setUTgt(null);if(t==="headshot"){setLens(p=>p?{...p,saved_headshot_url:url}:p);await saveLens("saved_headshot_url",url)}else if(t==="logo"){setLens(p=>p?{...p,saved_logo_url:url}:p);await saveLens("saved_logo_url",url)}else if(t==="hero_photo"&&site){const u={...site,hero_photos:[...site.hero_photos,url]};setSite(u);autoSave(u)}else if(t==="hero_video"&&site){const u={...site,hero_video_url:url};setSite(u);autoSave(u)}}catch{setUProg(null);setUTgt(null);setSs("error")}}
+  async function doUp(e:React.ChangeEvent<HTMLInputElement>,t:string,folder:string){const f=e.target.files?.[0];if(!f)return;setUTgt(t);setUProg(0);try{const url=await upCld(f,folder,setUProg);setUProg(null);setUTgt(null);if(t==="headshot"){setLens(p=>p?{...p,saved_headshot_url:url}:p);await saveLens("saved_headshot_url",url)}else if(t==="logo"){setLens(p=>p?{...p,saved_logo_url:url}:p);await saveLens("saved_logo_url",url)}else if(t==="hero_photo"&&site){const u={...site,hero_photos:[...site.hero_photos,url]};setSite(u);autoSave(u)}else if(t==="hero_video"&&site){const u={...site,hero_video_url:url};setSite(u);autoSave(u)}else if(t==="blog_cover"&&editingPost){setEditingPost({...editingPost,cover_image_url:url})}}catch{setUProg(null);setUTgt(null);setSs("error")}}
 
-  function pick(url:string){if(!site||!pkTgt)return;if(pkTgt==="hero_photo"){const u={...site,hero_photos:[...site.hero_photos,url]};setSite(u);autoSave(u)}else if(pkTgt==="hero_video"){const u={...site,hero_video_url:url};setSite(u);autoSave(u)}else if(pkTgt==="headshot"){setLens(p=>p?{...p,saved_headshot_url:url}:p);saveLens("saved_headshot_url",url)}else if(pkTgt==="logo"){setLens(p=>p?{...p,saved_logo_url:url}:p);saveLens("saved_logo_url",url)}setPkOpen(false);setPkTgt(null)}
+  function pick(url:string){if(!site||!pkTgt)return;if(pkTgt==="hero_photo"){const u={...site,hero_photos:[...site.hero_photos,url]};setSite(u);autoSave(u)}else if(pkTgt==="hero_video"){const u={...site,hero_video_url:url};setSite(u);autoSave(u)}else if(pkTgt==="headshot"){setLens(p=>p?{...p,saved_headshot_url:url}:p);saveLens("saved_headshot_url",url)}else if(pkTgt==="logo"){setLens(p=>p?{...p,saved_logo_url:url}:p);saveLens("saved_logo_url",url)}else if(pkTgt==="blog_cover"&&editingPost){setEditingPost({...editingPost,cover_image_url:url})}setPkOpen(false);setPkTgt(null)}
   function openPk(t:string,f?:"all"|"image"|"video"){setPkTgt(t);setPkFilt(f||"all");setPkOpen(true)}
   function cpUrl(u:string){navigator.clipboard.writeText(u);setCopied(u);setTimeout(()=>setCopied(null),1500)}
   function useHero(m:MItem){if(!site)return;if(m.type==="image"){const u={...site,hero_photos:[...site.hero_photos,m.url]};setSite(u);autoSave(u)}else{const u={...site,hero_video_url:m.url};setSite(u);autoSave(u)}}
 
-  // ─── Location helpers ───
   async function genLoc(){if(!newLoc.trim())return;setGenning(true);setGenErr("");try{const res=await fetch("https://realestatephoto2video.com/api/websites/generate-location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({location_name:newLoc.trim(),region:newReg.trim()||null,zip_code:newZip.trim()||null,county:newCounty.trim()||null,country:newCountry.trim()||"USA",agent_name:lens?.saved_agent_name,company:lens?.saved_company,handle,user_id:user.id})});const d=await res.json();if(!res.ok)throw new Error(d.error);if(d.page){setLocs([...locs,d.page]);setNewLoc("");setNewReg("");setNewZip("");setNewCounty("");setEditLoc(d.page.id)}}catch(e:any){setGenErr(e.message)}setGenning(false)}
   async function togglePub(loc:LocPage){const nv=!loc.published;const{error}=await supabase.from("agent_location_pages").update({published:nv}).eq("id",loc.id);if(!error)setLocs(locs.map(l=>l.id===loc.id?{...l,published:nv}:l))}
   async function upLocF(id:string,f:string,v:any){const{error}=await supabase.from("agent_location_pages").update({[f]:v,updated_at:new Date().toISOString()}).eq("id",id);if(!error)setLocs(locs.map(l=>l.id===id?{...l,[f]:v}:l))}
   async function delLoc(id:string){const{error}=await supabase.from("agent_location_pages").delete().eq("id",id);if(!error){setLocs(locs.filter(l=>l.id!==id));if(editLoc===id)setEditLoc(null)}}
   function setLocPhoto(locId:string,idx:number,url:string){if(idx===-1){upLocF(locId,"hero_photo_url",url)}else{const loc=locs.find(l=>l.id===locId);if(!loc)return;const ph=[...loc.photos];ph[idx]={...ph[idx],url};upLocF(locId,"photos",ph)}}
 
-  // ─── Listing helpers ───
-  async function toggleListingVisible(p:ListingItem){
-    const nv=!p.website_published;
-    const{error}=await supabase.from("agent_properties").update({website_published:nv}).eq("id",p.id);
-    if(!error)setProps(props.map(x=>x.id===p.id?{...x,website_published:nv}:x));
+  async function toggleListingVisible(p:ListingItem){const nv=!p.website_published;const{error}=await supabase.from("agent_properties").update({website_published:nv}).eq("id",p.id);if(!error)setProps(props.map(x=>x.id===p.id?{...x,website_published:nv}:x))}
+  async function toggleListingFeatured(p:ListingItem){const nv=!p.website_featured;const fc=props.filter(x=>x.website_featured&&x.id!==p.id).length;if(nv&&fc>=6)return;const{error}=await supabase.from("agent_properties").update({website_featured:nv}).eq("id",p.id);if(!error)setProps(props.map(x=>x.id===p.id?{...x,website_featured:nv}:x))}
+  async function moveListingUp(idx:number){if(idx===0)return;const arr=[...props];[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];arr.forEach((p,i)=>p.website_sort_order=i);setProps(arr);for(const p of arr){await supabase.from("agent_properties").update({website_sort_order:p.website_sort_order}).eq("id",p.id)}}
+  async function moveListingDown(idx:number){if(idx>=props.length-1)return;const arr=[...props];[arr[idx],arr[idx+1]]=[arr[idx+1],arr[idx]];arr.forEach((p,i)=>p.website_sort_order=i);setProps(arr);for(const p of arr){await supabase.from("agent_properties").update({website_sort_order:p.website_sort_order}).eq("id",p.id)}}
+  function startEditProp(p:ListingItem){setEditProp(p.id);setEditPrice(p.price?.toString()||"");setEditStatus(p.status||"active")}
+  async function saveEditProp(){if(!editProp)return;const np=editPrice?parseInt(editPrice.replace(/\D/g,"")):null;const{error}=await supabase.from("agent_properties").update({price:np,status:editStatus||"active"}).eq("id",editProp);if(!error){setProps(props.map(p=>p.id===editProp?{...p,price:np,status:editStatus}:p));setEditProp(null)}}
+
+  // Blog helpers
+  function newPost(){setEditingPost({...EMPTY_POST});setImgs([]);setAiErr("");setPostSaved(false)}
+  function startEditPost(p:BlogPost){setEditingPost({...p});setImgs([]);setAiErr("");setPostSaved(false)}
+  function postTitle(title:string){if(!editingPost)return;const slug=editingPost.id?editingPost.slug:title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");setEditingPost({...editingPost,title,slug})}
+  async function savePost(publish:boolean){if(!editingPost)return;setPostSaving(true);setPostSaved(false);const token=await getAuthToken();if(!token){setPostSaving(false);return}
+    const data={...editingPost,status:publish?"published":editingPost.status};
+    try{const res=await fetch(`${API_BASE}/api/websites/blog`,{method:editingPost.id?"PATCH":"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify(data)});const d=await res.json();if(d.success){setEditingPost(d.post);setPostSaved(true);fetchPosts();setTimeout(()=>setPostSaved(false),2500)}else alert(d.error||"Save failed")}catch(e){alert("Save failed")}
+    setPostSaving(false);
   }
-  async function toggleListingFeatured(p:ListingItem){
-    const nv=!p.website_featured;
-    const featuredCount=props.filter(x=>x.website_featured&&x.id!==p.id).length;
-    if(nv&&featuredCount>=6)return; // max 6 featured
-    const{error}=await supabase.from("agent_properties").update({website_featured:nv}).eq("id",p.id);
-    if(!error)setProps(props.map(x=>x.id===p.id?{...x,website_featured:nv}:x));
+  async function deletePost(id:string){if(!confirm("Delete this post?"))return;const token=await getAuthToken();if(!token)return;
+    try{const res=await fetch(`${API_BASE}/api/websites/blog?id=${id}`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`}});const d=await res.json();if(d.success){setPosts(posts.filter(p=>p.id!==id));if(editingPost?.id===id)setEditingPost(null)}}catch(e){alert("Delete failed")}
   }
-  async function moveListingUp(idx:number){
-    if(idx===0)return;
-    const arr=[...props];
-    [arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];
-    arr.forEach((p,i)=>p.website_sort_order=i);
-    setProps(arr);
-    for(const p of arr){await supabase.from("agent_properties").update({website_sort_order:p.website_sort_order}).eq("id",p.id)}
+  async function aiGenPost(){if(!aiTopic.trim())return;setAiGenning(true);setAiErr("");const token=await getAuthToken();if(!token){setAiGenning(false);return}
+    try{const res=await fetch(`${API_BASE}/api/websites/blog/generate`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({title:aiTopic,subject:aiTopic,subtopics:aiSubtopics,keywords:aiKeywords})});const d=await res.json();
+      if(d.success){setEditingPost({...EMPTY_POST,title:d.title||aiTopic,slug:d.slug||aiTopic.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),content:d.content||"",excerpt:d.excerpt||"",tags:d.tags||[],ai_generated:true});if(d.suggested_images?.length){setImgQuery(d.suggested_images[0].search_query);searchImgs(d.suggested_images[0].search_query)}setAiTopic("");setAiSubtopics("");setAiKeywords("")}else setAiErr(d.error||"Generation failed")
+    }catch(e){setAiErr("Generation failed")}
+    setAiGenning(false);
   }
-  async function moveListingDown(idx:number){
-    if(idx>=props.length-1)return;
-    const arr=[...props];
-    [arr[idx],arr[idx+1]]=[arr[idx+1],arr[idx]];
-    arr.forEach((p,i)=>p.website_sort_order=i);
-    setProps(arr);
-    for(const p of arr){await supabase.from("agent_properties").update({website_sort_order:p.website_sort_order}).eq("id",p.id)}
+  async function searchImgs(q?:string){const query=q||imgQuery;if(!query.trim())return;setImgSearching(true);const token=await getAuthToken();if(!token){setImgSearching(false);return}
+    try{const res=await fetch(`${API_BASE}/api/websites/blog/images?q=${encodeURIComponent(query)}&per_page=12`,{headers:{Authorization:`Bearer ${token}`}});const d=await res.json();if(d.success)setImgs(d.images||[])}catch(e){console.error(e)}
+    setImgSearching(false);
   }
-  function startEditProp(p:ListingItem){
-    setEditProp(p.id);
-    setEditPrice(p.price?.toString()||"");
-    setEditStatus(p.status||"active");
-  }
-  async function saveEditProp(){
-    if(!editProp)return;
-    const updates:any={};
-    const newPrice=editPrice?parseInt(editPrice.replace(/\D/g,"")):null;
-    updates.price=newPrice;
-    updates.status=editStatus||"active";
-    const{error}=await supabase.from("agent_properties").update(updates).eq("id",editProp);
-    if(!error){
-      setProps(props.map(p=>p.id===editProp?{...p,price:newPrice,status:editStatus}:p));
-      setEditProp(null);
-    }
-  }
+  function insertImgInPost(img:PexelsImage){if(!editingPost)return;const alt=img.alt||imgQuery||"photo";const md=`\n\n![${alt}](${img.url})\n*Photo by [${img.photographer}](${img.photographer_url}) on Pexels*\n\n`;const ed=postEditorRef.current;if(ed){const s=ed.selectionStart;setEditingPost({...editingPost,content:editingPost.content.slice(0,s)+md+editingPost.content.slice(s)});setTimeout(()=>{ed.selectionStart=ed.selectionEnd=s+md.length;ed.focus()},50)}else{setEditingPost({...editingPost,content:editingPost.content+md})}}
+  function setCover(img:PexelsImage){if(!editingPost)return;setEditingPost({...editingPost,cover_image_url:img.url})}
+  function insertMd(before:string,after:string="",placeholder:string=""){const ed=postEditorRef.current;if(!ed||!editingPost)return;const s=ed.selectionStart;const e=ed.selectionEnd;const sel=editingPost.content.slice(s,e)||placeholder;const nc=editingPost.content.slice(0,s)+before+sel+after+editingPost.content.slice(e);setEditingPost({...editingPost,content:nc});setTimeout(()=>{ed.selectionStart=s+before.length;ed.selectionEnd=s+before.length+sel.length;ed.focus()},50)}
 
   const fMedia=mFilt==="all"?media:media.filter(m=>m.type===mFilt);
   const pkMedia=pkFilt==="all"?media:media.filter(m=>m.type===pkFilt);
   const eLoc=locs.find(l=>l.id===editLoc);
   const featuredCount=props.filter(p=>p.website_featured).length;
 
-  const tabs:{key:Tab;label:string}[]=[{key:"hero",label:"Hero"},{key:"brand",label:"Brand"},{key:"content",label:"Content"},{key:"media",label:`Media (${media.length})`},{key:"listings",label:`Listings (${props.length})`},{key:"locations",label:`Locations (${locs.length})`},{key:"faq",label:"FAQ"},{key:"features",label:"Features"}];
+  const tabs:{key:Tab;label:string}[]=[{key:"hero",label:"Hero"},{key:"brand",label:"Brand"},{key:"content",label:"Content"},{key:"media",label:`Media (${media.length})`},{key:"listings",label:`Listings (${props.length})`},{key:"locations",label:`Locations (${locs.length})`},{key:"blog",label:`Blog (${posts.length})`},{key:"faq",label:"FAQ"},{key:"features",label:"Features"}];
 
   if(authL)return<Ctr><p style={{color:"#9ca3af"}}>Loading…</p></Ctr>;
   if(!user){const r=`https://${handle}.p2v.homes/editor/${handle}/auth-callback`;return<Ctr><p style={{fontSize:18,fontWeight:600,color:"#1e293b",marginBottom:4}}>Site Editor</p><p style={{color:"#94a3b8",marginBottom:20}}>Sign in to edit {handle}.p2v.homes</p><a href={`https://realestatephoto2video.com/login?redirect=${encodeURIComponent(r)}`} style={S.pBtn}>Log in →</a></Ctr>}
@@ -180,13 +180,11 @@ export default function EditorPage(){
 
       <main style={S.mn}><div style={S.ctr}>
 
-        {/* ═══ HERO ═══ */}
         {tab==="hero"&&<><Hd t="Hero Section" s="The banner visitors see first"/>
           <Cd t="Hero Video" s="Auto-plays behind your hero. MP4 or WebM.">{site.hero_video_url?<div><video src={site.hero_video_url} muted loop autoPlay playsInline style={{width:"100%",borderRadius:8,maxHeight:220,objectFit:"cover"}}/><button onClick={()=>up("hero_video_url",null)} style={S.dng}>Remove video</button></div>:<div style={{display:"flex",gap:8}}><UZ accept="video/mp4,video/webm,video/quicktime" label="Upload video" onChange={e=>doUp(e,"hero_video","photo2video/hero")} uping={uTgt==="hero_video"} prog={uTgt==="hero_video"?uProg:null}/><LB label="From your videos" onClick={()=>openPk("hero_video","video")}/></div>}</Cd>
           <Cd t="Hero Photos" s={site.hero_photos.length?`${site.hero_photos.length} photo${site.hero_photos.length>1?"s":""}`:"Falls back to listing photos when empty"}>{site.hero_photos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>{site.hero_photos.map((u,i)=><div key={i} className="tw"><img src={u} alt="" style={{width:130,height:90,objectFit:"cover",borderRadius:8}}/><button className="tx" onClick={()=>rmHero(i)}>×</button></div>)}</div>}<div style={{display:"flex",gap:8}}><UZ accept="image/*" label="Upload photo" onChange={e=>doUp(e,"hero_photo","photo2video/hero")} uping={uTgt==="hero_photo"} prog={uTgt==="hero_photo"?uProg:null} compact/><LB label="From your photos" onClick={()=>openPk("hero_photo","image")}/></div></Cd>
         </>}
 
-        {/* ═══ BRAND ═══ */}
         {tab==="brand"&&<><Hd t="Brand & Identity" s="Your photos, colors, site info, and social links"/>
           <Cd t="Agent Photos" s="From your Design Studio — replace anytime"><div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
             <div style={{flex:"1 1 180px"}}><label style={S.lb}>Headshot</label>{lens?.saved_headshot_url?<img src={lens.saved_headshot_url} alt="" style={{width:110,height:110,borderRadius:"50%",objectFit:"cover",border:"3px solid #e5e7eb",display:"block"}}/>:<div style={{width:110,height:110,borderRadius:"50%",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:12}}>No headshot</div>}<div style={{display:"flex",gap:6,marginTop:10}}><SU accept="image/*" label="Upload" onChange={e=>doUp(e,"headshot","photo2video/design-studio")} uping={uTgt==="headshot"}/><button onClick={()=>openPk("headshot","image")} style={S.sm}>Library</button></div></div>
@@ -195,80 +193,144 @@ export default function EditorPage(){
           <Cd t="Site Info"><Fl l="Site Title" v={site.site_title??""} onChange={v=>up("site_title",v)} ph="e.g. Wall to Wall Real Estate"/><Fl l="Tagline" v={site.tagline??""} onChange={v=>up("tagline",v)} ph="e.g. Your dream home in Costa Rica"/>
             <div style={S.fg}><label style={S.lb}>Primary Color</label><div style={{display:"flex",alignItems:"center",gap:10}}><input type="color" value={site.primary_color??"#334155"} onChange={e=>up("primary_color",e.target.value)} style={{width:42,height:42,border:"1px solid #d1d5db",borderRadius:10,cursor:"pointer",padding:2}}/><input type="text" value={site.primary_color??"#334155"} onChange={e=>up("primary_color",e.target.value)} style={{...S.inp,width:110}}/>{lens?.saved_company_colors?.length?<div style={{display:"flex",gap:5,marginLeft:8}}>{lens.saved_company_colors.map((c,i)=><button key={i} onClick={()=>up("primary_color",c)} title={c} style={{width:26,height:26,borderRadius:6,background:c,border:site.primary_color===c?"2px solid #0f172a":"1px solid #d1d5db",cursor:"pointer"}}/>)}<span style={{fontSize:11,color:"#9ca3af",alignSelf:"center"}}>brand</span></div>:null}</div></div>
           </Cd>
-          {/* Social Links */}
           <Cd t="Social Links" s="Add your social media profiles — shown in site footer">
-            {[{k:"instagram",l:"Instagram",ph:"https://instagram.com/yourhandle"},{k:"facebook",l:"Facebook",ph:"https://facebook.com/yourpage"},{k:"linkedin",l:"LinkedIn",ph:"https://linkedin.com/in/yourname"},{k:"youtube",l:"YouTube",ph:"https://youtube.com/@yourchannel"},{k:"tiktok",l:"TikTok",ph:"https://tiktok.com/@yourhandle"}].map(s=>(
-              <Fl key={s.k} l={s.l} v={(site.social_links as any)?.[s.k]??""} onChange={v=>upSocial(s.k,v)} ph={s.ph}/>
-            ))}
+            {[{k:"instagram",l:"Instagram",ph:"https://instagram.com/yourhandle"},{k:"facebook",l:"Facebook",ph:"https://facebook.com/yourpage"},{k:"linkedin",l:"LinkedIn",ph:"https://linkedin.com/in/yourname"},{k:"youtube",l:"YouTube",ph:"https://youtube.com/@yourchannel"},{k:"tiktok",l:"TikTok",ph:"https://tiktok.com/@yourhandle"}].map(s=>(<Fl key={s.k} l={s.l} v={(site.social_links as any)?.[s.k]??""} onChange={v=>upSocial(s.k,v)} ph={s.ph}/>))}
           </Cd>
           {lens&&<Cd t="Agent Profile" s="From your Design Studio" muted><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Inf l="Name" v={lens.saved_agent_name}/><Inf l="Company" v={lens.saved_company}/><Inf l="Phone" v={lens.saved_phone}/><Inf l="Email" v={lens.saved_email}/></div></Cd>}
         </>}
 
-        {/* ═══ CONTENT ═══ */}
         {tab==="content"&&<><Hd t="Content" s="Homepage bio and about page text"/><Cd><TA l="Bio (homepage)" v={site.bio??""} onChange={v=>up("bio",v)} ph="A brief intro — 2-3 sentences" rows={3}/><TA l="About Content (about page)" v={site.about_content??""} onChange={v=>up("about_content",v)} ph="Your full story…" rows={8}/></Cd></>}
 
-        {/* ═══ MEDIA ═══ */}
         {tab==="media"&&<><Hd t="Media Library" s={`${media.length} items from your orders and Design Studio`}/>
           <div style={{display:"flex",gap:6,marginBottom:16}}>{(["all","image","video"] as const).map(f=><button key={f} onClick={()=>setMFilt(f)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+(mFilt===f?"#6366f1":"#e5e7eb"),background:mFilt===f?"#eef2ff":"#fff",color:mFilt===f?"#4f46e5":"#6b7280",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>{f==="all"?`All (${media.length})`:f==="image"?`Photos (${media.filter(m=>m.type==="image").length})`:`Videos (${media.filter(m=>m.type==="video").length})`}</button>)}</div>
           {fMedia.length===0?<Cd><div style={{textAlign:"center",padding:32,color:"#9ca3af"}}><p style={{fontSize:32,marginBottom:8}}>📷</p><p>No {mFilt==="all"?"media":mFilt+"s"} found</p></div></Cd>:
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>{fMedia.map(m=><div key={m.id} style={{borderRadius:12,overflow:"hidden",border:"1px solid #e5e7eb",background:"#fff"}}><div onClick={()=>setPrev(m)} style={{cursor:"pointer",position:"relative"}}>{m.type==="video"?<div style={{width:"100%",height:120,background:"#0f172a",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>{m.thumb?<img src={m.thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity:.4}}/>:null}<span style={{position:"absolute",width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:"#fff"}}>▶</span></div>:<img src={m.thumb} alt={m.label} style={{width:"100%",height:120,objectFit:"cover"}}/>}</div><div style={{padding:"10px 12px"}}><p style={{fontSize:13,fontWeight:500,color:"#1e293b",margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.label}</p><p style={{fontSize:11,color:"#9ca3af",margin:"2px 0 8px"}}>{m.source}</p><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button onClick={()=>setPrev(m)} style={S.aBtn}>{m.type==="video"?"▶ Play":"🔍 Preview"}</button><button onClick={()=>useHero(m)} style={S.aBtn}>🖼 Hero</button><button onClick={()=>cpUrl(m.url)} style={S.aBtn}>{copied===m.url?"✓ Copied":"🔗 Copy"}</button></div></div></div>)}</div>}
         </>}
 
-        {/* ═══ LISTINGS ═══ */}
         {tab==="listings"&&<>
           <Hd t="Listings" s={`${props.length} properties · ${featuredCount}/6 featured · ${props.filter(p=>p.website_published).length} visible`}/>
           {props.length===0?<Cd><div style={{textAlign:"center",padding:32,color:"#9ca3af"}}><p style={{fontSize:32,marginBottom:8}}>🏠</p><p>No properties found. Add listings from your dashboard.</p></div></Cd>:
           props.map((p,idx)=>(
             <div key={p.id} style={{...cardS,marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
-                {/* Reorder buttons */}
                 <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
-                  <button onClick={()=>moveListingUp(idx)} disabled={idx===0} style={{...S.arrBtn,opacity:idx===0?.3:1}} title="Move up">▲</button>
-                  <button onClick={()=>moveListingDown(idx)} disabled={idx>=props.length-1} style={{...S.arrBtn,opacity:idx>=props.length-1?.3:1}} title="Move down">▼</button>
+                  <button onClick={()=>moveListingUp(idx)} disabled={idx===0} style={{...S.arrBtn,opacity:idx===0?.3:1}}>▲</button>
+                  <button onClick={()=>moveListingDown(idx)} disabled={idx>=props.length-1} style={{...S.arrBtn,opacity:idx>=props.length-1?.3:1}}>▼</button>
                 </div>
-                {/* Info */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                     <span style={{fontSize:15,fontWeight:600,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.address}</span>
                     {p.status&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:p.status==="active"?"#dcfce7":p.status==="sold"?"#fef3c7":"#f1f5f9",color:p.status==="active"?"#166534":p.status==="sold"?"#92400e":"#64748b",fontWeight:500,textTransform:"capitalize"}}>{p.status}</span>}
                     {p.price?<span style={{fontSize:14,fontWeight:700,color:"#111"}}>${p.price.toLocaleString()}</span>:null}
                   </div>
-                  <p style={{fontSize:12,color:"#9ca3af",margin:"2px 0 0"}}>
-                    {[p.bedrooms&&p.bedrooms+"bd",p.bathrooms&&p.bathrooms+"ba",p.sqft&&p.sqft.toLocaleString()+"sf"].filter(Boolean).join(" · ")}
-                    {(p.city||p.state)?` · ${[p.city,p.state].filter(Boolean).join(", ")}`:""}
-                  </p>
+                  <p style={{fontSize:12,color:"#9ca3af",margin:"2px 0 0"}}>{[p.bedrooms&&p.bedrooms+"bd",p.bathrooms&&p.bathrooms+"ba",p.sqft&&p.sqft.toLocaleString()+"sf"].filter(Boolean).join(" · ")}{(p.city||p.state)?` · ${[p.city,p.state].filter(Boolean).join(", ")}`:""}</p>
                 </div>
-                {/* Actions */}
                 <div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                  <button onClick={()=>toggleListingFeatured(p)} style={{...S.aBtn,background:p.website_featured?"#fef3c7":"#f5f3ff",color:p.website_featured?"#92400e":"#4f46e5",borderColor:p.website_featured?"#fde68a":"#e0e7ff"}} title={p.website_featured?"Remove featured":"Mark as featured (max 6)"}>{p.website_featured?"★ Featured":"☆ Feature"}</button>
+                  <button onClick={()=>toggleListingFeatured(p)} style={{...S.aBtn,background:p.website_featured?"#fef3c7":"#f5f3ff",color:p.website_featured?"#92400e":"#4f46e5",borderColor:p.website_featured?"#fde68a":"#e0e7ff"}}>{p.website_featured?"★ Featured":"☆ Feature"}</button>
                   <button onClick={()=>toggleListingVisible(p)} style={{...S.aBtn,background:p.website_published?"#dcfce7":"#fef2f2",color:p.website_published?"#166534":"#991b1b",borderColor:p.website_published?"#bbf7d0":"#fecaca"}}>{p.website_published?"✅ Visible":"❌ Hidden"}</button>
                   <button onClick={()=>editProp===p.id?setEditProp(null):startEditProp(p)} style={S.aBtn}>{editProp===p.id?"Cancel":"Edit"}</button>
                 </div>
               </div>
-              {/* Inline edit */}
-              {editProp===p.id&&(
-                <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #f1f5f9",display:"flex",gap:12,alignItems:"flex-end",flexWrap:"wrap"}}>
-                  <div style={{flex:"1 1 140px"}}>
-                    <label style={{...S.lb,fontSize:12}}>Price</label>
-                    <input type="text" value={editPrice} onChange={e=>setEditPrice(e.target.value)} placeholder="e.g. 450000" style={{...S.inp,fontSize:13}}/>
-                  </div>
-                  <div style={{flex:"1 1 140px"}}>
-                    <label style={{...S.lb,fontSize:12}}>Status</label>
-                    <select value={editStatus} onChange={e=>setEditStatus(e.target.value)} style={{...S.inp,fontSize:13}}>
-                      <option value="active">Active</option>
-                      <option value="pending">Pending</option>
-                      <option value="sold">Sold</option>
-                      <option value="withdrawn">Withdrawn</option>
-                    </select>
-                  </div>
-                  <button onClick={saveEditProp} style={{padding:"9px 20px",borderRadius:8,border:"none",background:"#4f46e5",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Save</button>
-                </div>
-              )}
+              {editProp===p.id&&(<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #f1f5f9",display:"flex",gap:12,alignItems:"flex-end",flexWrap:"wrap"}}><div style={{flex:"1 1 140px"}}><label style={{...S.lb,fontSize:12}}>Price</label><input type="text" value={editPrice} onChange={e=>setEditPrice(e.target.value)} placeholder="e.g. 450000" style={{...S.inp,fontSize:13}}/></div><div style={{flex:"1 1 140px"}}><label style={{...S.lb,fontSize:12}}>Status</label><select value={editStatus} onChange={e=>setEditStatus(e.target.value)} style={{...S.inp,fontSize:13}}><option value="active">Active</option><option value="pending">Pending</option><option value="sold">Sold</option><option value="withdrawn">Withdrawn</option></select></div><button onClick={saveEditProp} style={{padding:"9px 20px",borderRadius:8,border:"none",background:"#4f46e5",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>Save</button></div>)}
             </div>
           ))}
         </>}
 
-        {/* ═══ LOCATIONS ═══ */}
+        {/* ═══ BLOG ═══ */}
+        {tab==="blog"&&<>
+          {!editingPost?<>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <Hd t="Blog Posts" s={`${posts.length} post${posts.length===1?"":"s"} · ${posts.filter(p=>p.status==="published").length} published`}/>
+              <button onClick={newPost} style={{padding:"10px 20px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ New Post</button>
+            </div>
+            {posts.length===0?<Cd><div style={{textAlign:"center",padding:32,color:"#9ca3af"}}><p style={{fontSize:32,marginBottom:8}}>📝</p><p>No blog posts yet. Create your first post to build your authority.</p></div></Cd>:
+            posts.map(p=>(
+              <div key={p.id} style={{...cardS,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+                {p.cover_image_url?<img src={p.cover_image_url} alt="" style={{width:60,height:60,objectFit:"cover",borderRadius:8,flexShrink:0}}/>:<div style={{width:60,height:60,borderRadius:8,background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:20}}>📝</div>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:15,fontWeight:600,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.title||"Untitled"}</span>
+                    <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:p.status==="published"?"#dcfce7":"#fef3c7",color:p.status==="published"?"#166534":"#92400e",fontWeight:500}}>{p.status==="published"?"Published":"Draft"}</span>
+                    {p.ai_generated&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"#f5f3ff",color:"#4f46e5",fontWeight:500}}>✨ AI</span>}
+                  </div>
+                  <p style={{fontSize:12,color:"#9ca3af",margin:"2px 0 0"}}>/blog/{p.slug}{p.published_at?` · ${new Date(p.published_at).toLocaleDateString()}`:""}</p>
+                </div>
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <button onClick={()=>startEditPost(p)} style={S.aBtn}>Edit</button>
+                  {p.status==="published"&&p.id&&<a href={`https://${handle}.p2v.homes/blog/${p.slug}`} target="_blank" rel="noopener noreferrer" style={{...S.aBtn,textDecoration:"none"}}>View ↗</a>}
+                  <button onClick={()=>p.id&&deletePost(p.id)} style={{...S.aBtn,color:"#ef4444",borderColor:"#fecaca"}}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </>:<>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <button onClick={()=>setEditingPost(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#6366f1",fontFamily:"inherit",fontWeight:500}}>← Back to posts</button>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                {postSaved&&<span style={{fontSize:12,color:"#166534",fontWeight:500}}>✓ Saved</span>}
+                <button onClick={()=>savePost(false)} disabled={postSaving} style={{...S.sm,padding:"8px 16px"}}>{postSaving?"Saving…":"Save Draft"}</button>
+                <button onClick={()=>savePost(true)} disabled={postSaving} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"#10b981",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{postSaving?"…":"Publish"}</button>
+              </div>
+            </div>
+            {!editingPost.id&&!editingPost.content&&<Cd t="✨ Generate with AI" s="Describe your topic — AI will write a full SEO-optimized post in your voice">
+              <Fl l="Topic / Title" v={aiTopic} onChange={setAiTopic} ph="e.g. 5 Things First-Time Buyers Need to Know"/>
+              <TA l="Sub-topics to cover (optional)" v={aiSubtopics} onChange={setAiSubtopics} ph={"e.g.,\nsaving for a down payment\nunderstanding mortgage pre-approval\nworking with a buyer's agent"} rows={4}/>
+              <Fl l="Target keywords (optional)" v={aiKeywords} onChange={setAiKeywords} ph="e.g. first time home buyer tips"/>
+              <button onClick={aiGenPost} disabled={aiGenning||!aiTopic.trim()} style={{width:"100%",padding:12,borderRadius:10,border:"none",background:aiGenning?"#a5b4fc":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",fontSize:14,fontWeight:600,cursor:aiGenning?"wait":"pointer",fontFamily:"inherit"}}>{aiGenning?"✨ Writing your blog post…":"✨ Generate with AI"}</button>
+              {aiErr&&<p style={{color:"#dc2626",fontSize:13,marginTop:8}}>{aiErr}</p>}
+            </Cd>}
+            <Cd t="Title & URL">
+              <Fl l="Title" v={editingPost.title} onChange={postTitle} ph="Your post title"/>
+              <div style={S.fg}><label style={S.lb}>URL Slug</label><div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:13,color:"#9ca3af"}}>/blog/</span><input type="text" value={editingPost.slug} onChange={e=>setEditingPost({...editingPost,slug:e.target.value})} style={{...S.inp,flex:1}}/></div></div>
+            </Cd>
+            <Cd t="Cover Image">
+              {editingPost.cover_image_url?<div><img src={editingPost.cover_image_url} alt="" style={{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8}}/><button onClick={()=>setEditingPost({...editingPost,cover_image_url:null})} style={S.dng}>Remove</button></div>:<div style={{display:"flex",gap:8}}>
+                <UZ accept="image/*" label="Upload image" onChange={e=>doUp(e,"blog_cover","photo2video/blog")} uping={uTgt==="blog_cover"} prog={uTgt==="blog_cover"?uProg:null} compact/>
+                <LB label="From your photos" onClick={()=>openPk("blog_cover","image")}/>
+              </div>}
+            </Cd>
+            <Cd t="Content" s="Markdown supported. Use the toolbar below.">
+              <div style={{display:"flex",gap:4,marginBottom:8,flexWrap:"wrap",padding:"6px",background:"#f8fafc",borderRadius:8}}>
+                <MdBtn onClick={()=>insertMd("**","**","bold text")} title="Bold"><b>B</b></MdBtn>
+                <MdBtn onClick={()=>insertMd("*","*","italic text")} title="Italic"><i>I</i></MdBtn>
+                <span style={{width:1,background:"#e5e7eb",margin:"0 4px"}}/>
+                <MdBtn onClick={()=>insertMd("\n## ","\n","Heading")} title="Heading 2">H2</MdBtn>
+                <MdBtn onClick={()=>insertMd("\n### ","\n","Subheading")} title="Heading 3">H3</MdBtn>
+                <span style={{width:1,background:"#e5e7eb",margin:"0 4px"}}/>
+                <MdBtn onClick={()=>insertMd("\n- ","\n","List item")} title="Bullet list">•</MdBtn>
+                <MdBtn onClick={()=>insertMd("\n1. ","\n","List item")} title="Numbered list">1.</MdBtn>
+                <span style={{width:1,background:"#e5e7eb",margin:"0 4px"}}/>
+                <MdBtn onClick={()=>insertMd("[","](url)","link text")} title="Link">🔗</MdBtn>
+                <MdBtn onClick={()=>insertMd("\n> ","\n","Quote")} title="Quote">❝</MdBtn>
+                <MdBtn onClick={()=>insertMd("\n---\n","","")} title="Divider">—</MdBtn>
+              </div>
+              <textarea ref={postEditorRef} value={editingPost.content} onChange={e=>setEditingPost({...editingPost,content:e.target.value})} rows={24} style={{...S.ta,fontFamily:"ui-monospace,'SF Mono',Menlo,monospace",fontSize:13,lineHeight:1.6}} placeholder="Write your post in Markdown..."/>
+              <p style={{fontSize:11,color:"#9ca3af",margin:"4px 0 0"}}>{editingPost.content.split(/\s+/).filter(Boolean).length} words · ~{Math.max(1,Math.ceil(editingPost.content.split(/\s+/).filter(Boolean).length/200))} min read</p>
+            </Cd>
+            <Cd t="🖼 Image Search (Pexels)" s="Search free stock photos — click to insert or set as cover">
+              <div style={{display:"flex",gap:6,marginBottom:10}}>
+                <input type="text" value={imgQuery} onChange={e=>setImgQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchImgs()} placeholder="Search photos…" style={{...S.inp,flex:1}}/>
+                <button onClick={()=>searchImgs()} disabled={imgSearching||!imgQuery.trim()} style={{...S.sm,padding:"9px 16px"}}>{imgSearching?"…":"Search"}</button>
+              </div>
+              {imgs.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:6,maxHeight:300,overflowY:"auto"}}>
+                {imgs.map(img=>(
+                  <div key={img.id} style={{position:"relative",borderRadius:6,overflow:"hidden",border:"1px solid #e5e7eb"}} className="pimg">
+                    <img src={img.thumbnail} alt={img.alt} style={{width:"100%",height:70,objectFit:"cover",display:"block"}}/>
+                    <div className="pimg-ov" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.6)",display:"none",flexDirection:"column",gap:2,alignItems:"center",justifyContent:"center",padding:4}}>
+                      <button onClick={()=>insertImgInPost(img)} style={{padding:"4px 8px",border:"none",background:"#6366f1",color:"#fff",fontSize:10,fontWeight:600,borderRadius:4,cursor:"pointer",fontFamily:"inherit",width:"100%"}}>Insert</button>
+                      <button onClick={()=>setCover(img)} style={{padding:"4px 8px",border:"none",background:"rgba(255,255,255,0.2)",color:"#fff",fontSize:10,fontWeight:600,borderRadius:4,cursor:"pointer",fontFamily:"inherit",width:"100%"}}>Cover</button>
+                    </div>
+                  </div>
+                ))}
+              </div>}
+              {imgs.length>0&&<p style={{fontSize:10,color:"#9ca3af",margin:"8px 0 0",textAlign:"center"}}>Photos from Pexels · Hover to insert or set as cover</p>}
+            </Cd>
+            <Cd t="SEO & Excerpt">
+              <TA l="Excerpt" v={editingPost.excerpt} onChange={v=>setEditingPost({...editingPost,excerpt:v})} ph="Short summary for blog cards and search results…" rows={3}/>
+              <div style={S.fg}><label style={S.lb}>Tags (comma separated)</label><input type="text" value={editingPost.tags.join(", ")} onChange={e=>setEditingPost({...editingPost,tags:e.target.value.split(",").map(t=>t.trim()).filter(Boolean)})} placeholder="real estate, first time buyer, market update" style={S.inp}/></div>
+            </Cd>
+          </>}
+        </>}
+
         {tab==="locations"&&<>
           <Hd t="Location Pages" s="AI-generated SEO pages for areas you serve"/>
           <Cd t="Generate New Location" s="Enter a location — AI writes the full SEO page">
@@ -277,7 +339,7 @@ export default function EditorPage(){
               <input type="text" value={newReg} onChange={e=>setNewReg(e.target.value)} placeholder="State / Region" style={{...S.inp,flex:1}}/>
             </div>
             <div style={{display:"flex",gap:8,marginBottom:8}}>
-              <input type="text" value={newZip} onChange={e=>setNewZip(e.target.value)} placeholder="Zip code (helps disambiguate)" style={{...S.inp,flex:1}}/>
+              <input type="text" value={newZip} onChange={e=>setNewZip(e.target.value)} placeholder="Zip code" style={{...S.inp,flex:1}}/>
               <input type="text" value={newCounty} onChange={e=>setNewCounty(e.target.value)} placeholder="County (optional)" style={{...S.inp,flex:1}}/>
               <input type="text" value={newCountry} onChange={e=>setNewCountry(e.target.value)} placeholder="Country" style={{...S.inp,flex:1}}/>
             </div>
@@ -322,7 +384,7 @@ export default function EditorPage(){
               <TA l="Intro Text" v={eLoc.intro_text??""} onChange={v=>upLocF(eLoc.id,"intro_text",v)} rows={3}/>
               <TA l="Body Content (Markdown)" v={eLoc.body_content??""} onChange={v=>upLocF(eLoc.id,"body_content",v)} rows={16}/>
             </Cd>
-            <Cd t="Photos & Alt Tags" s="AI-suggested photos with SEO alt text — add your own">
+            <Cd t="Photos & Alt Tags" s="AI-suggested photos with SEO alt text">
               {eLoc.photos.map((ph,i)=>(
                 <div key={i} style={{display:"flex",gap:12,alignItems:"center",padding:"10px 0",borderBottom:i<eLoc.photos.length-1?"1px solid #f1f5f9":"none"}}>
                   <div style={{width:80,height:56,borderRadius:6,overflow:"hidden",flexShrink:0,background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -341,27 +403,19 @@ export default function EditorPage(){
           </>}
         </>}
 
-        {/* ═══ FAQ ═══ */}
         {tab==="faq"&&<><Hd t="FAQ" s="Frequently asked questions on your homepage"/>{site.faq_items.map((item,i)=><Cd key={i}><Fl l={`Question ${i+1}`} v={item.question} onChange={v=>upFaq(i,"question",v)} ph="e.g. What areas do you cover?"/><TA l="Answer" v={item.answer} onChange={v=>upFaq(i,"answer",v)} ph="Your answer…" rows={3}/><button onClick={()=>rmFaq(i)} style={S.dng}>Remove</button></Cd>)}<button onClick={addFaq} style={S.addB}>+ Add FAQ item</button></>}
 
-        {/* ═══ FEATURES ═══ */}
         {tab==="features"&&<><Hd t="Features" s="Toggle site sections on or off"/><Cd><Tg l="Blog" d="Show blog page and nav link" on={site.blog_enabled} onT={()=>up("blog_enabled",!site.blog_enabled)}/><Tg l="Calendar" d="Show calendar page for bookings" on={site.calendar_enabled} onT={()=>up("calendar_enabled",!site.calendar_enabled)}/><Tg l="Listings" d="Show your property listings" on={site.listings_opt_in} onT={()=>up("listings_opt_in",!site.listings_opt_in)} last/></Cd></>}
 
       </div></main>
 
-      {/* Media Picker */}
       {pkOpen&&<div className="mbg" onClick={()=>{setPkOpen(false);setPkTgt(null)}}><div className="mbox" onClick={e=>e.stopPropagation()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h3 style={{margin:0,fontSize:16,fontWeight:600}}>Choose from your media</h3><button onClick={()=>{setPkOpen(false);setPkTgt(null)}} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#9ca3af"}}>×</button></div>{pkMedia.length===0?<p style={{textAlign:"center",color:"#9ca3af",padding:32}}>No matching media</p>:<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>{pkMedia.map(m=><div key={m.id} onClick={()=>pick(m.url)} className="ptb" style={{cursor:"pointer"}}>{m.type==="video"?<div style={{width:"100%",height:90,background:"#111",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>{m.thumb?<img src={m.thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity:.4}}/>:null}<span style={{position:"absolute",fontSize:20,color:"white"}}>▶</span></div>:<img src={m.thumb} alt={m.label} style={{width:"100%",height:90,objectFit:"cover",borderRadius:8}}/>}<p style={{fontSize:11,color:"#6b7280",margin:"4px 0 0",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.label}</p></div>)}</div>}</div></div>}
-
-      {/* Preview Modal */}
       {prev&&<div className="mbg" onClick={()=>setPrev(null)}><div className="mbox" onClick={e=>e.stopPropagation()} style={{maxWidth:900}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div><h3 style={{margin:0,fontSize:16,fontWeight:600}}>{prev.label}</h3><p style={{margin:"2px 0 0",fontSize:12,color:"#9ca3af"}}>{prev.source}</p></div><button onClick={()=>setPrev(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#9ca3af"}}>×</button></div>{prev.type==="video"?prev.url.includes("drive.google.com")?<div style={{position:"relative",paddingBottom:"56.25%",background:"#000",borderRadius:8,overflow:"hidden"}}><iframe src={prev.url.replace("/view","/preview")} style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none"}} allowFullScreen/></div>:<video src={prev.url} controls autoPlay style={{width:"100%",borderRadius:8,maxHeight:500}}/>:<img src={prev.url} alt={prev.label} style={{width:"100%",borderRadius:8,maxHeight:600,objectFit:"contain",background:"#f1f5f9"}}/>}<div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}><button onClick={()=>useHero(prev)} style={S.aBtnL}>🖼 Use as hero</button><button onClick={()=>cpUrl(prev.url)} style={S.aBtnL}>{copied===prev.url?"✓ Copied!":"🔗 Copy link"}</button><a href={prev.url} target="_blank" rel="noopener noreferrer" style={{...S.aBtnL,textDecoration:"none"}}>↗ Open original</a></div></div></div>}
-
-      {/* Location Photo Picker */}
       {locPicker&&<div className="mbg" onClick={()=>setLocPicker(null)}><div className="mbox" onClick={e=>e.stopPropagation()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h3 style={{margin:0,fontSize:16,fontWeight:600}}>Choose a photo</h3><button onClick={()=>setLocPicker(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#9ca3af"}}>×</button></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>{media.filter(m=>m.type==="image").map(m=><img key={m.id} src={m.thumb||m.url} alt={m.label} onClick={()=>{setLocPhoto(locPicker.locId,locPicker.idx,m.url);setLocPicker(null)}} style={{width:"100%",height:90,objectFit:"cover",borderRadius:8,cursor:"pointer",border:"2px solid transparent"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#6366f1"} onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}/>)}</div></div></div>}
     </div>
   );
 }
 
-// ─── Components ───
 const cardS:React.CSSProperties={background:"#fff",border:"1px solid #eaedf0",borderRadius:14,padding:"20px 24px",marginBottom:12,boxShadow:"0 1px 2px rgba(0,0,0,0.03)"};
 function Ctr({children}:{children:React.ReactNode}){return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',system-ui,sans-serif",padding:32,textAlign:"center",flexDirection:"column"}}>{children}</div>}
 function SvBdg({s}:{s:SaveSt}){if(s==="idle")return null;const c={saving:{t:"Saving…",bg:"#fef3c7",fg:"#92400e"},saved:{t:"Saved ✓",bg:"#dcfce7",fg:"#166534"},error:{t:"Save failed",bg:"#fef2f2",fg:"#991b1b"}}[s]!;return<span style={{fontSize:12,padding:"4px 12px",borderRadius:99,background:c.bg,color:c.fg,fontWeight:500}}>{c.t}</span>}
@@ -374,6 +428,7 @@ function Inf({l,v}:{l:string;v:string|null}){return<div><span style={{color:"#9c
 function UZ({accept,label,onChange,uping,prog,compact}:{accept:string;label:string;onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void;uping:boolean;prog:number|null;compact?:boolean}){const r=useRef<HTMLInputElement>(null);return<div className="uz" onClick={()=>r.current?.click()} style={compact?{padding:14,flex:1}:{}}><input ref={r} type="file" accept={accept} onChange={onChange} style={{display:"none"}}/>{uping&&prog!==null?<div style={{width:"100%"}}><p style={{fontSize:13,color:"#6366f1",margin:"0 0 6px"}}>Uploading… {prog}%</p><div className="pb"><div className="pf" style={{width:`${prog}%`}}/></div></div>:<p style={{fontSize:13,color:"#6b7280",margin:0,fontWeight:500}}>{compact?"📎 ":"📤 "}{label}</p>}</div>}
 function SU({accept,label,onChange,uping}:{accept:string;label:string;onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void;uping:boolean}){const r=useRef<HTMLInputElement>(null);return<><input ref={r} type="file" accept={accept} onChange={onChange} style={{display:"none"}}/><button onClick={()=>r.current?.click()} style={S.sm} disabled={uping}>{uping?"…":`📎 ${label}`}</button></>}
 function LB({label,onClick}:{label:string;onClick:()=>void}){return<button onClick={onClick} style={{flex:1,padding:14,borderRadius:12,border:"2px dashed #d1d5db",background:"#fafafa",cursor:"pointer",fontSize:13,color:"#6b7280",fontWeight:500,fontFamily:"inherit"}}>📂 {label}</button>}
+function MdBtn({onClick,title,children}:{onClick:()=>void;title:string;children:React.ReactNode}){return<button onClick={onClick} title={title} style={{padding:"6px 10px",border:"1px solid #e5e7eb",background:"#fff",cursor:"pointer",borderRadius:6,fontSize:12,fontFamily:"inherit",fontWeight:500,color:"#374151",minWidth:30}}>{children}</button>}
 
 const S:Record<string,React.CSSProperties>={
   page:{minHeight:"100vh",background:"#f8f9fb",fontFamily:"'DM Sans',system-ui,sans-serif"},
@@ -393,4 +448,4 @@ const S:Record<string,React.CSSProperties>={
   aBtnL:{fontSize:13,color:"#4f46e5",border:"1px solid #e0e7ff",background:"#f5f3ff",cursor:"pointer",padding:"8px 16px",borderRadius:8,fontFamily:"inherit",fontWeight:500,display:"inline-block"},
   arrBtn:{background:"none",border:"1px solid #e5e7eb",borderRadius:4,cursor:"pointer",padding:"2px 6px",fontSize:10,color:"#9ca3af",fontFamily:"inherit",lineHeight:1},
 };
-const CSS=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box}body{margin:0}input:focus,textarea:focus,select:focus{border-color:#6366f1!important;outline:none;box-shadow:0 0 0 3px rgba(99,102,241,0.1)}.uz{border:2px dashed #d1d5db;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa}.uz:hover{border-color:#6366f1;background:#f5f3ff}.tw{position:relative;display:inline-block}.tw .tx{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}.tw:hover .tx{opacity:1}.pb{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden}.pf{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .3s}.mbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.mbox{background:#fff;border-radius:16px;width:90%;max-width:780px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:0 25px 50px rgba(0,0,0,.25)}.ptb:hover img,.ptb:hover div{outline:2px solid #6366f1;outline-offset:-2px;border-radius:8px}`;
+const CSS=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box}body{margin:0}input:focus,textarea:focus,select:focus{border-color:#6366f1!important;outline:none;box-shadow:0 0 0 3px rgba(99,102,241,0.1)}.uz{border:2px dashed #d1d5db;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa}.uz:hover{border-color:#6366f1;background:#f5f3ff}.tw{position:relative;display:inline-block}.tw .tx{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}.tw:hover .tx{opacity:1}.pb{height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden}.pf{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .3s}.mbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.mbox{background:#fff;border-radius:16px;width:90%;max-width:780px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:0 25px 50px rgba(0,0,0,.25)}.ptb:hover img,.ptb:hover div{outline:2px solid #6366f1;outline-offset:-2px;border-radius:8px}.pimg:hover .pimg-ov{display:flex!important}`;
