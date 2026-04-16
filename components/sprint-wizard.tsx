@@ -355,6 +355,27 @@ export function SprintCalendar({
     setSchedule(prev => prev.map(s => s.id === id ? { ...s, status: "skipped" } : s));
   };
 
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteSprint = async () => {
+    if (!plan) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/planner/sprint/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: plan.id }),
+      });
+      if (res.ok) {
+        setPlan(null);
+        setSchedule([]);
+        setConfirmReset(false);
+      }
+    } catch {}
+    setIsDeleting(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8 text-gray-400 gap-2">
@@ -424,6 +445,23 @@ export function SprintCalendar({
             <p className="text-[13px] font-bold text-emerald-400">{totalPosted}/{totalPosts} posted</p>
             {overdue > 0 && <p className="text-[11px] text-amber-400">{overdue} ready to go</p>}
           </div>
+          {confirmReset ? (
+            <div className="flex items-center gap-2">
+              <button onClick={handleDeleteSprint} disabled={isDeleting}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-red-600 hover:bg-red-500 disabled:bg-gray-700 text-white transition-colors">
+                {isDeleting ? "Deleting..." : "Yes, delete"}
+              </button>
+              <button onClick={() => setConfirmReset(false)}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-600 bg-gray-800 text-gray-400 hover:text-white transition-colors">
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmReset(true)}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-600 bg-gray-800 text-gray-400 hover:text-red-400 hover:border-red-500/30 transition-colors">
+              Reset Sprint
+            </button>
+          )}
         </div>
       </div>
 
