@@ -492,9 +492,12 @@ export default function DashboardPage() {
   const tools: ToolDef[] = [
     { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
     { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
-    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "/dashboard/planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
+    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
+    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
+    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "#", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
+    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "/dashboard/planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
     {
       icon: Globe,
       label: "My Agent Website",
@@ -511,15 +514,12 @@ export default function DashboardPage() {
       ring: "ring-sky-400/20",
       ...gated("website_builder"),
     },
-    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
-    { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
     { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
-    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", ...gated("virtual_staging") },
-    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("custom_reports") },
-    { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
-    { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "#", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
-    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "#", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
     { icon: ImageIcon, label: "Photo Enhancement", desc: "AI brightness, color & white balance correction", href: "/dashboard/lens/enhance", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", stat: enhancementCount > 0 ? `${enhancementCount} enhanced` : null, ...gated("photo_enhancement") },
+    { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
+    { icon: FileText, label: "Reports", desc: "Branded buyer & seller guides", href: "/dashboard/lens/reports", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("custom_reports") },
+    { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "#", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
+    { icon: Sofa, label: "Virtual Staging", desc: "Furnish empty rooms with AI in seconds", href: "/dashboard/lens/staging", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20", ...gated("virtual_staging") },
   ];
 
   /* ═══════════════════════════════════════════════════════════════
