@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: app/p/[slug]/client.tsx
+// ============================================================
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -211,12 +214,43 @@ function ShareSection({ url, theme }: { url: string; theme: typeof TEMPLATES.mod
   );
 }
 
+/* ─── Agent Site Edit Button (replaces P2V Home link) ─── */
+function AgentEditButton() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    import("@supabase/ssr").then(({ createBrowserClient }) => {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) setShow(true);
+      });
+    });
+  }, []);
+  if (!show) return null;
+  return (
+    <a
+      href="/editor"
+      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 text-white/70 hover:text-white hover:bg-white/20 text-xs font-medium transition-all flex items-center gap-1.5"
+    >
+      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+      <span className="hidden sm:inline">Edit Site</span>
+    </a>
+  );
+}
+
 /* ─── Main Client Component ─── */
 export default function PropertyWebsiteClient({
   property, agent, modules, curated, descriptions, stagings, designExports, template,
+  agentSiteMode = false,
 }: {
   property: any; agent: any; modules: Record<string, boolean>; curated: Record<string, string[]>;
   descriptions: any[]; stagings: any[]; designExports: any[]; template: string;
+  agentSiteMode?: boolean;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeStagingIdx, setActiveStagingIdx] = useState(0);
@@ -289,10 +323,14 @@ export default function PropertyWebsiteClient({
               {agent?.saved_company && <span className="text-white/70 text-xs hidden sm:inline font-medium">{agent.saved_company}</span>}
             </div>
           </div>
-         <a href="https://realestatephoto2video.com" className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 text-white/70 hover:text-white hover:bg-white/20 text-xs font-medium transition-all flex items-center gap-1.5">
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            <span className="hidden sm:inline">P2V Home</span>
-          </a>
+          {agentSiteMode ? (
+            <AgentEditButton />
+          ) : (
+            <a href="https://realestatephoto2video.com" className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 text-white/70 hover:text-white hover:bg-white/20 text-xs font-medium transition-all flex items-center gap-1.5">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span className="hidden sm:inline">P2V Home</span>
+            </a>
+          )}
         </div>
 
         {/* Hero content */}
