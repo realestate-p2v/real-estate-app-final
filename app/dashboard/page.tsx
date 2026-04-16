@@ -161,6 +161,7 @@ const mcStyles = `
   .dashboard-light [class*="border-blue"] { border-color: rgba(37,99,235,0.15) !important; }
   .dashboard-light [class*="border-violet"] { border-color: rgba(124,58,237,0.15) !important; }
   .dashboard-light [class*="border-amber"] { border-color: rgba(217,119,6,0.2) !important; }
+  .dashboard-light [class*="border-teal"] { border-color: rgba(13,148,136,0.2) !important; }
   .dashboard-light [class*="border-red"] { border-color: rgba(220,38,38,0.2) !important; }
 
   /* Colored bg accents — keep but lighter */
@@ -174,7 +175,7 @@ const mcStyles = `
   .dashboard-light [class*="bg-blue-400\\/"] { background-color: rgba(37,99,235,0.06) !important; }
   .dashboard-light [class*="bg-violet-400\\/"] { background-color: rgba(124,58,237,0.06) !important; }
   .dashboard-light [class*="bg-amber-400\\/"] { background-color: rgba(217,119,6,0.08) !important; }
-  .dashboard-light [class*="bg-teal-400\\/"] { background-color: rgba(13,148,136,0.06) !important; }
+  .dashboard-light [class*="bg-teal-400\\/"] { background-color: rgba(13,148,136,0.08) !important; }
 
   /* Solid bg buttons stay solid */
   .dashboard-light .bg-cyan-500 { background-color: #0891b2 !important; }
@@ -191,6 +192,7 @@ const mcStyles = `
   .dashboard-light [class*="ring-purple"] { --tw-ring-color: rgba(124,58,237,0.12) !important; }
   .dashboard-light [class*="ring-indigo"] { --tw-ring-color: rgba(79,70,229,0.12) !important; }
   .dashboard-light [class*="ring-blue"] { --tw-ring-color: rgba(37,99,235,0.12) !important; }
+  .dashboard-light [class*="ring-teal"] { --tw-ring-color: rgba(13,148,136,0.15) !important; }
 
   /* Cards get subtle shadow */
   .dashboard-light .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); }
@@ -338,6 +340,7 @@ export default function DashboardPage() {
   });
   const [coachSessionCount, setCoachSessionCount] = useState(0);
   const [descriptionCount, setDescriptionCount] = useState(0);
+  const [enhancementCount, setEnhancementCount] = useState(0);
   const [propertyCount, setPropertyCount] = useState(0);
   const [recentProperties, setRecentProperties] = useState<RecentProperty[]>([]);
   const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
@@ -455,6 +458,7 @@ export default function DashboardPage() {
         sessionsResult,
         sessionCountResult,
         descCountResult,
+        enhanceCountResult,
         propCountResult,
         propsResult,
         publishedSitesResult,
@@ -463,6 +467,7 @@ export default function DashboardPage() {
         supabase.from("lens_sessions").select("total_analyses").eq("user_id", authUser.id),
         supabase.from("lens_sessions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("lens_descriptions").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
+        supabase.from("lens_enhancements").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("agent_properties").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("agent_properties")
           .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features")
@@ -483,6 +488,7 @@ export default function DashboardPage() {
 
       setCoachSessionCount(sessionCountResult.count || 0);
       setDescriptionCount(descCountResult.count || 0);
+      setEnhancementCount(enhanceCountResult.count || 0);
       setPropertyCount(propCountResult.count || 0);
       if (propsResult.data) setRecentProperties(propsResult.data);
       if (publishedSitesResult.data) setPublishedWebsites(publishedSitesResult.data);
@@ -622,10 +628,10 @@ export default function DashboardPage() {
     { icon: ImageIcon, label: "Listing Flyer", desc: "Print-ready flyers from your photos", href: "/dashboard/lens/design-studio", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20", ...gated("listing_flyer") },
     { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "#", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
     { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "#", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
+    { icon: ImageIcon, label: "Photo Enhancement", desc: "AI brightness, color & white balance correction", href: "/dashboard/lens/enhance", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", stat: enhancementCount > 0 ? `${enhancementCount} enhanced` : null, ...gated("photo_enhancement") },
   ];
 
   const subscriberPerks = [
-    { icon: ImageIcon, label: "Photo Enhancement", desc: "AI brightness, color, and white balance correction", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
     { icon: Percent, label: "10% Off Every Video", desc: "Automatic subscriber discount at checkout", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20" },
     { icon: Zap, label: "Priority Delivery", desc: "12-hour turnaround — subscribers go first", color: "text-yellow-400", bg: "bg-yellow-400/10", ring: "ring-yellow-400/20" },
   ];
@@ -1039,7 +1045,6 @@ export default function DashboardPage() {
               <div className="flex flex-wrap gap-x-6 gap-y-2">
                 {[
                   { icon: Percent, text: "10% off every video order" },
-                  { icon: ImageIcon, text: "Free photo enhancement" },
                   { icon: Clock, text: "Priority 12hr processing" },
                   { icon: Film, text: "Quick Videos from $4.95/clip" },
                   { icon: ShieldCheck, text: "Satisfaction guarantee" },
@@ -1066,6 +1071,7 @@ export default function DashboardPage() {
                   "Unlimited Photo Coach sessions",
                   "Unlimited Design Studio exports",
                   "Unlimited descriptions & staging",
+                  "Unlimited Photo Enhancement",
                   "Quick Videos from $4.95/clip",
                   "10% off every video order",
                   "Location Value Score & Value Boost",
