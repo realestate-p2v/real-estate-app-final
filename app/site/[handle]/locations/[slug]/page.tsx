@@ -1,9 +1,10 @@
-// app/site/[handle]/locations/[slug]/page.tsx
-// Renders a location page on the agent's website
-// URL: mattsrealty.p2v.homes/locations/playa-hermosa
-
+// ============================================================
+// FILE: app/site/[handle]/locations/[slug]/page.tsx
+// ============================================================
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { getSite, getProfile } from "../../data";
+import type { Metadata } from "next";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,10 +15,7 @@ interface Props {
   params: Promise<{ handle: string; slug: string }>;
 }
 
-export default async function LocationPage({ params }: Props) {
-  const { handle, slug } = await params;
-
-  // Get location page
+async function getLocationPage(handle: string, slug: string) {
   const { data: pages } = await supabase
     .from("agent_location_pages")
     .select("*")
@@ -25,20 +23,43 @@ export default async function LocationPage({ params }: Props) {
     .eq("location_slug", slug)
     .eq("published", true)
     .limit(1);
+  return pages?.[0] || null;
+}
 
-  if (!pages?.length) return notFound();
-  const page = pages[0];
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle, slug } = await params;
+  const page = await getLocationPage(handle, slug);
+  if (!page) return {};
+  const site = await getSite(handle);
+  if (!site) return {};
+  const profile = await getProfile(site.user_id);
+  const agent = profile.agent_name || site.site_title || "Agent";
+  const title = page.page_title || `${page.location_name} Real Estate | ${agent}`;
+  const description = page.meta_description || `Explore real estate in ${page.location_name}. ${agent} is your local expert.`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(page.hero_photo_url && { images: [{ url: page.hero_photo_url }] }),
+    },
+    twitter: {
+      card: page.hero_photo_url ? "summary_large_image" : "summary",
+      title,
+      description,
+    },
+  };
+}
 
-  // Get site data for colors/branding
-  const { data: siteRows } = await supabase
-    .from("agent_websites")
-    .select("primary_color, site_title")
-    .eq("handle", handle)
-    .limit(1);
-  const site = siteRows?.[0];
+export default async function LocationPage({ params }: Props) {
+  const { handle, slug } = await params;
+  const page = await getLocationPage(handle, slug);
+  if (!page) return notFound();
+
+  const site = await getSite(handle);
   const primary = site?.primary_color || "#334155";
 
-  // Get agent profile
   const { data: lensRows } = await supabase
     .from("lens_usage")
     .select("saved_agent_name, saved_phone, saved_email, saved_company")
@@ -46,17 +67,12 @@ export default async function LocationPage({ params }: Props) {
     .limit(1);
   const agent = lensRows?.[0];
 
-  // Parse markdown body into sections
   const sections = parseMarkdown(page.body_content || "");
-
-  // Photos with alt tags
   const photos: { url: string | null; alt: string; caption: string }[] = Array.isArray(page.photos) ? page.photos : [];
   const photosWithUrls = photos.filter(p => p.url);
 
   return (
     <div>
-      {/* SEO meta tags would be handled by generateMetadata in production */}
-
       {/* Hero */}
       <section style={{
         position: "relative",
@@ -114,7 +130,6 @@ export default async function LocationPage({ params }: Props) {
             {section.paragraphs.map((p, j) => (
               <p key={j} style={{ fontSize: 16, color: "#444", margin: "0 0 14px", lineHeight: 1.7 }}>{p}</p>
             ))}
-            {/* Insert a photo between sections if available */}
             {photosWithUrls[i] ? (
               <div style={{ margin: "24px 0", borderRadius: 10, overflow: "hidden" }}>
                 <img
@@ -154,7 +169,6 @@ export default async function LocationPage({ params }: Props) {
   );
 }
 
-// Simple markdown parser for ## headings and paragraphs
 function parseMarkdown(md: string): { heading: string | null; paragraphs: string[] }[] {
   const lines = md.split("\n");
   const sections: { heading: string | null; paragraphs: string[] }[] = [];
@@ -166,7 +180,6 @@ function parseMarkdown(md: string): { heading: string | null; paragraphs: string
       if (current.paragraphs.length > 0 || current.heading) sections.push(current);
       current = { heading: trimmed.replace(/^##\s*/, ""), paragraphs: [] };
     } else if (trimmed.length > 0) {
-      // Strip bold markdown
       const cleaned = trimmed.replace(/\*\*(.*?)\*\*/g, "$1");
       current.paragraphs.push(cleaned);
     }
