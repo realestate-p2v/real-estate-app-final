@@ -97,7 +97,7 @@ export function Navigation() {
   const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
 
   // Lens link: logged in → dashboard, logged out → landing page
-  const lensLink = user ? "/dashboard/lens" : "/lens";
+  const lensLink = user ? "/dashboard" : "/lens";
 
   return (
     <>
@@ -261,7 +261,7 @@ export function Navigation() {
                         <Home className="h-3.5 w-3.5 text-muted-foreground" />
                         My Properties
                       </Link>
-                      <Link href="/dashboard/lens" onClick={() => setShowDropdown(false)}
+                      <Link href="/dashboard" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                         <Sparkles className="h-3.5 w-3.5 text-cyan-500" />
                         P2V Lens Tools
@@ -426,7 +426,7 @@ export function Navigation() {
                       <Home className="h-4 w-4 text-primary-foreground/60" />
                       My Properties
                     </Link>
-                    <Link href="/dashboard/lens" onClick={() => setIsOpen(false)}
+                    <Link href="/dashboard" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                       <Sparkles className="h-4 w-4 text-cyan-400" />
                       P2V Lens Tools
