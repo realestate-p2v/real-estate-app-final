@@ -170,7 +170,6 @@ function ShareSection({ url, theme }: { url: string; theme: typeof TEMPLATES.mod
               </button>
             )}
           </div>
-          {/* Social share buttons */}
           <div className="flex items-center gap-2 pt-1">
             <span className={`text-xs font-semibold ${theme.textMuted} mr-1`}>Share on</span>
             <a
@@ -218,15 +217,10 @@ function ShareSection({ url, theme }: { url: string; theme: typeof TEMPLATES.mod
 function AgentEditButton() {
   const [show, setShow] = useState(false);
   useEffect(() => {
-    import("@supabase/ssr").then(({ createBrowserClient }) => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) setShow(true);
-      });
-    });
+    const host = window.location.hostname;
+    if (host.endsWith(".p2v.homes") && host !== "p2v.homes" && host !== "www.p2v.homes") {
+      setShow(true);
+    }
   }, []);
   if (!show) return null;
   return (
@@ -288,10 +282,8 @@ export default function PropertyWebsiteClient({
 
   const hasBrandingCard = agent?.saved_branding_cards && Array.isArray(agent.saved_branding_cards) && agent.saved_branding_cards.length > 0;
 
-  // Check if there's any real content
   const hasContent = photos.length > 0 || videos.length > 0 || descriptions.length > 0 || stagings.length > 0;
 
-  // Build the page URL for sharing
   const [pageUrl, setPageUrl] = useState("");
   useEffect(() => {
     setPageUrl(window.location.href);
@@ -398,7 +390,6 @@ export default function PropertyWebsiteClient({
           {/* ═══ LEFT COLUMN (70%) ═══ */}
           <div className="flex-1 min-w-0">
 
-            {/* Empty state — no curated content */}
             {!hasContent && (
               <section className="mb-12">
                 <div className={`${t.cardBg} rounded-2xl border ${t.border} p-10 sm:p-14 text-center`}>
@@ -413,7 +404,6 @@ export default function PropertyWebsiteClient({
               </section>
             )}
 
-            {/* Property Details */}
             {hasContent && (
             <section className="mb-12">
               <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Property Details</h2>
@@ -449,37 +439,24 @@ export default function PropertyWebsiteClient({
             </section>
             )}
 
-            {/* Amenities */}
             {property.amenities && property.amenities.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Amenities</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {property.amenities.map((id: string) => {
                     const amenityMap: Record<string, { label: string; icon: string }> = {
-                      ac: { label: "A/C", icon: "❄️" },
-                      heating: { label: "Heating", icon: "🔥" },
-                      pool: { label: "Pool", icon: "🏊" },
-                      garage: { label: "Garage", icon: "🚗" },
-                      parking: { label: "Parking", icon: "🅿️" },
-                      security: { label: "Security System", icon: "🔒" },
-                      gated: { label: "Gated Community", icon: "🚧" },
-                      laundry: { label: "Laundry", icon: "👕" },
-                      dishwasher: { label: "Dishwasher", icon: "🍽️" },
-                      fireplace: { label: "Fireplace", icon: "🪵" },
-                      furnished: { label: "Furnished", icon: "🛋️" },
-                      pet_friendly: { label: "Pet Friendly", icon: "🐾" },
-                      gym: { label: "Gym", icon: "💪" },
-                      elevator: { label: "Elevator", icon: "🛗" },
-                      balcony: { label: "Balcony", icon: "🌅" },
-                      garden: { label: "Garden", icon: "🌿" },
-                      rooftop: { label: "Rooftop", icon: "🏙️" },
-                      storage: { label: "Storage", icon: "📦" },
-                      wheelchair: { label: "Wheelchair Access", icon: "♿" },
-                      solar: { label: "Solar Panels", icon: "☀️" },
-                      ev_charging: { label: "EV Charging", icon: "🔌" },
-                      smart_home: { label: "Smart Home", icon: "📱" },
-                      water_heater: { label: "Water Heater", icon: "🚿" },
-                      ceiling_fans: { label: "Ceiling Fans", icon: "🌀" },
+                      ac: { label: "A/C", icon: "❄️" }, heating: { label: "Heating", icon: "🔥" },
+                      pool: { label: "Pool", icon: "🏊" }, garage: { label: "Garage", icon: "🚗" },
+                      parking: { label: "Parking", icon: "🅿️" }, security: { label: "Security System", icon: "🔒" },
+                      gated: { label: "Gated Community", icon: "🚧" }, laundry: { label: "Laundry", icon: "👕" },
+                      dishwasher: { label: "Dishwasher", icon: "🍽️" }, fireplace: { label: "Fireplace", icon: "🪵" },
+                      furnished: { label: "Furnished", icon: "🛋️" }, pet_friendly: { label: "Pet Friendly", icon: "🐾" },
+                      gym: { label: "Gym", icon: "💪" }, elevator: { label: "Elevator", icon: "🛗" },
+                      balcony: { label: "Balcony", icon: "🌅" }, garden: { label: "Garden", icon: "🌿" },
+                      rooftop: { label: "Rooftop", icon: "🏙️" }, storage: { label: "Storage", icon: "📦" },
+                      wheelchair: { label: "Wheelchair Access", icon: "♿" }, solar: { label: "Solar Panels", icon: "☀️" },
+                      ev_charging: { label: "EV Charging", icon: "🔌" }, smart_home: { label: "Smart Home", icon: "📱" },
+                      water_heater: { label: "Water Heater", icon: "🚿" }, ceiling_fans: { label: "Ceiling Fans", icon: "🌀" },
                     };
                     const a = amenityMap[id];
                     if (!a) return null;
@@ -494,7 +471,6 @@ export default function PropertyWebsiteClient({
               </section>
             )}
 
-            {/* Description — with line breaks + sanitization */}
             {modules.description && descriptions.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>About This Property</h2>
@@ -506,7 +482,6 @@ export default function PropertyWebsiteClient({
               </section>
             )}
 
-            {/* Photos — responsive grid, span only on sm+ */}
             {modules.photos && photos.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Photos</h2>
@@ -526,7 +501,6 @@ export default function PropertyWebsiteClient({
               </section>
             )}
 
-            {/* Videos */}
             {modules.videos && videos.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Video Tour</h2>
@@ -538,7 +512,6 @@ export default function PropertyWebsiteClient({
               </section>
             )}
 
-            {/* Virtual Staging */}
             {modules.staging && stagings.length > 0 && (
               <section className="mb-12">
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Virtual Staging</h2>
@@ -555,7 +528,6 @@ export default function PropertyWebsiteClient({
               </section>
             )}
 
-            {/* Share section with QR code */}
             {pageUrl && (
               <section className="mb-12">
                 <ShareSection url={pageUrl} theme={t} />
@@ -567,7 +539,6 @@ export default function PropertyWebsiteClient({
           <div className="lg:w-[380px] flex-shrink-0">
             <div className="lg:sticky lg:top-20 space-y-5">
 
-              {/* Branding Card — clickable, opens modal */}
               {hasBrandingCard && (
                 <button
                   onClick={() => setBrandingModalOpen(true)}
@@ -581,7 +552,6 @@ export default function PropertyWebsiteClient({
                 </button>
               )}
 
-              {/* Agent Card — hidden when branding card is shown */}
               {!hasBrandingCard && (
               <div className={`${t.cardBg} rounded-2xl border ${t.border} p-5`}>
                 <div className="flex items-start gap-3.5 mb-4">
@@ -612,7 +582,6 @@ export default function PropertyWebsiteClient({
               </div>
               )}
 
-              {/* Booking Calendar */}
               {hasBooking && (
                 <div ref={bookingRef} className={`${t.cardBg} rounded-2xl border ${t.border} p-5`}>
                   <h3 className={`text-base font-extrabold ${t.heading} mb-1 ${t.heroFont}`}>{showingLabel}</h3>
@@ -621,7 +590,6 @@ export default function PropertyWebsiteClient({
                 </div>
               )}
 
-              {/* Contact Form */}
               <div ref={contactRef} className={`${t.cardBg} rounded-2xl border ${t.border} p-5`}>
                 <h3 className={`text-base font-extrabold ${t.heading} mb-1 ${t.heroFont}`}>{contactLabel}</h3>
                 <p className={`${t.textMuted} text-xs mb-4`}>Send a message and {agentName || "the agent"} will get back to you.</p>
