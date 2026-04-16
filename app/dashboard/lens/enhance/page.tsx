@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Navigation } from "@/components/navigation";
@@ -117,9 +117,9 @@ function formatBytes(bytes?: number): string {
 }
 
 /* ═══════════════════════════════════════════════
-   PAGE
+   INNER PAGE (uses useSearchParams — must be inside Suspense)
    ═══════════════════════════════════════════════ */
-export default function PhotoEnhancementPage() {
+function PhotoEnhancementInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -259,23 +259,28 @@ export default function PhotoEnhancementPage() {
     }));
 
     setPhotos(prev => [...prev, ...newPhotos]);
-    if (!selectedId && newPhotos.length) setSelectedId(newPhotos[0].id);
+    // Select first new photo if nothing was selected
+    setSelectedId(prev => prev ?? newPhotos[0]?.id ?? null);
 
     // Upload + auto-enhance in parallel
     for (const photo of newPhotos) {
       (async () => {
         const uploaded = await uploadToCloudinary(photo);
-        setPhotos(prev => prev.map(p => (p.id === uploaded.id ? uploaded : p)));
-
-        if (uploaded.status === "uploaded") {
-          // Auto-enhance immediately
-          setPhotos(prev => prev.map(p => (p.id === uploaded.id ? { ...uploaded, status: "enhancing" as EnhanceStatus } : p)));
-          const enhanced = await enhancePhoto({ ...uploaded, status: "enhancing" });
-          setPhotos(prev => prev.map(p => (p.id === enhanced.id ? enhanced : p)));
+        if (uploaded.status !== "uploaded") {
+          // Upload failed — flip row and stop
+          setPhotos(prev => prev.map(p => (p.id === uploaded.id ? uploaded : p)));
+          return;
         }
+
+        // Single render: mark as enhancing with uploaded data
+        const enhancing: EnhancePhoto = { ...uploaded, status: "enhancing" };
+        setPhotos(prev => prev.map(p => (p.id === enhancing.id ? enhancing : p)));
+
+        const enhanced = await enhancePhoto(enhancing);
+        setPhotos(prev => prev.map(p => (p.id === enhanced.id ? enhanced : p)));
       })();
     }
-  }, [selectedId, uploadToCloudinary, enhancePhoto]);
+  }, [uploadToCloudinary, enhancePhoto]);
 
   /* ─── Drag & drop ─── */
   const handleDrop = (e: React.DragEvent) => {
@@ -314,10 +319,11 @@ export default function PhotoEnhancementPage() {
   };
 
   /* ─── Commit intensity (persist to DB) ─── */
-  const handleIntensityCommit = async () => {
-    if (!selectedId || !user) return;
-    const photo = photos.find(p => p.id === selectedId);
-    if (!photo?.dbId) return;
+  // Capture id at call time so a racing selection change can't redirect the write.
+  const handleIntensityCommit = async (photoId: string | null) => {
+    if (!photoId || !user) return;
+    const photo = photos.find(p => p.id === photoId);
+    if (!photo?.dbId || !photo.enhancedUrl) return;
     const supabase = createClient();
     await supabase
       .from("lens_enhancements")
@@ -337,12 +343,12 @@ export default function PhotoEnhancementPage() {
     });
     setPhotos(updated);
 
-    // Persist
+    // Persist — only rows with both dbId and a valid enhancedUrl
     if (user) {
       const supabase = createClient();
       await Promise.all(
         updated
-          .filter(p => p.dbId)
+          .filter(p => p.dbId && p.enhancedUrl)
           .map(p =>
             supabase
               .from("lens_enhancements")
@@ -372,8 +378,11 @@ export default function PhotoEnhancementPage() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `enhanced-${photo.filename}`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      // Defer revoke — some browsers haven't finished the click handler yet
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
       window.open(photo.enhancedUrl, "_blank");
     }
@@ -633,8 +642,8 @@ export default function PhotoEnhancementPage() {
                         max={100}
                         value={selected.intensity}
                         onChange={e => handleIntensityChange(Number(e.target.value))}
-                        onMouseUp={handleIntensityCommit}
-                        onTouchEnd={handleIntensityCommit}
+                        onMouseUp={() => handleIntensityCommit(selected.id)}
+                        onTouchEnd={() => handleIntensityCommit(selected.id)}
                         className="intensity-slider w-full h-1.5 rounded-full bg-white/10 appearance-none cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] text-white/30 mt-1">
@@ -749,5 +758,25 @@ export default function PhotoEnhancementPage() {
         )}
       </div>
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OUTER PAGE — Suspense boundary for useSearchParams()
+   ═══════════════════════════════════════════════ */
+export default function PhotoEnhancementPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-900">
+          <Navigation />
+          <div className="flex items-center justify-center py-32">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
+          </div>
+        </div>
+      }
+    >
+      <PhotoEnhancementInner />
+    </Suspense>
   );
 }
