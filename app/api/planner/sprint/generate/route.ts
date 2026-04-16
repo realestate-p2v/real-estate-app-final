@@ -199,14 +199,27 @@ export async function POST(req: Request) {
       for (let i = 0; i < weight; i++) weightedPropertyIds.push(sp.id);
     });
 
-    // Generate 30 days of schedule
+    // Determine start date: today if before 6pm, else tomorrow
+    // Agents who create a sprint are motivated — don't kill momentum by making them wait
+    const now = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() + 1); // start tomorrow
+    if (now.getHours() >= 18) {
+      startDate.setDate(startDate.getDate() + 1); // after 6pm → start tomorrow
+    }
+    startDate.setHours(0, 0, 0, 0); // normalize to start of day
+
     const scheduleRows: any[] = [];
     let postTypeIndex = 0;
 
-    for (let week = 0; week < 5; week++) { // 5 weeks ≈ 30+ days
-      // Pick which days this week to post
+    // Build list of all post dates for the 30-day window
+    // First post is ALWAYS on day 1 (start date) — the agent wants to post now
+    const postDates: Date[] = [];
+
+    // Add day 1 as first post
+    postDates.push(new Date(startDate));
+
+    // Then fill remaining slots using preferred days
+    for (let week = 0; week < 5; week++) {
       const weekStart = new Date(startDate);
       weekStart.setDate(weekStart.getDate() + week * 7);
 
@@ -214,53 +227,67 @@ export async function POST(req: Request) {
 
       postDays.forEach((dayOfWeek) => {
         const postDate = new Date(weekStart);
-        // Find next occurrence of this day of week
         const currentDay = postDate.getDay();
         const daysUntil = (dayOfWeek - currentDay + 7) % 7;
         postDate.setDate(postDate.getDate() + daysUntil);
+        postDate.setHours(0, 0, 0, 0);
+
+        // Skip if this is the same day as start (already added)
+        if (postDate.getTime() === startDate.getTime()) return;
 
         // Don't go past 35 days
         const daysDiff = Math.floor((postDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff > 35) return;
+        if (daysDiff > 35 || daysDiff < 0) return;
 
-        // Pick property (weighted rotation)
-        const propId = weightedPropertyIds[scheduleRows.length % weightedPropertyIds.length];
-        const prop = propertiesData.find((p: any) => p.id === propId);
-        if (!prop) return;
+        // Don't duplicate dates
+        if (postDates.some(d => d.getTime() === postDate.getTime())) return;
 
-        // Pick post type (rotate through all types)
-        const postType = POST_TYPES[postTypeIndex % POST_TYPES.length];
-        postTypeIndex++;
-
-        // Pick best media for this post type
-        const media = propertyMediaMap.get(propId) || { photos: [], videos: [], clips: [], flyers: [] };
-        let assetUrl = "";
-        if (postType.mediaType === "video" && media.videos.length > 0) {
-          assetUrl = media.videos[0];
-        } else if (postType.mediaType === "clip" && media.clips.length > 0) {
-          assetUrl = media.clips[scheduleRows.length % media.clips.length];
-        } else if (postType.mediaType === "flyer" && media.flyers.length > 0) {
-          assetUrl = media.flyers[scheduleRows.length % media.flyers.length];
-        } else if (media.photos.length > 0) {
-          assetUrl = media.photos[scheduleRows.length % media.photos.length];
-        }
-
-        // Generate caption
-        const caption = generateCaptionForType(postType.contentType, prop, agentName);
-
-        scheduleRows.push({
-          user_id: userId,
-          property_id: propId,
-          scheduled_date: postDate.toISOString().split("T")[0],
-          platform: postType.platform,
-          content_type: postType.contentType,
-          caption,
-          asset_url: assetUrl,
-          status: "pending",
-          auto_generated: true,
-        });
+        postDates.push(postDate);
       });
     }
+
+    // Sort all post dates chronologically
+    postDates.sort((a, b) => a.getTime() - b.getTime());
+
+    // Now create a scheduled row for each date
+    postDates.forEach((postDate) => {
+      // Pick property (weighted rotation)
+      const propId = weightedPropertyIds[scheduleRows.length % weightedPropertyIds.length];
+      const prop = propertiesData.find((p: any) => p.id === propId);
+      if (!prop) return;
+
+      // Pick post type (rotate through all types)
+      const postType = POST_TYPES[postTypeIndex % POST_TYPES.length];
+      postTypeIndex++;
+
+      // Pick best media for this post type
+      const media = propertyMediaMap.get(propId) || { photos: [], videos: [], clips: [], flyers: [] };
+      let assetUrl = "";
+      if (postType.mediaType === "video" && media.videos.length > 0) {
+        assetUrl = media.videos[0];
+      } else if (postType.mediaType === "clip" && media.clips.length > 0) {
+        assetUrl = media.clips[scheduleRows.length % media.clips.length];
+      } else if (postType.mediaType === "flyer" && media.flyers.length > 0) {
+        assetUrl = media.flyers[scheduleRows.length % media.flyers.length];
+      } else if (media.photos.length > 0) {
+        assetUrl = media.photos[scheduleRows.length % media.photos.length];
+      }
+
+      // Generate caption
+      const caption = generateCaptionForType(postType.contentType, prop, agentName);
+
+      scheduleRows.push({
+        user_id: userId,
+        property_id: propId,
+        scheduled_date: postDate.toISOString().split("T")[0],
+        platform: postType.platform,
+        content_type: postType.contentType,
+        caption,
+        asset_url: assetUrl,
+        status: "pending",
+        auto_generated: true,
+      });
+    });
 
     // Sort by date
     scheduleRows.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
