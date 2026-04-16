@@ -2,7 +2,7 @@
 // FILE: app/site/[handle]/layout.tsx
 // ============================================================
 import { getSite, getProfile, getLocationPageCount } from "./data";
-import EditSiteNav from "./edit-site-nav";
+import EditSiteButton from "./edit-site-button";
 
 interface Props {
   params: Promise<{ handle: string }>;
@@ -97,7 +97,6 @@ export default async function AgentSiteLayout({ params, children }: Props) {
               {link.label}
             </a>
           ))}
-          <EditSiteNav />
         </div>
       </nav>
 
@@ -211,6 +210,9 @@ export default async function AgentSiteLayout({ params, children }: Props) {
           </a>
         </div>
       </footer>
+
+      {/* ── FLOATING EDIT BUTTON (owner only) ────────────────────────────── */}
+      <EditSiteButton siteUserId={site.user_id} />
     </>
   );
 }
