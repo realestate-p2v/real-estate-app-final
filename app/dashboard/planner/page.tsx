@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { SprintWizardModal, SprintCalendar } from "@/components/sprint-wizard";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,8 @@ export default function PlannerPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [step, setStep] = useState(1);
+  const [sprintWizardOpen, setSprintWizardOpen] = useState(false);
+  const [sprintRefresh, setSprintRefresh] = useState(0);
   const hasInit = useRef(false);
 
   // ─── Init ───────────────────────────────────────────────────────────────
@@ -295,6 +298,35 @@ export default function PlannerPage() {
       setAgentName(profileRes.data?.saved_agent_name || "Agent");
       setIsSubscriber(!!profileRes.data?.is_subscriber);
       setLoadingProperties(false);
+
+      // Deep-link: ?post=SCHEDULE_ID — auto-load a scheduled post
+      const urlParams = new URLSearchParams(window.location.search);
+      const postId = urlParams.get("post");
+      if (postId) {
+        const { data: schedItem } = await supabase
+          .from("marketing_schedule")
+          .select("id, property_id, caption, asset_url, platform, content_type")
+          .eq("id", postId)
+          .single();
+        if (schedItem && schedItem.property_id) {
+          const matchedProp = (propsRes.data || []).find((p: any) => p.id === schedItem.property_id);
+          if (matchedProp) {
+            setSelectedProperty(matchedProp);
+            setGeneratedCaption(schedItem.caption || "");
+            if (schedItem.asset_url) {
+              setSelectedMedia([{
+                id: `sched-${schedItem.id}`,
+                type: schedItem.asset_url.endsWith(".mp4") ? "video" : "photo",
+                propertyAddress: matchedProp.address,
+                thumbnailUrl: schedItem.asset_url,
+                assetUrl: schedItem.asset_url,
+                label: schedItem.content_type?.replace(/[-_]/g, " ") || "Scheduled Post",
+              }]);
+            }
+            setStep(3);
+          }
+        }
+      }
     };
     init();
   }, []);
@@ -553,11 +585,19 @@ export default function PlannerPage() {
               <p className="text-xs text-gray-500 font-medium">Select property → pick media → generate & share</p>
             </div>
           </div>
-          {step > 1 && (
-            <button onClick={handleStartOver} className="px-4 py-2 rounded-lg text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2">
-              <RotateCcw className="w-3.5 h-3.5" /> Start Over
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {step === 1 && (
+              <button onClick={() => setSprintWizardOpen(true)}
+                className="px-4 py-2 rounded-lg text-[13px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5" /> 30-Day Sprint
+              </button>
+            )}
+            {step > 1 && (
+              <button onClick={handleStartOver} className="px-4 py-2 rounded-lg text-[13px] font-bold border border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2">
+                <RotateCcw className="w-3.5 h-3.5" /> Start Over
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -860,7 +900,28 @@ export default function PlannerPage() {
             )}
           </div>
         </div>
+
+        {/* Sprint Calendar — full width below the main content */}
+        <div className="mt-6">
+          <SprintCalendar
+            key={sprintRefresh}
+            onPostClick={(scheduleId) => {
+              // Navigate to this post via deep link
+              window.location.href = `/dashboard/planner?post=${scheduleId}`;
+            }}
+          />
+        </div>
       </div>
+
+      {/* Sprint Wizard Modal */}
+      <SprintWizardModal
+        open={sprintWizardOpen}
+        onClose={() => setSprintWizardOpen(false)}
+        properties={properties}
+        onSprintCreated={(planId) => {
+          setSprintRefresh(prev => prev + 1); // refresh calendar
+        }}
+      />
     </div>
   );
 }
