@@ -15,7 +15,6 @@ import {
   ArrowRight,
   ImageIcon,
   MessageSquare,
-  Play,
   BookOpen,
   Lock,
   Crown,
@@ -24,7 +23,6 @@ import {
   Film,
   Gift,
   Home,
-  ChevronRight,
   FileText,
   Percent,
   ShieldCheck,
@@ -37,33 +35,19 @@ import {
   Edit,
   Building2,
   User,
-  Mail,
-  Phone,
   Globe,
   Check,
   X,
-  Loader2,
-  Pencil,
-  Upload,
-  Save,
-  Eye,
-  Copy,
   MapPin,
   TrendingUp,
   Sun,
   Moon,
-  ChevronDown,
+  Settings,
 } from "lucide-react";
 
 /* ─── Lazy-loaded components (not needed for initial paint) ─── */
 const SignupSpin = dynamic(() => import("@/components/signup-spin").then(m => ({ default: m.SignupSpin })), { ssr: false });
 const LensConversionTracker = dynamic(() => import("@/components/lens-conversion-tracker").then(m => ({ default: m.LensConversionTracker })), { ssr: false });
-const MarketingPlannerWidget = dynamic(() => import("@/components/marketing-planner-widget"), { ssr: false });
-
-/* ─────────────────────────────────────────────
-   Constants
-   ───────────────────────────────────────────── */
-const PROPERTY_SITE_BASE = "/p"; // Change to "https://" + slug + ".p2v.homes" when DNS is live
 
 /* ─────────────────────────────────────────────
    Styles
@@ -219,16 +203,6 @@ interface LensSubscription {
   renewsAt: string | null;
 }
 
-interface AgentProfile {
-  saved_agent_name: string;
-  saved_phone: string;
-  saved_email: string;
-  saved_company: string;
-  saved_website: string;
-  saved_headshot_url: string | null;
-  saved_logo_url: string | null;
-}
-
 interface RecentProperty {
   id: string;
   address: string;
@@ -240,14 +214,6 @@ interface RecentProperty {
   sqft: number | null;
   price: number | null;
   special_features: string[] | null;
-}
-
-interface PublishedWebsite {
-  id: string;
-  address: string;
-  website_slug: string;
-  website_published: boolean;
-  website_curated: any;
 }
 
 /* ─────────────────────────────────────────────
@@ -334,17 +300,12 @@ export default function DashboardPage() {
   const [subscription, setSubscription] = useState<LensSubscription>({
     active: false, plan: null, analysesUsed: 0, analysesLimit: 200, renewsAt: null,
   });
-  const [agentProfile, setAgentProfile] = useState<AgentProfile>({
-    saved_agent_name: "", saved_phone: "", saved_email: "", saved_company: "",
-    saved_website: "", saved_headshot_url: null, saved_logo_url: null,
-  });
   const [coachSessionCount, setCoachSessionCount] = useState(0);
   const [descriptionCount, setDescriptionCount] = useState(0);
   const [enhancementCount, setEnhancementCount] = useState(0);
   const [propertyCount, setPropertyCount] = useState(0);
   const [recentProperties, setRecentProperties] = useState<RecentProperty[]>([]);
-  const [publishedWebsites, setPublishedWebsites] = useState<PublishedWebsite[]>([]);
-  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [agentWebsite, setAgentWebsite] = useState<{ handle: string; status: string } | null>(null);
   const [coreReady, setCoreReady] = useState(false);
   const [secondaryLoaded, setSecondaryLoaded] = useState(false);
   const [isFreePrize, setIsFreePrize] = useState(false);
@@ -355,21 +316,8 @@ export default function DashboardPage() {
   const [hasDirectoryListing, setHasDirectoryListing] = useState<boolean | null>(null);
   const [access, setAccess] = useState<AccessResult>({ allowed: false, reason: "free", tier: "free", hasVideo: false });
 
-  // Profile editing
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState<AgentProfile>({ ...agentProfile });
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-
-  // Active tab for tools vs quick links
-  const [activeTab, setActiveTab] = useState<"tools" | "perks">("tools");
-
   // Subscribe banner dismiss (resets each visit — intentional gentle reminder)
   const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  // Show all websites toggle
-  const [showAllWebsites, setShowAllWebsites] = useState(false);
 
   // Dark/light mode
   const [darkMode, setDarkMode] = useState(true);
@@ -397,23 +345,10 @@ export default function DashboardPage() {
         .eq("user_id", authUser.id)
         .single();
 
-      // Agent profile
-      if (usage) {
-        const profile: AgentProfile = {
-          saved_agent_name: usage.saved_agent_name || "",
-          saved_phone: usage.saved_phone || "",
-          saved_email: usage.saved_email || "",
-          saved_company: usage.saved_company || "",
-          saved_website: usage.saved_website || "",
-          saved_headshot_url: usage.saved_headshot_url || null,
-          saved_logo_url: usage.saved_logo_url || null,
-        };
-        setAgentProfile(profile);
-        setProfileForm(profile);
-        if (usage.signup_prize_code) {
-          setSignupPrizeCode(usage.signup_prize_code);
-          setSignupPrizeLabel("Discount on your first order");
-        }
+      // Signup prize code (profile now lives on /dashboard/profile)
+      if (usage?.signup_prize_code) {
+        setSignupPrizeCode(usage.signup_prize_code);
+        setSignupPrizeLabel("Discount on your first order");
       }
 
       // ── Check if user has any paid video orders ──
@@ -461,7 +396,7 @@ export default function DashboardPage() {
         enhanceCountResult,
         propCountResult,
         propsResult,
-        publishedSitesResult,
+        agentWebsiteResult,
         directoryResult,
       ] = await Promise.all([
         supabase.from("lens_sessions").select("total_analyses").eq("user_id", authUser.id),
@@ -473,11 +408,10 @@ export default function DashboardPage() {
           .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features")
           .eq("user_id", authUser.id).is("merged_into_id", null)
           .order("updated_at", { ascending: false }).limit(5),
-        supabase.from("agent_properties")
-          .select("id, address, website_slug, website_published, website_curated")
-          .eq("user_id", authUser.id).eq("website_published", true)
-          .is("merged_into_id", null).not("website_slug", "is", null)
-          .order("updated_at", { ascending: false }).limit(6),
+        supabase.from("agent_websites")
+          .select("handle, status")
+          .eq("user_id", authUser.id)
+          .limit(1),
         fetch("/api/directory/me").then(r => r.json()).catch(() => ({ success: false })),
       ]);
 
@@ -491,71 +425,15 @@ export default function DashboardPage() {
       setEnhancementCount(enhanceCountResult.count || 0);
       setPropertyCount(propCountResult.count || 0);
       if (propsResult.data) setRecentProperties(propsResult.data);
-      if (publishedSitesResult.data) setPublishedWebsites(publishedSitesResult.data);
+      if (agentWebsiteResult.data && agentWebsiteResult.data.length > 0) {
+        setAgentWebsite(agentWebsiteResult.data[0]);
+      }
       setHasDirectoryListing(directoryResult.success && !!directoryResult.photographer);
 
       setSecondaryLoaded(true);
     };
     init();
   }, []);
-
-  /* ─── Copy link handler ─── */
-  const handleCopyLink = async (slug: string) => {
-    const url = `${window.location.origin}/p/${slug}`;
-    await navigator.clipboard.writeText(url);
-    setCopiedSlug(slug);
-    setTimeout(() => setCopiedSlug(null), 2000);
-  };
-
-  /* ─── Get hero image from website_curated ─── */
-  const getHeroImage = (curated: any): string | null => {
-    if (!curated) return null;
-    if (Array.isArray(curated) && curated.length > 0) return typeof curated[0] === "string" ? curated[0] : curated[0]?.url || null;
-    if (curated.photos && Array.isArray(curated.photos) && curated.photos.length > 0) return typeof curated.photos[0] === "string" ? curated.photos[0] : curated.photos[0]?.url || null;
-    if (curated.hero && Array.isArray(curated.hero) && curated.hero.length > 0) return typeof curated.hero[0] === "string" ? curated.hero[0] : curated.hero[0]?.url || null;
-    return null;
-  };
-
-  /* ─── Profile save ─── */
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    setSavingProfile(true);
-    const supabase = createClient();
-    await supabase.from("lens_usage").upsert({
-      user_id: user.id,
-      saved_agent_name: profileForm.saved_agent_name,
-      saved_phone: profileForm.saved_phone,
-      saved_email: profileForm.saved_email,
-      saved_company: profileForm.saved_company,
-      saved_website: profileForm.saved_website,
-    }, { onConflict: "user_id" });
-    setAgentProfile({ ...profileForm });
-    setEditingProfile(false);
-    setSavingProfile(false);
-  };
-
-  /* ─── Profile image upload ─── */
-  const handleProfileImageUpload = async (file: File, field: "saved_headshot_url" | "saved_logo_url", setLoading: (v: boolean) => void) => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const sigRes = await fetch("/api/cloudinary-signature", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder: "photo2video/design-studio" }) });
-      const sigData = await sigRes.json();
-      if (!sigData.success) throw new Error("Signature failed");
-      const { signature, timestamp, cloudName, apiKey, folder } = sigData.data;
-      const fd = new FormData();
-      fd.append("file", file); fd.append("api_key", apiKey); fd.append("timestamp", timestamp.toString()); fd.append("signature", signature); fd.append("folder", folder); fd.append("resource_type", "auto");
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, { method: "POST", body: fd });
-      const result = await res.json();
-      if (result.secure_url) {
-        const supabase = createClient();
-        await supabase.from("lens_usage").upsert({ user_id: user.id, [field]: result.secure_url }, { onConflict: "user_id" });
-        setAgentProfile(prev => ({ ...prev, [field]: result.secure_url }));
-        setProfileForm(prev => ({ ...prev, [field]: result.secure_url }));
-      }
-    } catch (err) { console.error("Upload error:", err); }
-    setLoading(false);
-  };
 
   /* ─── Build property query string for quick links ─── */
   const buildQs = (prop: RecentProperty) => {
@@ -584,8 +462,6 @@ export default function DashboardPage() {
     );
   }
 
-  const getTimeOfDay = () => { const h = new Date().getHours(); if (h < 12) return "Good morning"; if (h < 17) return "Good afternoon"; return "Good evening"; };
-  const firstName = user?.name?.split(" ")[0] || "there";
   const usagePercent = subscription.analysesLimit > 0 ? Math.round((subscription.analysesUsed / subscription.analysesLimit) * 100) : 0;
   const isSubscriber = subscription.active && !!user;
 
@@ -616,10 +492,25 @@ export default function DashboardPage() {
   const tools: ToolDef[] = [
     { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
     { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
+    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "/dashboard/planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
-    { icon: Globe, label: "Website Builder", desc: "Build your full agent website with AI-powered content", href: "#", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", ...gated("website_builder") },
-    { icon: MessageSquare, label: "Marketing Planner", desc: "AI assistant — captions, posting schedule, content gaps", href: "/dashboard/planner", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("marketing_planner") },
+    {
+      icon: Globe,
+      label: "My Agent Website",
+      desc: agentWebsite?.status === "published"
+        ? `${agentWebsite.handle}.p2v.homes — Edit your live site`
+        : agentWebsite
+        ? "Finish setting up your agent website"
+        : "Build your agent website on p2v.homes",
+      href: agentWebsite
+        ? `https://${agentWebsite.handle}.p2v.homes/editor`
+        : "/dashboard/website/setup",
+      color: "text-sky-400",
+      bg: "bg-sky-400/10",
+      ring: "ring-sky-400/20",
+      ...gated("website_builder"),
+    },
     { icon: ImageIcon, label: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, social — under 290KB", href: "/dashboard/lens/optimize", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("photo_optimizer") },
     { icon: Crosshair, label: "Drone Mark", desc: "Annotate aerial photos with lot lines & pins", href: "/dashboard/lens/dronemark", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20", ...gated("drone_mark") },
     { icon: Camera, label: "Photo Coach", desc: "AI-powered photo scoring & feedback", href: "/dashboard/lens/coach", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20", stat: coachSessionCount > 0 ? `${coachSessionCount} session${coachSessionCount !== 1 ? "s" : ""}` : null, ...gated("photo_coach") },
@@ -629,11 +520,6 @@ export default function DashboardPage() {
     { icon: MapPin, label: "Location Value Score", desc: "Neighborhood insights for your listing", href: "#", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20", ...gated("location_value_score") },
     { icon: TrendingUp, label: "Value Boost Report", desc: "ROI-ranked improvement suggestions", href: "#", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20", ...gated("value_boost") },
     { icon: ImageIcon, label: "Photo Enhancement", desc: "AI brightness, color & white balance correction", href: "/dashboard/lens/enhance", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", stat: enhancementCount > 0 ? `${enhancementCount} enhanced` : null, ...gated("photo_enhancement") },
-  ];
-
-  const subscriberPerks = [
-    { icon: Percent, label: "10% Off Every Video", desc: "Automatic subscriber discount at checkout", color: "text-green-400", bg: "bg-green-400/10", ring: "ring-green-400/20" },
-    { icon: Zap, label: "Priority Delivery", desc: "12-hour turnaround — subscribers go first", color: "text-yellow-400", bg: "bg-yellow-400/10", ring: "ring-yellow-400/20" },
   ];
 
   /* ═══════════════════════════════════════════════════════════════
@@ -652,51 +538,44 @@ export default function DashboardPage() {
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
 
-        {/* ═══ TOP BAR — mode toggle + subscription status only ═══ */}
-        <div className="mc-animate flex items-center justify-end gap-3 mb-4" style={{ animationDelay: "0.05s" }}>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="dl-mode-toggle flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
-            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
-          </button>
-          {isSubscriber ? (
-            <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 backdrop-blur-sm">
-              <Crown className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm font-bold text-white/80">{subscription.plan}</span>
-              <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">Active</span>
-            </div>
-          ) : (
-            <Link href="/lens">
-              <Button size="sm" className="mc-glow-btn bg-green-500 hover:bg-green-400 text-white font-extrabold text-sm px-5 py-2.5 rounded-xl">
-                Subscribe — $27.95/mo
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
-            </Link>
-          )}
+        {/* ═══ TOP BAR ═══ */}
+        <div className="mc-animate flex items-center justify-between mb-4" style={{ animationDelay: "0.05s" }}>
+          {/* LEFT — discount pill */}
+          <div className="flex items-center gap-3">
+            {signupPrizeCode && (
+              <div className="flex items-center gap-2 rounded-xl border border-green-400/20 bg-green-400/[0.06] px-3.5 py-2 backdrop-blur-sm">
+                <Gift className="h-3.5 w-3.5 text-green-400" />
+                <span className="text-xs font-bold text-green-300">{signupPrizeLabel}</span>
+                <span className="text-xs font-mono font-bold bg-green-400/10 px-1.5 py-0.5 rounded text-green-300">{signupPrizeCode}</span>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT — mode toggle + subscriber badge */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="dl-mode-toggle flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-400" />}
+            </button>
+            {isSubscriber ? (
+              <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 backdrop-blur-sm">
+                <Crown className="h-4 w-4 text-cyan-400" />
+                <span className="text-sm font-bold text-white/80">{subscription.plan}</span>
+                <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">Active</span>
+              </div>
+            ) : (
+              <Link href="/lens">
+                <Button size="sm" className="mc-glow-btn bg-green-500 hover:bg-green-400 text-white font-extrabold text-sm px-5 py-2.5 rounded-xl">
+                  Subscribe — $27.95/mo
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
-
-        {/* ═══ MARKETING COPILOT — first thing agents see ═══ */}
-        {secondaryLoaded && user && access.allowed && (
-          <div id="planner" className="mc-animate mb-5" style={{ animationDelay: "0.07s" }}>
-            <MarketingPlannerWidget
-              isSubscriber={isSubscriber}
-              isTrial={access.tier === "trial"}
-            />
-          </div>
-        )}
-
-        {/* ═══ SIGNUP PRIZE ═══ */}
-        {signupPrizeCode && (
-          <div className="mc-animate mt-4 rounded-xl border border-green-400/20 bg-green-400/[0.06] p-4 flex items-center gap-3" style={{ animationDelay: "0.08s" }}>
-            <Gift className="h-5 w-5 text-green-400 flex-shrink-0" />
-            <div>
-              <span className="text-sm font-bold text-green-300">{signupPrizeLabel}</span>
-              <span className="ml-2 text-sm text-green-400/70">Code: <span className="font-mono font-bold bg-green-400/10 px-1.5 py-0.5 rounded text-green-300">{signupPrizeCode}</span></span>
-            </div>
-          </div>
-        )}
 
         {/* ═══ TRIAL BANNER — active trial ═══ */}
         {access.tier === "trial" && access.trialDaysLeft !== undefined && (
@@ -779,194 +658,93 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ═══ AGENT PROFILE CARD ═══ */}
-        <div className="mc-animate mt-6 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm" style={{ animationDelay: "0.12s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white/30">Agent Profile</p>
-            <button onClick={() => { if (editingProfile) handleSaveProfile(); else { setProfileForm({ ...agentProfile }); setEditingProfile(true); } }}
-              className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400/70 hover:text-cyan-400 transition-colors">
-              {editingProfile ? (savingProfile ? <><Loader2 className="h-3 w-3 animate-spin" />Saving...</> : <><Save className="h-3 w-3" />Save</>) : <><Pencil className="h-3 w-3" />Edit</>}
-            </button>
-          </div>
-          <div className="flex items-start gap-5 flex-wrap sm:flex-nowrap">
-            {/* Headshot */}
-            <div className="relative group flex-shrink-0">
-              <div className="h-16 w-16 rounded-full overflow-hidden bg-white/[0.06] border border-white/[0.08]">
-                {agentProfile.saved_headshot_url ? <img src={agentProfile.saved_headshot_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><User className="h-6 w-6 text-white/20" /></div>}
-              </div>
-              <label className="absolute inset-0 rounded-full cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                {uploadingHeadshot ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <Upload className="h-4 w-4 text-white" />}
-                <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleProfileImageUpload(f, "saved_headshot_url", setUploadingHeadshot); e.target.value = ""; }} />
-              </label>
-            </div>
-            {/* Info */}
-            {editingProfile ? (
-              <div className="flex-1 grid grid-cols-2 gap-3 min-w-0">
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Name</label><input value={profileForm.saved_agent_name} onChange={e => setProfileForm(p => ({ ...p, saved_agent_name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="Jane Smith" /></div>
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Company</label><input value={profileForm.saved_company} onChange={e => setProfileForm(p => ({ ...p, saved_company: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="Coldwell Banker" /></div>
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Phone</label><input value={profileForm.saved_phone} onChange={e => setProfileForm(p => ({ ...p, saved_phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="(555) 123-4567" /></div>
-                <div><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Email</label><input value={profileForm.saved_email} onChange={e => setProfileForm(p => ({ ...p, saved_email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="jane@email.com" /></div>
-                <div className="col-span-2"><label className="text-[10px] font-bold text-white/30 uppercase block mb-1">Website</label><input value={profileForm.saved_website} onChange={e => setProfileForm(p => ({ ...p, saved_website: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 focus:border-cyan-400/30 focus:outline-none" placeholder="www.janesmith.com" /></div>
-                <button onClick={() => setEditingProfile(false)} className="text-xs text-white/30 hover:text-white/50 transition-colors">Cancel</button>
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <p className="text-base font-bold text-white/90">{agentProfile.saved_agent_name || "Add your name"}</p>
-                  {agentProfile.saved_company && <span className="text-xs text-white/40">{agentProfile.saved_company}</span>}
+        {/* ═══ TOOLS GRID — HERO ═══ */}
+        <div id="tools" className="mc-animate mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
+          {tools.map((tool, i) => {
+            const isScrollLink = tool.href.startsWith("#");
+            const isExternal = tool.href.startsWith("http");
+
+            let Wrapper: any;
+            let wrapperProps: any;
+
+            if (isScrollLink) {
+              Wrapper = "button";
+              wrapperProps = {
+                onClick: () => {
+                  const el = document.getElementById(tool.href.slice(1));
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                },
+                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] text-left w-full",
+                style: { animationDelay: `${0.18 + i * 0.05}s` },
+              };
+            } else if (isExternal) {
+              Wrapper = "a";
+              wrapperProps = {
+                href: tool.href,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
+                style: { animationDelay: `${0.18 + i * 0.05}s` },
+              };
+            } else {
+              Wrapper = Link;
+              wrapperProps = {
+                href: tool.href,
+                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
+                style: { animationDelay: `${0.18 + i * 0.05}s` },
+              };
+            }
+
+            return (
+              <Wrapper key={tool.label} {...wrapperProps}>
+                {/* Crown tier indicator + optional trial badge */}
+                <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                  {tool.badge && (
+                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
+                      {tool.badge}
+                    </span>
+                  )}
+                  {tool.crown === "gold" && <Crown className="h-3.5 w-3.5 text-amber-400/50" />}
+                  {tool.crown === "silver" && <Crown className="h-3.5 w-3.5 text-gray-400/40" />}
                 </div>
-                <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2">
-                  {agentProfile.saved_phone && <span className="flex items-center gap-1.5 text-xs text-white/50"><Phone className="h-3 w-3 text-cyan-400/50" />{agentProfile.saved_phone}</span>}
-                  {agentProfile.saved_email && <span className="flex items-center gap-1.5 text-xs text-white/50"><Mail className="h-3 w-3 text-cyan-400/50" />{agentProfile.saved_email}</span>}
-                  {agentProfile.saved_website && <span className="flex items-center gap-1.5 text-xs text-white/50"><Globe className="h-3 w-3 text-cyan-400/50" />{agentProfile.saved_website}</span>}
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} transition-transform group-hover:scale-110`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white/90 group-hover:text-cyan-300 transition-colors">{tool.label}</p>
+                    {tool.stat && <p className="text-[11px] font-medium text-white/30">{tool.stat}</p>}
+                  </div>
                 </div>
-                {!agentProfile.saved_agent_name && !agentProfile.saved_phone && (
-                  <p className="text-xs text-white/25 mt-1">Complete your profile — it auto-fills your marketing tools, branding cards, and reports.</p>
-                )}
-              </div>
-            )}
-            {/* Logo */}
-            <div className="relative group flex-shrink-0 hidden sm:block">
-              <div className="h-12 w-20 rounded-lg overflow-hidden bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
-                {agentProfile.saved_logo_url ? <img src={agentProfile.saved_logo_url} alt="" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-white/15 font-bold">LOGO</span>}
-              </div>
-              <label className="absolute inset-0 rounded-lg cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                {uploadingLogo ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Upload className="h-3 w-3 text-white" />}
-                <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleProfileImageUpload(f, "saved_logo_url", setUploadingLogo); e.target.value = ""; }} />
-              </label>
-            </div>
-          </div>
+                <p className="text-xs leading-relaxed text-white/40">{tool.desc}</p>
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-400/60 group-hover:text-cyan-400 transition-colors mt-auto pt-1">
+                  Open<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Wrapper>
+            );
+          })}
         </div>
 
-        {/* ═══ PROPERTY WEBSITES ═══ */}
-        {publishedWebsites.length > 0 && (
-          <div id="websites" className="mc-animate mt-8" style={{ animationDelay: "0.18s" }}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/30">Your Property Websites</p>
-              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">Manage all →</Link>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(showAllWebsites ? publishedWebsites : publishedWebsites.slice(0, 3)).map((site, i) => {
-                const heroUrl = getHeroImage(site.website_curated);
-                const siteUrl = `${PROPERTY_SITE_BASE}/${site.website_slug}`;
-                return (
-                  <div
-                    key={site.id}
-                    className="mc-chip-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
-                    style={{ animationDelay: `${0.2 + i * 0.06}s` }}
-                  >
-                    <div className="relative h-40 w-full overflow-hidden">
-                      {heroUrl ? (
-                        <img src={heroUrl} alt={site.address} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 50%, rgba(168,85,247,0.15) 100%)" }} />
-                      )}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-[10px] font-bold text-green-400">Live</span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">Your Property Website</p>
-                      <p className="text-sm font-bold text-white/90 truncate">{site.address}</p>
-                      <p className="text-[11px] text-cyan-400/60 truncate mt-0.5">{site.website_slug}.p2v.homes</p>
-                    </div>
-                    <div className="border-t border-white/[0.06] px-4 py-3 flex items-center gap-3">
-                      <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[11px] font-bold rounded-full px-3.5 py-1.5 transition-colors"><Eye className="h-3 w-3" />View Live Page</a>
-                      <button onClick={() => handleCopyLink(site.website_slug)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 hover:text-white/80 transition-colors">
-                        {copiedSlug === site.website_slug ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Copied!</span></> : <><Copy className="h-3 w-3" />Copy Link</>}
-                      </button>
-                      <Link href={`/dashboard/properties/${site.id}`} className="ml-auto text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors">Edit Settings →</Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {publishedWebsites.length > 3 && (
-              <button
-                onClick={() => setShowAllWebsites(!showAllWebsites)}
-                className="mt-3 flex items-center gap-1.5 mx-auto text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors"
+        {/* ═══ QUICK ACTIONS ═══ */}
+        <div className="mc-animate mt-8" style={{ animationDelay: "0.45s" }}>
+          <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-3">Quick Links</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {[
+              { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-400" },
+              { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-400" },
+              { icon: Film, label: "Video Remix", href: "/dashboard/lens/remix", color: "text-indigo-400" },
+              { icon: User, label: "Agent Profile", href: "/dashboard/profile", color: "text-blue-400" },
+              { icon: Settings, label: "Account Settings", href: "/dashboard/settings", color: "text-white/60" },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] py-4 px-3 text-center transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]"
               >
-                {showAllWebsites ? "Show less" : `See ${publishedWebsites.length - 3} more`}
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllWebsites ? "rotate-180" : ""}`} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ═══ TABS ═══ */}
-        <div id="tools" className="mc-animate mt-10 flex items-center gap-1 border-b border-white/[0.06]" style={{ animationDelay: "0.24s" }}>
-          {[{ id: "tools" as const, label: "Your Tools" }, { id: "perks" as const, label: "Subscriber Perks" }].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-4 py-2.5 text-sm font-bold transition-colors relative ${activeTab === t.id ? "text-cyan-400" : "text-white/40 hover:text-white/60"}`}>
-              {t.label}
-              {activeTab === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-full" />}
-            </button>
-          ))}
-        </div>
-
-        {/* ═══ TOOLS GRID ═══ */}
-        {activeTab === "tools" && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool, i) => {
-              const isScrollLink = tool.href.startsWith("#");
-              const Wrapper = isScrollLink ? "button" as any : Link;
-              const wrapperProps = isScrollLink
-                ? {
-                    onClick: () => {
-                      const el = document.getElementById(tool.href.slice(1));
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    },
-                    className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] text-left w-full",
-                    style: { animationDelay: `${0.28 + i * 0.05}s` },
-                  }
-                : {
-                    href: tool.href,
-                    className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
-                    style: { animationDelay: `${0.28 + i * 0.05}s` },
-                  };
-
-              return (
-                <Wrapper key={tool.label} {...wrapperProps}>
-                  {/* Crown tier indicator + optional trial badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    {tool.badge && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
-                        {tool.badge}
-                      </span>
-                    )}
-                    {tool.crown === "gold" && <Crown className="h-3.5 w-3.5 text-amber-400/50" />}
-                    {tool.crown === "silver" && <Crown className="h-3.5 w-3.5 text-gray-400/40" />}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} transition-transform group-hover:scale-110`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-white/90 group-hover:text-cyan-300 transition-colors">{tool.label}</p>
-                      {tool.stat && <p className="text-[11px] font-medium text-white/30">{tool.stat}</p>}
-                    </div>
-                  </div>
-                  <p className="text-xs leading-relaxed text-white/40">{tool.desc}</p>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-400/60 group-hover:text-cyan-400 transition-colors mt-auto pt-1">
-                    Open<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </Wrapper>
-              );
-            })}
-          </div>
-        )}
-
-        {activeTab === "perks" && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {subscriberPerks.map((tool, i) => (
-              <div key={tool.label} className="mc-chip-animate flex items-start gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5" style={{ animationDelay: `${0.05 + i * 0.06}s` }}>
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring}`}><tool.icon className={`h-5 w-5 ${tool.color}`} /></div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2"><p className="text-sm font-bold text-white/90">{tool.label}</p><span className="text-[9px] font-bold uppercase tracking-wider text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full border border-green-400/20">Included</span></div>
-                  <p className="mt-1 text-xs leading-relaxed text-white/40">{tool.desc}</p>
-                </div>
-              </div>
+                <item.icon className={`h-4 w-4 ${item.color} opacity-60 group-hover:opacity-100 transition-opacity`} />
+                <span className="text-[11px] font-semibold text-white/50 group-hover:text-white/80 transition-colors">{item.label}</span>
+              </Link>
             ))}
           </div>
-        )}
+        </div>
 
         {/* ═══ RECENT PROPERTIES — quick links with auto-fill ═══ */}
         {recentProperties.length > 0 && (
