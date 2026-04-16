@@ -125,6 +125,11 @@ export default async function AgentHomePage({ params }: Props) {
                 <CardTag key={l.id} {...cardProps}>
                   <div style={{ position: "relative", paddingBottom: "66%", overflow: "hidden" }}>
                     <img src={l.photos[0]} alt={l.address} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    {l.website_featured && (
+                      <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.6)", color: "#fbbf24", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                        ★ Featured
+                      </div>
+                    )}
                     {l.photos.length > 1 ? <div style={{ position: "absolute", bottom: 8, right: 8, padding: "4px 10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 6, fontSize: 12, color: "#fff", fontWeight: 600 }}>{l.photos.length} photos</div> : null}
                   </div>
                   <div style={{ padding: "16px 20px" }}>
