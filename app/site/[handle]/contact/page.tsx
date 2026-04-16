@@ -1,9 +1,23 @@
-// app/site/[handle]/contact/page.tsx
+// ============================================================
+// FILE: app/site/[handle]/contact/page.tsx
+// ============================================================
 import { notFound } from "next/navigation";
 import { getSite, getProfile } from "../data";
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{ handle: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle } = await params;
+  const site = await getSite(handle);
+  if (!site) return {};
+  const profile = await getProfile(site.user_id);
+  const agent = profile.agent_name || site.site_title || "Agent";
+  const title = `Contact ${agent} | ${site.site_title || agent}`;
+  const description = `Get in touch with ${agent}${profile.company ? " at " + profile.company : ""} for your real estate needs.`;
+  return { title, description, openGraph: { title, description } };
 }
 
 export default async function ContactPage({ params }: Props) {
@@ -21,7 +35,6 @@ export default async function ContactPage({ params }: Props) {
       </p>
 
       <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
-        {/* Contact info */}
         <div style={{ flex: "0 0 240px" }}>
           {profile.headshot_url ? (
             <img src={profile.headshot_url} alt={profile.agent_name || ""} style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover", marginBottom: 20, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }} />
@@ -40,7 +53,6 @@ export default async function ContactPage({ params }: Props) {
           ) : null}
         </div>
 
-        {/* Form */}
         <div style={{ flex: 1, minWidth: 300 }}>
           <form action="https://realestatephoto2video.com/api/websites/contact" method="POST">
             <input type="hidden" name="handle" value={handle} />
