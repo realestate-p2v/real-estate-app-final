@@ -188,19 +188,19 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
 
       {/* This Week's Calendar */}
       {!loading && weekSchedule.length > 0 && (
-        <div className="border-t border-white/[0.05] px-4 py-3">
+        <div className="border-t border-white/[0.05] px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-white/30" />
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-wider">This Week</p>
+              <Calendar className="h-4 w-4 text-white/60" />
+              <p className="text-[12px] font-bold text-white/70 uppercase tracking-wider">This Week</p>
             </div>
             {weekLabel && (
-              <p className={`text-[11px] font-bold ${weekLabel.color}`}>{weekLabel.text} · {weekPosted}/{weekTotal}</p>
+              <p className={`text-[13px] font-bold ${weekLabel.color}`}>{weekLabel.text} · {weekPosted}/{weekTotal}</p>
             )}
           </div>
 
           {/* Mini week grid */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="grid grid-cols-7 gap-1.5 mb-3">
             {weekDays.map((day, i) => {
               const dayPosts = weekSchedule.filter(s => s.scheduled_date === day);
               const isToday = day === today;
@@ -211,26 +211,26 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
 
               return (
                 <Link key={day} href={dayPosts.length > 0 ? `/dashboard/planner?post=${dayPosts[0].id}` : "/dashboard/planner"} className="text-center block">
-                  <p className="text-[9px] text-white/20 font-semibold mb-1">{DAY_NAMES[i]}</p>
-                  <div className={`mx-auto w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold border transition-all ${
+                  <p className="text-[11px] text-white/50 font-bold mb-1.5">{DAY_NAMES[i]}</p>
+                  <div className={`mx-auto w-10 h-10 rounded-lg flex items-center justify-center text-[13px] font-extrabold border transition-all ${
                     allPosted
-                      ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                      ? "bg-emerald-500/30 border-emerald-400/60 text-emerald-300"
                       : hasPending && isPast
-                      ? "bg-amber-500/20 border-amber-500/30 text-amber-400"
+                      ? "bg-amber-500/30 border-amber-400/60 text-amber-300"
                       : hasPending && isToday
-                      ? "bg-blue-500/20 border-blue-500/40 text-blue-400 ring-1 ring-blue-400/30"
+                      ? "bg-blue-500/30 border-blue-400/70 text-blue-200 ring-2 ring-blue-400/40"
                       : hasPending
-                      ? "bg-white/[0.04] border-white/[0.08] text-white/40"
+                      ? "bg-white/[0.08] border-white/[0.15] text-white/70"
                       : allSkipped
-                      ? "bg-white/[0.02] border-white/[0.05] text-white/15 line-through"
-                      : "bg-transparent border-transparent text-white/10"
+                      ? "bg-white/[0.04] border-white/[0.08] text-white/30 line-through"
+                      : "bg-white/[0.02] border-white/[0.04] text-white/20"
                   }`}>
-                    {allPosted ? <Check className="w-3.5 h-3.5" /> : dayPosts.length > 0 ? dayPosts.length : "—"}
+                    {allPosted ? <Check className="w-4 h-4" /> : dayPosts.length > 0 ? dayPosts.length : "—"}
                   </div>
                   {dayPosts.length > 0 && (
                     <div className="flex justify-center gap-0.5 mt-1">
                       {dayPosts.slice(0, 3).map(p => (
-                        <span key={p.id} className="text-[8px]">{PLATFORM_ICONS[p.platform] || "📌"}</span>
+                        <span key={p.id} className="text-[11px]">{PLATFORM_ICONS[p.platform] || "📌"}</span>
                       ))}
                     </div>
                   )}
@@ -241,14 +241,14 @@ export default function MarketingPlannerWidget({ isSubscriber, isTrial }: Market
 
           {/* Week progress bar */}
           {weekTotal > 0 && (
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 h-2 bg-white/[0.08] rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${weekPct === 100 ? "bg-emerald-400" : weekPct >= 50 ? "bg-blue-400" : "bg-amber-400"}`}
                   style={{ width: `${weekPct}%` }}
                 />
               </div>
-              <span className="text-[10px] font-bold text-white/30">{weekPct}%</span>
+              <span className="text-[12px] font-bold text-white/60">{weekPct}%</span>
             </div>
           )}
 
