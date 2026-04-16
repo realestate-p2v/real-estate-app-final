@@ -4,19 +4,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 
 export default function EditSiteNav() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setShow(true);
-    });
+    // Show the edit button on p2v.homes subdomains
+    // The editor itself handles authentication
+    const host = window.location.hostname;
+    if (host.endsWith(".p2v.homes") && host !== "p2v.homes" && host !== "www.p2v.homes") {
+      setShow(true);
+    }
   }, []);
 
   if (!show) return null;
@@ -36,7 +34,6 @@ export default function EditSiteNav() {
         borderRadius: 8,
         border: "1px solid #e0e7ff",
         backgroundColor: "#f5f3ff",
-        transition: "background-color 0.2s",
         marginLeft: 4,
       }}
     >
