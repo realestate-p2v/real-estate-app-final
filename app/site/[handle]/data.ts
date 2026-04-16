@@ -65,6 +65,7 @@ export interface Listing {
   amenities: string[] | null;
   website_slug: string | null;
   website_published: boolean | null;
+  website_featured: boolean;
   website_curated: { photos?: string[] } | null;
   photos: string[];
 }
@@ -130,7 +131,8 @@ export async function getSite(handle: string): Promise<AgentSite | null> {
     hero_photos: Array.isArray(r.hero_photos) ? r.hero_photos : [],
     hero_video_url: r.hero_video_url || null,
     faq_items: Array.isArray(r.faq_items) ? r.faq_items : [],
-    social_links: r.social_links || {}, contact_info: r.contact_info || null,
+    social_links: r.social_links || {},
+    contact_info: r.contact_info || null,
     blog_enabled: r.blog_enabled ?? true, calendar_enabled: r.calendar_enabled ?? false,
     listings_opt_in: r.listings_opt_in ?? true, reports_public: r.reports_public ?? false,
     lensy_enabled: r.lensy_enabled ?? false, news_enabled: r.news_enabled ?? false,
@@ -160,8 +162,12 @@ export async function getProfile(userId: string): Promise<AgentProfile> {
 export async function getListings(userId: string): Promise<Listing[]> {
   const { data: props } = await supabase
     .from("agent_properties")
-    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated")
-    .eq("user_id", userId).is("merged_into_id", null)
+    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated, website_featured, website_sort_order")
+    .eq("user_id", userId)
+    .eq("website_published", true)
+    .is("merged_into_id", null)
+    .order("website_featured", { ascending: false })
+    .order("website_sort_order", { ascending: true })
     .order("updated_at", { ascending: false });
   if (!props || props.length === 0) return [];
   const { data: orders } = await supabase
@@ -189,8 +195,8 @@ export async function getListings(userId: string): Promise<Listing[]> {
       bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, sqft: p.sqft ?? null,
       price: p.price ?? null, special_features: p.special_features || null,
       amenities: p.amenities || null, website_slug: p.website_slug || null,
-      website_published: p.website_published ?? null, website_curated: p.website_curated || null,
-      photos };
+      website_published: p.website_published ?? null, website_featured: p.website_featured ?? false,
+      website_curated: p.website_curated || null, photos };
   });
 }
 
@@ -198,7 +204,7 @@ export async function getListings(userId: string): Promise<Listing[]> {
 export async function getListing(userId: string, slug: string): Promise<ListingDetail | null> {
   const { data: props } = await supabase
     .from("agent_properties")
-    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated, year_built, lot_size, property_type, listing_type, status, booking_enabled, qr_code_url, website_modules")
+    .select("id, address, city, state, bedrooms, bathrooms, sqft, price, special_features, amenities, website_slug, website_published, website_curated, website_featured, year_built, lot_size, property_type, listing_type, status, booking_enabled, qr_code_url, website_modules")
     .eq("user_id", userId)
     .eq("website_slug", slug)
     .is("merged_into_id", null)
@@ -230,7 +236,8 @@ export async function getListing(userId: string, slug: string): Promise<ListingD
     bedrooms: p.bedrooms ?? null, bathrooms: p.bathrooms ?? null, sqft: p.sqft ?? null,
     price: p.price ?? null, special_features: p.special_features || null,
     amenities: p.amenities || null, website_slug: p.website_slug || null,
-    website_published: p.website_published ?? null, website_curated: p.website_curated || null,
+    website_published: p.website_published ?? null, website_featured: p.website_featured ?? false,
+    website_curated: p.website_curated || null,
     photos, year_built: p.year_built ?? null, lot_size: p.lot_size || null,
     property_type: p.property_type || null, listing_type: p.listing_type || null,
     status: p.status || null, booking_enabled: p.booking_enabled ?? false,
@@ -239,7 +246,7 @@ export async function getListing(userId: string, slug: string): Promise<ListingD
   };
 }
 
-// ── Get full property data for PropertyWebsiteClient (mirrors main site's getPropertyData) ──
+// ── Get full property data for PropertyWebsiteClient ──
 export async function getPropertyWebsiteData(slug: string, userId: string) {
   const { data: props } = await supabase
     .from("agent_properties")
