@@ -586,9 +586,9 @@ export default function DashboardPage() {
 
         {/* ═══ TOP BAR ═══ */}
         <div className="mc-animate flex items-center justify-between mb-4" style={{ animationDelay: "0.05s" }}>
-          {/* LEFT — discount pill */}
+         {/* LEFT — announcements area */}
           <div className="flex items-center gap-3">
-            {signupPrizeCode && (
+            {signupPrizeCode && !isSubscriber && (
               <div className="flex items-center gap-2 rounded-xl border border-green-400/20 bg-green-400/[0.06] px-3.5 py-2 backdrop-blur-sm">
                 <Gift className="h-3.5 w-3.5 text-green-400" />
                 <span className="text-xs font-bold text-green-300">{signupPrizeLabel}</span>
