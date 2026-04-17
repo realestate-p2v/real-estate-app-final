@@ -284,7 +284,10 @@ function checkAccess(
   if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "tools") {
     return { allowed: true, reason: "tools", tier: "tools" };
   }
-  // Legacy subscriber tiers (Individual, free_prize, etc.) — treat as tools-level
+ // Legacy subscriber tiers — free_prize is Pro level, others are tools-level
+  if (lensUsage?.is_subscriber && lensUsage.subscription_tier === "free_prize") {
+    return { allowed: true, reason: "pro", tier: "pro" };
+  }
   if (lensUsage?.is_subscriber) {
     return { allowed: true, reason: "tools", tier: "tools" };
   }
