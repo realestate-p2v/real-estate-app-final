@@ -60,8 +60,14 @@ export function Footer() {
               <Link href="/" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
                 Home
               </Link>
+              <Link href="/tools" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
+                How It Works
+              </Link>
               <Link href="/portfolio" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
                 Portfolio
+              </Link>
+              <Link href="/blog" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
+                Blog
               </Link>
               <a href="#pricing" className="text-background/70 hover:text-background text-sm font-semibold transition-colors">
                 Pricing
