@@ -119,12 +119,8 @@ export function Navigation() {
            
             {/* Desktop Nav */}
             <div className="hidden xl:flex items-center gap-7">
-              <Link href="/portfolio" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
-                Portfolio
-              </Link>
-
-              <Link href="/blog" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
-                Blog
+              <Link href="/tools" className="text-primary-foreground/80 hover:text-primary-foreground font-semibold transition-colors">
+                How It Works
               </Link>
 
               {/* Tools Dropdown */}
@@ -143,11 +139,9 @@ export function Navigation() {
                     <Link href={lensLink} onClick={() => setShowTools(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                       <Sparkles className="h-4 w-4 text-cyan-500" />
-                      P2V Lens Tools
-                      {isLensSubscriber ? (
+                      Tools Dashboard
+                      {isLensSubscriber && (
                         <span className="ml-auto bg-cyan-100 text-cyan-700 text-xs font-bold px-1.5 py-0.5 rounded-full">SUBSCRIBED</span>
-                      ) : (
-                        <span className="ml-auto bg-accent/10 text-accent text-xs font-bold px-1.5 py-0.5 rounded-full">NEW</span>
                       )}
                     </Link>
                     <Link href="/dashboard/lens/remix" onClick={() => setShowTools(false)}
@@ -241,11 +235,6 @@ export function Navigation() {
                           Admin Dashboard
                         </Link>
                       )}
-                      <Link href="/dashboard" onClick={() => setShowDropdown(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
-                        <Sparkles className="h-3.5 w-3.5 text-cyan-500" />
-                        Dashboard Tools
-                      </Link>
                       <Link href="/dashboard/videos" onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                         <Video className="h-3.5 w-3.5 text-muted-foreground" />
@@ -337,13 +326,9 @@ export function Navigation() {
                 )}
 
                 {/* Main nav */}
-                <Link href="/portfolio" onClick={() => setIsOpen(false)}
+                <Link href="/tools" onClick={() => setIsOpen(false)}
                   className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors">
-                  Portfolio
-                </Link>
-                <Link href="/blog" onClick={() => setIsOpen(false)}
-                  className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors">
-                  Blog
+                  How It Works
                 </Link>
 
                 {/* AI Tools section — single link */}
@@ -352,7 +337,7 @@ export function Navigation() {
                 <Link href={lensLink} onClick={() => setIsOpen(false)}
                   className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                   <Sparkles className="h-4 w-4 text-cyan-400" />
-                  P2V Lens Tools
+                  Tools Dashboard
                   {isLensSubscriber ? (
                     <span className="ml-auto bg-cyan-500/20 text-cyan-300 text-xs font-bold px-1.5 py-0.5 rounded-full">SUBSCRIBED</span>
                   ) : (
@@ -401,11 +386,6 @@ export function Navigation() {
                         Admin Dashboard
                       </Link>
                     )}
-                    <Link href="/dashboard" onClick={() => setIsOpen(false)}
-                      className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
-                      <Sparkles className="h-4 w-4 text-cyan-400" />
-                      Dashboard Tools
-                    </Link>
                     <Link href="/dashboard/videos" onClick={() => setIsOpen(false)}
                       className="text-primary-foreground font-semibold py-2.5 px-2 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-3">
                       <Video className="h-4 w-4 text-primary-foreground/60" />
