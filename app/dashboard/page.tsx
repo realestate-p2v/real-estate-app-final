@@ -623,7 +623,7 @@ export default function DashboardPage() {
             ) : (
               <Link href="/lens">
                 <Button size="sm" className="mc-glow-btn bg-green-500 hover:bg-green-400 text-white font-extrabold text-sm px-5 py-2.5 rounded-xl">
-                  Subscribe — $27.95/mo
+                  Subscribe — $27/mo
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               </Link>
@@ -913,7 +913,7 @@ export default function DashboardPage() {
             </>
           ) : (
             <>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/25 mb-3">What You Get with P2V Lens — $27.95/mo</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/25 mb-3">What You Get with P2V Lens — $27/mo</p>
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 mb-4">
                 {[
                   "Unlimited Photo Coach sessions",
