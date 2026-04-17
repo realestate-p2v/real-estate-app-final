@@ -505,10 +505,10 @@ export default function DashboardPage() {
         ? `${agentWebsite.handle}.p2v.homes — Edit your live site`
         : agentWebsite
         ? "Finish setting up your agent website"
-        : "Build your agent website on p2v.homes",
+        : "Get your agent website with Lens Pro",
       href: agentWebsite
         ? `https://${agentWebsite.handle}.p2v.homes/editor`
-        : "/dashboard/website/setup",
+        : "/lens#pricing",
       color: "text-sky-400",
       bg: "bg-sky-400/10",
       ring: "ring-sky-400/20",
