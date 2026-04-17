@@ -9,14 +9,10 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * STRIPE WEBHOOK HANDLER - Production Grade
  * 
- * REQUIREMENTS IMPLEMENTED:
- * 1. Deep Data Extraction: orderId from event.data.object.metadata.orderId, fallback to client_reference_id
- * 2. Race Condition Fix: 5 retry attempts with 2000ms delay for Supabase
- * 3. Forced Blocking: Response ONLY after MailerSend await completes
- * 4. BCC hardcoded to realestatephoto2video@gmail.com
- * 5. MailerSend Template ID: zr6ke4n6kzelon12
- * 6. image_urls passed as array from Supabase photos field
- * 7. Error logging with error.body for MailerSend validation failures
+ * HANDLES:
+ * 1. Video order payments (checkout.session.completed with orderId)
+ * 2. Lens subscription activations (checkout.session.completed with product: "lens")
+ * 3. Lens subscription cancellations (customer.subscription.deleted)
  */
 
 // ============================================================================
@@ -57,13 +53,11 @@ function extractOrderId(session: Stripe.Checkout.Session): string | null {
   console.log("[WEBHOOK] Checking metadata:", JSON.stringify(session.metadata));
   console.log("[WEBHOOK] Checking client_reference_id:", session.client_reference_id);
   
-  // 1. PRIMARY: metadata.orderId
   if (session.metadata?.orderId) {
     console.log("[WEBHOOK] SUCCESS: Found orderId in metadata.orderId:", session.metadata.orderId);
     return session.metadata.orderId;
   }
   
-  // 2. FALLBACK: client_reference_id
   if (session.client_reference_id) {
     console.log("[WEBHOOK] SUCCESS: Found orderId in client_reference_id:", session.client_reference_id);
     return session.client_reference_id;
@@ -84,36 +78,120 @@ function getVoiceName(voiceId: string | undefined): string {
   return map[voiceId] || voiceId;
 }
 
-/**
- * Build image_urls as ARRAY of strings from photos column
- */
 function buildImageUrlsArray(photos: Order["photos"]): string[] {
   if (!photos || photos.length === 0) return [];
   return photos.map((p) => p.secure_url);
 }
 
-/**
- * Build image_urls as STRING (newline separated) for template
- */
 function buildImageUrlsString(photos: Order["photos"]): string {
   if (!photos || photos.length === 0) return "No images uploaded";
   return photos.map((p, i) => `Photo ${i + 1}: ${p.secure_url}`).join("\n");
 }
 
 // ============================================================================
+// LENS SUBSCRIPTION HANDLER
+// ============================================================================
+
+async function handleLensSubscription(session: Stripe.Checkout.Session): Promise<{ success: boolean; error?: string }> {
+  console.log("========================================");
+  console.log("[WEBHOOK] LENS SUBSCRIPTION ACTIVATION");
+  console.log("========================================");
+
+  const userId = session.metadata?.user_id || session.client_reference_id;
+  const userEmail = session.metadata?.user_email || session.customer_details?.email;
+  const plan = session.metadata?.plan || "monthly";
+  const subscriptionTier = session.metadata?.subscription_tier || (plan.startsWith("pro") ? "pro" : "tools");
+
+  if (!userId) {
+    console.error("[WEBHOOK] LENS: No user_id in metadata or client_reference_id");
+    return { success: false, error: "No user_id found" };
+  }
+
+  console.log("[WEBHOOK] LENS: user_id:", userId);
+  console.log("[WEBHOOK] LENS: email:", userEmail);
+  console.log("[WEBHOOK] LENS: plan:", plan);
+  console.log("[WEBHOOK] LENS: subscription_tier:", subscriptionTier);
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return { success: false, error: "Supabase not configured" };
+  }
+
+  // Extract Stripe customer ID and subscription ID
+  const stripeCustomerId = typeof session.customer === "string"
+    ? session.customer
+    : session.customer?.id || null;
+  const stripeSubscriptionId = typeof session.subscription === "string"
+    ? session.subscription
+    : (session.subscription as any)?.id || null;
+
+  // Update lens_usage — activate subscription
+  const { error: updateError } = await supabase
+    .from("lens_usage")
+    .upsert({
+      user_id: userId,
+      is_subscriber: true,
+      subscription_tier: subscriptionTier,
+      stripe_customer_id: stripeCustomerId,
+      stripe_subscription_id: stripeSubscriptionId,
+    }, { onConflict: "user_id" });
+
+  if (updateError) {
+    console.error("[WEBHOOK] LENS: Failed to update lens_usage:", updateError.message);
+    return { success: false, error: updateError.message };
+  }
+
+  console.log("[WEBHOOK] LENS: Subscription activated successfully");
+  console.log("[WEBHOOK] LENS: tier:", subscriptionTier);
+
+  return { success: true };
+}
+
+// ============================================================================
+// LENS SUBSCRIPTION CANCELLATION HANDLER
+// ============================================================================
+
+async function handleLensCancel(subscription: Stripe.Subscription): Promise<{ success: boolean; error?: string }> {
+  console.log("========================================");
+  console.log("[WEBHOOK] LENS SUBSCRIPTION CANCELLED");
+  console.log("========================================");
+
+  const userId = subscription.metadata?.user_id;
+
+  if (!userId) {
+    console.error("[WEBHOOK] LENS CANCEL: No user_id in subscription metadata");
+    return { success: false, error: "No user_id in metadata" };
+  }
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return { success: false, error: "Supabase not configured" };
+  }
+
+  const { error: updateError } = await supabase
+    .from("lens_usage")
+    .update({
+      is_subscriber: false,
+      subscription_tier: null,
+    })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    console.error("[WEBHOOK] LENS CANCEL: Failed to update lens_usage:", updateError.message);
+    return { success: false, error: updateError.message };
+  }
+
+  console.log("[WEBHOOK] LENS CANCEL: Subscription deactivated for user:", userId);
+  return { success: true };
+}
+
+// ============================================================================
 // SUPABASE ORDER FETCH WITH RETRY (Supabase Race Fix)
 // ============================================================================
 
-/**
- * RACE CONDITION FIX
- * Stripe often hits the webhook before Supabase finishes saving the order.
- * Retry loop: 5 attempts with 2000ms delay between each.
- */
 async function fetchOrderWithRetry(orderId: string): Promise<Order> {
   console.log("[WEBHOOK] === RACE CONDITION FIX: SUPABASE RETRY LOOP ===");
   console.log(`[WEBHOOK] Order ID: ${orderId}`);
-  console.log(`[WEBHOOK] Max attempts: ${SUPABASE_RETRY_ATTEMPTS}`);
-  console.log(`[WEBHOOK] Delay between attempts: ${SUPABASE_RETRY_DELAY_MS}ms`);
 
   const supabase = getSupabaseAdmin();
   
@@ -131,16 +209,14 @@ async function fetchOrderWithRetry(orderId: string): Promise<Order> {
       .eq("order_id", orderId)
       .single();
 
-    if (error && error.code !== "PGRST116") { // PGRST116 = no rows returned
+    if (error && error.code !== "PGRST116") {
       console.error(`[WEBHOOK] Attempt ${attempt} - Database error: ${error.message} (code: ${error.code})`);
     }
 
     if (data) {
       console.log(`[WEBHOOK] SUCCESS: Order found on attempt ${attempt}`);
-      console.log(`[WEBHOOK] Photos in order: ${data.photos?.length || 0}`);
 
-      // Update payment status to paid AND set status to new so pipeline picks it up
-      const { error: updateError } = await supabase
+      await supabase
         .from("orders")
         .update({ 
           payment_status: "paid", 
@@ -149,7 +225,6 @@ async function fetchOrderWithRetry(orderId: string): Promise<Order> {
         })
         .eq("order_id", orderId);
 
-      // Map to Order type
       const order: Order = {
         orderId: data.order_id,
         status: "processing",
@@ -181,20 +256,14 @@ async function fetchOrderWithRetry(orderId: string): Promise<Order> {
       return order;
     }
 
-    // Order not found yet - wait before retry (except on last attempt)
     if (attempt < SUPABASE_RETRY_ATTEMPTS) {
-      console.log(`[WEBHOOK] Order not found. Waiting ${SUPABASE_RETRY_DELAY_MS}ms before attempt ${attempt + 1}...`);
+      console.log(`[WEBHOOK] Order not found. Waiting ${SUPABASE_RETRY_DELAY_MS}ms...`);
       await sleep(SUPABASE_RETRY_DELAY_MS);
     }
   }
 
-  // CRITICAL: All 5 attempts exhausted - log error and exit
   const totalWaitTime = (SUPABASE_RETRY_ATTEMPTS - 1) * SUPABASE_RETRY_DELAY_MS / 1000;
   console.error("[WEBHOOK] === FATAL: ORDER NOT FOUND AFTER ALL RETRIES ===");
-  console.error(`[WEBHOOK] Order ID: ${orderId}`);
-  console.error(`[WEBHOOK] Attempts: ${SUPABASE_RETRY_ATTEMPTS}`);
-  console.error(`[WEBHOOK] Total wait time: ${totalWaitTime}s`);
-  
   throw new Error(`ORDER_NOT_FOUND: Order ${orderId} not in database after ${SUPABASE_RETRY_ATTEMPTS} attempts (${totalWaitTime}s total wait)`);
 }
 
@@ -207,7 +276,6 @@ function buildPersonalizationData(
   session: Stripe.Checkout.Session, 
   productName: string
 ): PersonalizationData {
-  // CRITICAL: Extract customer_email from session.customer_details.email
   const customerEmail = session.customer_details?.email || order.customer.email || "";
   const customerName = session.customer_details?.name || order.customer.name || "Customer";
   const customerPhone = session.customer_details?.phone || order.customer.phone || "Not provided";
@@ -246,9 +314,7 @@ function buildPersonalizationData(
     voiceover_script: order.voiceoverScript || "",
     include_edited_photos: order.includeEditedPhotos ? "Yes" : "No",
     special_requests: order.specialInstructions || "",
-    // image_urls as string for template (newline separated)
     image_urls: buildImageUrlsString(order.photos),
-    // Also provide as array if template needs it
     image_urls_array: buildImageUrlsArray(order.photos),
   } as PersonalizationData & { image_urls_array: string[] };
 }
@@ -263,7 +329,6 @@ export async function POST(request: Request) {
   console.log("[WEBHOOK] Timestamp:", new Date().toISOString());
   console.log("========================================");
 
-  // Variables to track state - NO early returns until the end
   let emailSent = false;
   let emailError: string | null = null;
 
@@ -300,7 +365,23 @@ export async function POST(request: Request) {
     console.log("[WEBHOOK] Event ID:", event.id);
 
     // ========================================================================
-    // STEP 2: Handle checkout.session.completed
+    // HANDLE: customer.subscription.deleted (Lens cancellation)
+    // ========================================================================
+
+    if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object as Stripe.Subscription;
+      
+      // Only handle Lens subscriptions
+      if (subscription.metadata?.product === "lens") {
+        const result = await handleLensCancel(subscription);
+        return NextResponse.json({ received: true, lens_cancel: result });
+      }
+
+      return NextResponse.json({ received: true, processed: false, reason: "Not a lens subscription" });
+    }
+
+    // ========================================================================
+    // HANDLE: checkout.session.completed
     // ========================================================================
 
     if (event.type === "checkout.session.completed") {
@@ -309,17 +390,14 @@ export async function POST(request: Request) {
       console.log("========================================");
       console.log("[WEBHOOK] CHECKOUT SESSION COMPLETED");
       console.log("[WEBHOOK] Session ID:", session.id);
+      console.log("[WEBHOOK] Mode:", session.mode);
       console.log("[WEBHOOK] Payment Status:", session.payment_status);
       console.log("[WEBHOOK] Amount:", session.amount_total);
+      console.log("[WEBHOOK] Metadata:", JSON.stringify(session.metadata));
       console.log("========================================");
 
-      // ======================================================================
-      // CRITICAL CHECK: Only proceed if payment_status === 'paid'
-      // ======================================================================
-      
       if (session.payment_status !== "paid") {
         console.log("[WEBHOOK] Skipping: Session is not paid yet. Status:", session.payment_status);
-        // Return 200 but don't process - Stripe may send another webhook when paid
         return NextResponse.json({ 
           received: true, 
           processed: false, 
@@ -327,51 +405,50 @@ export async function POST(request: Request) {
         });
       }
 
-      console.log("[WEBHOOK] Payment confirmed as PAID - proceeding with order processing");
+      // ====================================================================
+      // LENS SUBSCRIPTION — handle separately from video orders
+      // ====================================================================
 
-      // ======================================================================
-      // STEP 3: Extract orderId from metadata AND success_url
-      // ======================================================================
-      
+      if (session.metadata?.product === "lens" || session.mode === "subscription") {
+        console.log("[WEBHOOK] Detected LENS subscription checkout");
+        const result = await handleLensSubscription(session);
+        
+        // Also activate 10-day trial fields if this is their first subscription
+        // (trial_activated_at is used for the trial period after video purchase,
+        //  but setting it here ensures the subscription is tracked)
+        
+        return NextResponse.json({ 
+          received: true, 
+          lens_subscription: result 
+        });
+      }
+
+      // ====================================================================
+      // VIDEO ORDER — existing logic
+      // ====================================================================
+
+      console.log("[WEBHOOK] Payment confirmed as PAID - proceeding with VIDEO ORDER processing");
+
       const orderId = extractOrderId(session);
 
       if (!orderId) {
         console.error("[WEBHOOK] CRITICAL: Could not extract orderId from session");
-        console.error("[WEBHOOK] Session metadata:", JSON.stringify(session.metadata));
-        console.error("[WEBHOOK] Session success_url:", session.success_url);
-        console.error("[WEBHOOK] Session client_reference_id:", session.client_reference_id);
-        
         emailError = "No orderId found in session";
       } else {
         console.log("[WEBHOOK] Order ID extracted:", orderId);
-
-        // ==================================================================
-        // STEP 4: Fetch order from Supabase WITH RETRY
-        // ==================================================================
 
         let order: Order | null = null;
         
         try {
           order = await fetchOrderWithRetry(orderId);
           console.log("[WEBHOOK] Order fetched successfully");
-          console.log("[WEBHOOK] Photos count:", order.photos?.length || 0);
         } catch (dbError) {
           const message = dbError instanceof Error ? dbError.message : String(dbError);
           console.error("[WEBHOOK] CRITICAL: Database fetch failed");
-          console.error("MAILERSEND_CRITICAL_FAILURE", {
-            reason: "DATABASE_FETCH_FAILED",
-            order_id: orderId,
-            error: message
-          });
           emailError = message;
         }
 
-        // ==================================================================
-        // STEP 5: Send emails ONLY if we have order data
-        // ==================================================================
-
         if (order) {
-          // Get product name
           let productName = session.metadata?.productName || "";
           if (!productName) {
             try {
@@ -382,91 +459,43 @@ export async function POST(request: Request) {
             }
           }
 
-          // Build personalization data
-          // CRITICAL: customer_email from session.customer_details.email
           const personalizationData = buildPersonalizationData(order, session, productName);
 
-          console.log("[WEBHOOK] Customer email (from session):", session.customer_details?.email);
-          console.log("[WEBHOOK] Customer email (final):", personalizationData.customer_email);
-
           if (!personalizationData.customer_email) {
-            console.error("MAILERSEND_CRITICAL_FAILURE", {
-              reason: "NO_CUSTOMER_EMAIL",
-              order_id: orderId,
-              session_customer_details: session.customer_details
-            });
             emailError = "No customer email available";
           } else {
-            // ================================================================
-            // STEP 6: SEND EMAILS - BLOCKING AWAIT
-            // DO NOT return 200 to Stripe until these complete
-            // ================================================================
-
             console.log("========================================");
             console.log("[WEBHOOK] SENDING EMAILS - BLOCKING");
             console.log("========================================");
 
-            // ================================================================
-            // SEND CUSTOMER EMAIL - WRAPPED IN TRY/CATCH WITH error.body LOGGING
-            // ================================================================
             try {
-              console.log("[WEBHOOK] === PREPARING TO SEND CUSTOMER EMAIL ===");
-              console.log("[WEBHOOK] To:", personalizationData.customer_email);
-              console.log("[WEBHOOK] Template ID: zr6ke4n6kzelon12");
-              console.log("[WEBHOOK] BCC: realestatephoto2video@gmail.com");
-              console.log("[WEBHOOK] Image URLs count:", buildImageUrlsArray(order.photos).length);
-              console.log("[WEBHOOK] MAILERSEND_API_KEY present:", !!process.env.MAILERSEND_API_KEY);
-              console.log("[WEBHOOK] MAILERSEND_SENDER_EMAIL:", process.env.MAILERSEND_SENDER_EMAIL || "(not set - using fallback)");
-              
               const customerResult = await sendCustomerEmail(personalizationData);
-              
               if (customerResult.success) {
-                console.log("[WEBHOOK] Customer email: SUCCESS (status:", customerResult.statusCode, ")");
+                console.log("[WEBHOOK] Customer email: SUCCESS");
                 emailSent = true;
               } else {
-                // LOG error.body FOR VALIDATION FAILURES
-                console.error("[WEBHOOK] === MAILERSEND CUSTOMER EMAIL FAILED ===");
-                console.error("[WEBHOOK] error:", customerResult.error);
-                console.error("[WEBHOOK] statusCode:", customerResult.statusCode);
-                console.error("[WEBHOOK] responseBody:", JSON.stringify(customerResult.responseBody, null, 2));
-                console.error("[WEBHOOK] TROUBLESHOOTING:");
-                console.error("[WEBHOOK]   1. Verify MAILERSEND_API_KEY is correct");
-                console.error("[WEBHOOK]   2. Verify MAILERSEND_SENDER_EMAIL is from a verified domain in MailerSend");
-                console.error("[WEBHOOK]   3. Check MailerSend dashboard for domain verification status");
+                console.error("[WEBHOOK] Customer email FAILED:", customerResult.error);
                 emailError = customerResult.error || "Customer email failed";
               }
             } catch (err: unknown) {
-              // LOG error.body IF AVAILABLE ON EXCEPTION
-              console.error("[WEBHOOK] === MAILERSEND CUSTOMER EMAIL EXCEPTION ===");
               if (err && typeof err === 'object' && 'body' in err) {
                 console.error("[WEBHOOK] error.body:", JSON.stringify((err as { body: unknown }).body, null, 2));
               }
               const msg = err instanceof Error ? err.message : String(err);
-              console.error("[WEBHOOK] error.message:", msg);
+              console.error("[WEBHOOK] Customer email exception:", msg);
               emailError = msg;
             }
 
-            // ================================================================
-            // SEND ADMIN EMAIL - WRAPPED IN TRY/CATCH WITH error.body LOGGING
-            // ================================================================
             try {
-              console.log("[WEBHOOK] === SENDING ADMIN EMAIL ===");
               const adminResult = await sendAdminNotificationEmail(personalizationData);
-              
               if (adminResult.success) {
                 console.log("[WEBHOOK] Admin email: SUCCESS");
               } else {
-                console.error("[WEBHOOK] === MAILERSEND ADMIN EMAIL FAILED ===");
-                console.error("[WEBHOOK] error:", adminResult.error);
-                console.error("[WEBHOOK] error.body:", JSON.stringify(adminResult.responseBody, null, 2));
+                console.error("[WEBHOOK] Admin email FAILED:", adminResult.error);
               }
             } catch (err: unknown) {
-              console.error("[WEBHOOK] === MAILERSEND ADMIN EMAIL EXCEPTION ===");
-              if (err && typeof err === 'object' && 'body' in err) {
-                console.error("[WEBHOOK] error.body:", JSON.stringify((err as { body: unknown }).body, null, 2));
-              }
               const msg = err instanceof Error ? err.message : String(err);
-              console.error("[WEBHOOK] error.message:", msg);
+              console.error("[WEBHOOK] Admin email exception:", msg);
             }
           }
         }
@@ -474,8 +503,7 @@ export async function POST(request: Request) {
     }
 
     // ========================================================================
-    // STEP 7: FINAL RESPONSE TO STRIPE
-    // This is the ABSOLUTE LAST LINE after all awaits have completed
+    // FINAL RESPONSE
     // ========================================================================
 
     console.log("========================================");
@@ -494,7 +522,6 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[WEBHOOK] UNHANDLED EXCEPTION:", message);
     
-    // Always return 200 to prevent Stripe retries flooding
     return NextResponse.json({ 
       received: true, 
       processed: false,
