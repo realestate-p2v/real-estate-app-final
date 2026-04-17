@@ -199,9 +199,9 @@ const mcStyles = `
   .dashboard-light [class*="ring-blue"] { --tw-ring-color: rgba(37,99,235,0.12) !important; }
   .dashboard-light [class*="ring-teal"] { --tw-ring-color: rgba(13,148,136,0.15) !important; }
 
-  /* Cards get subtle shadow */
-  .dashboard-light .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); }
-  .dashboard-light .rounded-xl { box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  /* Cards get subtle shadow — only in light mode, scoped tighter */
+  .dashboard-light > div .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); }
+  .dashboard-light > div .rounded-xl { box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
 
   /* Backdrop blur — keep but lighten */
   .dashboard-light [class*="backdrop-blur"] { backdrop-filter: blur(8px); }
