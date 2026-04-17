@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { DashboardShell, useAccent } from "@/components/dashboard-shell";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -20,7 +18,6 @@ import {
   Lock,
   LogIn,
   X,
-  ImageIcon,
   AlertCircle,
   Home,
 } from "lucide-react";
@@ -63,12 +60,15 @@ const SURPRISE_SEGMENTS = [
 export default function DescriptionWriterPage() {
   return (
     <Suspense>
-      <DescriptionWriterPageInner />
+      <DashboardShell accent="sky" maxWidth="4xl">
+        <DescriptionWriterInner />
+      </DashboardShell>
     </Suspense>
   );
 }
 
-function DescriptionWriterPageInner() {
+function DescriptionWriterInner() {
+  const a = useAccent();
   const supabase = createClient();
   const searchParams = useSearchParams();
 
@@ -84,15 +84,8 @@ function DescriptionWriterPageInner() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [propertyData, setPropertyData] = useState<PropertyData>({
-    address: "",
-    beds: "",
-    baths: "",
-    sqft: "",
-    lotSize: "",
-    yearBuilt: "",
-    price: "",
-    neighborhood: "",
-    specialFeatures: "",
+    address: "", beds: "", baths: "", sqft: "", lotSize: "",
+    yearBuilt: "", price: "", neighborhood: "", specialFeatures: "",
   });
   const [style, setStyle] = useState<Style>("professional");
 
@@ -128,7 +121,6 @@ function DescriptionWriterPageInner() {
     if (!prop) return;
     setSelectedPropertyId(prop.id);
 
-    // Fill property data
     const cityState = [prop.city, prop.state].filter(Boolean).join(", ");
     setPropertyData({
       address: prop.address || "",
@@ -145,10 +137,8 @@ function DescriptionWriterPageInner() {
       ].filter(Boolean).join(", "),
     });
 
-    // Fill photos — try curated first, then fall back to order photos
     let photos: string[] = [];
 
-    // 1. Curated website photos
     const curated = prop.website_curated;
     if (curated) {
       if (Array.isArray(curated)) {
@@ -158,7 +148,6 @@ function DescriptionWriterPageInner() {
       }
     }
 
-    // 2. Fall back to order photos if curated doesn't have enough
     if (photos.length < 3) {
       try {
         const { data: orders } = await supabase
@@ -222,7 +211,6 @@ function DescriptionWriterPageInner() {
         }
       }
 
-      // Fetch user properties for selector
       if (user) {
         const { data: props } = await supabase
           .from("agent_properties")
@@ -236,7 +224,6 @@ function DescriptionWriterPageInner() {
     getUser();
   }, [supabase.auth]);
 
-  // Auto-select property from URL param once properties are loaded
   useEffect(() => {
     if (userProperties.length === 0) return;
     const pid = searchParams.get("propertyId");
@@ -248,12 +235,9 @@ function DescriptionWriterPageInner() {
     }
   }, [userProperties, searchParams, handleSelectProperty]);
 
-  // Pre-fill from URL params (property portfolio) or sessionStorage (Photo Coach)
   useEffect(() => {
-    // Skip URL param pre-fill if propertyId is present (handled by auto-select above)
     if (searchParams.get("propertyId")) return;
 
-    // URL params take priority (from property portfolio page)
     const addr = searchParams.get("address");
     if (addr) {
       const city = searchParams.get("city") || "";
@@ -270,10 +254,9 @@ function DescriptionWriterPageInner() {
         price: searchParams.get("price") ? `$${Number(searchParams.get("price")).toLocaleString()}` : prev.price,
         specialFeatures: searchParams.get("specialFeatures") || prev.specialFeatures,
       }));
-      return; // Don't also load from sessionStorage
+      return;
     }
 
-    // Fallback: load from Photo Coach sessionStorage
     try {
       const coachPhotos = sessionStorage.getItem("coach_photos_for_description");
       const coachAddress = sessionStorage.getItem("coach_property_address");
@@ -381,7 +364,6 @@ function DescriptionWriterPageInner() {
   };
 
   const handleGenerate = async () => {
-    // Gate: non-subscribers cannot generate descriptions
     if (!isSubscriber && !isAdmin) {
       setShowGate(true);
       return;
@@ -402,12 +384,7 @@ function DescriptionWriterPageInner() {
       const res = await fetch("/api/lens/description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          photoUrls,
-          propertyData,
-          style,
-          userId: user?.id,
-        }),
+        body: JSON.stringify({ photoUrls, propertyData, style, userId: user?.id }),
       });
 
       const data = await res.json();
@@ -437,9 +414,7 @@ function DescriptionWriterPageInner() {
     }
   };
 
-  const handleRegenerate = () => {
-    handleGenerate();
-  };
+  const handleRegenerate = () => handleGenerate();
 
   const handleCopy = () => {
     navigator.clipboard.writeText(editedDescription);
@@ -451,427 +426,338 @@ function DescriptionWriterPageInner() {
     setPropertyData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Not logged in
+  /* ═══════════════ GATED / AUTH STATES ═══════════════ */
+
   if (!authLoading && !user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-          <div className="bg-card rounded-2xl border border-border p-10 space-y-5">
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
-              <LogIn className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-foreground">
-              Sign In to Try the Description Writer
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Create a free account to try the AI Listing Description Writer. Your first description is free — no subscription required.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base">
-                <Link href={`/login?redirect=/dashboard/lens/descriptions`}>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign In
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="px-8 py-6 text-base">
-                <Link href="/lens">Learn About P2V Lens</Link>
-              </Button>
-            </div>
+      <div className="max-w-2xl mx-auto py-24 text-center">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-10 space-y-5 backdrop-blur-sm">
+          <div className="mx-auto h-16 w-16 rounded-2xl bg-white/[0.04] flex items-center justify-center ring-1 ring-white/[0.06]">
+            <LogIn className="h-8 w-8 text-white/50" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-white">Sign In to Try the Description Writer</h1>
+          <p className="text-white/60 max-w-md mx-auto">
+            Create a free account to try the AI Listing Description Writer. Your first description is free — no subscription required.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Button asChild className={`${a.btnBg} ${a.btnBgHover} text-white font-black px-8 py-6 text-base shadow-lg ${a.btnShadow}`}>
+              <Link href={`/login?redirect=/dashboard/lens/descriptions`}>
+                <LogIn className="mr-2 h-4 w-4" />Sign In
+              </Link>
+            </Button>
+            <Button asChild className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold px-8 py-6 text-base">
+              <Link href="/lens">Learn About P2V Lens</Link>
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Trial used paywall
   if (trialUsed) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-          <div className="bg-card rounded-2xl border border-border p-10 space-y-5">
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center">
-              <Lock className="h-8 w-8 text-accent" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-foreground">
-              You&apos;ve Used Your Free Description
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Subscribe to P2V Lens for unlimited AI listing descriptions, plus photo coaching, design studio, virtual staging, and more — starting at $27.95/month.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-6 text-base">
-                <Link href="/lens">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Subscribe to P2V Lens
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="px-8 py-6 text-base">
-                <Link href="/dashboard/lens">Back to Lens Dashboard</Link>
-              </Button>
-            </div>
+      <div className="max-w-2xl mx-auto py-24 text-center">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-10 space-y-5 backdrop-blur-sm">
+          <div className={`mx-auto h-16 w-16 rounded-2xl ${a.bg} flex items-center justify-center ring-1 ${a.ring}`}>
+            <Lock className={`h-8 w-8 ${a.text}`} />
+          </div>
+          <h1 className="text-2xl font-extrabold text-white">You&apos;ve Used Your Free Description</h1>
+          <p className="text-white/60 max-w-md mx-auto">
+            Subscribe to P2V Lens for unlimited AI listing descriptions, plus photo coaching, design studio, virtual staging, and more — starting at $27.95/month.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Button asChild className={`${a.btnBg} ${a.btnBgHover} text-white font-black px-8 py-6 text-base shadow-lg ${a.btnShadow}`}>
+              <Link href="/lens">
+                <Sparkles className="mr-2 h-4 w-4" />Subscribe to P2V Lens
+              </Link>
+            </Button>
+            <Button asChild className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold px-8 py-6 text-base">
+              <Link href="/dashboard">Back to Dashboard</Link>
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
+  /* ═══════════════ MAIN UI ═══════════════ */
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Link href="/dashboard/lens" className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-              AI Listing Description Writer
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Upload photos + enter property details → get an MLS-ready description
-            </p>
-          </div>
+    <>
+      {/* Header */}
+      <div className="mc-animate flex items-center gap-3 mb-8">
+        <Link href="/dashboard" className="text-white/50 hover:text-white transition-colors">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            AI Listing Description Writer
+          </h1>
+          <p className="text-white/50 mt-1">
+            Upload photos + enter property details → get an MLS-ready description
+          </p>
         </div>
+      </div>
 
-        {/* Subscription / trial badge */}
-        {isAdmin ? (
-          <div className="bg-green-100 border border-green-200 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0" />
-            <p className="text-sm text-green-800 font-semibold">Admin — Unlimited Access</p>
+      {/* Subscription / trial badge */}
+      {isAdmin ? (
+        <div className="mc-animate rounded-xl border border-green-400/20 bg-green-400/[0.06] px-4 py-3 mb-8 flex items-center gap-3" style={{ animationDelay: "0.05s" }}>
+          <Sparkles className="h-5 w-5 text-green-400 flex-shrink-0" />
+          <p className="text-sm text-green-300 font-semibold">Admin — Unlimited Access</p>
+        </div>
+      ) : isSubscriber ? (
+        <div className={`mc-animate rounded-xl border ${a.border} ${a.bg} px-4 py-3 mb-8 flex items-center gap-3`} style={{ animationDelay: "0.05s" }}>
+          <Sparkles className={`h-5 w-5 ${a.text} flex-shrink-0`} />
+          <p className="text-sm text-white/80">
+            <span className={`font-bold ${a.textLight}`}>P2V Lens Subscriber</span> — Unlimited descriptions
+          </p>
+        </div>
+      ) : (
+        <div className={`mc-animate rounded-xl border ${a.border} ${a.bg} px-4 py-3 mb-8 flex items-center gap-3`} style={{ animationDelay: "0.05s" }}>
+          <Sparkles className={`h-5 w-5 ${a.text} flex-shrink-0`} />
+          <p className="text-sm text-white/80">
+            <span className="font-bold text-white">Free trial:</span> Generate your first listing description free. Subscribe to P2V Lens for unlimited access.
+          </p>
+        </div>
+      )}
+
+      {/* Property Selector */}
+      {userProperties.length > 0 && (
+        <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 mb-6 backdrop-blur-sm" style={{ animationDelay: "0.1s" }}>
+          <div className="flex items-center gap-3 mb-3">
+            <Home className={`h-5 w-5 ${a.text}`} />
+            <h2 className="text-lg font-bold text-white">Select a Property</h2>
           </div>
-        ) : isSubscriber ? (
-          <div className="bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
-            <p className="text-sm text-foreground">
-              <span className="font-bold text-cyan-700">P2V Lens Subscriber</span> — Unlimited descriptions
+          <p className="text-sm text-white/50 mb-3">
+            Choose a property to auto-fill details and photos, or enter everything manually.
+          </p>
+          <select
+            value={selectedPropertyId || ""}
+            onChange={(e) => handleSelectProperty(e.target.value)}
+            className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white focus:border-${a.text.replace("text-", "")}/40 focus:outline-none`}
+            style={{ colorScheme: "dark" }}
+          >
+            <option value="">Select property...</option>
+            {userProperties.map((p: any) => (
+              <option key={p.id} value={p.id} className="bg-gray-900">
+                {p.address}{p.city ? `, ${p.city}` : ""}
+              </option>
+            ))}
+            <option value="__new__" className="bg-gray-900">＋ Enter details manually</option>
+          </select>
+        </div>
+      )}
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Left Column: Inputs */}
+        <div className="space-y-6">
+          {/* Photo Upload */}
+          <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm" style={{ animationDelay: "0.15s" }}>
+            <h2 className="text-lg font-bold text-white mb-1">Listing Photos</h2>
+            <p className="text-sm text-white/50 mb-4">
+              Upload 3–10 photos. AI analyzes each room to write an accurate description.
             </p>
-          </div>
-        ) : (
-          <div className="bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 mb-8 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-accent flex-shrink-0" />
-            <p className="text-sm text-foreground">
-              <span className="font-bold">Free trial:</span> Generate your first listing description free. Subscribe to P2V Lens for unlimited access.
-            </p>
-          </div>
-        )}
 
-        {/* Property Selector Dropdown */}
-        {userProperties.length > 0 && (
-          <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-            <div className="flex items-center gap-3 mb-3">
-              <Home className="h-5 w-5 text-accent" />
-              <h2 className="text-lg font-bold text-foreground">Select a Property</h2>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Choose a property to auto-fill details and photos, or enter everything manually.
-            </p>
-            <select
-              value={selectedPropertyId || ""}
-              onChange={(e) => handleSelectProperty(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-            >
-              <option value="">Select property...</option>
-              {userProperties.map((p: any) => (
-                <option key={p.id} value={p.id}>
-                  {p.address}{p.city ? `, ${p.city}` : ""}
-                </option>
-              ))}
-              <option value="__new__">＋ Enter details manually</option>
-            </select>
-          </div>
-        )}
-
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column: Inputs */}
-          <div className="space-y-6">
-            {/* Photo Upload */}
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <h2 className="text-lg font-bold text-foreground mb-1">Listing Photos</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload 3–10 photos. AI analyzes each room to write an accurate description.
-              </p>
-
-              <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-accent/40 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                  disabled={uploading || photoUrls.length >= 10}
-                />
-                {uploading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-                    <p className="text-sm text-muted-foreground">{uploadProgress || "Uploading..."}</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      {photoUrls.length >= 10
-                        ? "Maximum 10 photos reached"
-                        : "Click to upload photos (max 10)"}
-                    </p>
-                    <p className="text-xs text-muted-foreground/60">
-                      JPG, PNG, or HEIC · Max 10MB per photo
-                    </p>
-                  </div>
-                )}
-              </label>
-
-              {photoUrls.length > 0 && (
-                <div className="grid grid-cols-5 gap-2 mt-4">
-                  {photoUrls.map((url, i) => (
-                    <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => removePhoto(i)}
-                        className="absolute top-1 right-1 h-5 w-5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </button>
-                    </div>
-                  ))}
+            <label className={`block border-2 border-dashed border-white/[0.1] rounded-xl p-6 text-center cursor-pointer hover:${a.border.replace("/20", "/40")} hover:${a.bg} transition-colors`}>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={uploading || photoUrls.length >= 10}
+              />
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className={`h-8 w-8 ${a.text} animate-spin`} />
+                  <p className="text-sm text-white/70">{uploadProgress || "Uploading..."}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className={`h-8 w-8 ${a.textDim}`} />
+                  <p className="text-sm text-white/70">
+                    {photoUrls.length >= 10 ? "Maximum 10 photos reached" : "Click to upload photos (max 10)"}
+                  </p>
+                  <p className="text-xs text-white/35">JPG, PNG, or HEIC · Max 10MB per photo</p>
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-2">{photoUrls.length}/10 photos</p>
-            </div>
+            </label>
 
-            {/* Property Data */}
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <h2 className="text-lg font-bold text-foreground mb-4">Property Details</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Address</label>
-                  <Input
-                    placeholder="123 Main St, City, State"
-                    value={propertyData.address}
-                    onChange={(e) => updateField("address", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Bedrooms</label>
-                  <Input
-                    placeholder="3"
-                    value={propertyData.beds}
-                    onChange={(e) => updateField("beds", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Bathrooms</label>
-                  <Input
-                    placeholder="2.5"
-                    value={propertyData.baths}
-                    onChange={(e) => updateField("baths", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Square Feet</label>
-                  <Input
-                    placeholder="2,400"
-                    value={propertyData.sqft}
-                    onChange={(e) => updateField("sqft", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Lot Size</label>
-                  <Input
-                    placeholder="0.25 acres"
-                    value={propertyData.lotSize}
-                    onChange={(e) => updateField("lotSize", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Year Built</label>
-                  <Input
-                    placeholder="2005"
-                    value={propertyData.yearBuilt}
-                    onChange={(e) => updateField("yearBuilt", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Price</label>
-                  <Input
-                    placeholder="$599,000"
-                    value={propertyData.price}
-                    onChange={(e) => updateField("price", e.target.value)}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Neighborhood</label>
-                  <Input
-                    placeholder="Sunset Ridge, close to downtown"
-                    value={propertyData.neighborhood}
-                    onChange={(e) => updateField("neighborhood", e.target.value)}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Special Features</label>
-                  <Textarea
-                    placeholder="Pool, new roof 2024, finished basement, EV charger..."
-                    value={propertyData.specialFeatures}
-                    onChange={(e) => updateField("specialFeatures", e.target.value)}
-                    rows={2}
-                  />
-                </div>
+            {photoUrls.length > 0 && (
+              <div className="grid grid-cols-5 gap-2 mt-4">
+                {photoUrls.map((url, i) => (
+                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-white/[0.08]">
+                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
+            <p className="text-xs text-white/40 mt-2">{photoUrls.length}/10 photos</p>
+          </div>
 
-            {/* Style Selector */}
-            <div className="bg-card rounded-2xl border border-border p-6">
-              <h2 className="text-lg font-bold text-foreground mb-4">Writing Style</h2>
-              <div className="grid grid-cols-2 gap-2">
-                {STYLES.map((s) => (
+          {/* Property Data */}
+          <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm" style={{ animationDelay: "0.2s" }}>
+            <h2 className="text-lg font-bold text-white mb-4">Property Details</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Address" colSpan={2}>
+                <DarkInput value={propertyData.address} onChange={(v) => updateField("address", v)} placeholder="123 Main St, City, State" />
+              </Field>
+              <Field label="Bedrooms">
+                <DarkInput value={propertyData.beds} onChange={(v) => updateField("beds", v)} placeholder="3" />
+              </Field>
+              <Field label="Bathrooms">
+                <DarkInput value={propertyData.baths} onChange={(v) => updateField("baths", v)} placeholder="2.5" />
+              </Field>
+              <Field label="Square Feet">
+                <DarkInput value={propertyData.sqft} onChange={(v) => updateField("sqft", v)} placeholder="2,400" />
+              </Field>
+              <Field label="Lot Size">
+                <DarkInput value={propertyData.lotSize} onChange={(v) => updateField("lotSize", v)} placeholder="0.25 acres" />
+              </Field>
+              <Field label="Year Built">
+                <DarkInput value={propertyData.yearBuilt} onChange={(v) => updateField("yearBuilt", v)} placeholder="2005" />
+              </Field>
+              <Field label="Price">
+                <DarkInput value={propertyData.price} onChange={(v) => updateField("price", v)} placeholder="$599,000" />
+              </Field>
+              <Field label="Neighborhood" colSpan={2}>
+                <DarkInput value={propertyData.neighborhood} onChange={(v) => updateField("neighborhood", v)} placeholder="Sunset Ridge, close to downtown" />
+              </Field>
+              <Field label="Special Features" colSpan={2}>
+                <DarkTextarea value={propertyData.specialFeatures} onChange={(v) => updateField("specialFeatures", v)} placeholder="Pool, new roof 2024, finished basement, EV charger..." rows={2} />
+              </Field>
+            </div>
+          </div>
+
+          {/* Style Selector */}
+          <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm" style={{ animationDelay: "0.25s" }}>
+            <h2 className="text-lg font-bold text-white mb-4">Writing Style</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {STYLES.map((s) => {
+                const active = style === s.value;
+                return (
                   <button
                     key={s.value}
                     onClick={() => setStyle(s.value)}
                     className={`text-left px-4 py-3 rounded-xl border transition-all ${
-                      style === s.value
-                        ? "border-accent bg-accent/10"
-                        : "border-border hover:border-accent/30"
+                      active
+                        ? `${a.border} ${a.bg}`
+                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
                     }`}
                   >
-                    <p className={`text-sm font-bold ${style === s.value ? "text-accent" : "text-foreground"}`}>
-                      {s.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{s.description}</p>
+                    <p className={`text-sm font-bold ${active ? a.textLight : "text-white"}`}>{s.label}</p>
+                    <p className="text-xs text-white/45">{s.description}</p>
                   </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Generate Button */}
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || photoUrls.length === 0}
+            className={`mc-animate w-full ${a.btnBg} ${a.btnBgHover} text-white font-bold py-7 text-lg rounded-xl shadow-lg ${a.btnShadow} disabled:opacity-50`}
+            style={{ animationDelay: "0.3s" }}
+          >
+            {generating ? (
+              <><Loader2 className="h-5 w-5 animate-spin mr-2" />Analyzing Photos & Writing Description...</>
+            ) : (
+              <><Sparkles className="h-5 w-5 mr-2" />Generate Description</>
+            )}
+          </Button>
+
+          {error && (
+            <div className="rounded-xl border border-red-400/30 bg-red-400/[0.08] px-4 py-3 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-300">{error}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Results */}
+        <div className="space-y-6">
+          <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 sticky top-6 backdrop-blur-sm" style={{ animationDelay: "0.2s" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">Generated Description</h2>
+              {description && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleRegenerate}
+                    disabled={generating}
+                    className="flex items-center gap-1 text-xs font-semibold text-white/60 hover:text-white transition-colors"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
+                    Regenerate
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className={`flex items-center gap-1 text-xs font-semibold ${a.textLight} hover:text-white transition-colors`}
+                  >
+                    {copied ? <><Check className="h-3.5 w-3.5" />Copied!</> : <><Copy className="h-3.5 w-3.5" />Copy</>}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {description ? (
+              <DarkTextarea
+                value={editedDescription}
+                onChange={setEditedDescription}
+                rows={12}
+                resize={false}
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-center border border-dashed border-white/[0.08] rounded-xl">
+                <div className="space-y-2 px-6">
+                  <FileText className="h-10 w-10 text-white/20 mx-auto" />
+                  <p className="text-sm text-white/50">
+                    {generating ? "AI is analyzing your photos and writing your description..." : "Upload photos, fill in property details, and hit Generate"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {description && (
+              <div className="mt-4 flex gap-3">
+                <Button
+                  onClick={handleCopy}
+                  className={`flex-1 ${a.btnBg} ${a.btnBgHover} text-white font-black`}
+                >
+                  {copied ? <><Check className="h-4 w-4 mr-2" />Copied to Clipboard!</> : <><Copy className="h-4 w-4 mr-2" />Copy to Clipboard</>}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {photoAnalyses.length > 0 && (
+            <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm" style={{ animationDelay: "0.35s" }}>
+              <h2 className="text-lg font-bold text-white mb-1">AI Photo Analysis</h2>
+              <p className="text-xs text-white/40 mb-4">
+                {photoAnalyses.length} photos analyzed{photosSkipped > 0 ? `, ${photosSkipped} skipped (too dark/blurry)` : ""}
+              </p>
+              <div className="space-y-3">
+                {photoAnalyses.map((analysis, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm">
+                    <div className={`flex-shrink-0 h-6 w-6 rounded-full ${a.bg} flex items-center justify-center ring-1 ${a.ring}`}>
+                      <Camera className={`h-3 w-3 ${a.text}`} />
+                    </div>
+                    <p className="text-white/65 leading-relaxed">{analysis}</p>
+                  </div>
                 ))}
               </div>
             </div>
-
-            {/* Generate Button */}
-            <Button
-              onClick={handleGenerate}
-              disabled={generating || photoUrls.length === 0}
-              className="w-full bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold py-7 text-lg rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.3)]"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Analyzing Photos & Writing Description...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Generate Description
-                </>
-              )}
-            </Button>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Results */}
-          <div className="space-y-6">
-            <div className="bg-card rounded-2xl border border-border p-6 sticky top-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-foreground">Generated Description</h2>
-                {description && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleRegenerate}
-                      disabled={generating}
-                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
-                      Regenerate
-                    </button>
-                    <button
-                      onClick={handleCopy}
-                      className="flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent/80 transition-colors"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {description ? (
-                <Textarea
-                  value={editedDescription}
-                  onChange={(e) => setEditedDescription(e.target.value)}
-                  rows={12}
-                  className="text-sm leading-relaxed resize-none border-border"
-                />
-              ) : (
-                <div className="h-64 flex items-center justify-center text-center">
-                  <div className="space-y-2">
-                    <FileText className="h-10 w-10 text-muted-foreground/30 mx-auto" />
-                    <p className="text-sm text-muted-foreground">
-                      {generating
-                        ? "AI is analyzing your photos and writing your description..."
-                        : "Upload photos, fill in property details, and hit Generate"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {description && (
-                <div className="mt-4 flex gap-3">
-                  <Button
-                    onClick={handleCopy}
-                    className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground font-black"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-4 w-4 mr-2" />
-                        Copied to Clipboard!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy to Clipboard
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {photoAnalyses.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border p-6">
-                <h2 className="text-lg font-bold text-foreground mb-1">AI Photo Analysis</h2>
-                <p className="text-xs text-muted-foreground mb-4">
-                  {photoAnalyses.length} photos analyzed{photosSkipped > 0 ? `, ${photosSkipped} skipped (too dark/blurry)` : ""}
-                </p>
-                <div className="space-y-3">
-                  {photoAnalyses.map((analysis, i) => (
-                    <div key={i} className="flex items-start gap-3 text-sm">
-                      <div className="flex-shrink-0 h-6 w-6 rounded-full bg-accent/10 flex items-center justify-center">
-                        <Camera className="h-3 w-3 text-accent" />
-                      </div>
-                      <p className="text-muted-foreground leading-relaxed">{analysis}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Surprise discount wheel */}
+      {/* Surprise wheel */}
       {showSurpriseWheel && (
         <SpinWheel
           title="🎉 Surprise! Spin for a Video Discount!"
@@ -896,8 +782,58 @@ function DescriptionWriterPageInner() {
         />
       )}
 
-      {/* Access gate overlay */}
+      {/* Access gate */}
       {showGate && <GateOverlay gateType={gateType} toolName="Description Writer" onClose={() => setShowGate(false)} />}
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Dark-themed form field primitives (local to this page)
+   Pulls the label + input styling out of the JSX for readability.
+   ───────────────────────────────────────────── */
+
+function Field({ label, colSpan = 1, children }: { label: string; colSpan?: 1 | 2; children: ReactNode }) {
+  return (
+    <div className={colSpan === 2 ? "col-span-2" : ""}>
+      <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">{label}</label>
+      {children}
     </div>
+  );
+}
+
+function DarkInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-white/[0.2] focus:bg-white/[0.06] focus:outline-none transition-colors"
+    />
+  );
+}
+
+function DarkTextarea({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+  resize = true,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+  resize?: boolean;
+}) {
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-white/[0.2] focus:bg-white/[0.06] focus:outline-none transition-colors leading-relaxed ${resize ? "" : "resize-none"}`}
+    />
   );
 }
