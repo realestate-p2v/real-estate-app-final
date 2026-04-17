@@ -99,16 +99,16 @@ const mcStyles = `
   }
 
   /* ── Font size bump — everything one step larger ── */
-  .dash-root .text-\[9px\]  { font-size: 10px !important; }
-  .dash-root .text-\[10px\] { font-size: 11px !important; }
-  .dash-root .text-\[11px\] { font-size: 12px !important; }
-  .dash-root .text-xs  { font-size: 13px !important; line-height: 1.5 !important; }
-  .dash-root .text-sm  { font-size: 15px !important; line-height: 1.5 !important; }
-  .dash-root .text-base { font-size: 17px !important; }
-  .dash-root .text-lg  { font-size: 19px !important; }
-  .dash-root .text-xl  { font-size: 21px !important; }
-  .dash-root .text-2xl { font-size: 26px !important; }
-  .dash-root .text-3xl { font-size: 32px !important; }
+  .dash-root .text-\[9px\]  { font-size: 11px !important; }
+  .dash-root .text-\[10px\] { font-size: 12px !important; }
+  .dash-root .text-\[11px\] { font-size: 13px !important; }
+  .dash-root .text-xs  { font-size: 14px !important; line-height: 1.55 !important; }
+  .dash-root .text-sm  { font-size: 16px !important; line-height: 1.55 !important; }
+  .dash-root .text-base { font-size: 18px !important; }
+  .dash-root .text-lg  { font-size: 20px !important; }
+  .dash-root .text-xl  { font-size: 23px !important; }
+  .dash-root .text-2xl { font-size: 28px !important; }
+  .dash-root .text-3xl { font-size: 34px !important; }
 
   /* ── Light mode overrides ── */
   .dashboard-light {
@@ -772,22 +772,22 @@ export default function DashboardPage() {
 
         {/* ═══ QUICK ACTIONS ═══ */}
         <div className="mc-animate mt-8" style={{ animationDelay: "0.45s" }}>
-          <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-3">Quick Links</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Quick Links</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {[
-              { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-400" },
-              { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-400" },
-              { icon: Film, label: "Video Remix", href: "/dashboard/lens/remix", color: "text-indigo-400" },
-              { icon: User, label: "Agent Profile", href: "/dashboard/profile", color: "text-blue-400" },
-              { icon: Settings, label: "Account Settings", href: "/dashboard/settings", color: "text-white/60" },
+              { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-300" },
+              { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-300" },
+              { icon: Film, label: "Video Remix", href: "/dashboard/lens/remix", color: "text-indigo-300" },
+              { icon: User, label: "Agent Profile", href: "/dashboard/profile", color: "text-blue-300" },
+              { icon: Settings, label: "Account Settings", href: "/dashboard/settings", color: "text-white/80" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] py-4 px-3 text-center transition-all hover:border-cyan-400/15 hover:bg-white/[0.05]"
+                className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] py-4 px-3 text-center transition-all hover:border-cyan-400/30 hover:bg-white/[0.1]"
               >
-                <item.icon className={`h-4 w-4 ${item.color} opacity-60 group-hover:opacity-100 transition-opacity`} />
-                <span className="text-[11px] font-semibold text-white/50 group-hover:text-white/80 transition-colors">{item.label}</span>
+                <item.icon className={`h-5 w-5 ${item.color} transition-opacity`} />
+                <span className="text-[11px] font-bold text-white/80 group-hover:text-white transition-colors">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -797,8 +797,8 @@ export default function DashboardPage() {
         {recentProperties.length > 0 && (
           <div className="mc-animate mt-10" style={{ animationDelay: "0.5s" }}>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/30">Recent Properties — Quick Actions</p>
-              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-400/60 hover:text-cyan-400 transition-colors">View all →</Link>
+              <p className="text-xs font-bold uppercase tracking-wider text-white/50">Recent Properties — Quick Actions</p>
+              <Link href="/dashboard/properties" className="text-xs font-semibold text-cyan-300 hover:text-cyan-200 transition-colors">View all →</Link>
             </div>
             <div className="space-y-2">
               {recentProperties.map(prop => {
@@ -829,20 +829,20 @@ export default function DashboardPage() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-3">
-                        <Link href={`/dashboard/properties/${prop.id}`} className="text-sm font-bold text-white/80 hover:text-cyan-300 transition-colors truncate">{prop.address}</Link>
+                        <Link href={`/dashboard/properties/${prop.id}`} className="text-sm font-bold text-white hover:text-cyan-200 transition-colors truncate">{prop.address}</Link>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/20 text-green-300" : prop.status === "sold" ? "bg-blue-400/20 text-blue-300" : "bg-white/10 text-white/40"}`}>{prop.status}</span>
-                          <Link href={`/dashboard/properties/${prop.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-400/[0.08] border border-cyan-400/15 text-[11px] font-bold text-cyan-400 hover:bg-cyan-400/[0.15] hover:text-cyan-300 transition-all">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/30 text-green-200" : prop.status === "sold" ? "bg-blue-400/30 text-blue-200" : "bg-white/20 text-white/70"}`}>{prop.status}</span>
+                          <Link href={`/dashboard/properties/${prop.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-400/[0.18] border border-cyan-400/30 text-[11px] font-bold text-cyan-200 hover:bg-cyan-400/[0.28] hover:text-white transition-all">
                             <Edit className="h-3 w-3" />Edit Property
                           </Link>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        <Link href={`/order?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/[0.06] border border-cyan-400/10 text-[10px] font-semibold text-cyan-400/80 hover:bg-cyan-400/[0.12] hover:text-cyan-300 transition-all"><Video className="h-3 w-3" />Order Video</Link>
-                        <Link href={`/dashboard/lens/coach?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-400/[0.06] border border-blue-400/10 text-[10px] font-semibold text-blue-400/80 hover:bg-blue-400/[0.12] hover:text-blue-300 transition-all"><Camera className="h-3 w-3" />Coach</Link>
-                        <Link href={`/dashboard/lens/descriptions?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-400/[0.06] border border-sky-400/10 text-[10px] font-semibold text-sky-400/80 hover:bg-sky-400/[0.12] hover:text-sky-300 transition-all"><FileText className="h-3 w-3" />Description</Link>
-                        <Link href={`/dashboard/lens/design-studio?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-400/[0.06] border border-indigo-400/10 text-[10px] font-semibold text-indigo-400/80 hover:bg-indigo-400/[0.12] hover:text-indigo-300 transition-all"><PenTool className="h-3 w-3" />Design</Link>
-                        <Link href={`/dashboard/lens/staging?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-400/[0.06] border border-violet-400/10 text-[10px] font-semibold text-violet-400/80 hover:bg-violet-400/[0.12] hover:text-violet-300 transition-all"><Sofa className="h-3 w-3" />Stage</Link>
+                        <Link href={`/order?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/[0.15] border border-cyan-400/30 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/[0.25] hover:text-white transition-all"><Video className="h-3 w-3" />Order Video</Link>
+                        <Link href={`/dashboard/lens/coach?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-400/[0.15] border border-blue-400/30 text-[10px] font-bold text-blue-200 hover:bg-blue-400/[0.25] hover:text-white transition-all"><Camera className="h-3 w-3" />Coach</Link>
+                        <Link href={`/dashboard/lens/descriptions?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-400/[0.15] border border-sky-400/30 text-[10px] font-bold text-sky-200 hover:bg-sky-400/[0.25] hover:text-white transition-all"><FileText className="h-3 w-3" />Description</Link>
+                        <Link href={`/dashboard/lens/design-studio?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-400/[0.15] border border-indigo-400/30 text-[10px] font-bold text-indigo-200 hover:bg-indigo-400/[0.25] hover:text-white transition-all"><PenTool className="h-3 w-3" />Design</Link>
+                        <Link href={`/dashboard/lens/staging?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-400/[0.15] border border-violet-400/30 text-[10px] font-bold text-violet-200 hover:bg-violet-400/[0.25] hover:text-white transition-all"><Sofa className="h-3 w-3" />Stage</Link>
                       </div>
                     </div>
                   </div>
@@ -854,7 +854,7 @@ export default function DashboardPage() {
 
         {/* ═══ MORE TOOLS — Realtor & Photographer links ═══ */}
         <div id="more-tools" className="mc-animate mt-10" style={{ animationDelay: "0.55s" }}>
-          <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-4">More Tools & Resources</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">More Tools & Resources</p>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { icon: Video, label: "My Videos", desc: "Watch, download & share", href: "/dashboard/videos" },
@@ -872,15 +872,15 @@ export default function DashboardPage() {
               ]),
               { icon: BookOpen, label: "Photography Guide", desc: "32-page free guide", href: "/resources/photography-guide" },
             ].map((item, i) => (
-              <Link key={item.label} href={item.href} className="group flex items-center gap-3.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3.5 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] backdrop-blur-sm">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/[0.06] ring-1 ring-cyan-400/10">
-                  <item.icon className="h-3.5 w-3.5 text-cyan-400/60 group-hover:text-cyan-400 transition-colors" />
+              <Link key={item.label} href={item.href} className="group flex items-center gap-3.5 rounded-xl border border-white/[0.1] bg-white/[0.05] px-4 py-3.5 transition-all hover:border-cyan-400/30 hover:bg-white/[0.08] backdrop-blur-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/[0.15] ring-1 ring-cyan-400/25">
+                  <item.icon className="h-3.5 w-3.5 text-cyan-300 group-hover:text-cyan-200 transition-colors" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white/70 group-hover:text-cyan-300 transition-colors">{item.label}</p>
-                  <p className="text-[10px] text-white/30">{item.desc}</p>
+                  <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">{item.label}</p>
+                  <p className="text-[10px] text-white/55">{item.desc}</p>
                 </div>
-                <ArrowRight className="h-3.5 w-3.5 text-white/15 group-hover:text-cyan-400/50 transition-all group-hover:translate-x-0.5 flex-shrink-0" />
+                <ArrowRight className="h-3.5 w-3.5 text-white/35 group-hover:text-cyan-300 transition-all group-hover:translate-x-0.5 flex-shrink-0" />
               </Link>
             ))}
           </div>
