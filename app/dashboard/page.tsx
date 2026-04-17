@@ -690,16 +690,16 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ═══ FREE PRIZE COUNTDOWN — subscriber on free month ═══ */}
-        {isFreePrize && freeLensDaysLeft !== null && isSubscriber && (
-          <div className={`mc-animate mt-4 rounded-xl border p-4 ${freeLensDaysLeft <= 5 ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-cyan-400/15 bg-cyan-400/[0.04]"}`} style={{ animationDelay: "0.1s" }}>
+        {/* ═══ FREE PRIZE COUNTDOWN — only shows when 5 days or less remain ═══ */}
+        {isFreePrize && freeLensDaysLeft !== null && freeLensDaysLeft <= 5 && isSubscriber && (
+          <div className="mc-animate mt-4 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4" style={{ animationDelay: "0.1s" }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Gift className={`h-4 w-4 ${freeLensDaysLeft <= 5 ? "text-amber-400" : "text-cyan-400"}`} />
-                <span className="text-sm font-bold text-white/90">Free Lens Month</span>
-                <span className={`text-sm font-bold ${freeLensDaysLeft <= 5 ? "text-amber-400" : "text-cyan-400"}`}>{freeLensDaysLeft} day{freeLensDaysLeft !== 1 ? "s" : ""} left</span>
+                <Zap className="h-4 w-4 text-amber-400" />
+                <span className="text-sm font-bold text-white/90">Your free Lens Pro expires in</span>
+                <span className="text-sm font-bold text-amber-400">{freeLensDaysLeft} day{freeLensDaysLeft !== 1 ? "s" : ""}</span>
               </div>
-              {freeLensDaysLeft <= 5 && <Link href="/lens"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs">Subscribe — $27.95/mo</Button></Link>}
+              <Link href="/lens#pricing"><Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-white font-bold text-xs">Subscribe to keep access</Button></Link>
             </div>
           </div>
         )}
