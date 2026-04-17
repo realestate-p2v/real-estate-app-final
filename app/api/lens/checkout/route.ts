@@ -9,6 +9,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_IDS: Record<string, string> = {
   monthly: "price_1TEF6yI0vU9PjDcwOMm8pBOn",
   yearly: "price_1TEF6yI0vU9PjDcwsQhNGU3a",
+  pro_monthly: "PASTE_STRIPE_PRO_MONTHLY_PRICE_ID_HERE",
+  pro_yearly: "PASTE_STRIPE_PRO_YEARLY_PRICE_ID_HERE",
 };
 
 export async function POST(request: Request) {
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
 
     if (!plan || !PRICE_IDS[plan]) {
       return NextResponse.json(
-        { success: false, error: "Invalid plan. Must be 'monthly' or 'yearly'." },
+        { success: false, error: "Invalid plan. Must be 'monthly', 'yearly', 'pro_monthly', or 'pro_yearly'." },
         { status: 400 }
       );
     }
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const subscriptionTier = plan.startsWith("pro") ? "pro" : "tools";
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://realestatephoto2video.com"}/dashboard/lens?subscribed=true`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://realestatephoto2video.com"}/dashboard?subscribed=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://realestatephoto2video.com"}/lens`,
       client_reference_id: user_id,
       metadata: {
@@ -64,6 +68,7 @@ export async function POST(request: Request) {
         user_email,
         plan,
         product: "lens",
+        subscription_tier: subscriptionTier,
       },
       subscription_data: {
         metadata: {
@@ -71,6 +76,7 @@ export async function POST(request: Request) {
           user_email,
           plan,
           product: "lens",
+          subscription_tier: subscriptionTier,
         },
       },
     };
