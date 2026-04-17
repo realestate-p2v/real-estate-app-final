@@ -65,6 +65,27 @@ const mcStyles = `
     0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.25), 0 0 60px rgba(34, 197, 94, 0.1); }
     50%      { box-shadow: 0 0 28px rgba(34, 197, 94, 0.4),  0 0 80px rgba(34, 197, 94, 0.18); }
   }
+  @keyframes mc-start-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.35), 0 0 0 0 rgba(34, 211, 238, 0);
+      border-color: rgba(34, 211, 238, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.15), 0 0 28px 4px rgba(34, 211, 238, 0.25);
+      border-color: rgba(34, 211, 238, 0.6);
+    }
+  }
+  @keyframes mc-start-badge {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-2px); }
+  }
+  .mc-start-here {
+    animation: mc-start-pulse 2.4s ease-in-out infinite;
+    border-color: rgba(34, 211, 238, 0.4) !important;
+  }
+  .mc-start-badge {
+    animation: mc-start-badge 2.4s ease-in-out infinite;
+  }
   .mc-animate {
     opacity: 0;
     animation: mc-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -231,6 +252,7 @@ interface ToolDef {
   badge?: string;
   badgeColor?: string;
   crown?: "silver" | "gold";
+  startHere?: boolean;
 }
 
 /* ─────────────────────────────────────────────
@@ -315,6 +337,7 @@ export default function DashboardPage() {
   const [signupPrizeLabel, setSignupPrizeLabel] = useState("");
   const [hasDirectoryListing, setHasDirectoryListing] = useState<boolean | null>(null);
   const [access, setAccess] = useState<AccessResult>({ allowed: false, reason: "free", tier: "free", hasVideo: false });
+  const [hasPaidOrder, setHasPaidOrder] = useState(false);
 
   // Subscribe banner dismiss (resets each visit — intentional gentle reminder)
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -358,6 +381,7 @@ export default function DashboardPage() {
         .eq("user_id", authUser.id)
         .eq("payment_status", "paid");
       const hasPaidOrder = (orderCount || 0) > 0;
+      setHasPaidOrder(hasPaidOrder);
 
       // ── Build access result ──
       const accessResult = checkAccess(authUser.email || "", usage, hasPaidOrder);
@@ -490,7 +514,7 @@ export default function DashboardPage() {
   };
 
   const tools: ToolDef[] = [
-    { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
+    { icon: hasAccess ? Film : Video, label: "Order a Video", desc: hasAccess ? "Cinematic listing walkthrough from $4.95/clip" : "Cinematic listing walkthrough from $79", href: "/order", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20", startHere: !hasPaidOrder },
     { icon: Film, label: "Video Remix", desc: isVideoOnly || hasAccess ? "Remix your clips into social-ready videos with music & branding" : "Recut your clips into new videos — free forever", href: "/dashboard/lens/remix", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20", ...gated("video_remix") },
     { icon: MessageSquare, label: "Description Writer", desc: "MLS-ready listing copy from your photos", href: "/dashboard/lens/descriptions", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20", stat: descriptionCount > 0 ? `${descriptionCount} description${descriptionCount !== 1 ? "s" : ""}` : null, ...gated("description_writer") },
     { icon: PenTool, label: "Design Studio", desc: "Marketing graphics, listing flyers, branding cards", href: "/dashboard/lens/design-studio", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20", ...gated("design_studio") },
@@ -663,6 +687,7 @@ export default function DashboardPage() {
           {tools.map((tool, i) => {
             const isScrollLink = tool.href.startsWith("#");
             const isExternal = tool.href.startsWith("http");
+            const startHereClass = tool.startHere ? " mc-start-here" : "";
 
             let Wrapper: any;
             let wrapperProps: any;
@@ -674,7 +699,7 @@ export default function DashboardPage() {
                   const el = document.getElementById(tool.href.slice(1));
                   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                 },
-                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] text-left w-full",
+                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06] text-left w-full" + startHereClass,
                 style: { animationDelay: `${0.18 + i * 0.05}s` },
               };
             } else if (isExternal) {
@@ -683,22 +708,27 @@ export default function DashboardPage() {
                 href: tool.href,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
+                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]" + startHereClass,
                 style: { animationDelay: `${0.18 + i * 0.05}s` },
               };
             } else {
               Wrapper = Link;
               wrapperProps = {
                 href: tool.href,
-                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]",
+                className: "mc-chip-animate group relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]" + startHereClass,
                 style: { animationDelay: `${0.18 + i * 0.05}s` },
               };
             }
 
             return (
               <Wrapper key={tool.label} {...wrapperProps}>
-                {/* Crown tier indicator + optional trial badge */}
+                {/* Crown tier indicator + optional trial badge + start-here beacon */}
                 <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                  {tool.startHere && (
+                    <span className="mc-start-badge text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-400 text-gray-900 shadow-lg shadow-cyan-400/40">
+                      ★ Start Here
+                    </span>
+                  )}
                   {tool.badge && (
                     <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor || ""}`}>
                       {tool.badge}
