@@ -235,6 +235,8 @@ interface RecentProperty {
   sqft: number | null;
   price: number | null;
   special_features: string[] | null;
+  hero_image_url?: string | null;
+  website_curated?: any;
 }
 
 /* ─────────────────────────────────────────────
@@ -429,7 +431,7 @@ export default function DashboardPage() {
         supabase.from("lens_enhancements").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("agent_properties").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("agent_properties")
-          .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features")
+          .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features, website_curated")
           .eq("user_id", authUser.id).is("merged_into_id", null)
           .order("updated_at", { ascending: false }).limit(5),
         supabase.from("agent_websites")
@@ -472,6 +474,21 @@ export default function DashboardPage() {
     if (prop.price) p.set("price", prop.price.toString());
     if (prop.special_features?.length) p.set("specialFeatures", prop.special_features.join(", "));
     return p.toString();
+  };
+
+  /* ─── Pull the first usable image out of a property's website_curated blob ─── */
+  const getPropertyThumb = (prop: RecentProperty): string | null => {
+    if (prop.hero_image_url) return prop.hero_image_url;
+    const curated = prop.website_curated;
+    if (!curated) return null;
+    const extract = (arr: any): string | null => {
+      if (!Array.isArray(arr) || arr.length === 0) return null;
+      const first = arr[0];
+      if (typeof first === "string") return first;
+      return first?.url || first?.secure_url || null;
+    };
+    if (Array.isArray(curated)) return extract(curated);
+    return extract(curated.photos) || extract(curated.hero) || extract(curated.images) || null;
   };
 
   if (!coreReady) {
@@ -786,23 +803,47 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {recentProperties.map(prop => {
                 const qs = buildQs(prop);
+                const thumb = getPropertyThumb(prop);
                 return (
-                  <div key={prop.id} className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <Link href={`/dashboard/properties/${prop.id}`} className="text-sm font-bold text-white/80 hover:text-cyan-300 transition-colors truncate">{prop.address}</Link>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/20 text-green-300" : prop.status === "sold" ? "bg-blue-400/20 text-blue-300" : "bg-white/10 text-white/40"}`}>{prop.status}</span>
-                        <Link href={`/dashboard/properties/${prop.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-400/[0.08] border border-cyan-400/15 text-[11px] font-bold text-cyan-400 hover:bg-cyan-400/[0.15] hover:text-cyan-300 transition-all">
-                          <Edit className="h-3 w-3" />Edit Property
-                        </Link>
+                  <div key={prop.id} className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 flex gap-4">
+                    {/* Thumbnail */}
+                    <Link
+                      href={`/dashboard/properties/${prop.id}`}
+                      className="relative block h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 rounded-lg overflow-hidden bg-white/[0.04] border border-white/[0.06] group"
+                      aria-label={`View ${prop.address}`}
+                    >
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt={prop.address}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(99,102,241,0.12) 50%, rgba(168,85,247,0.1) 100%)" }}>
+                          <Home className="h-6 w-6 text-white/25" />
+                        </div>
+                      )}
+                    </Link>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-3">
+                        <Link href={`/dashboard/properties/${prop.id}`} className="text-sm font-bold text-white/80 hover:text-cyan-300 transition-colors truncate">{prop.address}</Link>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.status === "active" ? "bg-green-400/20 text-green-300" : prop.status === "sold" ? "bg-blue-400/20 text-blue-300" : "bg-white/10 text-white/40"}`}>{prop.status}</span>
+                          <Link href={`/dashboard/properties/${prop.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-400/[0.08] border border-cyan-400/15 text-[11px] font-bold text-cyan-400 hover:bg-cyan-400/[0.15] hover:text-cyan-300 transition-all">
+                            <Edit className="h-3 w-3" />Edit Property
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Link href={`/order?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/[0.06] border border-cyan-400/10 text-[10px] font-semibold text-cyan-400/80 hover:bg-cyan-400/[0.12] hover:text-cyan-300 transition-all"><Video className="h-3 w-3" />Order Video</Link>
-                      <Link href={`/dashboard/lens/coach?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-400/[0.06] border border-blue-400/10 text-[10px] font-semibold text-blue-400/80 hover:bg-blue-400/[0.12] hover:text-blue-300 transition-all"><Camera className="h-3 w-3" />Coach</Link>
-                      <Link href={`/dashboard/lens/descriptions?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-400/[0.06] border border-sky-400/10 text-[10px] font-semibold text-sky-400/80 hover:bg-sky-400/[0.12] hover:text-sky-300 transition-all"><FileText className="h-3 w-3" />Description</Link>
-                      <Link href={`/dashboard/lens/design-studio?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-400/[0.06] border border-indigo-400/10 text-[10px] font-semibold text-indigo-400/80 hover:bg-indigo-400/[0.12] hover:text-indigo-300 transition-all"><PenTool className="h-3 w-3" />Design</Link>
-                      <Link href={`/dashboard/lens/staging?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-400/[0.06] border border-violet-400/10 text-[10px] font-semibold text-violet-400/80 hover:bg-violet-400/[0.12] hover:text-violet-300 transition-all"><Sofa className="h-3 w-3" />Stage</Link>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Link href={`/order?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/[0.06] border border-cyan-400/10 text-[10px] font-semibold text-cyan-400/80 hover:bg-cyan-400/[0.12] hover:text-cyan-300 transition-all"><Video className="h-3 w-3" />Order Video</Link>
+                        <Link href={`/dashboard/lens/coach?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-400/[0.06] border border-blue-400/10 text-[10px] font-semibold text-blue-400/80 hover:bg-blue-400/[0.12] hover:text-blue-300 transition-all"><Camera className="h-3 w-3" />Coach</Link>
+                        <Link href={`/dashboard/lens/descriptions?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-400/[0.06] border border-sky-400/10 text-[10px] font-semibold text-sky-400/80 hover:bg-sky-400/[0.12] hover:text-sky-300 transition-all"><FileText className="h-3 w-3" />Description</Link>
+                        <Link href={`/dashboard/lens/design-studio?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-400/[0.06] border border-indigo-400/10 text-[10px] font-semibold text-indigo-400/80 hover:bg-indigo-400/[0.12] hover:text-indigo-300 transition-all"><PenTool className="h-3 w-3" />Design</Link>
+                        <Link href={`/dashboard/lens/staging?${qs}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-400/[0.06] border border-violet-400/10 text-[10px] font-semibold text-violet-400/80 hover:bg-violet-400/[0.12] hover:text-violet-300 transition-all"><Sofa className="h-3 w-3" />Stage</Link>
+                      </div>
                     </div>
                   </div>
                 );
