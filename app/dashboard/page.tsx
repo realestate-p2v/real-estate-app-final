@@ -542,13 +542,15 @@ export default function DashboardPage() {
     {
       icon: Globe,
       label: "My Agent Website",
-      desc: agentWebsite?.status === "published"
-        ? `${agentWebsite.handle}.p2v.homes — Edit your live site`
-        : agentWebsite
-        ? "Finish setting up your agent website"
-        : "Get your agent website with Lens Pro",
-      href: agentWebsite
-        ? `https://${agentWebsite.handle}.p2v.homes/editor`
+      desc: (access.tier === "pro" || access.tier === "admin")
+        ? agentWebsite
+          ? agentWebsite.handle + ".p2v.homes — View & edit your site"
+          : "Start building your agent website on p2v.homes"
+        : "Get your own branded agent website with Lens Pro",
+      href: (access.tier === "pro" || access.tier === "admin")
+        ? agentWebsite
+          ? "https://" + agentWebsite.handle + ".p2v.homes"
+          : "/dashboard/websites"
         : "/lens#pricing",
       color: "text-sky-400",
       bg: "bg-sky-400/10",
