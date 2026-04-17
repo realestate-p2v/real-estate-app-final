@@ -586,15 +586,23 @@ export default function DashboardPage() {
 
         {/* ═══ TOP BAR ═══ */}
         <div className="mc-animate flex items-center justify-between mb-4" style={{ animationDelay: "0.05s" }}>
-         {/* LEFT — announcements area */}
+        {/* LEFT — announcements / urgent notifications */}
           <div className="flex items-center gap-3">
-            {signupPrizeCode && !isSubscriber && (
-              <div className="flex items-center gap-2 rounded-xl border border-green-400/20 bg-green-400/[0.06] px-3.5 py-2 backdrop-blur-sm">
+            {/* Priority 1: Free prize expiring soon (≤5 days) */}
+            {isFreePrize && freeLensDaysLeft !== null && freeLensDaysLeft <= 5 && isSubscriber ? (
+              <div className="flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3.5 py-2">
+                <Zap className="h-3.5 w-3.5 text-amber-400" />
+                <span className="text-xs font-bold text-amber-300">Lens Pro expires in {freeLensDaysLeft} day{freeLensDaysLeft !== 1 ? "s" : ""}</span>
+                <Link href="/lens#pricing" className="text-xs font-bold text-amber-400 hover:text-amber-300 underline underline-offset-2 transition-colors">Subscribe</Link>
+              </div>
+            ) : signupPrizeCode && !isSubscriber ? (
+              /* Priority 2: Unused discount code */
+              <div className="flex items-center gap-2 rounded-xl border border-green-400/20 bg-green-400/[0.06] px-3.5 py-2">
                 <Gift className="h-3.5 w-3.5 text-green-400" />
                 <span className="text-xs font-bold text-green-300">{signupPrizeLabel}</span>
                 <span className="text-xs font-mono font-bold bg-green-400/10 px-1.5 py-0.5 rounded text-green-300">{signupPrizeCode}</span>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* RIGHT — mode toggle + subscriber badge */}
