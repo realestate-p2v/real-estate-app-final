@@ -9,8 +9,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_IDS: Record<string, string> = {
   monthly: "price_1TEF6yI0vU9PjDcwOMm8pBOn",
   yearly: "price_1TEF6yI0vU9PjDcwsQhNGU3a",
-  pro_monthly: "PASTE_STRIPE_PRO_MONTHLY_PRICE_ID_HERE",
-  pro_yearly: "PASTE_STRIPE_PRO_YEARLY_PRICE_ID_HERE",
+  pro_monthly: "price_1TNAf5I0vU9PjDcw1mq4X1Io",
+  pro_yearly: "price_1TNAfTI0vU9PjDcw8CTpNcV8",
 };
 
 export async function POST(request: Request) {
