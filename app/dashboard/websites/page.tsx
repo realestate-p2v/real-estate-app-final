@@ -1,558 +1,796 @@
-"use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+ "use client";
+
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Navigation } from "@/components/navigation";
+import Link from "next/link";
+import {
+  DashboardShell,
+  useAccent,
+} from "@/components/dashboard-shell";
 import { Button } from "@/components/ui/button";
-import UpgradeModal from "@/components/upgrade-modal";
+import { createClient } from "@/lib/supabase/client";
 import {
   ArrowLeft,
+  ArrowRight,
   Globe,
-  Plus,
-  Eye,
-  Settings,
-  Trash2,
-  ExternalLink,
+  Check,
   Loader2,
-  Home,
+  Upload,
   User,
-  BarChart3,
-  Users,
-  MousePointer,
-  Copy,
-  CheckCircle,
-  Crown,
-  Zap,
-  AlertCircle,
+  Sparkles,
+  Eye,
+  Palette,
+  Link as LinkIcon,
+  ToggleLeft,
+  ToggleRight,
+  BookOpen,
+  CalendarDays,
+  FileText,
+  Home,
+  X,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
-interface Website {
-  id: string;
-  name: string;
-  site_type: "property" | "agent";
-  status: "draft" | "published" | "suspended";
-  slug: string | null;
-  custom_domain: string | null;
-  template: string;
-  billing_type: "included" | "addon" | "owned";
-  view_count: number;
-  lead_count: number;
-  last_viewed_at: string | null;
-  owned_at: string | null;
-  owned_expires_pro_at: string | null;
-  created_at: string;
-  updated_at: string;
-  property_id: string | null;
+/* ═══════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════ */
+
+const TEMPLATES = [
+  {
+    id: "classic",
+    label: "Classic",
+    desc: "Clean layout, professional typography, versatile for any market.",
+    gradient: "from-slate-800 via-slate-700 to-slate-600",
+    accent: "#06b6d4",
+  },
+  {
+    id: "modern",
+    label: "Modern",
+    desc: "Bold sans-serif, generous whitespace, contemporary feel.",
+    gradient: "from-zinc-900 via-zinc-800 to-zinc-700",
+    accent: "#3b82f6",
+  },
+  {
+    id: "bold",
+    label: "Bold",
+    desc: "High contrast, dramatic typography, luxury-forward.",
+    gradient: "from-gray-950 via-gray-900 to-gray-800",
+    accent: "#f59e0b",
+  },
+];
+
+const PRIMARY_COLORS = [
+  { hex: "#06b6d4", label: "Cyan" },
+  { hex: "#3b82f6", label: "Blue" },
+  { hex: "#6366f1", label: "Indigo" },
+  { hex: "#8b5cf6", label: "Violet" },
+  { hex: "#ec4899", label: "Pink" },
+  { hex: "#ef4444", label: "Red" },
+  { hex: "#f97316", label: "Orange" },
+  { hex: "#eab308", label: "Yellow" },
+  { hex: "#22c55e", label: "Green" },
+  { hex: "#14b8a6", label: "Teal" },
+  { hex: "#0f172a", label: "Navy" },
+  { hex: "#78716c", label: "Stone" },
+];
+
+const SOCIAL_PLATFORMS = [
+  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
+  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
+  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/yourprofile" },
+  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@yourchannel" },
+  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@yourhandle" },
+];
+
+function generateHandle(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/-+/g, "")
+    .slice(0, 30);
 }
 
-const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
+/* ═══════════════════════════════════════════════
+   DARK INPUT PRIMITIVES
+   ═══════════════════════════════════════════════ */
 
-const STATUS_STYLES: Record<string, { label: string; classes: string }> = {
-  draft: { label: "Draft", classes: "bg-gray-100 text-gray-600" },
-  published: { label: "Live", classes: "bg-green-100 text-green-700" },
-  suspended: { label: "Suspended", classes: "bg-red-100 text-red-600" },
-};
-
-const BILLING_LABELS: Record<string, { label: string; classes: string }> = {
-  included: { label: "Included", classes: "bg-cyan-100 text-cyan-700" },
-  addon: { label: "Add-on", classes: "bg-blue-100 text-blue-700" },
-  owned: { label: "Owned", classes: "bg-amber-100 text-amber-700" },
-};
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}d ago`;
-  return `${Math.floor(day / 30)}mo ago`;
+function DarkInput({ label, hint, ...props }: { label: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">{label}</label>
+      <input
+        {...props}
+        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-sky-400/40 focus:outline-none focus:ring-1 focus:ring-sky-400/20 transition-colors"
+      />
+      {hint && <p className="text-[11px] text-white/25 mt-1.5">{hint}</p>}
+    </div>
+  );
 }
 
-export default function WebsitesPage() {
+function DarkTextarea({ label, hint, ...props }: { label: string; hint?: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">{label}</label>
+      <textarea
+        {...props}
+        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-sky-400/40 focus:outline-none focus:ring-1 focus:ring-sky-400/20 transition-colors resize-none"
+      />
+      {hint && <p className="text-[11px] text-white/25 mt-1.5">{hint}</p>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   DEFAULT EXPORT — Suspense wrapper
+   ═══════════════════════════════════════════════ */
+export default function WebsiteSetupPage() {
+  return (
+    <DashboardShell accent="sky" maxWidth="3xl">
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
+        </div>
+      }>
+        <WizardInner />
+      </Suspense>
+    </DashboardShell>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   WIZARD COMPONENT
+   ═══════════════════════════════════════════════ */
+function WizardInner() {
   const router = useRouter();
-  const supabase = createClient();
+  const a = useAccent();
 
+  /* ─── Auth + profile state ─── */
   const [loading, setLoading] = useState(true);
-  const [websites, setWebsites] = useState<Website[]>([]);
-  const [subscriptionTier, setSubscriptionTier] = useState<"none" | "lens" | "pro">("none");
-  const [includedSiteUsed, setIncludedSiteUsed] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hasExistingSite, setHasExistingSite] = useState(false);
+  const [existingHandle, setExistingHandle] = useState<string | null>(null);
+  const [existingStatus, setExistingStatus] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login?redirect=/dashboard/websites");
+  /* ─── Step tracking ─── */
+  const [step, setStep] = useState(1);
+  const TOTAL_STEPS = 5;
+
+  /* ─── Step 1: Your Site ─── */
+  const [handle, setHandle] = useState("");
+  const [handleAvailable, setHandleAvailable] = useState<boolean | null>(null);
+  const [checkingHandle, setCheckingHandle] = useState(false);
+  const [siteTitle, setSiteTitle] = useState("");
+  const [tagline, setTagline] = useState("");
+
+  /* ─── Step 2: About You ─── */
+  const [bio, setBio] = useState("");
+  const [aboutContent, setAboutContent] = useState("");
+  const [aboutPhotoUrl, setAboutPhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const aboutPhotoRef = useRef<HTMLInputElement>(null);
+
+  /* ─── Step 3: Brand & Design ─── */
+  const [template, setTemplate] = useState("classic");
+  const [primaryColor, setPrimaryColor] = useState("#06b6d4");
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
+
+  /* ─── Step 4: Features ─── */
+  const [blogEnabled, setBlogEnabled] = useState(true);
+  const [calendarEnabled, setCalendarEnabled] = useState(false);
+  const [reportsPublic, setReportsPublic] = useState(false);
+  const [listingsOptIn, setListingsOptIn] = useState(true);
+
+  /* ═══ INIT ═══ */
+  useEffect(() => {
+    const init = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        router.push("/login?redirect=/dashboard/websites");
+        return;
+      }
+
+      const authUser = session.user;
+      setUserId(authUser.id);
+
+      // Check if they already have an agent website
+      const { data: existing } = await supabase
+        .from("agent_websites")
+        .select("handle, status")
+        .eq("user_id", authUser.id)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        setHasExistingSite(true);
+        setExistingHandle(existing[0].handle);
+        setExistingStatus(existing[0].status);
+        setLoading(false);
+        return;
+      }
+
+      // Pre-fill from agent profile
+      const { data: profile } = await supabase
+        .from("lens_usage")
+        .select("saved_agent_name, saved_company, saved_phone, saved_email, saved_website, saved_headshot_url, saved_logo_url, saved_location")
+        .eq("user_id", authUser.id)
+        .limit(1);
+
+      if (profile && profile.length > 0) {
+        const p = profile[0];
+        const name = p.saved_agent_name || "";
+        const company = p.saved_company || "";
+
+        if (name) {
+          setSiteTitle(name + (company ? " \u2014 " + company : ""));
+          setHandle(generateHandle(name));
+        }
+        if (p.saved_headshot_url) setAboutPhotoUrl(p.saved_headshot_url);
+        if (p.saved_location) setTagline("Your trusted real estate professional in " + p.saved_location);
+      }
+
+      setLoading(false);
+    };
+    init();
+  }, [router]);
+
+  /* ═══ HANDLE AVAILABILITY CHECK ═══ */
+  const checkHandle = useCallback(async () => {
+    if (!handle.trim() || handle.trim().length < 3) {
+      setHandleAvailable(null);
       return;
     }
+    setCheckingHandle(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("agent_websites")
+      .select("handle")
+      .eq("handle", handle.trim().toLowerCase())
+      .limit(1);
 
-    const isAdmin = ADMIN_EMAILS.includes(user.email || "");
-
-    // Get subscription info
-    if (isAdmin) {
-      setSubscriptionTier("pro");
-    } else {
-      const { data: usage } = await supabase
-        .from("lens_usage")
-        .select("is_subscriber, subscription_tier, included_website_used")
-        .eq("user_id", user.id)
-        .single();
-
-      if (usage?.subscription_tier === "pro") {
-        setSubscriptionTier("pro");
-      } else if (usage?.subscription_tier === "lens" || usage?.is_subscriber) {
-        setSubscriptionTier("lens");
-      }
-      if (usage?.included_website_used) setIncludedSiteUsed(true);
-    }
-
-    // Fetch websites
-    const { data: sites } = await supabase
-      .from("websites")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false });
-
-    setWebsites(sites || []);
-
-    // Check if included site is used based on actual data
-    if (sites && sites.length > 0) {
-      const hasIncluded = sites.some((s) => s.billing_type === "included");
-      if (hasIncluded) setIncludedSiteUsed(true);
-    }
-
-    setLoading(false);
-  }, [supabase, router]);
+    setHandleAvailable(!data || data.length === 0);
+    setCheckingHandle(false);
+  }, [handle]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleDelete = async (site: Website) => {
-    if (!confirm(`Delete "${site.name}"? This cannot be undone.`)) return;
-    setDeleting(site.id);
-    const { error } = await supabase.from("websites").delete().eq("id", site.id);
-    if (!error) {
-      setWebsites((prev) => prev.filter((s) => s.id !== site.id));
+    if (handle.trim().length >= 3) {
+      const timer = setTimeout(checkHandle, 600);
+      return () => clearTimeout(timer);
     } else {
-      alert("Failed to delete: " + error.message);
+      setHandleAvailable(null);
     }
-    setDeleting(null);
+  }, [handle, checkHandle]);
+
+  /* ═══ PHOTO UPLOAD ═══ */
+  const handlePhotoUpload = async (file: File) => {
+    if (!userId) return;
+    setUploadingPhoto(true);
+    try {
+      const cloudName = "dh6ztnoue";
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("upload_preset", "p2v_unsigned");
+      fd.append("folder", "photo2video/agent-websites");
+      const res = await fetch("https://api.cloudinary.com/v1_1/" + cloudName + "/image/upload", { method: "POST", body: fd });
+      const result = await res.json();
+      if (result.secure_url) {
+        setAboutPhotoUrl(result.secure_url);
+      } else {
+        console.error("Cloudinary upload failed:", result);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
+    setUploadingPhoto(false);
   };
 
-  const handleCreateClick = () => {
-    if (subscriptionTier !== "pro") {
-      setShowUpgradeModal(true);
+  /* ═══ SAVE / PUBLISH ═══ */
+  const handleCreate = async (publish: boolean) => {
+    if (!userId) return;
+    setSaving(true);
+
+    const supabase = createClient();
+    const now = new Date().toISOString();
+
+    // Only include non-empty social links
+    const cleanSocials: Record<string, string> = {};
+    Object.entries(socialLinks).forEach(([k, v]) => {
+      if (v.trim()) cleanSocials[k] = v.trim();
+    });
+
+    const { data, error } = await supabase
+      .from("agent_websites")
+      .insert({
+        user_id: userId,
+        handle: handle.trim().toLowerCase(),
+        site_title: siteTitle.trim() || "My Agent Website",
+        tagline: tagline.trim() || null,
+        bio: bio.trim() || null,
+        about_content: aboutContent.trim() || null,
+        about_photo_url: aboutPhotoUrl || null,
+        template: template,
+        primary_color: primaryColor,
+        social_links: cleanSocials,
+        blog_enabled: blogEnabled,
+        calendar_enabled: calendarEnabled,
+        reports_public: reportsPublic,
+        listings_opt_in: listingsOptIn,
+        seo_title: siteTitle.trim() || null,
+        seo_description: tagline.trim() || null,
+        status: publish ? "published" : "draft",
+        published_at: publish ? now : null,
+      })
+      .select("handle")
+      .limit(1);
+
+    if (error) {
+      console.error("Create error:", error);
+      alert("Failed to create website: " + error.message);
+      setSaving(false);
       return;
     }
-    if (includedSiteUsed) {
-      // They need to pay for an additional site
-      setShowUpgradeModal(true);
-      return;
+
+    const createdHandle = (data && data.length > 0) ? data[0].handle : handle.trim().toLowerCase();
+
+    if (publish) {
+      window.location.href = "https://" + createdHandle + ".p2v.homes";
+    } else {
+      router.push("/dashboard");
     }
-    router.push("/dashboard/websites/new");
   };
 
-  const copyUrl = (slug: string) => {
-    navigator.clipboard.writeText(`https://${slug}.p2v.homes`);
-    setCopiedSlug(slug);
-    setTimeout(() => setCopiedSlug(null), 2000);
+  /* ═══ STEP VALIDATION ═══ */
+  const canAdvance = () => {
+    switch (step) {
+      case 1: return handle.trim().length >= 3 && handleAvailable === true && siteTitle.trim().length > 0;
+      case 2: return true;
+      case 3: return !!template;
+      case 4: return true;
+      default: return true;
+    }
   };
 
-  // Count sites by type
-  const includedCount = websites.filter((s) => s.billing_type === "included").length;
-  const addonCount = websites.filter((s) => s.billing_type === "addon").length;
-  const ownedCount = websites.filter((s) => s.billing_type === "owned").length;
-  const totalViews = websites.reduce((sum, s) => sum + (s.view_count || 0), 0);
-  const totalLeads = websites.reduce((sum, s) => sum + (s.lead_count || 0), 0);
+  const stepLabels = ["Your Site", "About You", "Brand & Design", "Features", "Review & Launch"];
 
+  /* ═══ LOADING STATE ═══ */
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
       </div>
     );
   }
 
-  // If not Pro and no existing sites, show full-page upgrade
-  if (subscriptionTier !== "pro" && websites.length === 0) {
+  /* ═══ EXISTING SITE ═══ */
+  if (hasExistingSite && existingHandle) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          currentTier={subscriptionTier}
-          includedSiteUsed={includedSiteUsed}
-        />
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex items-center gap-3 mb-8">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+      <div className="mc-animate py-20 text-center">
+        <div className="mx-auto h-20 w-20 rounded-2xl bg-sky-400/10 ring-1 ring-sky-400/20 flex items-center justify-center mb-6">
+          <Globe className="h-10 w-10 text-sky-400" />
+        </div>
+        <h1 className="text-2xl font-extrabold text-white mb-3">You already have a website</h1>
+        <p className="text-white/50 mb-1 text-lg font-semibold">{existingHandle}.p2v.homes</p>
+        {existingStatus === "draft" && (
+          <p className="text-amber-400/70 text-sm mb-4">Status: Draft — publish it from your editor to go live</p>
+        )}
+        {existingStatus === "published" && (
+          <p className="text-green-400/70 text-sm mb-4">Your site is live</p>
+        )}
+        <div className="flex items-center justify-center gap-4 mt-6">
+          <a
+            href={"https://" + existingHandle + ".p2v.homes"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={"inline-flex items-center gap-2 font-bold px-6 py-3 rounded-xl transition-colors " + a.btnBg + " " + a.btnBgHover + " text-white"}
+          >
+            <Eye className="h-4 w-4" />
+            View Your Site
+          </a>
+          <a
+            href={"https://" + existingHandle + ".p2v.homes/editor"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold px-6 py-3 rounded-xl transition-colors"
+          >
+            <Sparkles className="h-4 w-4" />
+            Open Editor
+          </a>
+        </div>
+        <Link href="/dashboard" className="inline-block mt-8 text-sm text-white/30 hover:text-white/50 transition-colors">
+          &larr; Back to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  /* ═══════════════════════════════════════════════
+     WIZARD RENDER
+     ═══════════════════════════════════════════════ */
+  return (
+    <div className="mc-animate" style={{ animationDelay: "0.05s" }}>
+
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <Link href="/dashboard" className="text-white/30 hover:text-white/60 transition-colors">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-extrabold text-white">Create Your Agent Website</h1>
+          <p className="text-sm text-white/40 mt-0.5">Step {step} of {TOTAL_STEPS} &mdash; {stepLabels[step - 1]}</p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="flex items-center gap-1.5 mb-10">
+        {stepLabels.map((label, i) => (
+          <div key={label} className="flex-1">
+            <div className={"h-1.5 rounded-full transition-all duration-300 " + (i + 1 <= step ? "bg-sky-400" : "bg-white/[0.06]")} />
+            <p className={"text-[10px] font-semibold mt-1.5 transition-colors " + (i + 1 === step ? "text-sky-400" : i + 1 < step ? "text-white/40" : "text-white/20")}>
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══ STEP 1: YOUR SITE ═══ */}
+      {step === 1 && (
+        <div className="space-y-6 mc-animate" style={{ animationDelay: "0.1s" }}>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm space-y-5">
+            <DarkInput
+              label="Site Title"
+              value={siteTitle}
+              onChange={(e) => setSiteTitle(e.target.value)}
+              placeholder="Jane Smith &mdash; Coldwell Banker Realty"
+              hint="Your name and brokerage. Appears in the hero and browser tab."
+            />
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">My Websites</h1>
-              <p className="text-muted-foreground mt-1">Create and manage your property and portfolio websites</p>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">Your Handle</label>
+              <div className="flex items-center gap-0">
+                <input
+                  type="text"
+                  value={handle}
+                  onChange={(e) => {
+                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
+                    setHandle(val);
+                    setHandleAvailable(null);
+                  }}
+                  placeholder="janesmith"
+                  className="flex-1 rounded-l-xl border border-r-0 border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-sky-400/40 focus:outline-none focus:ring-1 focus:ring-sky-400/20 transition-colors font-mono"
+                />
+                <div className="rounded-r-xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm text-white/40 font-mono whitespace-nowrap">
+                  .p2v.homes
+                </div>
+              </div>
+              <div className="mt-2 h-5">
+                {checkingHandle && (
+                  <p className="text-xs text-white/30 flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Checking availability...
+                  </p>
+                )}
+                {!checkingHandle && handleAvailable === true && handle.trim().length >= 3 && (
+                  <p className="text-xs text-green-400 flex items-center gap-1.5">
+                    <Check className="h-3 w-3" /> {handle}.p2v.homes is available
+                  </p>
+                )}
+                {!checkingHandle && handleAvailable === false && (
+                  <p className="text-xs text-red-400 flex items-center gap-1.5">
+                    <X className="h-3 w-3" /> {handle}.p2v.homes is taken &mdash; try another
+                  </p>
+                )}
+              </div>
+            </div>
+            <DarkInput
+              label="Tagline"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              placeholder="Your trusted real estate professional in Austin, TX"
+              hint="One line that describes what you do. Shows below your name on the homepage."
+            />
+          </div>
+
+          {handle.trim().length >= 3 && handleAvailable === true && siteTitle.trim() && (
+            <div className="rounded-xl border border-sky-400/15 bg-sky-400/[0.04] p-4 mc-animate">
+              <p className="text-xs font-semibold text-sky-400/60 mb-1">Your website will be live at</p>
+              <p className="text-sm font-bold text-white font-mono">https://{handle}.p2v.homes</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ STEP 2: ABOUT YOU ═══ */}
+      {step === 2 && (
+        <div className="space-y-6 mc-animate" style={{ animationDelay: "0.1s" }}>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm space-y-5">
+            {/* Photo upload */}
+            <div>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Profile Photo</label>
+              <div className="flex items-center gap-5">
+                <div className="relative group flex-shrink-0">
+                  <div className="h-20 w-20 rounded-full overflow-hidden bg-white/[0.06] border-2 border-white/[0.08] transition-colors group-hover:border-sky-400/30">
+                    {aboutPhotoUrl ? (
+                      <img src={aboutPhotoUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User className="h-8 w-8 text-white/20" />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => aboutPhotoRef.current?.click()}
+                    className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                    ) : (
+                      <Upload className="h-5 w-5 text-white" />
+                    )}
+                  </button>
+                  <input
+                    ref={aboutPhotoRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handlePhotoUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-white/60">Appears on your homepage hero and about page.</p>
+                  <p className="text-xs text-white/30 mt-1">
+                    {aboutPhotoUrl ? "Click the photo to change it" : "Click the circle to upload"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DarkTextarea
+              label="Short Bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="15+ years helping families find their dream home in the Austin metro area. Specializing in luxury properties and new construction..."
+              rows={3}
+              hint="A quick intro — appears on your homepage and listing pages."
+            />
+            <DarkTextarea
+              label="About — Full Description"
+              value={aboutContent}
+              onChange={(e) => setAboutContent(e.target.value)}
+              placeholder="Tell your story. What makes you different? What do clients say about working with you? This appears on your About page."
+              rows={6}
+              hint="The full version. Goes on your dedicated About page."
+            />
+          </div>
+          <p className="text-xs text-white/25 text-center">All fields are optional — you can always edit these later in your site editor.</p>
+        </div>
+      )}
+
+      {/* ═══ STEP 3: BRAND & DESIGN ═══ */}
+      {step === 3 && (
+        <div className="space-y-6 mc-animate" style={{ animationDelay: "0.1s" }}>
+          {/* Template picker */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm">
+            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">Template</label>
+            <div className="grid grid-cols-3 gap-3">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTemplate(t.id)}
+                  className={"rounded-xl border-2 p-1 transition-all " + (template === t.id ? "border-sky-400 ring-2 ring-sky-400/20" : "border-white/[0.06] hover:border-white/[0.15]")}
+                >
+                  <div className={"h-24 rounded-lg bg-gradient-to-br " + t.gradient + " flex items-end p-3"}>
+                    <div>
+                      <div className="h-1 w-12 rounded-full mb-1.5" style={{ backgroundColor: t.accent }} />
+                      <div className="h-0.5 w-8 rounded-full bg-white/20" />
+                    </div>
+                  </div>
+                  <div className="p-2.5 text-center">
+                    <p className={"text-xs font-bold " + (template === t.id ? "text-sky-400" : "text-white/70")}>{t.label}</p>
+                    <p className="text-[10px] text-white/30 mt-0.5 leading-tight">{t.desc}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="text-center py-16">
-            <div className="h-20 w-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto mb-6">
-              <Globe className="h-10 w-10 text-accent" />
+          {/* Color picker */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm">
+            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">
+              <Palette className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
+              Primary Color
+            </label>
+            <div className="grid grid-cols-6 gap-2.5">
+              {PRIMARY_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  onClick={() => setPrimaryColor(c.hex)}
+                  className={"h-10 rounded-lg border-2 transition-all " + (primaryColor === c.hex ? "border-white scale-110 shadow-lg" : "border-transparent hover:border-white/20 hover:scale-105")}
+                  style={{ backgroundColor: c.hex }}
+                  title={c.label}
+                />
+              ))}
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-3">Build Your Real Estate Website</h2>
-            <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Create stunning property listing pages and agent portfolio websites. Own them forever for $399 or subscribe to Lens Pro.
-            </p>
+            <p className="text-xs text-white/25 mt-3">Tints your buttons, links, and accent elements across the site.</p>
+          </div>
+
+          {/* Social links */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm">
+            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">
+              <LinkIcon className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
+              Social Links
+            </label>
+            <div className="space-y-3">
+              {SOCIAL_PLATFORMS.map((s) => (
+                <div key={s.key} className="flex items-center gap-3">
+                  <span className="text-xs font-semibold text-white/40 w-20 flex-shrink-0">{s.label}</span>
+                  <input
+                    type="url"
+                    value={socialLinks[s.key] || ""}
+                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, [s.key]: e.target.value }))}
+                    placeholder={s.placeholder}
+                    className="flex-1 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-white/15 focus:border-sky-400/30 focus:outline-none transition-colors"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-white/25 mt-3">Leave blank to hide. Icons appear in your site footer.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ STEP 4: FEATURES ═══ */}
+      {step === 4 && (
+        <div className="space-y-6 mc-animate" style={{ animationDelay: "0.1s" }}>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm">
+            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-5">Enable Pages & Features</label>
+            <div className="space-y-1">
+              {[
+                { key: "blog", label: "Blog", desc: "AI-generated blog posts for SEO. Write about neighborhoods, market updates, and tips.", icon: BookOpen, value: blogEnabled, setter: setBlogEnabled },
+                { key: "listings", label: "Listings Directory", desc: "Show all your published properties on your site. Visitors can browse and inquire.", icon: Home, value: listingsOptIn, setter: setListingsOptIn },
+                { key: "calendar", label: "Booking Calendar", desc: "Let visitors schedule showings and consultations directly from your site.", icon: CalendarDays, value: calendarEnabled, setter: setCalendarEnabled },
+                { key: "reports", label: "Public Reports", desc: "Make your buyer/seller reports viewable on your website for lead generation.", icon: FileText, value: reportsPublic, setter: setReportsPublic },
+              ].map((feature) => (
+                <button
+                  key={feature.key}
+                  onClick={() => feature.setter(!feature.value)}
+                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-transparent hover:border-white/[0.06] hover:bg-white/[0.02] transition-all text-left"
+                >
+                  <div className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl " + (feature.value ? "bg-sky-400/10 ring-1 ring-sky-400/20" : "bg-white/[0.04] ring-1 ring-white/[0.06]")}>
+                    <feature.icon className={"h-5 w-5 " + (feature.value ? "text-sky-400" : "text-white/25")} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={"text-sm font-bold " + (feature.value ? "text-white/90" : "text-white/50")}>{feature.label}</p>
+                    <p className="text-xs text-white/30 mt-0.5">{feature.desc}</p>
+                  </div>
+                  {feature.value ? (
+                    <ToggleRight className="h-6 w-6 text-sky-400 flex-shrink-0" />
+                  ) : (
+                    <ToggleLeft className="h-6 w-6 text-white/20 flex-shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-white/25 text-center">You can change these anytime in your site editor &rarr; Features tab.</p>
+        </div>
+      )}
+
+      {/* ═══ STEP 5: REVIEW & LAUNCH ═══ */}
+      {step === 5 && (
+        <div className="space-y-6 mc-animate" style={{ animationDelay: "0.1s" }}>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm divide-y divide-white/[0.04]">
+            {/* Site info */}
+            <div className="p-5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Website</p>
+                <p className="text-sm font-bold text-white mt-0.5">{siteTitle || "Untitled"}</p>
+                <p className="text-xs text-sky-400/60 mt-0.5 font-mono">{handle}.p2v.homes</p>
+                {tagline && <p className="text-xs text-white/30 mt-1 italic">{tagline}</p>}
+              </div>
+              <button onClick={() => setStep(1)} className="text-xs font-semibold text-sky-400/70 hover:text-sky-400 transition-colors">Edit</button>
+            </div>
+
+            {/* About */}
+            <div className="p-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {aboutPhotoUrl && (
+                  <img src={aboutPhotoUrl} alt="" className="h-12 w-12 rounded-full object-cover border border-white/[0.08] flex-shrink-0" />
+                )}
+                <div>
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">About</p>
+                  <p className="text-sm text-white/60 mt-0.5 line-clamp-2">{bio || aboutContent || "Not set yet — you can add this later"}</p>
+                </div>
+              </div>
+              <button onClick={() => setStep(2)} className="text-xs font-semibold text-sky-400/70 hover:text-sky-400 transition-colors flex-shrink-0 ml-4">Edit</button>
+            </div>
+
+            {/* Brand */}
+            <div className="p-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-8 w-8 rounded-lg border border-white/[0.08]" style={{ backgroundColor: primaryColor }} />
+                <div>
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Brand & Design</p>
+                  <p className="text-sm text-white/60 mt-0.5">
+                    {TEMPLATES.find((t) => t.id === template)?.label || template} template
+                    {Object.values(socialLinks).filter(Boolean).length > 0 && (
+                      <span className="text-white/30"> &middot; {Object.values(socialLinks).filter(Boolean).length} social link{Object.values(socialLinks).filter(Boolean).length !== 1 ? "s" : ""}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setStep(3)} className="text-xs font-semibold text-sky-400/70 hover:text-sky-400 transition-colors flex-shrink-0 ml-4">Edit</button>
+            </div>
+
+            {/* Features */}
+            <div className="p-5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Features</p>
+                <p className="text-sm text-white/60 mt-0.5">
+                  {[
+                    blogEnabled && "Blog",
+                    listingsOptIn && "Listings",
+                    calendarEnabled && "Calendar",
+                    reportsPublic && "Public Reports",
+                  ].filter(Boolean).join(", ") || "None enabled"}
+                </p>
+              </div>
+              <button onClick={() => setStep(4)} className="text-xs font-semibold text-sky-400/70 hover:text-sky-400 transition-colors flex-shrink-0 ml-4">Edit</button>
+            </div>
+          </div>
+
+          {/* Launch buttons */}
+          <div className="flex items-center gap-3 pt-2">
             <Button
-              onClick={() => setShowUpgradeModal(true)}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-8 py-3"
+              onClick={() => handleCreate(true)}
+              disabled={saving}
+              className={"flex-1 font-extrabold py-6 text-base rounded-xl text-white " + a.btnBg + " " + a.btnBgHover + " shadow-lg " + a.btnShadow}
             >
-              <Globe className="h-4 w-4 mr-2" />
-              Get Started
+              {saving ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Publishing...</>
+              ) : (
+                <><Globe className="h-4 w-4 mr-2" />Publish Now</>
+              )}
+            </Button>
+            <Button
+              onClick={() => handleCreate(false)}
+              disabled={saving}
+              className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold py-6 text-base rounded-xl"
+            >
+              Save as Draft
             </Button>
           </div>
 
-          {/* Two type cards */}
-          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto mt-4">
-            <div className="bg-card rounded-2xl border border-border p-6 text-center">
-              <div className="h-12 w-12 rounded-xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-                <Home className="h-6 w-6 text-cyan-600" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground">Property Website</h3>
-              <p className="text-sm text-muted-foreground mt-2">
-                Showcase a single listing with photos, videos, virtual staging, descriptions, and lead capture.
-              </p>
-            </div>
-            <div className="bg-card rounded-2xl border border-border p-6 text-center">
-              <div className="h-12 w-12 rounded-xl bg-violet-50 flex items-center justify-center mx-auto mb-4">
-                <User className="h-6 w-6 text-violet-600" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground">Agent Portfolio</h3>
-              <p className="text-sm text-muted-foreground mt-2">
-                Build your brand with a multi-page website featuring all your listings, bio, and neighborhood tools.
-              </p>
-            </div>
-          </div>
+          <p className="text-xs text-white/25 text-center">
+            After publishing, use the editor at {handle}.p2v.homes/editor to add hero photos, listings, blog posts, FAQ, and more.
+          </p>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-
-      <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        currentTier={subscriptionTier}
-        includedSiteUsed={includedSiteUsed}
-      />
-
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">My Websites</h1>
-              <p className="text-muted-foreground mt-1">Create and manage your property and portfolio websites</p>
-            </div>
-          </div>
+      {/* ═══ NAVIGATION BUTTONS ═══ */}
+      {step < 5 && (
+        <div className="flex items-center justify-between mt-10 pt-6 border-t border-white/[0.04]">
           <Button
-            onClick={handleCreateClick}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground font-black"
+            onClick={() => setStep(Math.max(1, step - 1))}
+            disabled={step === 1}
+            className="bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] text-white/60 hover:text-white font-bold rounded-xl px-5 py-2.5"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Website
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <Button
+            onClick={() => setStep(Math.min(5, step + 1))}
+            disabled={!canAdvance()}
+            className={"font-extrabold rounded-xl px-6 py-2.5 text-white " + a.btnBg + " " + a.btnBgHover + " disabled:opacity-30 disabled:cursor-not-allowed"}
+          >
+            Next
+            <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
-
-        {/* Site count indicator */}
-        <div className="flex items-center gap-3 mb-6 text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">{websites.length} website{websites.length !== 1 ? "s" : ""}</span>
-          <span className="text-border">·</span>
-          {includedCount > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-cyan-500" />
-              {includedCount} included
-            </span>
-          )}
-          {addonCount > 0 && (
-            <>
-              <span className="text-border">·</span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
-                {addonCount} add-on{addonCount !== 1 ? "s" : ""}
-              </span>
-            </>
-          )}
-          {ownedCount > 0 && (
-            <>
-              <span className="text-border">·</span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
-                {ownedCount} owned
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Stats bar */}
-        {websites.length > 0 && (totalViews > 0 || totalLeads > 0) && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground">Total Sites</p>
-              </div>
-              <p className="text-2xl font-extrabold text-foreground">{websites.length}</p>
-            </div>
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Eye className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground">Total Views</p>
-              </div>
-              <p className="text-2xl font-extrabold text-foreground">{totalViews.toLocaleString()}</p>
-            </div>
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground">Total Leads</p>
-              </div>
-              <p className="text-2xl font-extrabold text-foreground">{totalLeads.toLocaleString()}</p>
-            </div>
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground">Published</p>
-              </div>
-              <p className="text-2xl font-extrabold text-foreground">
-                {websites.filter((s) => s.status === "published").length}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Add-on banner */}
-        {includedSiteUsed && subscriptionTier === "pro" && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-            <Zap className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-blue-800">
-                You&apos;ve used your included website
-              </p>
-              <p className="text-xs text-blue-700 mt-0.5">
-                Additional sites are $29.95/mo each, or own one outright for $399.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Site cards */}
-        {websites.length === 0 ? (
-          /* Empty state for Pro users with no sites yet */
-          <div className="text-center py-16">
-            <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-5">
-              <Globe className="h-8 w-8 text-accent" />
-            </div>
-            <h2 className="text-xl font-extrabold text-foreground mb-2">Create your first website</h2>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-8">
-              Choose between a single-listing property page or a full agent portfolio with multiple pages.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              <button
-                onClick={() => router.push("/dashboard/websites/new?type=property")}
-                className="bg-card rounded-2xl border-2 border-border hover:border-accent/40 hover:shadow-lg transition-all p-6 text-left group"
-              >
-                <div className="h-12 w-12 rounded-xl bg-cyan-50 flex items-center justify-center mb-4 group-hover:bg-cyan-100 transition-colors">
-                  <Home className="h-6 w-6 text-cyan-600" />
-                </div>
-                <h3 className="text-lg font-bold text-foreground mb-1">Property Website</h3>
-                <p className="text-sm text-muted-foreground">
-                  Showcase a single listing with photos, videos, staging, and lead capture.
-                </p>
-                <p className="text-xs font-semibold text-accent mt-3">Get Started →</p>
-              </button>
-              <button
-                onClick={() => router.push("/dashboard/websites/new?type=agent")}
-                className="bg-card rounded-2xl border-2 border-border hover:border-accent/40 hover:shadow-lg transition-all p-6 text-left group"
-              >
-                <div className="h-12 w-12 rounded-xl bg-violet-50 flex items-center justify-center mb-4 group-hover:bg-violet-100 transition-colors">
-                  <User className="h-6 w-6 text-violet-600" />
-                </div>
-                <h3 className="text-lg font-bold text-foreground mb-1">Agent Portfolio</h3>
-                <p className="text-sm text-muted-foreground">
-                  Multi-page brand site with listings, bio, about, contact, and neighborhood tools.
-                </p>
-                <p className="text-xs font-semibold text-accent mt-3">Get Started →</p>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {websites.map((site) => {
-              const statusStyle = STATUS_STYLES[site.status] || STATUS_STYLES.draft;
-              const billingStyle = BILLING_LABELS[site.billing_type] || BILLING_LABELS.included;
-              const siteUrl = site.slug ? `https://${site.slug}.p2v.homes` : null;
-              const isCopied = copiedSlug === site.slug;
-
-              return (
-                <div
-                  key={site.id}
-                  className="bg-card rounded-2xl border border-border p-5 sm:p-6 hover:border-accent/40 hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Icon */}
-                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      site.site_type === "property" ? "bg-cyan-50" : "bg-violet-50"
-                    }`}>
-                      {site.site_type === "property" ? (
-                        <Home className="h-6 w-6 text-cyan-600" />
-                      ) : (
-                        <User className="h-6 w-6 text-violet-600" />
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-bold text-foreground truncate">{site.name}</h3>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusStyle.classes}`}>
-                          {statusStyle.label}
-                        </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          site.site_type === "property"
-                            ? "bg-cyan-50 text-cyan-700"
-                            : "bg-violet-50 text-violet-700"
-                        }`}>
-                          {site.site_type === "property" ? "Property" : "Portfolio"}
-                        </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${billingStyle.classes}`}>
-                          {billingStyle.label}
-                        </span>
-                      </div>
-
-                      {/* Domain */}
-                      {siteUrl && (
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <p className="text-xs text-muted-foreground truncate">{site.slug}.p2v.homes</p>
-                          <button
-                            onClick={() => copyUrl(site.slug!)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {isCopied ? (
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Stats row */}
-                      <div className="flex items-center gap-4 mt-2.5">
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Eye className="h-3 w-3" />
-                          {(site.view_count || 0).toLocaleString()} views
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          {(site.lead_count || 0).toLocaleString()} leads
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Updated {timeAgo(site.updated_at)}
-                        </span>
-                      </div>
-
-                      {/* Owned expiry warning */}
-                      {site.billing_type === "owned" && site.owned_expires_pro_at && (
-                        (() => {
-                          const expiresAt = new Date(site.owned_expires_pro_at);
-                          const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                          if (daysLeft <= 0) {
-                            return (
-                              <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-700">
-                                <AlertCircle className="h-3 w-3" />
-                                AI tools expired — site is still live
-                              </div>
-                            );
-                          }
-                          if (daysLeft <= 30) {
-                            return (
-                              <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-600">
-                                <AlertCircle className="h-3 w-3" />
-                                AI tools expire in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {site.status === "published" && siteUrl && (
-                        <a
-                          href={siteUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xs px-4 py-2 rounded-full transition-colors"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View
-                        </a>
-                      )}
-                      <Link
-                        href={`/dashboard/websites/${site.id}`}
-                        className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground font-semibold text-xs px-4 py-2 rounded-full transition-colors"
-                      >
-                        <Settings className="h-3 w-3" />
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(site)}
-                        disabled={deleting === site.id}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        {deleting === site.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <footer className="bg-muted/50 border-t py-8 mt-12">
-        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Real Estate Photo 2 Video. All rights reserved.</p>
-          <div className="flex justify-center gap-6 mt-2">
-            <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-            <Link href="/dashboard/properties" className="hover:text-foreground transition-colors">Properties</Link>
-            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-          </div>
-        </div>
-      </footer>
+      )}
     </div>
   );
 }
