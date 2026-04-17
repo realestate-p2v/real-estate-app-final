@@ -27,14 +27,14 @@ import {
   Globe,
   FileText,
   MapPin,
-  DollarSign,
-  BookOpen,
   Crosshair,
   Download,
   Share2,
   Monitor,
   Play,
   Shield,
+  TrendingUp,
+  Video,
 } from "lucide-react";
 
 export default function LensPage() {
@@ -97,21 +97,19 @@ export default function LensPage() {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 text-cyan-400 text-sm font-bold tracking-wider uppercase mb-6">
               <Sparkles className="w-4 h-4" />
-              Listing Photos Make Unlimited Content
+              15 AI Tools Built for Real Estate
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight">
-              Listing Photos Become<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">Your Entire Marketing Engine</span>
+              Start With a Video.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">Build a Content Machine.</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-              Order a listing video. Get 10 days of every AI marketing tool — free.
-              Build descriptions, flyers, staged rooms, drone annotations, and reports.
-              Then keep it all on your own branded agent website.
+              Your listing photos become an endless stream of marketing — videos, flyers, staged rooms, social posts, descriptions, and a full branded website. One shoot feeds 15 AI tools that keep producing.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               {isSubscriber ? (
                 <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl">
-                  <Link href="/dashboard/lens">Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                  <Link href="/dashboard">Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
                 </Button>
               ) : (
                 <>
@@ -217,35 +215,119 @@ export default function LensPage() {
         </div>
       </section>
 
-      {/* ═══ AI TOOLS SHOWCASE ═══ */}
+      {/* ═══ TOOLS — THE VIDEO ═══ */}
       <section id="features" className="py-20 sm:py-24 border-t border-white/[0.04]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold">Every Tool Your Listing Needs</h2>
-            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">Each one is purpose-built for real estate — not a generic AI wrapper. Try them all free for 10 days after your first video order.</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold">Everything Your Marketing Needs</h2>
+            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">15 tools organized around how you actually work — capture, create, publish, and win clients. Try them all free for 10 days after your first video order.</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              { icon: Camera, title: "AI Photo Coach", desc: "Instant 1-10 scoring with room-by-room feedback during your shoot. Approved photos flow into every other tool.", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20" },
-              { icon: PenTool, title: "Design Studio", desc: "Just Listed, Open House, Price Reduced graphics. 11 templates. Your branding auto-fills. PNG + PDF export.", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20" },
-              { icon: MessageSquare, title: "Description Writer", desc: "AI analyzes your photos and writes MLS-ready listing copy. 4 writing styles. Property details auto-fill.", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20" },
-              { icon: Sofa, title: "Virtual Staging", desc: "Furnish empty rooms with AI. 8 design styles x 8 room types. Before/after slider. Pennies per room.", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20" },
-              { icon: Crosshair, title: "Drone Mark", desc: "Annotate aerial photos with lot lines, measurement labels, branded pins. 8 drawing tools. JPEG export.", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
-              { icon: ImageIcon, title: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, and social. Hard cap: 1920px, under 290KB. One-click for the whole set.", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
-              { icon: FileText, title: "Reports", desc: "Branded buyer & seller guides with AI-written content. Color swatches. Agent branding. PDF export.", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20" },
-              { icon: DollarSign, title: "Value Boost Report", desc: "Room-by-room DIY improvements with cost, time, and ROI estimates. Amazon affiliate links included.", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20" },
-              { icon: MapPin, title: "Location Value Score", desc: "1-100 composite neighborhood score. Amenities, trends, growth, infrastructure. Branded PDF export.", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", badge: "PRO" },
-            ].map((tool, i) => (
-              <div key={i} className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
-                {tool.badge && <span className="absolute top-4 right-4 text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">{tool.badge}</span>}
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
-                  <tool.icon className={`h-6 w-6 ${tool.color}`} />
+          {/* THE VIDEO */}
+          <div className="mb-14">
+            <div className="flex items-center gap-2 mb-5">
+              <Film className="h-4 w-4 text-cyan-400" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400">The Video</h3>
+              <div className="flex-1 h-px bg-white/[0.06] ml-3" />
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {[
+                { icon: Video, title: "Order a Video", desc: "Cinematic listing walkthrough from your photos. You own every clip. Includes 10-day free trial of all tools.", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
+                { icon: Film, title: "Video Remix", desc: "Recut your clips into social-ready videos with music and branding. Unlimited remixes — free forever with any video purchase.", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20" },
+              ].map((tool, i) => (
+                <div key={i} className="group rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
+                    <tool.icon className={`h-6 w-6 ${tool.color}`} />
+                  </div>
+                  <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
+                  <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
                 </div>
-                <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
-                <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          {/* CREATE */}
+          <div className="mb-14">
+            <div className="flex items-center gap-2 mb-5">
+              <PenTool className="h-4 w-4 text-indigo-400" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400">Create</h3>
+              <div className="flex-1 h-px bg-white/[0.06] ml-3" />
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { icon: PenTool, title: "Design Studio", desc: "Just Listed, Open House, Price Reduced graphics. 11 templates. Your branding auto-fills. PNG + PDF export.", color: "text-indigo-400", bg: "bg-indigo-400/10", ring: "ring-indigo-400/20" },
+                { icon: ImageIcon, title: "Listing Flyer", desc: "Print-ready property flyers from your photos and details. Professional layouts with your branding.", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20" },
+                { icon: Sofa, title: "Virtual Staging", desc: "Furnish empty rooms with AI. 8 styles x 8 room types. Before/after slider. Pennies per room.", color: "text-violet-400", bg: "bg-violet-400/10", ring: "ring-violet-400/20" },
+                { icon: Crosshair, title: "Drone Mark", desc: "Annotate aerial photos with lot lines, measurement labels, and branded pins. 8 drawing tools.", color: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/20" },
+                { icon: ImageIcon, title: "Photo Optimizer", desc: "Batch compress for MLS, Zillow, and social. 1920px cap, under 290KB. One click for the whole set.", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
+                { icon: ImageIcon, title: "Photo Enhancement", desc: "AI brightness, color, and white balance correction. Fix dark interiors and tricky exposures.", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20" },
+              ].map((tool, i) => (
+                <div key={i} className="group rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
+                    <tool.icon className={`h-6 w-6 ${tool.color}`} />
+                  </div>
+                  <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
+                  <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* PUBLISH & DEPLOY */}
+          <div className="mb-14">
+            <div className="flex items-center gap-2 mb-5">
+              <Share2 className="h-4 w-4 text-emerald-400" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-400">Publish &amp; Deploy</h3>
+              <div className="flex-1 h-px bg-white/[0.06] ml-3" />
+            </div>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {[
+                { icon: MessageSquare, title: "Marketing Planner", desc: "AI plans what to post, when, and where. 30-day sprints, captions, media selection, and one-click sharing.", color: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/20" },
+                { icon: MessageSquare, title: "Description Writer", desc: "AI analyzes your photos and writes MLS-ready listing copy. 4 styles. Publish on flyers, website, social, MLS.", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20" },
+                { icon: Globe, title: "My Agent Website", desc: "Full professional site on p2v.homes or your domain. Every tool feeds your website automatically. Lens Pro ($49/mo).", color: "text-sky-400", bg: "bg-sky-400/10", ring: "ring-sky-400/20" },
+              ].map((tool, i) => (
+                <div key={i} className="group rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
+                    <tool.icon className={`h-6 w-6 ${tool.color}`} />
+                  </div>
+                  <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
+                  <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CLIENT TOOLS */}
+          <div>
+            <div className="flex items-center gap-2 mb-5">
+              <Star className="h-4 w-4 text-amber-400" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400">Client Tools</h3>
+              <div className="flex-1 h-px bg-white/[0.06] ml-3" />
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { icon: FileText, title: "Reports", desc: "Branded buyer & seller guides. Your colors, your headshot. Professional PDF export.", color: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/20" },
+                { icon: Camera, title: "Photo Coach", desc: "AI scores photos 1-10 with room-by-room feedback. Use during shoots to capture better content.", color: "text-blue-400", bg: "bg-blue-400/10", ring: "ring-blue-400/20" },
+                { icon: MapPin, title: "Location Value Score", desc: "1-100 neighborhood score. Amenities, trends, growth. Branded PDF for clients.", color: "text-teal-400", bg: "bg-teal-400/10", ring: "ring-teal-400/20", badge: "PRO" },
+                { icon: TrendingUp, title: "Value Boost Report", desc: "Room-by-room DIY improvements with cost, time, and ROI estimates for sellers.", color: "text-orange-400", bg: "bg-orange-400/10", ring: "ring-orange-400/20" },
+              ].map((tool, i) => (
+                <div key={i} className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
+                  {tool.badge && <span className="absolute top-4 right-4 text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">{tool.badge}</span>}
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
+                    <tool.icon className={`h-6 w-6 ${tool.color}`} />
+                  </div>
+                  <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
+                  <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Link to full How It Works page */}
+          <div className="text-center mt-12">
+            <Link href="/tools" className="inline-flex items-center gap-2 text-sm font-bold text-cyan-400/70 hover:text-cyan-400 transition-colors">
+              See detailed descriptions of every tool <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
@@ -363,7 +445,7 @@ export default function LensPage() {
               </ul>
               {isSubscriber ? (
                 <Button asChild className="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-5 rounded-xl">
-                  <Link href="/dashboard/lens"><CheckCircle className="mr-2 h-4 w-4" />Go to Dashboard</Link>
+                  <Link href="/dashboard"><CheckCircle className="mr-2 h-4 w-4" />Go to Dashboard</Link>
                 </Button>
               ) : (
                 <Button onClick={() => handleSubscribe("monthly")} disabled={subscribingTools || loadingUser} className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-5 rounded-xl">
@@ -443,7 +525,7 @@ export default function LensPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isSubscriber ? (
               <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-6 text-lg rounded-xl">
-                <Link href="/dashboard/lens">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                <Link href="/dashboard">Go to Your Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
             ) : (
               <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
