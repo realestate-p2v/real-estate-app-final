@@ -1295,7 +1295,7 @@ export function PhotoUploader({
             <AlertCircle className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold">More than 35 photos detected</p>
-              
+              <a
                 href="tel:+18455366954"
                 className="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline"
               >
