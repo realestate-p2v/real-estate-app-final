@@ -1,3 +1,11 @@
+// components/photo-uploader.tsx
+// Phase 1A refactor — adds roomCategory tagging derived from step.id,
+// exposes buildRoomTags() for submit, and parameterizes photo min/max
+// so the parent form can enforce subscriber vs non-subscriber rules.
+//
+// EXISTING behavior preserved: questionnaire, step building, Cloudinary
+// upload, resize-before-upload, crop preview, drag & drop, HEIC support.
+
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
@@ -7,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import {
   Upload,
   X,
-  ChevronUp,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ImageIcon,
@@ -32,13 +38,27 @@ import {
 // TYPES
 // ═══════════════════════════════════════════════════
 
+/**
+ * Canonical room categories. These drive Description Writer's Vision photo
+ * curation (file 11) and the video pipeline's sequencing. DO NOT rename
+ * without updating the DW trigger.
+ */
+export type RoomCategory =
+  | "exterior"
+  | "entryway"
+  | "common"
+  | "bedrooms"
+  | "bathrooms"
+  | "features"
+  | "backyard";
+
 export interface PhotoItem {
   id: string;
   file?: File;
   preview: string;
   description: string;
   secure_url?: string;
-  uploadStatus: 'uploading' | 'complete' | 'failed';
+  uploadStatus: "uploading" | "complete" | "failed";
   camera_direction?: string | null;
   camera_speed?: string | null;
   custom_motion?: string;
@@ -46,6 +66,9 @@ export interface PhotoItem {
   crop_offset_vertical?: number;
   original_width?: number;
   original_height?: number;
+  /** Room category derived from the upload step. Required for new orders;
+   *  legacy restored photos may be missing this field (handled at submit). */
+  roomCategory?: RoomCategory;
 }
 
 interface PhotoUploaderProps {
@@ -55,6 +78,12 @@ interface PhotoUploaderProps {
   onReviewConfirmed?: (confirmed: boolean) => void;
   initialBedrooms?: number;
   initialBathrooms?: number;
+  /** Minimum photo count required to submit (passed in by parent form).
+   *  Non-subscriber: 15 (enters Standard tier). Subscriber: 5 (Quick Video). */
+  minPhotos?: number;
+  /** Hard maximum. Default 35. Free-first-video promo users cap at 10
+   *  (enforced via `maxPhotos` prop from parent). */
+  maxPhotos?: number;
 }
 
 // ═══════════════════════════════════════════════════
@@ -75,7 +104,7 @@ interface QuestionnaireAnswers {
 // ═══════════════════════════════════════════════════
 
 interface UploadStep {
-  id: string;
+  id: RoomCategory;
   title: string;
   instructions: string;
   recommended: string;
@@ -89,14 +118,27 @@ interface UploadStep {
 // ═══════════════════════════════════════════════════
 
 const SPECIAL_FEATURES = [
-  "Pool", "Garage", "Patio/Deck", "Garden", "Home Office",
-  "Gym", "Wine Cellar", "Theater", "Guest House", "Laundry",
-  "Balcony", "Rooftop",
+  "Pool",
+  "Garage",
+  "Patio/Deck",
+  "Garden",
+  "Home Office",
+  "Gym",
+  "Wine Cellar",
+  "Theater",
+  "Guest House",
+  "Laundry",
+  "Balcony",
+  "Rooftop",
 ];
 
 const NOTABLE_VIEWS = [
-  "Ocean/Water", "Mountain", "City Skyline", "Garden/Nature",
-  "Golf Course", "Pool/Backyard",
+  "Ocean/Water",
+  "Mountain",
+  "City Skyline",
+  "Garden/Nature",
+  "Golf Course",
+  "Pool/Backyard",
 ];
 
 // ═══════════════════════════════════════════════════
@@ -109,14 +151,17 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     ...answers.views,
     ...(answers.viewOther.trim() ? [answers.viewOther.trim()] : []),
   ].join(", ");
-  const viewNote = hasViews ? `This property has notable views (${viewsList}). Include the view from the room if visible.` : undefined;
+  const viewNote = hasViews
+    ? `This property has notable views (${viewsList}). Include the view from the room if visible.`
+    : undefined;
 
   const steps: UploadStep[] = [];
 
   steps.push({
     id: "exterior",
     title: "Exterior",
-    instructions: "Start with the hero shot — the front of the property. Add 2-3 exterior angles.",
+    instructions:
+      "Start with the hero shot — the front of the property. Add 2-3 exterior angles.",
     recommended: "2-3 photos",
     defaultLabels: ["Front Exterior", "Side Exterior", "Rear Exterior"],
     icon: Home,
@@ -134,11 +179,12 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
   steps.push({
     id: "common",
     title: "Common Areas",
-    instructions: "Living room, kitchen, dining room. These are the most important interior shots.",
+    instructions:
+      "Living room, kitchen, dining room. These are the most important interior shots.",
     recommended: "3-5 photos",
     defaultLabels: ["Living Room", "Kitchen", "Dining Room", "Family Room"],
     icon: Sofa,
-    viewNote: viewNote,
+    viewNote,
   });
 
   const bedroomLabels: string[] = [];
@@ -152,7 +198,7 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
     recommended: `${answers.bedrooms} photo${answers.bedrooms !== 1 ? "s" : ""}`,
     defaultLabels: bedroomLabels,
     icon: BedDouble,
-    viewNote: viewNote,
+    viewNote,
   });
 
   const bathroomLabels: string[] = [];
@@ -196,19 +242,14 @@ function buildUploadSteps(answers: QuestionnaireAnswers): UploadStep[] {
 }
 
 // ═══════════════════════════════════════════════════
-// GENERATE LABEL FOR NEW PHOTO IN A STEP
+// LABEL HELPERS
 // ═══════════════════════════════════════════════════
 
-function getNextLabel(step: UploadStep, existingPhotosInStep: PhotoItem[]): string {
-  const count = existingPhotosInStep.length;
-  if (count < step.defaultLabels.length) {
-    return step.defaultLabels[count];
-  }
-  const baseLabel = step.defaultLabels.length > 0 ? step.defaultLabels[0] : step.title;
-  return `${baseLabel} ${count + 1}`;
-}
-
-function getLabelsForBatch(step: UploadStep, existingPhotosInStep: PhotoItem[], batchSize: number): string[] {
+function getLabelsForBatch(
+  step: UploadStep,
+  existingPhotosInStep: PhotoItem[],
+  batchSize: number
+): string[] {
   const labels: string[] = [];
   const existingCount = existingPhotosInStep.length;
 
@@ -226,6 +267,76 @@ function getLabelsForBatch(step: UploadStep, existingPhotosInStep: PhotoItem[], 
 }
 
 // ═══════════════════════════════════════════════════
+// PUBLIC HELPERS — used by the parent form at submit time
+// ═══════════════════════════════════════════════════
+
+/**
+ * Build the room_tags JSONB payload for the orders table.
+ * Each entry: { photo_index, room, label }.
+ * Photos without a roomCategory (legacy drafts) are omitted.
+ */
+export function buildRoomTags(
+  photos: PhotoItem[]
+): Array<{ photo_index: number; room: RoomCategory; label: string }> {
+  return photos
+    .map((p, i) =>
+      p.roomCategory
+        ? { photo_index: i, room: p.roomCategory, label: p.description || "" }
+        : null
+    )
+    .filter((x): x is { photo_index: number; room: RoomCategory; label: string } => x !== null);
+}
+
+/**
+ * Curate the 7–9 photos Description Writer sends to Claude Vision.
+ * Preference order per Phase 1A Section 8:
+ *   - Hero (first exterior)
+ *   - All common-area photos (up to 3)
+ *   - Primary bedroom (first bedrooms)
+ *   - Primary bath (first bathrooms)
+ *   - One additional bedroom
+ *   - Up to 2 feature photos
+ * Gracefully degrades when the uploader has fewer of a category.
+ * Fallback: if curation yields <5 photos, pad with remaining photos
+ * in upload order until reaching at least 5 or exhausting the list.
+ */
+export function curateVisionPhotos(photos: PhotoItem[]): PhotoItem[] {
+  const by = (cat: RoomCategory) =>
+    photos.filter((p) => p.roomCategory === cat && p.secure_url);
+
+  const picked: PhotoItem[] = [];
+  const pushUnique = (p: PhotoItem) => {
+    if (!picked.find((x) => x.id === p.id)) picked.push(p);
+  };
+
+  const exteriors = by("exterior");
+  if (exteriors[0]) pushUnique(exteriors[0]); // hero
+
+  by("common").slice(0, 3).forEach(pushUnique);
+
+  const bedrooms = by("bedrooms");
+  if (bedrooms[0]) pushUnique(bedrooms[0]); // primary bedroom
+
+  const bathrooms = by("bathrooms");
+  if (bathrooms[0]) pushUnique(bathrooms[0]); // primary bath
+
+  if (bedrooms[1]) pushUnique(bedrooms[1]); // additional bedroom
+
+  by("features").slice(0, 2).forEach(pushUnique);
+
+  // Fallback: pad with remaining photos in order if curation yielded too few
+  if (picked.length < 5) {
+    for (const p of photos) {
+      if (!p.secure_url) continue;
+      pushUnique(p);
+      if (picked.length >= 7) break;
+    }
+  }
+
+  return picked.slice(0, 9);
+}
+
+// ═══════════════════════════════════════════════════
 // CROP PREVIEW
 // ═══════════════════════════════════════════════════
 
@@ -237,7 +348,7 @@ function CropPreview({
   label,
 }: {
   photo: PhotoItem;
-  targetAspect: '16:9' | '9:16';
+  targetAspect: "16:9" | "9:16";
   offset: number;
   onOffsetChange: (val: number) => void;
   label: string;
@@ -245,11 +356,10 @@ function CropPreview({
   const w = photo.original_width || 1;
   const h = photo.original_height || 1;
   const currentRatio = w / h;
-  const targetRatio = targetAspect === '16:9' ? 16 / 9 : 9 / 16;
+  const targetRatio = targetAspect === "16:9" ? 16 / 9 : 9 / 16;
 
   const needsCrop = Math.abs(currentRatio - targetRatio) > 0.02;
   const cropsTopBottom = currentRatio < targetRatio;
-  const cropsLeftRight = currentRatio > targetRatio;
 
   if (!needsCrop) {
     return (
@@ -277,28 +387,27 @@ function CropPreview({
 
   const getOverlayStyle = () => {
     if (cropsTopBottom) {
-      const visibleRatio = (w / targetRatio) / h;
+      const visibleRatio = w / targetRatio / h;
       const visibleHeight = previewH * visibleRatio;
       const maxShift = previewH - visibleHeight;
       const topOffset = (offset / 100) * maxShift;
       return {
         top: `${topOffset}px`,
-        left: '0',
-        width: '100%',
+        left: "0",
+        width: "100%",
         height: `${visibleHeight}px`,
       };
-    } else {
-      const visibleRatio = (h * targetRatio) / w;
-      const visibleWidth = previewW * visibleRatio;
-      const maxShift = previewW - visibleWidth;
-      const leftOffset = (offset / 100) * maxShift;
-      return {
-        top: '0',
-        left: `${leftOffset}px`,
-        width: `${visibleWidth}px`,
-        height: '100%',
-      };
     }
+    const visibleRatio = (h * targetRatio) / w;
+    const visibleWidth = previewW * visibleRatio;
+    const maxShift = previewW - visibleWidth;
+    const leftOffset = (offset / 100) * maxShift;
+    return {
+      top: "0",
+      left: `${leftOffset}px`,
+      width: `${visibleWidth}px`,
+      height: "100%",
+    };
   };
 
   return (
@@ -306,11 +415,14 @@ function CropPreview({
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground flex items-center gap-1">
           <Crop className="h-3 w-3" />
-          {label}: {cropPercent}% will be cropped ({cropsTopBottom ? 'top/bottom' : 'left/right'})
+          {label}: {cropPercent}% will be cropped ({cropsTopBottom ? "top/bottom" : "left/right"})
         </span>
       </div>
 
-      <div className="relative rounded-lg overflow-hidden border border-border" style={{ width: previewW, height: previewH }}>
+      <div
+        className="relative rounded-lg overflow-hidden border border-border"
+        style={{ width: previewW, height: previewH }}
+      >
         <img
           src={photo.preview}
           alt=""
@@ -322,9 +434,7 @@ function CropPreview({
             alt=""
             className="w-full h-full object-cover"
             style={{
-              objectPosition: cropsTopBottom
-                ? `center ${offset}%`
-                : `${offset}% center`
+              objectPosition: cropsTopBottom ? `center ${offset}%` : `${offset}% center`,
             }}
           />
         </div>
@@ -332,7 +442,7 @@ function CropPreview({
 
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground w-12">
-          {cropsTopBottom ? '↑ Top' : '← Left'}
+          {cropsTopBottom ? "↑ Top" : "← Left"}
         </span>
         <input
           type="range"
@@ -347,7 +457,7 @@ function CropPreview({
           className="flex-1 h-3 accent-primary cursor-pointer"
         />
         <span className="text-xs text-muted-foreground w-14 text-right">
-          {cropsTopBottom ? 'Bottom ↓' : 'Right →'}
+          {cropsTopBottom ? "Bottom ↓" : "Right →"}
         </span>
       </div>
     </div>
@@ -358,13 +468,22 @@ function CropPreview({
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════
 
-export function PhotoUploader({ photos, onPhotosChange, orientation = "landscape", onReviewConfirmed, initialBedrooms, initialBathrooms }: PhotoUploaderProps) {
-  const [phase, setPhase] = useState<'questionnaire' | 'guided'>(
-    photos.length > 0 ? 'guided' : 'questionnaire'
+export function PhotoUploader({
+  photos,
+  onPhotosChange,
+  orientation = "landscape",
+  onReviewConfirmed,
+  initialBedrooms,
+  initialBathrooms,
+  minPhotos = 1,
+  maxPhotos = 35,
+}: PhotoUploaderProps) {
+  const [phase, setPhase] = useState<"questionnaire" | "guided">(
+    photos.length > 0 ? "guided" : "questionnaire"
   );
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
-const [answers, setAnswers] = useState<QuestionnaireAnswers>({
+  const [answers, setAnswers] = useState<QuestionnaireAnswers>({
     bedrooms: 3,
     bathrooms: 2,
     features: [],
@@ -378,18 +497,19 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
     const params = new URLSearchParams(window.location.search);
     const urlBeds = parseInt(params.get("beds") || "");
     const urlBaths = parseInt(params.get("baths") || "");
-    setAnswers(prev => ({
+    setAnswers((prev) => ({
       ...prev,
-      bedrooms: (!isNaN(urlBeds) && urlBeds >= 1) ? urlBeds : (initialBedrooms || prev.bedrooms),
-      bathrooms: (!isNaN(urlBaths) && urlBaths >= 1) ? urlBaths : (initialBathrooms || prev.bathrooms),
+      bedrooms: !isNaN(urlBeds) && urlBeds >= 1 ? urlBeds : initialBedrooms || prev.bedrooms,
+      bathrooms:
+        !isNaN(urlBaths) && urlBaths >= 1 ? urlBaths : initialBathrooms || prev.bathrooms,
     }));
   }, []);
   useEffect(() => {
     if (initialBathrooms && initialBathrooms !== answers.bathrooms) {
-      setAnswers(prev => ({ ...prev, bathrooms: initialBathrooms }));
+      setAnswers((prev) => ({ ...prev, bathrooms: initialBathrooms }));
     }
   }, [initialBathrooms]);
-  
+
   const [uploadSteps, setUploadSteps] = useState<UploadStep[]>([]);
   const [stepPhotoIds, setStepPhotoIds] = useState<Record<string, string[]>>({});
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
@@ -399,27 +519,23 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
   const currentStepPhotos = useMemo(() => {
     if (!currentStep) return [];
     const ids = stepPhotoIds[currentStep.id] || [];
-    return ids.map(id => photos.find(p => p.id === id)).filter(Boolean) as PhotoItem[];
+    return ids.map((id) => photos.find((p) => p.id === id)).filter(Boolean) as PhotoItem[];
   }, [currentStep, stepPhotoIds, photos]);
 
   const resizeForUpload = (file: File): Promise<Blob> => {
     return new Promise((resolve) => {
-      const img = document.createElement('img');
+      const img = document.createElement("img");
       img.onload = () => {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         let { width, height } = img;
         const maxDim = 1920;
 
         if (width <= maxDim && height <= maxDim) {
           canvas.width = width;
           canvas.height = height;
-          const ctx = canvas.getContext('2d')!;
+          const ctx = canvas.getContext("2d")!;
           ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => resolve(blob || file),
-            'image/jpeg',
-            0.85
-          );
+          canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.85);
           URL.revokeObjectURL(img.src);
           return;
         }
@@ -434,13 +550,9 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
 
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d')!;
+        const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => resolve(blob || file),
-          'image/jpeg',
-          0.85
-        );
+        canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.85);
         URL.revokeObjectURL(img.src);
       };
       img.src = URL.createObjectURL(file);
@@ -449,35 +561,62 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
 
   const handleFilesForStep = useCallback(
     async (files: File[], step: UploadStep) => {
+      // Enforce maxPhotos (free-first-video promo cap; default 35)
+      const remainingCapacity = Math.max(0, maxPhotos - photos.length);
+      if (remainingCapacity === 0) {
+        alert(
+          `You've reached the ${maxPhotos}-photo maximum for this order. Remove a photo to add a different one.`
+        );
+        return;
+      }
+      const filesToProcess = files.slice(0, remainingCapacity);
+      if (filesToProcess.length < files.length) {
+        alert(
+          `Only ${remainingCapacity} more photo${
+            remainingCapacity === 1 ? "" : "s"
+          } will fit — this order is capped at ${maxPhotos}.`
+        );
+      }
+
       const validFiles: { file: File; width: number; height: number }[] = [];
-      for (const file of files) {
+      for (const file of filesToProcess) {
         if (file.size > 20 * 1024 * 1024) {
-          alert(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum file size is 20MB.`);
+          alert(
+            `"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(
+              1
+            )}MB). Maximum file size is 20MB.`
+          );
           continue;
         }
 
-        const dims = await new Promise<{ valid: boolean; width: number; height: number }>((resolve) => {
-          const img = new window.Image();
-          img.onload = () => {
-            const minSide = Math.min(img.width, img.height);
-            if (minSide < 768) {
-              alert(`"${file.name}" is too small (${img.width}×${img.height}). Minimum dimension is 768px. Please upload a higher quality photo.`);
-              resolve({ valid: false, width: img.width, height: img.height });
-            } else {
-              resolve({ valid: true, width: img.width, height: img.height });
-            }
-            URL.revokeObjectURL(img.src);
-          };
-          img.onerror = () => resolve({ valid: false, width: 0, height: 0 });
-          img.src = URL.createObjectURL(file);
-        });
+        const dims = await new Promise<{ valid: boolean; width: number; height: number }>(
+          (resolve) => {
+            const img = new window.Image();
+            img.onload = () => {
+              const minSide = Math.min(img.width, img.height);
+              if (minSide < 768) {
+                alert(
+                  `"${file.name}" is too small (${img.width}×${img.height}). Minimum dimension is 768px. Please upload a higher quality photo.`
+                );
+                resolve({ valid: false, width: img.width, height: img.height });
+              } else {
+                resolve({ valid: true, width: img.width, height: img.height });
+              }
+              URL.revokeObjectURL(img.src);
+            };
+            img.onerror = () => resolve({ valid: false, width: 0, height: 0 });
+            img.src = URL.createObjectURL(file);
+          }
+        );
         if (dims.valid) validFiles.push({ file, width: dims.width, height: dims.height });
       }
 
       if (validFiles.length === 0) return;
 
       const currentIds = stepPhotoIds[step.id] || [];
-      const currentStepPhotosList = currentIds.map(id => photos.find(p => p.id === id)).filter(Boolean) as PhotoItem[];
+      const currentStepPhotosList = currentIds
+        .map((id) => photos.find((p) => p.id === id))
+        .filter(Boolean) as PhotoItem[];
       const labels = getLabelsForBatch(step, currentStepPhotosList, validFiles.length);
 
       const newPhotos: PhotoItem[] = validFiles.map(({ file, width, height }, i) => ({
@@ -485,15 +624,17 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
         file,
         preview: URL.createObjectURL(file),
         description: labels[i] || "",
-        uploadStatus: 'uploading' as const,
+        uploadStatus: "uploading" as const,
         crop_offset_landscape: 50,
         crop_offset_vertical: 50,
         original_width: width,
         original_height: height,
+        // ─── NEW: tag every photo with its room category from the step ───
+        roomCategory: step.id,
       }));
 
-      const newIds = newPhotos.map(p => p.id);
-      setStepPhotoIds(prev => ({
+      const newIds = newPhotos.map((p) => p.id);
+      setStepPhotoIds((prev) => ({
         ...prev,
         [step.id]: [...(prev[step.id] || []), ...newIds],
       }));
@@ -521,17 +662,21 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
           uploadData.append("signature", signature);
           uploadData.append("folder", folder);
 
-          const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
-            method: "POST",
-            body: uploadData,
-          });
+          const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+            {
+              method: "POST",
+              body: uploadData,
+            }
+          );
           const result = await response.json();
 
           if (result.secure_url) {
             onPhotosChange((prev: PhotoItem[]) =>
-              prev.map(p => p.id === photo.id
-                ? { ...p, secure_url: result.secure_url, uploadStatus: 'complete' as const }
-                : p
+              prev.map((p) =>
+                p.id === photo.id
+                  ? { ...p, secure_url: result.secure_url, uploadStatus: "complete" as const }
+                  : p
               )
             );
           } else {
@@ -540,15 +685,12 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
         } catch (error) {
           console.error("Upload failed for", photo.id, error);
           onPhotosChange((prev: PhotoItem[]) =>
-            prev.map(p => p.id === photo.id
-              ? { ...p, uploadStatus: 'failed' as const }
-              : p
-            )
+            prev.map((p) => (p.id === photo.id ? { ...p, uploadStatus: "failed" as const } : p))
           );
         }
       });
     },
-    [photos, onPhotosChange, stepPhotoIds]
+    [photos, onPhotosChange, stepPhotoIds, maxPhotos]
   );
 
   const handleFileChange = useCallback(
@@ -565,13 +707,14 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
   const handleRemove = useCallback(
     (id: string) => {
       const photo = photos.find((p) => p.id === id);
-      if (photo?.preview && photo.preview.startsWith('blob:')) URL.revokeObjectURL(photo.preview);
+      if (photo?.preview && photo.preview.startsWith("blob:"))
+        URL.revokeObjectURL(photo.preview);
       onPhotosChange(photos.filter((p) => p.id !== id));
 
-      setStepPhotoIds(prev => {
+      setStepPhotoIds((prev) => {
         const updated = { ...prev };
         for (const stepId of Object.keys(updated)) {
-          updated[stepId] = updated[stepId].filter(pid => pid !== id);
+          updated[stepId] = updated[stepId].filter((pid) => pid !== id);
         }
         return updated;
       });
@@ -589,8 +732,8 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
   );
 
   const handleCropOffsetChange = useCallback(
-    (id: string, aspect: 'landscape' | 'vertical', value: number) => {
-      const key = aspect === 'landscape' ? 'crop_offset_landscape' : 'crop_offset_vertical';
+    (id: string, aspect: "landscape" | "vertical", value: number) => {
+      const key = aspect === "landscape" ? "crop_offset_landscape" : "crop_offset_vertical";
       onPhotosChange(photos.map((p) => (p.id === id ? { ...p, [key]: value } : p)));
     },
     [photos, onPhotosChange]
@@ -599,27 +742,31 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
   const needsCropForOrientation = (photo: PhotoItem, orient: string) => {
     if (!photo.original_width || !photo.original_height) return false;
     const ratio = photo.original_width / photo.original_height;
-    if (orient === 'landscape' || orient === 'both') {
+    if (orient === "landscape" || orient === "both") {
       if (Math.abs(ratio - 16 / 9) > 0.02) return true;
     }
-    if (orient === 'vertical' || orient === 'both') {
+    if (orient === "vertical" || orient === "both") {
       if (Math.abs(ratio - 9 / 16) > 0.02) return true;
     }
     return false;
   };
 
-  const allUploadsComplete = photos.length > 0 && photos.every((p) => p.uploadStatus === 'complete');
+  const allUploadsComplete =
+    photos.length > 0 && photos.every((p) => p.uploadStatus === "complete");
+  const meetsMinimum = photos.length >= minPhotos;
   const isOnLastStep = uploadSteps.length > 0 && currentStepIndex === uploadSteps.length - 1;
   const isDraftRestore = photos.length > 0 && uploadSteps.length === 0;
   React.useEffect(() => {
-    onReviewConfirmed?.(allUploadsComplete && (isOnLastStep || isDraftRestore));
-  }, [allUploadsComplete, isOnLastStep, isDraftRestore, onReviewConfirmed]);
+    onReviewConfirmed?.(
+      allUploadsComplete && meetsMinimum && (isOnLastStep || isDraftRestore)
+    );
+  }, [allUploadsComplete, meetsMinimum, isOnLastStep, isDraftRestore, onReviewConfirmed]);
 
   const handleStartGuided = () => {
     const steps = buildUploadSteps(answers);
     setUploadSteps(steps);
     setCurrentStepIndex(0);
-    setPhase('guided');
+    setPhase("guided");
   };
 
   const goToNextStep = () => {
@@ -636,14 +783,15 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
     }
   };
 
-  const showTooManyPhotosWarning = photos.length > 35;
+  const atMaxCapacity = photos.length >= maxPhotos;
+  const showTooManyPhotosWarning = photos.length > 35; // legacy >35 = contact us
   const totalPhotoCount = photos.length;
 
   // ═══════════════════════════════════════════════════
   // RENDER — QUESTIONNAIRE
   // ═══════════════════════════════════════════════════
 
-  if (phase === 'questionnaire') {
+  if (phase === "questionnaire") {
     return (
       <div className="space-y-6">
         <div className="space-y-1">
@@ -660,11 +808,11 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
         <div className="space-y-2">
           <label className="text-sm font-semibold">How many bedrooms?</label>
           <div className="flex gap-2 flex-wrap">
-            {[1, 2, 3, 4, 5, 6].map(n => (
+            {[1, 2, 3, 4, 5, 6].map((n) => (
               <button
                 key={n}
                 type="button"
-                onClick={() => setAnswers(prev => ({ ...prev, bedrooms: n }))}
+                onClick={() => setAnswers((prev) => ({ ...prev, bedrooms: n }))}
                 className={`h-11 w-14 rounded-xl border-2 font-bold text-sm transition-all ${
                   answers.bedrooms === n
                     ? "border-primary bg-primary/10 text-primary"
@@ -681,11 +829,11 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
         <div className="space-y-2">
           <label className="text-sm font-semibold">How many bathrooms?</label>
           <div className="flex gap-2 flex-wrap">
-            {[1, 2, 3, 4, 5].map(n => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"
-                onClick={() => setAnswers(prev => ({ ...prev, bathrooms: n }))}
+                onClick={() => setAnswers((prev) => ({ ...prev, bathrooms: n }))}
                 className={`h-11 w-14 rounded-xl border-2 font-bold text-sm transition-all ${
                   answers.bathrooms === n
                     ? "border-primary bg-primary/10 text-primary"
@@ -700,19 +848,22 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
 
         {/* Special Features */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold">Special features? <span className="font-normal text-muted-foreground">(select all that apply)</span></label>
+          <label className="text-sm font-semibold">
+            Special features?{" "}
+            <span className="font-normal text-muted-foreground">(select all that apply)</span>
+          </label>
           <div className="flex gap-2 flex-wrap">
-            {SPECIAL_FEATURES.map(feature => {
+            {SPECIAL_FEATURES.map((feature) => {
               const isSelected = answers.features.includes(feature);
               return (
                 <button
                   key={feature}
                   type="button"
                   onClick={() => {
-                    setAnswers(prev => ({
+                    setAnswers((prev) => ({
                       ...prev,
                       features: isSelected
-                        ? prev.features.filter(f => f !== feature)
+                        ? prev.features.filter((f) => f !== feature)
                         : [...prev.features, feature],
                     }));
                   }}
@@ -731,26 +882,29 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
           <Input
             placeholder="Other feature (e.g., Sauna)"
             value={answers.featureOther}
-            onChange={(e) => setAnswers(prev => ({ ...prev, featureOther: e.target.value }))}
+            onChange={(e) => setAnswers((prev) => ({ ...prev, featureOther: e.target.value }))}
             className="mt-2 max-w-xs"
           />
         </div>
 
         {/* Notable Views */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold">Notable views? <span className="font-normal text-muted-foreground">(select all that apply)</span></label>
+          <label className="text-sm font-semibold">
+            Notable views?{" "}
+            <span className="font-normal text-muted-foreground">(select all that apply)</span>
+          </label>
           <div className="flex gap-2 flex-wrap">
-            {NOTABLE_VIEWS.map(view => {
+            {NOTABLE_VIEWS.map((view) => {
               const isSelected = answers.views.includes(view);
               return (
                 <button
                   key={view}
                   type="button"
                   onClick={() => {
-                    setAnswers(prev => ({
+                    setAnswers((prev) => ({
                       ...prev,
                       views: isSelected
-                        ? prev.views.filter(v => v !== view)
+                        ? prev.views.filter((v) => v !== view)
                         : [...prev.views, view],
                     }));
                   }}
@@ -769,7 +923,7 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
           <Input
             placeholder="Other view (e.g., Lake)"
             value={answers.viewOther}
-            onChange={(e) => setAnswers(prev => ({ ...prev, viewOther: e.target.value }))}
+            onChange={(e) => setAnswers((prev) => ({ ...prev, viewOther: e.target.value }))}
             className="mt-2 max-w-xs"
           />
         </div>
@@ -790,7 +944,7 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
   // RENDER — GUIDED UPLOAD STEPS
   // ═══════════════════════════════════════════════════
 
-  if (phase === 'guided' && currentStep) {
+  if (phase === "guided" && currentStep) {
     const StepIcon = currentStep.icon;
     const stepNumber = currentStepIndex + 1;
     const totalSteps = uploadSteps.length;
@@ -799,7 +953,10 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
     return (
       <div
         className="space-y-6"
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -812,8 +969,13 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
         {/* Progress bar */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-foreground">Step {stepNumber} of {totalSteps}</span>
-            <span className="text-muted-foreground">{totalPhotoCount} photo{totalPhotoCount !== 1 ? "s" : ""} total</span>
+            <span className="font-semibold text-foreground">
+              Step {stepNumber} of {totalSteps}
+            </span>
+            <span className="text-muted-foreground">
+              {totalPhotoCount} photo{totalPhotoCount !== 1 ? "s" : ""} total
+              {maxPhotos < 35 ? ` (${maxPhotos} max)` : ""}
+            </span>
           </div>
           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
             <div
@@ -831,7 +993,10 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => { setCurrentStepIndex(i); setOpenCropIndex(null); }}
+                  onClick={() => {
+                    setCurrentStepIndex(i);
+                    setOpenCropIndex(null);
+                  }}
                   className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1 ${
                     isCurrent
                       ? "bg-primary text-primary-foreground"
@@ -841,7 +1006,7 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
                   }`}
                 >
                   {isPast && stepPhotos > 0 && <Check className="h-3 w-3" />}
-                  {s.title.replace(/ \(\d+\)/, '')}
+                  {s.title.replace(/ \(\d+\)/, "")}
                   {stepPhotos > 0 && <span className="opacity-70">({stepPhotos})</span>}
                 </button>
               );
@@ -862,7 +1027,8 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
 
         {/* Recommended count */}
         <p className="text-sm text-muted-foreground">
-          Recommended: {currentStep.recommended} · Every step is optional — skip if you don&apos;t have these shots
+          Recommended: {currentStep.recommended} · Every step is optional — skip if you don&apos;t
+          have these shots
         </p>
 
         {/* View note */}
@@ -875,25 +1041,61 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
 
         {/* Drop zone */}
         <div
-          className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors"
-          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
-          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-primary", "bg-primary/5"); }}
-          onDrop={(e) => {
-            e.preventDefault(); e.stopPropagation();
+          className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+            atMaxCapacity
+              ? "border-border opacity-50 cursor-not-allowed"
+              : "border-border hover:border-primary/50"
+          }`}
+          onDragOver={(e) => {
+            if (atMaxCapacity) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add("border-primary", "bg-primary/5");
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+            if (atMaxCapacity) return;
             const files = Array.from(e.dataTransfer.files);
             if (files.length > 0 && currentStep) {
               handleFilesForStep(files, currentStep);
             }
           }}
         >
-          <input type="file" id={inputId} multiple accept="image/*" onChange={handleFileChange} className="hidden" />
-          <label htmlFor={inputId} className="cursor-pointer flex flex-col items-center">
+          <input
+            type="file"
+            id={inputId}
+            multiple
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+            disabled={atMaxCapacity}
+          />
+          <label
+            htmlFor={inputId}
+            className={`flex flex-col items-center ${
+              atMaxCapacity ? "cursor-not-allowed" : "cursor-pointer"
+            }`}
+          >
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
               <Upload className="h-6 w-6 text-primary" />
             </div>
-            <p className="font-semibold">Upload {currentStep.title.toLowerCase()} photos</p>
-            <p className="text-sm text-muted-foreground">Drag and drop or click to select</p>
+            <p className="font-semibold">
+              {atMaxCapacity
+                ? `Maximum ${maxPhotos} photos reached`
+                : `Upload ${currentStep.title.toLowerCase()} photos`}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {atMaxCapacity
+                ? "Remove a photo to add a different one"
+                : "Drag and drop or click to select"}
+            </p>
           </label>
         </div>
 
@@ -902,7 +1104,9 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-muted-foreground">
               <ImageIcon className="h-4 w-4" />
-              <span className="text-sm">{currentStepPhotos.length} photo{currentStepPhotos.length !== 1 ? "s" : ""} in this step</span>
+              <span className="text-sm">
+                {currentStepPhotos.length} photo{currentStepPhotos.length !== 1 ? "s" : ""} in this step
+              </span>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -917,8 +1121,13 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
                     </div>
 
                     <div className="h-20 w-28 sm:h-24 sm:w-36 relative rounded-lg overflow-hidden flex-shrink-0 border">
-                      <Image src={photo.preview || "/placeholder.svg"} alt="" fill className="object-cover" />
-                      {photo.uploadStatus === 'uploading' && (
+                      <Image
+                        src={photo.preview || "/placeholder.svg"}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                      {photo.uploadStatus === "uploading" && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                           <Loader2 className="h-6 w-6 text-white animate-spin" />
                         </div>
@@ -934,26 +1143,46 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
                         className="text-sm h-9"
                       />
                       <div className="flex items-center gap-2 flex-wrap">
-                        {photo.uploadStatus === 'complete' && <span className="text-green-500 text-xs font-semibold">✓ Ready</span>}
-                        {photo.uploadStatus === 'uploading' && <span className="text-amber-500 text-xs font-semibold animate-pulse">Uploading...</span>}
-                        {photo.uploadStatus === 'failed' && <span className="text-red-500 text-xs font-semibold">✕ Failed</span>}
+                        {photo.uploadStatus === "complete" && (
+                          <span className="text-green-500 text-xs font-semibold">✓ Ready</span>
+                        )}
+                        {photo.uploadStatus === "uploading" && (
+                          <span className="text-amber-500 text-xs font-semibold animate-pulse">
+                            Uploading...
+                          </span>
+                        )}
+                        {photo.uploadStatus === "failed" && (
+                          <span className="text-red-500 text-xs font-semibold">✕ Failed</span>
+                        )}
 
-                        <button type="button"
-                          onClick={(e) => { e.stopPropagation(); setOpenCropIndex(openCropIndex === index ? null : index); }}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenCropIndex(openCropIndex === index ? null : index);
+                          }}
                           className={`text-xs py-1 px-2.5 rounded-lg border flex items-center gap-1 transition-colors ${
-                            openCropIndex === index ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
-                          }`}>
+                            openCropIndex === index
+                              ? "bg-amber-50 border-amber-300 text-amber-700"
+                              : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                          }`}
+                        >
                           <Crop className="h-3 w-3" />
                           <span>Crop</span>
                         </button>
                       </div>
                       {photo.original_width && (
-                        <p className="text-xs text-muted-foreground">{photo.original_width} × {photo.original_height}px</p>
+                        <p className="text-xs text-muted-foreground">
+                          {photo.original_width} × {photo.original_height}px
+                        </p>
                       )}
                     </div>
 
-                    <button type="button" onClick={() => handleRemove(photo.id)}
-                      className="p-2 text-muted-foreground hover:text-destructive flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(photo.id)}
+                      className="p-2 text-muted-foreground hover:text-destructive flex-shrink-0"
+                    >
                       <X className="h-5 w-5" />
                     </button>
                   </div>
@@ -962,42 +1191,80 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
                   {openCropIndex === index && (
                     <div className="mt-3 pt-3 border-t border-border space-y-4">
                       <p className="text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">This is optional.</span> If you skip this, we&apos;ll auto-center the crop.
+                        <span className="font-semibold text-foreground">This is optional.</span>{" "}
+                        If you skip this, we&apos;ll auto-center the crop.
                       </p>
 
                       {!needsCropForOrientation(photo, orientation) ? (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                           <Crop className="h-5 w-5 text-green-600 mx-auto mb-2" />
                           <p className="text-sm font-semibold text-green-800">No crop needed!</p>
-                          <p className="text-xs text-green-700 mt-1">This photo already matches your selected video format.</p>
+                          <p className="text-xs text-green-700 mt-1">
+                            This photo already matches your selected video format.
+                          </p>
                         </div>
                       ) : (
                         <>
-                          {(orientation === 'landscape' || orientation === 'both') && (
-                            <CropPreview photo={photo} targetAspect="16:9"
+                          {(orientation === "landscape" || orientation === "both") && (
+                            <CropPreview
+                              photo={photo}
+                              targetAspect="16:9"
                               offset={photo.crop_offset_landscape ?? 50}
-                              onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'landscape', val)}
-                              label="Landscape (16:9)" />
+                              onOffsetChange={(val) =>
+                                handleCropOffsetChange(photo.id, "landscape", val)
+                              }
+                              label="Landscape (16:9)"
+                            />
                           )}
-                          {(orientation === 'vertical' || orientation === 'both') && (
-                            <CropPreview photo={photo} targetAspect="9:16"
+                          {(orientation === "vertical" || orientation === "both") && (
+                            <CropPreview
+                              photo={photo}
+                              targetAspect="9:16"
                               offset={photo.crop_offset_vertical ?? 50}
-                              onOffsetChange={(val) => handleCropOffsetChange(photo.id, 'vertical', val)}
-                              label="Vertical (9:16)" />
+                              onOffsetChange={(val) =>
+                                handleCropOffsetChange(photo.id, "vertical", val)
+                              }
+                              label="Vertical (9:16)"
+                            />
                           )}
 
                           <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-left">
-                            <p className="text-xs font-semibold text-foreground">Cropping tips:</p>
-                            <p className="text-xs text-muted-foreground">• Give the home some <span className="font-medium text-foreground">headroom</span> — don&apos;t crop too tight on the roofline</p>
-                            <p className="text-xs text-muted-foreground">• Front doors look best <span className="font-medium text-foreground">slightly below center</span></p>
-                            <p className="text-xs text-muted-foreground">• Keep <span className="font-medium text-foreground">key features visible</span> — landscaping, pools, driveways</p>
-                            <p className="text-xs text-muted-foreground">• For interiors, keep <span className="font-medium text-foreground">floors and ceilings balanced</span></p>
+                            <p className="text-xs font-semibold text-foreground">
+                              Cropping tips:
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              • Give the home some{" "}
+                              <span className="font-medium text-foreground">headroom</span> —
+                              don&apos;t crop too tight on the roofline
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              • Front doors look best{" "}
+                              <span className="font-medium text-foreground">
+                                slightly below center
+                              </span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              • Keep{" "}
+                              <span className="font-medium text-foreground">
+                                key features visible
+                              </span>{" "}
+                              — landscaping, pools, driveways
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              • For interiors, keep{" "}
+                              <span className="font-medium text-foreground">
+                                floors and ceilings balanced
+                              </span>
+                            </p>
                           </div>
                         </>
                       )}
 
-                      <button type="button" onClick={() => setOpenCropIndex(null)}
-                        className="text-sm text-primary font-semibold hover:underline">
+                      <button
+                        type="button"
+                        onClick={() => setOpenCropIndex(null)}
+                        className="text-sm text-primary font-semibold hover:underline"
+                      >
                         Done ✓
                       </button>
                     </div>
@@ -1007,24 +1274,45 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
             </div>
 
             {/* Add more to this step */}
-            <div className="text-center pt-1">
-              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(inputId)?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Add More {currentStep.title} Photos
-              </Button>
-            </div>
+            {!atMaxCapacity && (
+              <div className="text-center pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById(inputId)?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Add More {currentStep.title} Photos
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Too many photos warning */}
+        {/* Too many photos warning (only triggers in legacy >35 path) */}
         {showTooManyPhotosWarning && (
           <div className="bg-accent/10 border border-accent rounded-xl p-4 flex items-start gap-4">
             <AlertCircle className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold">More than 35 photos detected</p>
-              <a href="tel:+18455366954" className="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline">
+              
+                href="tel:+18455366954"
+                className="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline"
+              >
                 <Phone className="h-4 w-4" />1 (845) 536-6954
               </a>
             </div>
+          </div>
+        )}
+
+        {/* Minimum not yet reached warning */}
+        {totalPhotoCount > 0 && totalPhotoCount < minPhotos && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800">
+              Upload at least {minPhotos} photo{minPhotos !== 1 ? "s" : ""} to place your order.{" "}
+              You currently have {totalPhotoCount}.
+            </p>
           </div>
         )}
 
@@ -1036,7 +1324,11 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
               Back
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => setPhase('questionnaire')} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPhase("questionnaire")}
+              className="gap-2"
+            >
               <ChevronLeft className="h-4 w-4" />
               Edit Property
             </Button>
@@ -1051,10 +1343,11 @@ const [answers, setAnswers] = useState<QuestionnaireAnswers>({
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground text-right">
-              {totalPhotoCount > 0
-                ? `✓ ${totalPhotoCount} photo${totalPhotoCount !== 1 ? "s" : ""} uploaded — continue below`
-                : "Upload at least one photo to continue"
-              }
+              {totalPhotoCount >= minPhotos
+                ? `✓ ${totalPhotoCount} photo${
+                    totalPhotoCount !== 1 ? "s" : ""
+                  } uploaded — continue below`
+                : `Upload at least ${minPhotos} photo${minPhotos !== 1 ? "s" : ""} to continue`}
             </p>
           )}
         </div>
