@@ -1299,7 +1299,8 @@ export function PhotoUploader({
                 href="tel:+18455366954"
                 className="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline"
               >
-                <Phone className="h-4 w-4" />1 (845) 536-6954
+                <Phone className="h-4 w-4" />
+                {"1 (845) 536-6954"}
               </a>
             </div>
           </div>
