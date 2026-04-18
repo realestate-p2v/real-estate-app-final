@@ -1,7 +1,12 @@
+// components/music-selector.tsx
+// Phase 1A — adds random default track pre-selection on mount.
+// Default picks from warm_acoustic / chill_tropical / upbeat_modern vibes.
+// All other behavior preserved: library browse, vibe filter, preview
+// playback, custom audio upload, "Generate Custom (Coming Soon)" tab.
+
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Music, Loader2, Check, Sparkles } from "lucide-react";
 
 const VIBE_PRESETS = [
@@ -15,6 +20,10 @@ const VIBE_PRESETS = [
   { key: "smooth_jazz", label: "Smooth Jazz", emoji: "🎺" },
   { key: "ambient", label: "Ambient", emoji: "🌙" },
 ];
+
+// Phase 1A: default track pool — pulled from these vibes, random pick.
+// Matt's call: vertical-friendly agent-favored categories.
+const DEFAULT_POOL_VIBES = ["warm_acoustic", "chill_tropical", "upbeat_modern"];
 
 interface MusicSelectorProps {
   selected: string;
@@ -38,6 +47,7 @@ export function MusicSelector({
   const [libraryTracks, setLibraryTracks] = useState<any[]>([]);
   const [libraryFilter, setLibraryFilter] = useState("");
   const [libraryLoading, setLibraryLoading] = useState(false);
+  const defaultAppliedRef = useRef(false);
 
   const fetchLibrary = async (vibe: string = "") => {
     setLibraryLoading(true);
@@ -45,17 +55,80 @@ export function MusicSelector({
       const resp = await fetch(`/api/generate-music?library=true&vibe=${vibe}`);
       const data = await resp.json();
       setLibraryTracks(data.tracks || []);
+      return data.tracks || [];
     } catch (e) {
       console.error("Library fetch error:", e);
+      return [];
+    } finally {
+      setLibraryLoading(false);
     }
-    setLibraryLoading(false);
   };
 
   useEffect(() => {
     fetchLibrary();
   }, []);
 
-  // Stop audio playback when component unmounts (e.g. navigating to next wizard step)
+  // ── Default track pre-selection (Phase 1A Section 5) ──
+  // If no music is selected yet, pick a random track from the default
+  // vibe pool and set it as the selection. Only runs once per mount.
+  useEffect(() => {
+    if (defaultAppliedRef.current) return;
+    if (selected) {
+      // User already has a selection (draft restore, etc.) — don't override.
+      defaultAppliedRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      // Try each vibe in the default pool in random order.
+      const shuffled = [...DEFAULT_POOL_VIBES].sort(() => Math.random() - 0.5);
+      for (const vibe of shuffled) {
+        if (cancelled) return;
+        try {
+          const resp = await fetch(
+            `/api/generate-music?library=true&vibe=${vibe}`
+          );
+          const data = await resp.json();
+          const tracks = data.tracks || [];
+          if (tracks.length > 0) {
+            const pick = tracks[Math.floor(Math.random() * tracks.length)];
+            if (!cancelled && pick?.id && pick?.file_url) {
+              onSelect(`library:${pick.id}:${pick.file_url}`);
+              defaultAppliedRef.current = true;
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("[music-selector] default pick error:", e);
+        }
+      }
+
+      // Final fallback: pick any active track from the unfiltered library.
+      if (cancelled) return;
+      try {
+        const resp = await fetch(`/api/generate-music?library=true`);
+        const data = await resp.json();
+        const tracks = data.tracks || [];
+        if (tracks.length > 0) {
+          const pick = tracks[Math.floor(Math.random() * tracks.length)];
+          if (!cancelled && pick?.id && pick?.file_url) {
+            onSelect(`library:${pick.id}:${pick.file_url}`);
+            defaultAppliedRef.current = true;
+          }
+        }
+      } catch (e) {
+        console.error("[music-selector] fallback pick error:", e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Stop audio playback when component unmounts
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -81,18 +154,16 @@ export function MusicSelector({
     setPlayingTrackId(trackId);
   };
 
-  const getPlayingTrackName = () => {
-    if (!playingTrackId) return "";
-    const track = libraryTracks.find(t => t.id === playingTrackId);
-    return track?.display_name || "";
-  };
-
   return (
     <div className="space-y-4">
       <style jsx>{`
         @keyframes scroll-text {
-          0% { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
+          0% {
+            transform: translateX(100%);
+          }
+          100% {
+            transform: translateX(-100%);
+          }
         }
         .scroll-text {
           animation: scroll-text 8s linear infinite;
@@ -104,6 +175,11 @@ export function MusicSelector({
           <Music className="h-5 w-5 text-primary" />
         </div>
         <h3 className="text-lg font-bold">Music</h3>
+        {selected && (
+          <span className="text-xs text-muted-foreground ml-auto">
+            ✓ Track selected
+          </span>
+        )}
       </div>
 
       {/* Tab switcher */}
@@ -142,9 +218,14 @@ export function MusicSelector({
           <div className="flex flex-wrap gap-1.5 mb-3">
             <button
               type="button"
-              onClick={() => { setLibraryFilter(""); fetchLibrary(""); }}
+              onClick={() => {
+                setLibraryFilter("");
+                fetchLibrary("");
+              }}
               className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
-                libraryFilter === "" ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border hover:bg-muted"
+                libraryFilter === ""
+                  ? "bg-primary/10 border-primary text-primary font-semibold"
+                  : "border-border hover:bg-muted"
               }`}
             >
               All
@@ -153,9 +234,14 @@ export function MusicSelector({
               <button
                 key={v.key}
                 type="button"
-                onClick={() => { setLibraryFilter(v.key); fetchLibrary(v.key); }}
+                onClick={() => {
+                  setLibraryFilter(v.key);
+                  fetchLibrary(v.key);
+                }}
                 className={`text-xs py-1.5 px-3 rounded-lg border transition-all ${
-                  libraryFilter === v.key ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border hover:bg-muted"
+                  libraryFilter === v.key
+                    ? "bg-primary/10 border-primary text-primary font-semibold"
+                    : "border-border hover:bg-muted"
                 }`}
               >
                 {v.emoji} {v.label}
@@ -168,35 +254,58 @@ export function MusicSelector({
               <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
             </div>
           ) : libraryTracks.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No tracks found</p>
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No tracks found
+            </p>
           ) : (
-            <div className={`space-y-2 ${libraryTracks.length > 10 ? "max-h-[500px] overflow-y-auto pr-2" : ""}`}>
+            <div
+              className={`space-y-2 ${
+                libraryTracks.length > 10
+                  ? "max-h-[500px] overflow-y-auto pr-2"
+                  : ""
+              }`}
+            >
               {libraryTracks.map((track) => (
                 <button
                   key={track.id}
                   type="button"
-                  onClick={() => onSelect(`library:${track.id}:${track.file_url}`)}
+                  onClick={() =>
+                    onSelect(`library:${track.id}:${track.file_url}`)
+                  }
                   className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                    selected.includes(track.id) ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/50"
+                    selected.includes(track.id)
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-border hover:bg-muted/50"
                   }`}
                 >
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handlePlayTrack(track.id, track.file_url); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlayTrack(track.id, track.file_url);
+                      }}
                       className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
-                        playingTrackId === track.id ? "bg-primary text-white" : "bg-primary/10 hover:bg-primary/20"
+                        playingTrackId === track.id
+                          ? "bg-primary text-white"
+                          : "bg-primary/10 hover:bg-primary/20"
                       }`}
                     >
                       {playingTrackId === track.id ? (
                         <span className="text-xs font-bold">■</span>
                       ) : (
-                        <span className="text-primary text-xs font-bold ml-0.5">▶</span>
+                        <span className="text-primary text-xs font-bold ml-0.5">
+                          ▶
+                        </span>
                       )}
                     </button>
                     <div>
-                      <span className="font-medium text-sm">{track.display_name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{track.duration_seconds}s</span>
+                      <span className="font-medium text-sm">
+                        {track.display_name}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {track.duration_seconds}s
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-1 justify-end min-w-0 ml-3">
@@ -218,28 +327,43 @@ export function MusicSelector({
 
           {/* Custom audio upload */}
           <div className="pt-3 border-t border-border mt-3">
-            <p className="text-xs text-muted-foreground mb-2">Or upload your own audio:</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              Or upload your own audio:
+            </p>
             <input
               type="file"
               accept="audio/*"
               onChange={(e) => {
                 const file = e.target.files?.[0] || null;
                 onCustomAudioChange(file);
-                if (file) { onSelect("custom"); setAudioPermission(false); }
+                if (file) {
+                  onSelect("custom");
+                  setAudioPermission(false);
+                }
               }}
               className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
             />
             {customAudioFile && (
               <div className="mt-2 space-y-2">
-                <p className="text-xs text-green-600">✓ {customAudioFile.name}</p>
+                <p className="text-xs text-green-600">
+                  ✓ {customAudioFile.name}
+                </p>
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={audioPermission}
-                    onChange={(e) => { setAudioPermission(e.target.checked); if (!e.target.checked) { onCustomAudioChange(null); onSelect(""); } }}
+                    onChange={(e) => {
+                      setAudioPermission(e.target.checked);
+                      if (!e.target.checked) {
+                        onCustomAudioChange(null);
+                        onSelect("");
+                      }
+                    }}
                     className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary"
                   />
-                  <span className="text-xs text-muted-foreground">I have permission to use this audio track.</span>
+                  <span className="text-xs text-muted-foreground">
+                    I have permission to use this audio track.
+                  </span>
                 </label>
               </div>
             )}
@@ -251,12 +375,17 @@ export function MusicSelector({
       {tab === "generate" && (
         <div className="text-center py-8 space-y-3">
           <Sparkles className="h-10 w-10 text-primary mx-auto" />
-          <h3 className="text-lg font-semibold">Custom AI Music Generation</h3>
+          <h3 className="text-lg font-semibold">
+            Custom AI Music Generation
+          </h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Soon you&apos;ll be able to generate custom music tracks tailored to your listing&apos;s vibe. Choose from 9 styles including Upbeat Modern, Chill Tropical, Elegant Classical, and more.
+            Soon you&apos;ll be able to generate custom music tracks tailored to
+            your listing&apos;s vibe. Choose from 9 styles including Upbeat
+            Modern, Chill Tropical, Elegant Classical, and more.
           </p>
           <p className="text-xs text-muted-foreground">
-            In the meantime, browse our library of curated tracks — there&apos;s something for every listing.
+            In the meantime, browse our library of curated tracks —
+            there&apos;s something for every listing.
           </p>
         </div>
       )}
