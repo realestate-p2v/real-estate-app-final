@@ -1,86 +1,166 @@
+// components/order-summary.tsx
+// Phase 1A refactor — preserves all working modes (URL, Quick Video, orientation, 1080P).
+// Removes voiceover (spec Section 4). Swaps legacy branding/custom-branding line.
+// Adds free-first-video credit handling (zeroes the first 10 Quick Video clips).
+// Removes retired "48-hour delivery" language (master doc Part 1).
+
 "use client";
 
-import { Check, Phone } from "lucide-react";
+import { Check, Phone, Sparkles } from "lucide-react";
+import {
+  QUICK_VIDEO_RATE,
+  FREE_FIRST_VIDEO_MAX_CLIPS,
+  computeQuickVideoPricing,
+} from "@/lib/subscription-state";
 
 interface OrderSummaryProps {
   photoCount: number;
   brandingOption?: string;
-  voiceoverOption?: string;
   includeEditedPhotos?: boolean;
   resolution?: string;
   orientation?: string;
   isUrlMode?: boolean;
   isQuickVideo?: boolean;
+  /** Subscriber state drives photo-editing pricing (free vs $2.99/photo). */
+  isSubscriber?: boolean;
+  /** Active free-first-video credit — zeros the first 10 Quick Video clips. */
+  hasFreeFirstVideoCredit?: boolean;
 }
-
-const QUICK_VIDEO_RATE = 4.95;
 
 export function OrderSummary({
   photoCount,
   brandingOption = "unbranded",
-  voiceoverOption = "none",
   includeEditedPhotos = false,
   resolution = "768P",
   orientation = "landscape",
   isUrlMode = false,
   isQuickVideo = false,
+  isSubscriber = false,
+  hasFreeFirstVideoCredit = false,
 }: OrderSummaryProps) {
   const getPricing = () => {
     if (isQuickVideo && photoCount > 0) {
-      const qvPrice = Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
-      return { price: qvPrice, originalPrice: 0, tier: `Quick Video (${photoCount} clips)` };
+      const qv = computeQuickVideoPricing(photoCount, hasFreeFirstVideoCredit);
+      return {
+        price: qv.displayPrice,
+        chargedPrice: qv.chargedPrice,
+        originalPrice: 0,
+        tier: `Quick Video (${photoCount} clips)`,
+        freeClips: qv.freeClips,
+        paidClips: qv.paidClips,
+      };
     }
     if (photoCount === 0) {
-      return { price: 0, originalPrice: 0, tier: "Select photos to see price" };
+      return {
+        price: 0,
+        chargedPrice: 0,
+        originalPrice: 0,
+        tier: "Select photos to see price",
+        freeClips: 0,
+        paidClips: 0,
+      };
     }
     if (photoCount <= 15) {
-      return { price: 79, originalPrice: 119, tier: "Standard (up to 15 photos)" };
+      return {
+        price: 79,
+        chargedPrice: 79,
+        originalPrice: 119,
+        tier: "Standard (up to 15 photos)",
+        freeClips: 0,
+        paidClips: photoCount,
+      };
     }
     if (photoCount <= 25) {
-      return { price: 99, originalPrice: 149, tier: "Professional (16-25 photos)" };
+      return {
+        price: 99,
+        chargedPrice: 99,
+        originalPrice: 149,
+        tier: "Professional (16-25 photos)",
+        freeClips: 0,
+        paidClips: photoCount,
+      };
     }
     if (photoCount <= 35) {
-      return { price: 109, originalPrice: 179, tier: "Premium (26-35 photos)" };
+      return {
+        price: 109,
+        chargedPrice: 109,
+        originalPrice: 179,
+        tier: "Premium (26-35 photos)",
+        freeClips: 0,
+        paidClips: photoCount,
+      };
     }
-    return { price: 0, originalPrice: 0, tier: "Contact us" };
+    return {
+      price: 0,
+      chargedPrice: 0,
+      originalPrice: 0,
+      tier: "Contact us",
+      freeClips: 0,
+      paidClips: 0,
+    };
   };
 
-  const { price, originalPrice, tier } = getPricing();
+  const { price, chargedPrice, originalPrice, tier, freeClips, paidClips } = getPricing();
   const showContactUs = photoCount > 35 && !isQuickVideo;
 
-  const brandingPrice = brandingOption === "custom" ? 0 : 0;
-  const voiceoverPrice = voiceoverOption === "voiceover" && !isQuickVideo ? 25 : 0;
-  const editedPhotosPrice = includeEditedPhotos ? photoCount * 2.99 : 0;
+  // ── Add-on pricing (voiceover removed) ──
+  const editedPhotosPrice = includeEditedPhotos
+    ? isSubscriber
+      ? 0 // free for subscribers + active-trial users
+      : photoCount * 2.99
+    : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
   const orientationPrice = orientation === "both" ? 15 : 0;
   const urlServicePrice = isUrlMode ? 25 : 0;
-  const totalAddons = brandingPrice + voiceoverPrice + editedPhotosPrice + resolutionPrice + orientationPrice + urlServicePrice;
+  const totalAddons = editedPhotosPrice + resolutionPrice + orientationPrice + urlServicePrice;
+
+  // Display total — what user sees as they build the order (before free credit).
   const totalPrice = price + totalAddons;
+  // Charged total — what Stripe bills (after free credit; add-ons still chargeable per Matt).
+  const chargedTotal = chargedPrice + totalAddons;
 
   const features: string[] = [];
   features.push(resolution === "1080P" ? "1080P Full HD video" : "768P HD video");
-  features.push(orientation === "both" ? "Landscape + Vertical videos" : orientation === "vertical" ? "Vertical (9:16) video" : "Landscape (16:9) video");
-  if (brandingOption === "custom") {
-    features.push("Custom branded intro & outro");
-  }
-  if (voiceoverOption === "voiceover" && !isQuickVideo) {
-    features.push("Professional AI voiceover");
-  }
+  features.push(
+    orientation === "both"
+      ? "Landscape + Vertical videos"
+      : orientation === "vertical"
+      ? "Vertical (9:16) video"
+      : "Landscape (16:9) video"
+  );
   if (includeEditedPhotos) {
-    features.push("Professional photo editing");
+    features.push(
+      isSubscriber ? "Professional photo editing (included with Lens)" : "Professional photo editing"
+    );
   }
-  features.push("AI-enhanced motion clips");
+  features.push("Cinematic motion clips");
   features.push("Choice of music");
-  features.push("48-hour delivery");
+  features.push("Delivery in minutes"); // replaces "48-hour delivery"
   if (isQuickVideo) {
     features.push("Paid revisions available");
   } else {
     features.push("1 revision included");
   }
 
+  const freeVideoActive = hasFreeFirstVideoCredit && isQuickVideo && photoCount > 0;
+
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 sticky top-24">
       <h3 className="text-xl font-bold text-foreground mb-4">Order Summary</h3>
+
+      {/* ── Free-first-video banner ── */}
+      {freeVideoActive && (
+        <div className="mb-4 rounded-xl border border-green-300 bg-green-50 p-3 flex items-start gap-2">
+          <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-green-800">First video on us</p>
+            <p className="text-xs text-green-700 mt-0.5">
+              Up to {FREE_FIRST_VIDEO_MAX_CLIPS} clips free. Additional clips are $
+              {QUICK_VIDEO_RATE.toFixed(2)} each. Your Lens Pro trial starts when your video delivers.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="flex justify-between items-center pb-4 border-b border-border">
@@ -90,9 +170,7 @@ export function OrderSummary({
 
         <div className="flex justify-between items-center pb-4 border-b border-border">
           <span className="text-muted-foreground">Package</span>
-          <span className="font-semibold text-foreground text-right text-sm">
-            {tier}
-          </span>
+          <span className="font-semibold text-foreground text-right text-sm">{tier}</span>
         </div>
 
         {showContactUs ? (
@@ -100,11 +178,12 @@ export function OrderSummary({
             <p className="text-muted-foreground mb-3">
               For orders with more than 35 photos, please contact us:
             </p>
-            <a
+            
               href="tel:+18455366954"
               className="inline-flex items-center gap-2 text-primary font-semibold hover:underline text-lg"
             >
-              <Phone className="h-5 w-5" />1 (845) 536-6954
+              <Phone className="h-5 w-5" />
+              {"1 (845) 536-6954"}
             </a>
           </div>
         ) : (
@@ -114,14 +193,22 @@ export function OrderSummary({
               {isQuickVideo ? (
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Quick Video ({photoCount} clips × ${QUICK_VIDEO_RATE})</span>
-                    <span className="font-semibold text-foreground">
-                      ${price.toFixed(2)}
+                    <span className="text-muted-foreground">
+                      Quick Video ({photoCount} clips × ${QUICK_VIDEO_RATE})
                     </span>
+                    <span className="font-semibold text-foreground">${price.toFixed(2)}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">LENS SUBSCRIBER</span>
+                    <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">
+                      LENS SUBSCRIBER
+                    </span>
                   </div>
+                  {freeVideoActive && (
+                    <div className="flex justify-between items-center text-xs text-green-700 pt-1">
+                      <span>Free-first-video credit ({freeClips} clip{freeClips !== 1 ? "s" : ""})</span>
+                      <span className="font-semibold">− ${(price - chargedPrice).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex justify-between items-center">
@@ -141,27 +228,26 @@ export function OrderSummary({
             </div>
 
             {/* Add-ons */}
-            {(brandingPrice > 0 || voiceoverPrice > 0 || editedPhotosPrice > 0 || resolutionPrice > 0 || orientationPrice > 0 || urlServicePrice > 0) && (
+            {(editedPhotosPrice > 0 ||
+              resolutionPrice > 0 ||
+              orientationPrice > 0 ||
+              urlServicePrice > 0) && (
               <div className="py-4 border-b border-border space-y-3">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Add-ons:
-                </span>
-                {brandingPrice > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Custom Branding</span>
-                    <span className="font-semibold text-foreground">+$25</span>
-                  </div>
-                )}
-                {voiceoverPrice > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Professional Voiceover</span>
-                    <span className="font-semibold text-foreground">+$25</span>
-                  </div>
-                )}
+                <span className="text-sm font-medium text-muted-foreground">Add-ons:</span>
                 {editedPhotosPrice > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Photo Editing ({photoCount} × $2.99)</span>
-                    <span className="font-semibold text-foreground">+${editedPhotosPrice.toFixed(2)}</span>
+                    <span className="text-sm text-foreground">
+                      Photo Editing ({photoCount} × $2.99)
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      +${editedPhotosPrice.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {includeEditedPhotos && isSubscriber && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Photo Editing</span>
+                    <span className="font-semibold text-green-600">Included</span>
                   </div>
                 )}
                 {resolutionPrice > 0 && (
@@ -187,23 +273,47 @@ export function OrderSummary({
 
             {/* Total */}
             <div className="py-4">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-foreground">Total</span>
-                <span className="text-3xl font-bold text-foreground">
-                  {totalPrice > 0 ? `$${totalPrice.toFixed(2)}` : "--"}
-                </span>
-              </div>
-              {!isQuickVideo && price > 0 && originalPrice > price && (
-                <div className="text-right mt-2">
-                  <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-semibold">
-                    Save ${originalPrice - price}
-                  </span>
-                </div>
+              {freeVideoActive ? (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground line-through">Subtotal</span>
+                    <span className="text-sm text-muted-foreground line-through">
+                      ${totalPrice.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-lg font-semibold text-foreground">You pay today</span>
+                    <span className="text-3xl font-bold text-green-600">
+                      ${chargedTotal.toFixed(2)}
+                    </span>
+                  </div>
+                  {paidClips > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2 text-right">
+                      {paidClips} clip{paidClips !== 1 ? "s" : ""} past the free {FREE_FIRST_VIDEO_MAX_CLIPS}-clip limit
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-foreground">Total</span>
+                    <span className="text-3xl font-bold text-foreground">
+                      {totalPrice > 0 ? `$${totalPrice.toFixed(2)}` : "--"}
+                    </span>
+                  </div>
+                  {!isQuickVideo && price > 0 && originalPrice > price && (
+                    <div className="text-right mt-2">
+                      <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-semibold">
+                        Save ${originalPrice - price}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
             {/* Quick Video note */}
-            {isQuickVideo && (
+            {isQuickVideo && !freeVideoActive && (
               <p className="text-xs text-muted-foreground">
                 Quick Videos include branding and music. Paid revisions available after delivery.
               </p>
