@@ -361,7 +361,7 @@ function ErrorScreen({
           </p>
         )}
         <div className="pt-3">
-          
+          <a
             href="mailto:realestatephoto2video@gmail.com"
             className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
           >
