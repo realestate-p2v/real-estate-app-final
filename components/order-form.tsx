@@ -340,7 +340,8 @@ export function OrderForm() {
 
   // ── Skip-branding modal state ──
   const [showSkipModal, setShowSkipModal] = useState(false);
-
+  const [brandingSkipped, setBrandingSkipped] = useState(false);
+  
   // ── Property fields (existing behavior; URL params pre-fill) ──
   const [propertyAddress, setPropertyAddress] = useState("");
   const [propertyCity, setPropertyCity] = useState("");
@@ -747,8 +748,9 @@ export function OrderForm() {
           if (photos.length === 0 || photos.length > STANDARD_MAX_PHOTOS || !allUploadsComplete) return false;
           if (photos.length < effectiveMinPhotos) return false;
           // Special features chip picker lives inside the photo-uploader's
-          // questionnaire. We also gate here — at least 1 filled.
-          if (!hasAtLeastOneFeature(specialFeatures)) return false;
+          // questionnaire. We also gate here — at least 1 filled. Skipped
+          // when user opted out of branded bonus content.
+          if (!brandingSkipped && !hasAtLeastOneFeature(specialFeatures)) return false;
           return true;
         }
         if (isUrlMode) {
@@ -778,6 +780,7 @@ export function OrderForm() {
     allUploadsComplete,
     effectiveMinPhotos,
     specialFeatures,
+    brandingSkipped,
     listingUrl,
     listingPackage,
     listingPermission,
@@ -803,6 +806,7 @@ export function OrderForm() {
   };
 
   const handleSkipConfirmed = () => {
+    setBrandingSkipped(true);
     setShowSkipModal(false);
     setCurrentStep(currentStep + 1);
   };
@@ -1245,10 +1249,14 @@ export function OrderForm() {
                     maxPhotos={effectiveMaxPhotos}
                   />
 
-                  {/* Special Features chips — JSONB, narrative data for DW */}
-                  <div className="pt-4 border-t border-border">
-                    <SpecialFeaturesPicker value={specialFeatures} onChange={setSpecialFeatures} />
-                  </div>
+                  {/* Special Features chips — JSONB, narrative data for DW.
+                      Hidden when user opted out of branded bonus content
+                      (features only feed bonus-content copy, nothing else). */}
+                  {!brandingSkipped && (
+                    <div className="pt-4 border-t border-border">
+                      <SpecialFeaturesPicker value={specialFeatures} onChange={setSpecialFeatures} />
+                    </div>
+                  )}
 
                   {/* Subscriber Quick Video banner */}
                   {isQuickVideo && (
@@ -1334,10 +1342,12 @@ export function OrderForm() {
                     />
                   </div>
 
-                  {/* Special features still apply in URL mode */}
-                  <div className="pt-4 border-t border-border">
-                    <SpecialFeaturesPicker value={specialFeatures} onChange={setSpecialFeatures} />
-                  </div>
+                  {/* Special features — hidden when user opted out of branded bonus content */}
+                  {!brandingSkipped && (
+                    <div className="pt-4 border-t border-border">
+                      <SpecialFeaturesPicker value={specialFeatures} onChange={setSpecialFeatures} />
+                    </div>
+                  )}
 
                   <div
                     className={`rounded-xl border-2 p-4 transition-colors ${
