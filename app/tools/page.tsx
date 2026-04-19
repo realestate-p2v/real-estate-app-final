@@ -224,35 +224,6 @@ function PhotoToVideoDemo() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Counter that ticks up on scroll
-// ──────────────────────────────────────────────────────────────
-
-function ContentCounter() {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!inView) return;
-    let n = 0;
-    const t = setInterval(() => {
-      n += 1;
-      setCount(n);
-      if (n >= 47) clearInterval(t);
-    }, 28);
-    return () => clearInterval(t);
-  }, [inView]);
-  return (
-    <div ref={ref} className="text-center">
-      <div className="text-[88px] font-black leading-none tracking-tighter text-cyan-400 sm:text-[120px]">
-        {count}+
-      </div>
-      <p className="mt-2 text-sm font-bold uppercase tracking-[0.2em] text-white/50">
-        Assets from one shoot
-      </p>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
 // Tool card — lean, data-forward
 // ──────────────────────────────────────────────────────────────
 
@@ -558,32 +529,11 @@ export default function ToolsPage() {
               15 Tools powered by 1 Set of Photos
             </div>
 
-            <h1 className="text-4xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
+            <h1 className="text-4xl font-black leading-[0.95] tracking-tight no-underline sm:text-6xl lg:text-7xl">
               Your listing photos
               <br />
-              <span className="relative inline-block">
-                <span className="relative z-10 bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
-                  are an unfair advantage.
-                </span>
-                <svg
-                  className="absolute -bottom-2 left-0 w-full"
-                  viewBox="0 0 300 12"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M 2 8 Q 75 2, 150 6 T 298 4"
-                    stroke="url(#underline)"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  <defs>
-                    <linearGradient id="underline">
-                      <stop offset="0" stopColor="#22d3ee" />
-                      <stop offset="1" stopColor="#818cf8" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+              <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent no-underline">
+                are an unfair advantage.
               </span>
             </h1>
 
@@ -679,31 +629,6 @@ export default function ToolsPage() {
         title="Then one shoot becomes everything."
         kicker="The multiplier"
       >
-        {/* Big stat callout */}
-        <div className="mb-10 overflow-hidden rounded-3xl border border-blue-900/60 bg-gradient-to-br from-blue-950 via-blue-950/80 to-gray-950 p-8 shadow-2xl shadow-blue-950/30 sm:p-12">
-          <div className="grid items-center gap-6 md:grid-cols-2">
-            <ContentCounter />
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { k: "7", v: "Production tools" },
-                { k: "1", v: "Branded profile" },
-                { k: "$0", v: "Per extra asset" },
-                { k: "∞", v: "Regenerations" },
-              ].map((s) => (
-                <div
-                  key={s.v}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-                >
-                  <div className="text-2xl font-black text-indigo-300">{s.k}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
-                    {s.v}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ToolCard
             icon={PenTool}
