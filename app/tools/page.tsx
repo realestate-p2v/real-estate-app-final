@@ -231,12 +231,11 @@ type ToolCardProps = {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
-  deliverable: string;
   accent: AccentKey;
   stat: { value: string; label: string };
 };
 
-function ToolCard({ icon: Icon, title, desc, deliverable, accent, stat }: ToolCardProps) {
+function ToolCard({ icon: Icon, title, desc, accent, stat }: ToolCardProps) {
   const a = A[accent];
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-0.5">
@@ -262,14 +261,7 @@ function ToolCard({ icon: Icon, title, desc, deliverable, accent, stat }: ToolCa
         </div>
 
         <h4 className="mb-2 text-lg font-bold text-white">{title}</h4>
-        <p className="mb-5 text-sm leading-relaxed text-white/60">{desc}</p>
-
-        <div className="flex items-start gap-2 border-t border-white/5 pt-4">
-          <Check className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${a.text}`} />
-          <p className="text-xs leading-relaxed text-white/50">
-            <span className="font-semibold text-white/80">You get:</span> {deliverable}
-          </p>
-        </div>
+        <p className="text-sm leading-relaxed text-white/60">{desc}</p>
       </div>
     </div>
   );
@@ -391,14 +383,13 @@ function FeatureBlock({
 // ──────────────────────────────────────────────────────────────
 
 function DeployCard({
-  icon: Icon, accent, title, byline, desc, deliverable, stats, featured,
+  icon: Icon, accent, title, byline, desc, stats, featured,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   accent: AccentKey;
   title: string;
   byline: string;
   desc: string;
-  deliverable: string;
   stats: { k: string; v: string }[];
   featured?: boolean;
 }) {
@@ -423,7 +414,7 @@ function DeployCard({
       <p className={`mb-3 text-sm font-semibold ${a.textLight}`}>{byline}</p>
       <p className="mb-4 text-sm leading-relaxed text-white/60">{desc}</p>
 
-      <div className="mb-4 grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {stats.map((s) => (
           <div key={s.v} className="rounded-lg bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
             <div className={`text-base font-black ${a.textLight}`}>{s.k}</div>
@@ -432,12 +423,6 @@ function DeployCard({
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="border-t border-white/10 pt-4">
-        <p className="text-xs leading-relaxed text-white/50">
-          <span className="font-semibold text-white/80">You get:</span> {deliverable}
-        </p>
       </div>
     </div>
   );
@@ -448,13 +433,12 @@ function DeployCard({
 // ──────────────────────────────────────────────────────────────
 
 function ClientToolCard({
-  icon: Icon, accent, title, desc, deliverable, useCase,
+  icon: Icon, accent, title, desc, useCase,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   accent: AccentKey;
   title: string;
   desc: string;
-  deliverable: string;
   useCase: string;
 }) {
   const a = A[accent];
@@ -473,11 +457,6 @@ function ClientToolCard({
             <span>{useCase}</span>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-white/60">{desc}</p>
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="text-xs leading-relaxed text-white/50">
-              <span className="font-semibold text-white/80">You get:</span> {deliverable}
-            </p>
-          </div>
         </div>
       </div>
     </div>
@@ -634,7 +613,6 @@ export default function ToolsPage() {
             icon={PenTool}
             title="Design Studio"
             desc="Just Listed, Open House, Price Reduced graphics with auto-filled branding. Swap photos, edit text, export."
-            deliverable="PNG + PDF graphics for social, print, and MLS."
             accent="indigo"
             stat={{ value: "11", label: "Templates" }}
           />
@@ -642,7 +620,6 @@ export default function ToolsPage() {
             icon={ImageIcon}
             title="Listing Flyer"
             desc="Print-ready property flyers generated from your photos and details. Professional layouts, your branding baked in."
-            deliverable="Downloadable PDF flyers for open houses, mailers, broker tours."
             accent="orange"
             stat={{ value: "PDF", label: "Print-ready" }}
           />
@@ -650,7 +627,6 @@ export default function ToolsPage() {
             icon={Sofa}
             title="Virtual Staging"
             desc="Furnish empty rooms with AI. 8 design styles across 8 room types. Before/after comparison slider."
-            deliverable="Staged room photos at pennies per room. Before/after pairs for listings."
             accent="violet"
             stat={{ value: "8×8", label: "Styles × Rooms" }}
           />
@@ -658,7 +634,6 @@ export default function ToolsPage() {
             icon={Crosshair}
             title="Drone Mark"
             desc="Annotate aerial photos with lot lines, measurement labels, and branded pins. 8 drawing tools."
-            deliverable="Annotated aerial JPEGs for listings, presentations, print."
             accent="amber"
             stat={{ value: "8", label: "Draw tools" }}
           />
@@ -666,7 +641,6 @@ export default function ToolsPage() {
             icon={ImageIcon}
             title="Photo Enhancement"
             desc="AI brightness, color, and white balance correction. Fix dark interiors, warm cold light, balance tricky exposures."
-            deliverable="Enhanced photos with professional-grade color correction."
             accent="teal"
             stat={{ value: "1-click", label: "AI fix" }}
           />
@@ -674,7 +648,6 @@ export default function ToolsPage() {
             icon={Zap}
             title="Photo Optimizer"
             desc="Batch compress listing photos for MLS, Zillow, and social. Hard cap at 1920px and under 290KB."
-            deliverable="Optimized photos that meet every platform's upload requirements."
             accent="emerald"
             stat={{ value: "<290KB", label: "Per photo" }}
           />
@@ -682,7 +655,6 @@ export default function ToolsPage() {
             icon={Camera}
             title="Photo Coach"
             desc={'AI scores every photo 1-10 with actionable feedback — "move left 3 feet, open the blinds on the east wall."'}
-            deliverable="Better photos on every listing. A process that impresses sellers at the appointment."
             accent="blue"
             stat={{ value: "1–10", label: "Live score" }}
           />
@@ -705,7 +677,6 @@ export default function ToolsPage() {
             title="Marketing Planner"
             byline="Tell me what to post — and do it for me."
             desc="30-day AI content sprints with weighted property rotation, 10 post types, and a weekly calendar. Select a property, pick media, get a caption, share."
-            deliverable="A 30-day posting schedule with captions, media, and one-click deep-links to every platform."
             stats={[
               { k: "30-day", v: "Sprints" },
               { k: "10", v: "Post types" },
@@ -717,7 +688,6 @@ export default function ToolsPage() {
             title="Description Writer"
             byline="MLS-ready copy that actually sounds human."
             desc="AI analyzes your listing photos and writes in 4 styles: Professional, Luxury, Conversational, Concise. Feeds flyers, website, social, and MLS automatically."
-            deliverable="Polished listing descriptions ready to paste into MLS, print on flyers, or publish on your website."
             stats={[
               { k: "4", v: "Voice styles" },
               { k: "∞", v: "Regenerations" },
@@ -729,7 +699,6 @@ export default function ToolsPage() {
             title="My Agent Website"
             byline="Your marketing has a home now."
             desc="Full professional website on p2v.homes or your custom domain. Every description, staged room, and flyer auto-feeds your site. Property pages, lead capture, AI blog, SEO."
-            deliverable="A live agent website with your listings, branding, and content — we handle hosting, SSL, and updates. Lens Pro $49/mo or buy outright $399."
             stats={[
               { k: "SEO", v: "Built in" },
               { k: "SSL", v: "Included" },
@@ -754,7 +723,6 @@ export default function ToolsPage() {
             accent="rose"
             title="Reports"
             desc="Branded buyer and seller guides with AI-written content. Your colors, your headshot on the cover. Professional reports that position you as the expert."
-            deliverable="Downloadable PDF reports branded to your business — ready to email, print, or present."
             useCase="Send to every lead who requests info"
           />
           <ClientToolCard
@@ -762,7 +730,6 @@ export default function ToolsPage() {
             accent="teal"
             title="Location Value Score"
             desc="A 1-100 composite neighborhood score covering amenities, trends, growth, and infrastructure. Branded PDF for buyers or listing presentations."
-            deliverable="A branded neighborhood insights report that demonstrates local expertise."
             useCase="Attach to every buyer tour package"
           />
           <ClientToolCard
@@ -770,7 +737,6 @@ export default function ToolsPage() {
             accent="amber"
             title="Value Boost Report"
             desc="Room-by-room DIY improvement suggestions with cost, time, and ROI estimates. Help sellers understand which upgrades are worth doing before listing."
-            deliverable="A branded improvement report with actionable recommendations and ROI projections."
             useCase="Your secret weapon at the listing appointment"
           />
         </div>
