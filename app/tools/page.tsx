@@ -241,11 +241,11 @@ function ContentCounter() {
     return () => clearInterval(t);
   }, [inView]);
   return (
-    <div ref={ref} className="text-left">
-      <div className="text-[64px] font-black leading-none tracking-tighter text-cyan-400 sm:text-[72px]">
+    <div ref={ref} className="text-center">
+      <div className="text-[88px] font-black leading-none tracking-tighter text-cyan-400 sm:text-[120px]">
         {count}+
       </div>
-      <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+      <p className="mt-2 text-sm font-bold uppercase tracking-[0.2em] text-white/50">
         Assets from one shoot
       </p>
     </div>
@@ -513,324 +513,6 @@ function ClientToolCard({
   );
 }
 
-// ──────────────────────────────────────────────────────────────
-// StagingAnimation — empty room → furnished, on scroll
-// ──────────────────────────────────────────────────────────────
-
-function StagingAnimation() {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  return (
-    <div
-      ref={ref}
-      className="relative grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-gray-950"
-    >
-      {/* BEFORE — empty room */}
-      <div className="relative aspect-video bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900">
-        {/* Floor line */}
-        <div className="absolute inset-x-0 bottom-1/3 h-px bg-white/10" />
-        {/* Window */}
-        <div className="absolute left-1/2 top-[18%] h-[30%] w-[22%] -translate-x-1/2 rounded-sm border border-white/15 bg-gradient-to-b from-gray-600/40 to-gray-800/40">
-          <div className="absolute inset-x-0 top-1/2 h-px bg-white/10" />
-          <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
-        </div>
-        <div className="absolute left-3 top-3 rounded bg-black/40 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60 backdrop-blur">
-          Before
-        </div>
-      </div>
-
-      {/* AFTER — furnished */}
-      <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-amber-900/30 via-stone-800 to-stone-900">
-        <div className="absolute inset-x-0 bottom-1/3 h-px bg-amber-200/15" />
-        {/* Window with warmer light */}
-        <div className="absolute left-1/2 top-[18%] h-[30%] w-[22%] -translate-x-1/2 rounded-sm border border-amber-200/30 bg-gradient-to-b from-amber-200/40 to-amber-400/20">
-          <div className="absolute inset-x-0 top-1/2 h-px bg-amber-200/20" />
-          <div className="absolute inset-y-0 left-1/2 w-px bg-amber-200/20" />
-        </div>
-
-        {/* Sofa — slides in from left */}
-        <div
-          className="absolute bottom-[14%] left-[8%] h-[22%] w-[38%] rounded-md bg-gradient-to-b from-stone-500 to-stone-700 shadow-lg"
-          style={{
-            opacity: inView ? 1 : 0,
-            transform: inView ? "translateX(0)" : "translateX(-40px)",
-            transition: "all 700ms cubic-bezier(0.16, 1, 0.3, 1) 200ms",
-          }}
-        >
-          <div className="absolute inset-x-1 top-1 h-[40%] rounded bg-stone-400/40" />
-          <div className="absolute bottom-0 left-1 h-1 w-1 rounded-full bg-stone-900" />
-          <div className="absolute bottom-0 right-1 h-1 w-1 rounded-full bg-stone-900" />
-        </div>
-
-        {/* Coffee table — fades in */}
-        <div
-          className="absolute bottom-[10%] left-1/2 h-[7%] w-[16%] -translate-x-1/2 rounded-sm bg-stone-800 ring-1 ring-stone-700"
-          style={{
-            opacity: inView ? 1 : 0,
-            transform: inView ? "scale(1)" : "scale(0.7)",
-            transition: "all 500ms cubic-bezier(0.34, 1.56, 0.64, 1) 500ms",
-          }}
-        />
-
-        {/* Plant — slides in from right */}
-        <div
-          className="absolute bottom-[14%] right-[12%] flex flex-col items-center"
-          style={{
-            opacity: inView ? 1 : 0,
-            transform: inView ? "translateY(0)" : "translateY(20px)",
-            transition: "all 600ms cubic-bezier(0.16, 1, 0.3, 1) 700ms",
-          }}
-        >
-          <div className="h-6 w-8 rounded-t-full bg-emerald-700/80" />
-          <div className="h-4 w-5 rounded-sm bg-stone-900" />
-        </div>
-
-        {/* Artwork on wall — fades in */}
-        <div
-          className="absolute left-[14%] top-[22%] h-[18%] w-[12%] rounded-sm border-2 border-stone-900 bg-gradient-to-br from-rose-400/60 to-amber-400/60"
-          style={{
-            opacity: inView ? 1 : 0,
-            transition: "opacity 600ms ease 900ms",
-          }}
-        />
-
-        <div className="absolute left-3 top-3 rounded bg-amber-400/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 ring-1 ring-amber-400/30 backdrop-blur">
-          After · AI Staged
-        </div>
-
-        {/* Sparkle accent */}
-        <div
-          className="absolute right-3 top-3"
-          style={{
-            opacity: inView ? 1 : 0,
-            transform: inView ? "scale(1) rotate(0deg)" : "scale(0) rotate(-180deg)",
-            transition: "all 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 1100ms",
-          }}
-        >
-          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-        </div>
-      </div>
-
-      {/* Center divider arrow */}
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{
-          opacity: inView ? 1 : 0,
-          transition: "opacity 400ms ease 1300ms",
-        }}
-      >
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 ring-2 ring-amber-400/40 shadow-lg">
-          <ArrowRight className="h-4 w-4 text-amber-300" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
-// SocialFanAnimation — post cards fanning to platforms
-// ──────────────────────────────────────────────────────────────
-
-function SocialFanAnimation() {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  const cards = [
-    { platform: "IG", rotate: -18, color: "from-pink-500 to-orange-500", delay: 100 },
-    { platform: "FB", rotate: -6, color: "from-blue-500 to-blue-700", delay: 200 },
-    { platform: "TikTok", rotate: 6, color: "from-cyan-400 to-rose-500", delay: 300 },
-    { platform: "X", rotate: 18, color: "from-gray-700 to-gray-900", delay: 400 },
-  ];
-  return (
-    <div
-      ref={ref}
-      className="relative flex h-40 items-end justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-emerald-950/30 to-gray-950 p-4"
-    >
-      {/* Source card (photo) */}
-      <div
-        className="absolute left-6 top-6 h-16 w-12 rounded-md bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-lg ring-2 ring-white/20"
-        style={{
-          opacity: inView ? 1 : 0,
-          transform: inView ? "scale(1)" : "scale(0.5)",
-          transition: "all 500ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-        }}
-      >
-        <div className="absolute inset-1 rounded-sm bg-white/20" />
-      </div>
-
-      {/* Arrow */}
-      <div
-        className="absolute left-[78px] top-[42px]"
-        style={{
-          opacity: inView ? 1 : 0,
-          transition: "opacity 400ms ease 600ms",
-        }}
-      >
-        <ArrowRight className="h-4 w-4 text-emerald-400" />
-      </div>
-
-      {/* Fan of platform cards */}
-      <div className="relative flex h-full items-center">
-        {cards.map((card) => (
-          <div
-            key={card.platform}
-            className={`absolute left-1/2 top-1/2 flex h-20 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg bg-gradient-to-br ${card.color} text-[10px] font-black text-white shadow-xl ring-1 ring-white/20`}
-            style={{
-              opacity: inView ? 1 : 0,
-              transform: inView
-                ? `translate(-50%, -50%) rotate(${card.rotate}deg) translateY(-4px)`
-                : `translate(-50%, -50%) rotate(0deg) translateY(0)`,
-              transition: `all 600ms cubic-bezier(0.34, 1.56, 0.64, 1) ${card.delay}ms`,
-            }}
-          >
-            {card.platform}
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom caption */}
-      <div
-        className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.2em] text-white/50"
-        style={{
-          opacity: inView ? 1 : 0,
-          transition: "opacity 500ms ease 800ms",
-        }}
-      >
-        1 post · 4 platforms · 1 click
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
-// MapPinAnimation — pin drops on a grid, score counts up
-// ──────────────────────────────────────────────────────────────
-
-function MapPinAnimation() {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  const [score, setScore] = useState(0);
-  useEffect(() => {
-    if (!inView) return;
-    let n = 0;
-    const t = setInterval(() => {
-      n += 2;
-      setScore(n);
-      if (n >= 92) {
-        setScore(92);
-        clearInterval(t);
-      }
-    }, 20);
-    return () => clearInterval(t);
-  }, [inView]);
-
-  return (
-    <div
-      ref={ref}
-      className="relative h-40 overflow-hidden rounded-2xl border border-white/10 bg-gray-950"
-    >
-      {/* Map grid */}
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(20,184,166,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(20,184,166,0.4) 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
-
-      {/* Streets — curved paths */}
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 160" preserveAspectRatio="none">
-        <path
-          d="M 0 80 Q 100 60, 200 90 T 400 70"
-          stroke="rgb(20 184 166 / 0.3)"
-          strokeWidth="2"
-          fill="none"
-        />
-        <path
-          d="M 120 0 L 140 160"
-          stroke="rgb(20 184 166 / 0.25)"
-          strokeWidth="1.5"
-          fill="none"
-        />
-        <path
-          d="M 280 0 Q 260 80, 300 160"
-          stroke="rgb(20 184 166 / 0.25)"
-          strokeWidth="1.5"
-          fill="none"
-        />
-      </svg>
-
-      {/* Amenity dots */}
-      {[
-        { x: "20%", y: "30%", delay: 300 },
-        { x: "72%", y: "28%", delay: 450 },
-        { x: "28%", y: "72%", delay: 600 },
-        { x: "82%", y: "68%", delay: 750 },
-      ].map((d, i) => (
-        <div
-          key={i}
-          className="absolute h-1.5 w-1.5 rounded-full bg-teal-400 shadow-[0_0_8px_rgb(20,184,166)]"
-          style={{
-            left: d.x,
-            top: d.y,
-            opacity: inView ? 1 : 0,
-            transition: `opacity 400ms ease ${d.delay}ms`,
-          }}
-        />
-      ))}
-
-      {/* Dropping pin */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2"
-        style={{
-          opacity: inView ? 1 : 0,
-          transform: inView
-            ? "translate(-50%, -50%) translateY(0)"
-            : "translate(-50%, -50%) translateY(-60px)",
-          transition: "all 700ms cubic-bezier(0.34, 1.8, 0.64, 1) 150ms",
-        }}
-      >
-        <div className="flex flex-col items-center">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-teal-400 ring-4 ring-teal-400/30 shadow-[0_0_20px_rgb(20,184,166)]">
-            <MapPin className="h-4 w-4 text-gray-950" />
-          </div>
-          <div className="h-2 w-0.5 bg-gradient-to-b from-teal-400 to-transparent" />
-        </div>
-      </div>
-
-      {/* Pulse ring */}
-      <div
-        className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-teal-400"
-        style={{
-          opacity: inView ? 0 : 0,
-          animation: inView ? "pulse-ring 2s ease-out 900ms infinite" : "none",
-        }}
-      />
-
-      {/* Score badge */}
-      <div
-        className="absolute right-4 top-4 rounded-xl border border-teal-400/30 bg-gray-950/90 px-3 py-2 backdrop-blur"
-        style={{
-          opacity: inView ? 1 : 0,
-          transform: inView ? "translateX(0)" : "translateX(20px)",
-          transition: "all 500ms ease 1000ms",
-        }}
-      >
-        <div className="text-[9px] font-bold uppercase tracking-wider text-white/50">
-          Location Score
-        </div>
-        <div className="flex items-baseline gap-1">
-          <div className="text-2xl font-black text-teal-300">{score}</div>
-          <div className="text-xs font-bold text-white/40">/100</div>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes pulse-ring {
-          0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-          100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-}
 
 // ──────────────────────────────────────────────────────────────
 // MAIN PAGE
@@ -998,33 +680,26 @@ export default function ToolsPage() {
         kicker="The multiplier"
       >
         {/* Big stat callout */}
-        <div className="mb-10 overflow-hidden rounded-3xl border border-blue-900/60 bg-gradient-to-br from-blue-950 via-blue-950/80 to-gray-950 p-6 shadow-2xl shadow-blue-950/30 sm:p-8">
-          <div className="grid items-center gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <StagingAnimation />
-            </div>
-            <div className="lg:col-span-2">
-              <div className="mb-4">
-                <ContentCounter />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { k: "7", v: "Production tools" },
-                  { k: "1", v: "Branded profile" },
-                  { k: "$0", v: "Per extra asset" },
-                  { k: "∞", v: "Regenerations" },
-                ].map((s) => (
-                  <div
-                    key={s.v}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
-                  >
-                    <div className="text-xl font-black text-indigo-300">{s.k}</div>
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-white/50">
-                      {s.v}
-                    </div>
+        <div className="mb-10 overflow-hidden rounded-3xl border border-blue-900/60 bg-gradient-to-br from-blue-950 via-blue-950/80 to-gray-950 p-8 shadow-2xl shadow-blue-950/30 sm:p-12">
+          <div className="grid items-center gap-6 md:grid-cols-2">
+            <ContentCounter />
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { k: "7", v: "Production tools" },
+                { k: "1", v: "Branded profile" },
+                { k: "$0", v: "Per extra asset" },
+                { k: "∞", v: "Regenerations" },
+              ].map((s) => (
+                <div
+                  key={s.v}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+                >
+                  <div className="text-2xl font-black text-indigo-300">{s.k}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                    {s.v}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1098,10 +773,6 @@ export default function ToolsPage() {
         title="Then it goes to work — everywhere."
         kicker="The distribution"
       >
-        <div className="mb-8">
-          <SocialFanAnimation />
-        </div>
-
         <div className="grid gap-5 lg:grid-cols-3">
           <DeployCard
             icon={Calendar}
@@ -1152,10 +823,6 @@ export default function ToolsPage() {
         title="And it wins you the listing appointment."
         kicker="The close"
       >
-        <div className="mb-8">
-          <MapPinAnimation />
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-3">
           <ClientToolCard
             icon={FileText}
