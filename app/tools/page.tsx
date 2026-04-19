@@ -303,80 +303,7 @@ function ContentCounter() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Mini previews for tool cards
-// ──────────────────────────────────────────────────────────────
-
-const FlyerPreview = () => (
-  <div className="flex h-full items-center justify-center bg-gradient-to-br from-orange-500/20 to-blue-900/40 p-4">
-    <div className="flex gap-1.5">
-      {["JUST LISTED", "OPEN HOUSE", "SOLD"].map((t) => (
-        <div key={t} className="rounded bg-white/10 px-2 py-1 text-[8px] font-bold text-white/80">
-          {t}
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const StagingPreview = () => (
-  <div className="grid h-full grid-cols-2">
-    <div className="relative bg-gray-700/40">
-      <span className="absolute left-1 top-1 text-[8px] font-bold text-white/60">BEFORE</span>
-    </div>
-    <div className="relative bg-gradient-to-br from-amber-500/30 to-violet-500/30">
-      <span className="absolute left-1 top-1 text-[8px] font-bold text-white/80">AFTER</span>
-    </div>
-  </div>
-);
-
-const EnhancePreview = () => (
-  <div className="flex h-full">
-    <div className="flex-1 bg-gradient-to-br from-gray-700 to-gray-900" />
-    <div className="flex-1 bg-gradient-to-br from-amber-300/40 via-orange-400/30 to-rose-500/30" />
-  </div>
-);
-
-const DronePreview = () => (
-  <div className="relative h-full bg-gradient-to-br from-emerald-900/40 to-teal-900/60">
-    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 50" preserveAspectRatio="none">
-      <path d="M 10 30 L 40 20 L 70 35 L 90 15" stroke="rgb(251 191 36)" strokeWidth="0.8" fill="none" strokeDasharray="2 1" />
-      <circle cx="40" cy="20" r="1.5" fill="rgb(251 191 36)" />
-      <circle cx="70" cy="35" r="1.5" fill="rgb(251 191 36)" />
-    </svg>
-  </div>
-);
-
-const OptimizerPreview = () => (
-  <div className="flex h-full items-center justify-center gap-3 bg-emerald-900/20 p-2">
-    <div className="text-[10px] font-bold text-white/50 line-through">4.2 MB</div>
-    <ArrowRight className="h-3 w-3 text-emerald-400" />
-    <div className="text-xs font-black text-emerald-400">287 KB</div>
-  </div>
-);
-
-const DesignPreview = () => (
-  <div className="grid h-full grid-cols-3 gap-1 p-2">
-    {[0, 1, 2].map((i) => (
-      <div
-        key={i}
-        className="rounded bg-gradient-to-br from-indigo-500/30 to-purple-500/30 ring-1 ring-white/10"
-      />
-    ))}
-  </div>
-);
-
-const PhotoCoachPreview = () => (
-  <div className="flex h-full items-center justify-between bg-blue-900/30 px-4">
-    <div className="text-xs font-bold text-white/60">Living Room</div>
-    <div className="flex items-center gap-1">
-      <div className="text-2xl font-black text-blue-300">8.4</div>
-      <div className="text-[10px] font-bold text-white/40">/10</div>
-    </div>
-  </div>
-);
-
-// ──────────────────────────────────────────────────────────────
-// Tool card
+// Tool card — lean, data-forward
 // ──────────────────────────────────────────────────────────────
 
 type ToolCardProps = {
@@ -385,40 +312,36 @@ type ToolCardProps = {
   desc: string;
   deliverable: string;
   accent: AccentKey;
-  badge?: string;
-  preview?: React.ReactNode;
+  stat: { value: string; label: string };
 };
 
-function ToolCard({ icon: Icon, title, desc, deliverable, accent, badge, preview }: ToolCardProps) {
+function ToolCard({ icon: Icon, title, desc, deliverable, accent, stat }: ToolCardProps) {
   const a = A[accent];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition-all duration-500 hover:border-white/20 hover:bg-white/[0.06] hover:-translate-y-1">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-0.5">
+      {/* Corner glow */}
       <div
-        className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full ${a.bg20} opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100`}
+        className={`pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full ${a.bg20} opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100`}
       />
 
       <div className="relative">
-        <div className="mb-4 flex items-center justify-between">
+        {/* Header: icon + stat */}
+        <div className="mb-5 flex items-start justify-between">
           <div
-            className={`flex h-11 w-11 items-center justify-center rounded-xl ${a.bg10} ring-1 ${a.ring30} transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}
+            className={`flex h-11 w-11 items-center justify-center rounded-xl ${a.bg10} ring-1 ${a.ring30} transition-transform duration-300 group-hover:scale-110`}
           >
             <Icon className={`h-5 w-5 ${a.text}`} />
           </div>
-          {badge && (
-            <span className={`rounded-full ${a.bg10} px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${a.textLight} ring-1 ${a.ring30}`}>
-              {badge}
-            </span>
-          )}
+          <div className="text-right">
+            <div className={`text-2xl font-black leading-none ${a.textLight}`}>{stat.value}</div>
+            <div className="mt-1 text-[9px] font-bold uppercase tracking-wider text-white/40">
+              {stat.label}
+            </div>
+          </div>
         </div>
 
         <h4 className="mb-2 text-lg font-bold text-white">{title}</h4>
-        <p className="mb-4 text-sm leading-relaxed text-white/60">{desc}</p>
-
-        {preview && (
-          <div className="mb-4 h-14 overflow-hidden rounded-lg border border-white/5 opacity-70 transition-all duration-500 group-hover:h-20 group-hover:opacity-100">
-            {preview}
-          </div>
-        )}
+        <p className="mb-5 text-sm leading-relaxed text-white/60">{desc}</p>
 
         <div className="flex items-start gap-2 border-t border-white/5 pt-4">
           <Check className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${a.text}`} />
@@ -832,61 +755,58 @@ export default function ToolsPage() {
           <ToolCard
             icon={PenTool}
             title="Design Studio"
-            desc="Just Listed, Open House, Price Reduced graphics. 11 templates, auto-filled branding, swap photos and text, export in seconds."
-            deliverable="PNG + PDF graphics ready for social, print, and MLS."
+            desc="Just Listed, Open House, Price Reduced graphics with auto-filled branding. Swap photos, edit text, export."
+            deliverable="PNG + PDF graphics for social, print, and MLS."
             accent="indigo"
-            badge="11 templates"
-            preview={<DesignPreview />}
+            stat={{ value: "11", label: "Templates" }}
           />
           <ToolCard
             icon={ImageIcon}
             title="Listing Flyer"
-            desc="Print-ready property flyers generated from your photos and details. Professional layouts with your branding baked in."
-            deliverable="Downloadable PDF flyers for open houses, mailers, and broker tours."
+            desc="Print-ready property flyers generated from your photos and details. Professional layouts, your branding baked in."
+            deliverable="Downloadable PDF flyers for open houses, mailers, broker tours."
             accent="orange"
-            preview={<FlyerPreview />}
+            stat={{ value: "PDF", label: "Print-ready" }}
           />
           <ToolCard
             icon={Sofa}
             title="Virtual Staging"
-            desc="Furnish empty rooms with AI. 8 design styles across 8 room types. Before/after slider shows the transformation."
+            desc="Furnish empty rooms with AI. 8 design styles across 8 room types. Before/after comparison slider."
             deliverable="Staged room photos at pennies per room. Before/after pairs for listings."
             accent="violet"
-            badge="8 styles"
-            preview={<StagingPreview />}
+            stat={{ value: "8×8", label: "Styles × Rooms" }}
           />
           <ToolCard
             icon={Crosshair}
             title="Drone Mark"
-            desc="Annotate aerial photos with lot lines, measurement labels, and branded pins. 8 drawing tools for boundaries and setbacks."
-            deliverable="Annotated aerial JPEG exports for listings, presentations, and print."
+            desc="Annotate aerial photos with lot lines, measurement labels, and branded pins. 8 drawing tools."
+            deliverable="Annotated aerial JPEGs for listings, presentations, print."
             accent="amber"
-            preview={<DronePreview />}
+            stat={{ value: "8", label: "Draw tools" }}
           />
           <ToolCard
             icon={ImageIcon}
             title="Photo Enhancement"
-            desc="AI-powered brightness, color, and white balance correction. Fix dark interiors, warm up cold light, balance tricky exposures."
+            desc="AI brightness, color, and white balance correction. Fix dark interiors, warm cold light, balance tricky exposures."
             deliverable="Enhanced photos with professional-grade color correction."
             accent="teal"
-            preview={<EnhancePreview />}
+            stat={{ value: "1-click", label: "AI fix" }}
           />
           <ToolCard
             icon={Zap}
             title="Photo Optimizer"
-            desc="Batch compress listing photos for MLS, Zillow, and social. Hard cap at 1920px and under 290KB. One click, whole set."
+            desc="Batch compress listing photos for MLS, Zillow, and social. Hard cap at 1920px and under 290KB."
             deliverable="Optimized photos that meet every platform's upload requirements."
             accent="emerald"
-            preview={<OptimizerPreview />}
+            stat={{ value: "<290KB", label: "Per photo" }}
           />
           <ToolCard
             icon={Camera}
             title="Photo Coach"
-            desc={'AI scores every photo 1-10 with actionable feedback — "move left 3 feet, open the blinds on the east wall." Coach yourself room by room during your shoot.'}
-            deliverable="Better photos on every listing, plus a professional process that impresses sellers at the appointment."
+            desc={'AI scores every photo 1-10 with actionable feedback — "move left 3 feet, open the blinds on the east wall."'}
+            deliverable="Better photos on every listing. A process that impresses sellers at the appointment."
             accent="blue"
-            badge="Live scoring"
-            preview={<PhotoCoachPreview />}
+            stat={{ value: "1–10", label: "Live score" }}
           />
         </div>
       </PhaseSection>
