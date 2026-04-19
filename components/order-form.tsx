@@ -264,7 +264,7 @@ function SkipBrandingModal({
             </li>
             <li className="flex gap-2">
               <span className="text-primary">•</span>
-              <span>A vertical social video for Instagram and TikTok</span>
+              <span>A vertical social video for Facebook, Instagram, YouTube Shorts, and TikTok</span>
             </li>
             <li className="flex gap-2">
               <span className="text-primary">•</span>
