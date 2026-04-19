@@ -183,14 +183,14 @@ function PhaseNav() {
 
   return (
     <div className="sticky top-4 z-40 mx-auto mt-6 hidden w-fit md:flex">
-      <div className="flex items-center gap-1 rounded-full border border-white/10 bg-blue-950/70 px-2 py-2 backdrop-blur-xl">
+      <div className="flex items-center gap-1 rounded-full border border-white/10 bg-blue-950/80 px-2 py-2 shadow-2xl shadow-blue-950/50 backdrop-blur-xl">
         {phases.map((p) => (
           <a
             key={p.id}
             href={`#${p.id}`}
             className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-wide transition-all ${
               active === p.id
-                ? "bg-cyan-400 text-blue-950"
+                ? "bg-cyan-400 text-gray-950"
                 : "text-white/60 hover:text-white"
             }`}
           >
@@ -222,7 +222,7 @@ function PhotoToVideoDemo() {
   return (
     <div
       ref={ref}
-      className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-blue-800/40 to-blue-950/60"
+      className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-blue-900/60 bg-gradient-to-br from-blue-950 via-blue-950/80 to-gray-950 shadow-2xl shadow-blue-950/50"
     >
       <div className="absolute inset-0 grid grid-cols-3 gap-2 p-4">
         {tiles.map((bg, i) => (
@@ -249,7 +249,7 @@ function PhotoToVideoDemo() {
           transition: "opacity 600ms ease 700ms",
         }}
       >
-        <div className="flex items-center gap-3 rounded-full bg-blue-950/90 px-5 py-2.5 ring-1 ring-cyan-400/30 backdrop-blur">
+        <div className="flex items-center gap-3 rounded-full bg-gray-950/90 px-5 py-2.5 ring-1 ring-cyan-400/40 backdrop-blur-md shadow-xl">
           <span className="text-xs font-bold uppercase tracking-wider text-white/50">
             12 Photos
           </span>
@@ -436,7 +436,7 @@ function ToolCard({ icon: Icon, title, desc, deliverable, accent, badge, preview
 // ──────────────────────────────────────────────────────────────
 
 function PhaseSection({
-  id, num, accent, icon: Icon, kicker, title, lede, children,
+  id, num, accent, icon: Icon, kicker, title, children,
 }: {
   id: string;
   num: string;
@@ -444,7 +444,6 @@ function PhaseSection({
   icon: React.ComponentType<{ className?: string }>;
   kicker: string;
   title: string;
-  lede: string;
   children: React.ReactNode;
 }) {
   const a = A[accent];
@@ -454,7 +453,7 @@ function PhaseSection({
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div
           ref={ref}
-          className="mb-14 grid gap-4 lg:grid-cols-12 lg:gap-10"
+          className="mb-10 grid gap-4 lg:grid-cols-12 lg:gap-10"
           style={{
             opacity: inView ? 1 : 0,
             transform: inView ? "translateY(0)" : "translateY(30px)",
@@ -485,9 +484,6 @@ function PhaseSection({
             <h2 className="text-3xl font-black leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
               {title}
             </h2>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/60 sm:text-lg">
-              {lede}
-            </p>
           </div>
         </div>
 
@@ -648,7 +644,7 @@ function ClientToolCard({
 
 export default function ToolsPage() {
   return (
-    <div className="min-h-screen bg-blue-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white">
       {/* Grain overlay */}
       <div
         className="pointer-events-none fixed inset-0 z-[1] opacity-[0.15] mix-blend-overlay"
@@ -683,7 +679,7 @@ export default function ToolsPage() {
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">
               <Sparkles className="h-3 w-3" />
-              15 Tools · 1 Set of Photos
+              15 Tools powered by 1 Set of Photos
             </div>
 
             <h1 className="text-4xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
@@ -716,14 +712,14 @@ export default function ToolsPage() {
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-base text-white/60 sm:text-lg">
-              One shoot. A video, flyers, staged rooms, social content, a full website, and
+              One shoot. Create a video, staged rooms, flyers, social content, a full website, and
               client-winning reports — all generated, branded, and deployed from the photos you already have.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
                 asChild
-                className="group bg-cyan-400 px-8 py-6 text-base font-black text-blue-950 shadow-[0_0_40px_-5px_rgba(34,211,238,0.6)] hover:bg-cyan-300"
+                className="group bg-cyan-400 px-8 py-6 text-base font-black text-gray-950 shadow-[0_0_40px_-5px_rgba(34,211,238,0.6)] hover:bg-cyan-300"
               >
                 <Link href="/order">
                   Start with a video — $79
@@ -746,14 +742,13 @@ export default function ToolsPage() {
         icon={Film}
         title="It starts with a video."
         kicker="The foundation"
-        lede="Upload your photos. Get back a cinematic walkthrough — hand-finished by a human editor. Every clip is yours to remix forever, and your property profile auto-fills every other tool."
       >
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-3">
             <PhotoToVideoDemo />
             <div className="mt-4 grid grid-cols-3 gap-3">
               {[
-                { label: "Turnaround", value: "24-48h" },
+                { label: "Turnaround", value: "Minutes" },
                 { label: "Starting at", value: "$79" },
                 { label: "Aspect ratios", value: "3" },
               ].map((stat) => (
@@ -807,19 +802,28 @@ export default function ToolsPage() {
         icon={PenTool}
         title="Then one shoot becomes everything."
         kicker="The multiplier"
-        lede="The same photos that made your video now power flyers, staged rooms, branded graphics, and annotated aerials. This is where your marketing budget stops bleeding."
       >
         {/* Big stat callout */}
-        <div className="mb-10 overflow-hidden rounded-3xl border border-indigo-400/20 bg-gradient-to-br from-indigo-500/10 via-blue-800/40 to-blue-950/60 p-8 sm:p-12">
+        <div className="mb-10 overflow-hidden rounded-3xl border border-blue-900/60 bg-gradient-to-br from-blue-950 via-blue-950/80 to-gray-950 p-8 shadow-2xl shadow-blue-950/30 sm:p-12">
           <div className="grid items-center gap-6 md:grid-cols-2">
             <ContentCounter />
-            <div>
-              <p className="text-lg font-bold text-white/90 sm:text-xl">
-                Instead of hiring a photographer, a designer, a stager, and a copywriter for every listing —
-              </p>
-              <p className="mt-3 text-sm text-white/60">
-                you upload your photos once and generate everything your listing needs across seven production tools, all pulling from the same branded property profile.
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { k: "7", v: "Production tools" },
+                { k: "1", v: "Branded profile" },
+                { k: "$0", v: "Per extra asset" },
+                { k: "∞", v: "Regenerations" },
+              ].map((s) => (
+                <div
+                  key={s.v}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+                >
+                  <div className="text-2xl font-black text-indigo-300">{s.k}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                    {s.v}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -895,7 +899,6 @@ export default function ToolsPage() {
         icon={Share2}
         title="Then it goes to work — everywhere."
         kicker="The distribution"
-        lede="Content on your hard drive doesn't sell houses. These tools get your marketing in front of buyers — on social, on MLS, and on your own branded agent website."
       >
         <div className="grid gap-5 lg:grid-cols-3">
           <DeployCard
@@ -946,7 +949,6 @@ export default function ToolsPage() {
         icon={Award}
         title="And it wins you the listing appointment."
         kicker="The close"
-        lede="These aren't marketing tools — they're credibility tools. Send them to sellers, hand them to buyers, pull them out at the kitchen table. They make you look like the most prepared agent in the room."
       >
         <div className="grid gap-4 sm:grid-cols-3">
           <ClientToolCard
