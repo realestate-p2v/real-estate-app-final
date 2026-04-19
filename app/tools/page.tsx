@@ -326,7 +326,7 @@ function PhaseSection({
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div
           ref={ref}
-          className="mb-10 grid gap-4 lg:grid-cols-12 lg:gap-10"
+          className="mb-10 grid items-stretch gap-4 lg:grid-cols-12 lg:gap-10"
           style={{
             opacity: inView ? 1 : 0,
             transform: inView ? "translateY(0)" : "translateY(30px)",
@@ -355,7 +355,7 @@ function PhaseSection({
             </div>
           </div>
 
-          <div className="lg:col-span-8">
+          <div className="flex flex-col justify-end lg:col-span-8">
             <h2 className="text-3xl font-black leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
               {title}
             </h2>
