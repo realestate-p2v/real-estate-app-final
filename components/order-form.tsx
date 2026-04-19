@@ -2,8 +2,9 @@
 // Phase 1A refactor — preserves every working mode (URL, Quick Video, sequence,
 // orientation rendering, UTM tracking, Pixel events, Photo Coach handoff,
 // Stripe flow). Adds:
-//   - Step 1 "Your Info" for first-order users (hard block on headshot/logo/
-//     brokerage/name/phone; pre-filled from lens_usage for returning users)
+//   - Step 1 "Your Info" for first-order users (OPTIONAL fields — headshot,
+//     logo, name, phone, brokerage are encouraged for bonus content branding
+//     but can be skipped via confirmation modal)
 //   - Free-first-video credit handling (zeros first 10 Quick Video clips)
 //   - Special Features JSONB chips (captured inside the photo uploader's
 //     questionnaire; we just pass them through to the DB)
@@ -217,6 +218,86 @@ function StepNavigation({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Skip-branding confirmation modal (inline — no new deps)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SkipBrandingModal({
+  open,
+  onGoBack,
+  onSkipAnyway,
+}: {
+  open: boolean;
+  onGoBack: () => void;
+  onSkipAnyway: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onGoBack}
+    >
+      <div
+        className="bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full p-6 md:p-7 space-y-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="text-xl font-bold">Skip branded bonus content?</h3>
+          <button
+            type="button"
+            onClick={onGoBack}
+            className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center flex-shrink-0"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            You&apos;ll still get your listing video — that&apos;s the main event. But you&apos;ll miss
+            out on three bonus pieces we&apos;d normally include:
+          </p>
+          <ul className="space-y-1.5 pl-1">
+            <li className="flex gap-2">
+              <span className="text-primary">•</span>
+              <span>A branded flyer (print-ready for open houses and mailers)</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-primary">•</span>
+              <span>A vertical social video for Instagram and TikTok</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-primary">•</span>
+              <span>A shareable listing page at yourname.p2v.homes</span>
+            </li>
+          </ul>
+          <p>
+            These use your headshot, logo, name, phone, and brokerage to brand them for you. It takes
+            about 30 seconds to fill in.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row-reverse gap-3 pt-2">
+          <Button
+            onClick={onGoBack}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-6 py-6 text-base flex-1"
+          >
+            Go back and fill it in
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onSkipAnyway}
+            className="font-semibold px-6 py-6 text-base flex-1"
+          >
+            Skip anyway — just make my video
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -247,7 +328,7 @@ export function OrderForm() {
   const [uploaderReady, setUploaderReady] = useState(false);
   const [specialFeatures, setSpecialFeatures] = useState<SpecialFeaturesValue>({});
 
-  // ── Profile fields (Step 1) ──
+  // ── Profile fields (Step 1 — optional for first-order users) ──
   const [agentName, setAgentName] = useState("");
   const [agentPhone, setAgentPhone] = useState("");
   const [agentEmail, setAgentEmail] = useState("");
@@ -256,6 +337,9 @@ export function OrderForm() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // ── Skip-branding modal state ──
+  const [showSkipModal, setShowSkipModal] = useState(false);
 
   // ── Property fields (existing behavior; URL params pre-fill) ──
   const [propertyAddress, setPropertyAddress] = useState("");
@@ -654,15 +738,9 @@ export function OrderForm() {
   const canProceedFromCurrentStep = useCallback((): boolean => {
     switch (currentStepKey) {
       case "your-info": {
-        // Hard block for first-order users: need headshot, logo, name, phone, brokerage
-        if (!showYourInfoStep) return true;
-        const hasAll =
-          !!agentName.trim() &&
-          !!agentPhone.trim() &&
-          !!agentBrokerage.trim() &&
-          !!headshotUrl &&
-          !!logoUrl;
-        return hasAll && !uploadingHeadshot && !uploadingLogo;
+        // Fields are OPTIONAL — don't block on missing branding info.
+        // Still wait for any in-flight uploads to finish so we don't drop them.
+        return !uploadingHeadshot && !uploadingLogo;
       }
       case "upload":
         if (isUploadMode) {
@@ -692,12 +770,6 @@ export function OrderForm() {
     }
   }, [
     currentStepKey,
-    showYourInfoStep,
-    agentName,
-    agentPhone,
-    agentBrokerage,
-    headshotUrl,
-    logoUrl,
     uploadingHeadshot,
     uploadingLogo,
     isUploadMode,
@@ -711,10 +783,29 @@ export function OrderForm() {
     listingPermission,
     sequenceConfirmed,
     musicSelection,
+    agentName,
     agentEmail,
     photoPermission,
     propertyAddress,
   ]);
+
+  // ─── Skip-branding handlers ─────────────────────────────────────────────
+  // Any branding field filled in? Determines whether "Skip" button is shown.
+  const hasAnyBrandingInfo =
+    !!agentName.trim() ||
+    !!agentPhone.trim() ||
+    !!agentBrokerage.trim() ||
+    !!headshotUrl ||
+    !!logoUrl;
+
+  const handleSkipClick = () => {
+    setShowSkipModal(true);
+  };
+
+  const handleSkipConfirmed = () => {
+    setShowSkipModal(false);
+    setCurrentStep(currentStep + 1);
+  };
 
   // ─── Submit handler ─────────────────────────────────────────────────────
   const handleSubmitOrder = async () => {
@@ -901,6 +992,12 @@ export function OrderForm() {
 
   return (
     <div className="relative">
+      <SkipBrandingModal
+        open={showSkipModal}
+        onGoBack={() => setShowSkipModal(false)}
+        onSkipAnyway={handleSkipConfirmed}
+      />
+
       <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 space-y-6">
           <DraftSaveBar
@@ -915,7 +1012,7 @@ export function OrderForm() {
 
           <WizardProgress currentStep={currentStep} totalSteps={totalSteps} steps={steps} />
 
-          {/* ═══ STEP: YOUR INFO (first-order only) ═══ */}
+          {/* ═══ STEP: YOUR INFO (first-order only — fields optional) ═══ */}
           {currentStepKey === "your-info" && (
             <div className="bg-card rounded-2xl border border-border p-6 md:p-8 space-y-6">
               <div className="flex items-center gap-3">
@@ -934,10 +1031,10 @@ export function OrderForm() {
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
                 <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-green-800">First-order bonus</p>
-                  <p className="text-xs text-green-700 mt-0.5">
-                    You&apos;ll get three bonus pieces — a branded flyer, a vertical social video, and a
-                    shareable listing page — delivered with your video. All branded with the info below.
+                  <p className="text-sm text-green-800 italic">
+                    Add your info and we&apos;ll include three branded bonus pieces with your video — a
+                    flyer, a vertical social video, and a shareable listing page. Optional, but nice to
+                    have.
                   </p>
                 </div>
               </div>
@@ -945,7 +1042,7 @@ export function OrderForm() {
               {/* Headshot + Logo */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Headshot *</Label>
+                  <Label>Headshot</Label>
                   {headshotUrl ? (
                     <div className="relative">
                       <img
@@ -982,7 +1079,7 @@ export function OrderForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Logo *</Label>
+                  <Label>Logo</Label>
                   {logoUrl ? (
                     <div className="relative">
                       <img
@@ -1021,7 +1118,7 @@ export function OrderForm() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Full Name *</Label>
+                  <Label>Full Name</Label>
                   <Input
                     value={agentName}
                     onChange={(e) => setAgentName(e.target.value)}
@@ -1030,7 +1127,7 @@ export function OrderForm() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Phone *</Label>
+                  <Label>Phone</Label>
                   <Input
                     value={agentPhone}
                     onChange={(e) => setAgentPhone(e.target.value)}
@@ -1039,7 +1136,7 @@ export function OrderForm() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Brokerage *</Label>
+                  <Label>Brokerage</Label>
                   <Input
                     value={agentBrokerage}
                     onChange={(e) => setAgentBrokerage(e.target.value)}
@@ -1059,12 +1156,10 @@ export function OrderForm() {
                 </div>
               </div>
 
-              {!canProceedFromCurrentStep() && (
-                <p className="text-xs text-red-500 italic">
-                  * Headshot, logo, name, phone, and brokerage are required for your first video so your
-                  bonus content renders properly.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground italic">
+                We&apos;ll only brand the bonus pieces with the info you provide. Leave any field blank
+                to skip branding on that piece.
+              </p>
 
               <StepNavigation
                 currentStep={currentStep}
@@ -1076,6 +1171,19 @@ export function OrderForm() {
                 isSubmitting={isSubmitting}
                 canSubmit={canProceedFromCurrentStep()}
               />
+
+              {/* Skip link — only shown if user hasn't filled in anything */}
+              {!hasAnyBrandingInfo && (
+                <div className="flex justify-center pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSkipClick}
+                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
+                  >
+                    Skip branding — I just want my video
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1577,9 +1685,9 @@ export function OrderForm() {
                 <h3 className="text-lg font-bold">Your Contact</h3>
                 {showYourInfoStep ? (
                   <div className="bg-muted/50 rounded-xl border border-border p-4 text-sm">
-                    <p className="font-semibold text-foreground">{agentName}</p>
+                    <p className="font-semibold text-foreground">{agentName || <span className="text-muted-foreground italic">No name provided</span>}</p>
                     <p className="text-muted-foreground">{agentEmail}</p>
-                    <p className="text-muted-foreground">{agentPhone}</p>
+                    <p className="text-muted-foreground">{agentPhone || <span className="italic">No phone provided</span>}</p>
                     <button
                       type="button"
                       onClick={() => setCurrentStep(1)}
@@ -1609,6 +1717,7 @@ export function OrderForm() {
                     </div>
                   </div>
                 )}
+               
                 <div className="space-y-2">
                   <Label>Special Instructions (Optional)</Label>
                   <Textarea
