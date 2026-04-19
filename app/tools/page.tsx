@@ -60,6 +60,7 @@ type AccentStyles = {
   gradFrom: string;
   numOutline: string;
   fill: string;
+  glowColor: string;
 };
 
 const A: Record<AccentKey, AccentStyles> = {
@@ -372,7 +373,7 @@ function PhaseSection({
   const a = A[accent];
   const { ref, inView } = useInView<HTMLDivElement>();
   return (
-    <section id={id} className="relative scroll-mt-24 border-t border-white/[0.06] py-20 sm:py-28">
+    <section id={id} className="relative scroll-mt-24 border-t border-white/[0.06] py-12 sm:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div
           ref={ref}
@@ -396,10 +397,20 @@ function PhaseSection({
               </div>
             </div>
             <div
-              className={`mt-4 font-mono text-[100px] font-black leading-none tracking-tighter ${a.numOutline} sm:text-[140px]`}
+              className="relative mt-4 font-mono text-[100px] font-black leading-none tracking-tighter sm:text-[160px]"
               aria-hidden
             >
-              {num}
+              <span
+                className={a.textLight}
+                style={{
+                  WebkitTextStroke: `2px currentColor`,
+                  WebkitTextFillColor: "transparent",
+                  filter: `drop-shadow(0 0 24px ${a.glowColor})`,
+                  opacity: 0.85,
+                }}
+              >
+                {num}
+              </span>
             </div>
           </div>
 
@@ -635,7 +646,7 @@ export default function ToolsPage() {
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-base text-white/60 sm:text-lg">
-              One shoot. Create a video, staged rooms, flyers, social content, a full website, and
+              Create a video, staged rooms, flyers, social content, a full website, and
               client-winning reports — all generated, branded, and deployed from the photos you already have.
             </p>
 
