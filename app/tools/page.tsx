@@ -527,12 +527,12 @@ export default function ToolsPage() {
                 className="group bg-cyan-400 px-8 py-6 text-base font-black text-gray-950 shadow-[0_0_40px_-5px_rgba(34,211,238,0.6)] hover:bg-cyan-300"
               >
                 <Link href="/order">
-                  Start with a video — $79
+                  Get Your First Video On Us
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
               <p className="text-xs text-white/40">
-                Unlocks 10-day free trial of all 15 tools. No card required.
+                Plus a 10-day free trial of every marketing tool. No card required.
               </p>
             </div>
           </div>
@@ -674,7 +674,7 @@ export default function ToolsPage() {
           <DeployCard
             icon={Calendar}
             accent="emerald"
-            title="Marketing Planner"
+            title="Socials Planner"
             byline="Tell me what to post — and do it for me."
             desc="30-day AI content sprints with weighted property rotation, 10 post types, and a weekly calendar. Select a property, pick media, get a caption, share."
             stats={[
@@ -749,22 +749,22 @@ export default function ToolsPage() {
         </div>
         <div className="relative mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8">
           <h2 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Start with a video.
+            Claim your first listing video
             <br />
-            <span className="bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text text-transparent">
-              Build a content machine.
+            <span className="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">
+              on us.
             </span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-white/60 sm:text-lg">
-            One listing video unlocks 10 days of every marketing tool. No card for the trial. No commitment. Your photos have more to give.
+            Plus 10 days of every marketing tool, free. No card required.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
               asChild
-              className="group bg-cyan-400 px-8 py-7 text-base font-black text-blue-950 shadow-[0_0_60px_-5px_rgba(34,211,238,0.7)] hover:bg-cyan-300"
+              className="group bg-cyan-400 px-8 py-7 text-base font-black text-gray-950 shadow-[0_0_60px_-5px_rgba(34,211,238,0.7)] hover:bg-cyan-300"
             >
               <Link href="/order">
-                Order your first video — $79
+                Get Your First Video On Us
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
