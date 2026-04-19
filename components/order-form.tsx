@@ -277,19 +277,19 @@ function SkipBrandingModal({
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row-reverse gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
           <Button
-            onClick={onGoBack}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground font-black px-6 py-6 text-base flex-1"
+            variant="ghost"
+            onClick={onSkipAnyway}
+            className="text-muted-foreground hover:text-foreground font-medium text-sm"
           >
-            Go back and fill it in
+            Skip anyway
           </Button>
           <Button
-            variant="outline"
-            onClick={onSkipAnyway}
-            className="font-semibold px-6 py-6 text-base flex-1"
+            onClick={onGoBack}
+            className="bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold px-5 py-2.5 text-sm"
           >
-            Skip anyway — just make my video
+            Go back and fill it in
           </Button>
         </div>
       </div>
@@ -1029,9 +1029,9 @@ export function OrderForm() {
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0 mt-1" />
                 <div>
-                  <p className="text-sm text-green-800 italic">
+                  <p className="text-base text-green-800 leading-relaxed">
                     Add your info and we&apos;ll include three branded bonus pieces with your video — a
                     flyer, a vertical social video, and a shareable listing page. Optional, but nice to
                     have.
