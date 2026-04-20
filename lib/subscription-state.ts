@@ -29,8 +29,9 @@ export interface SubscriptionState {
   isQuickVideoEligible: boolean;
   /**
    * User has an unused free-first-video credit from the promo funnel.
-   * When true, checkout applies a $0 adjustment to cover up to 10 clips.
-   * Clips 11+ are charged at the Quick Video rate.
+   * When true, checkout applies a $0 adjustment to cover up to
+   * FREE_FIRST_VIDEO_MAX_CLIPS clips. Clips past that threshold up to
+   * FREE_FIRST_VIDEO_HARD_CAP are charged at the Quick Video rate.
    */
   hasFreeFirstVideoCredit: boolean;
   /** Subscription tier when isSubscriber is true: 'tools' | 'pro' | null */
@@ -58,10 +59,22 @@ export const UNAUTHENTICATED_STATE: SubscriptionState = {
 };
 
 /**
- * Maximum number of clips covered by the free-first-video promo.
- * Clips past this threshold are charged at QUICK_VIDEO_RATE.
+ * Number of clips covered by the free-first-video promo at $0.
+ * Clips past this threshold (up to FREE_FIRST_VIDEO_HARD_CAP) are
+ * charged at QUICK_VIDEO_RATE.
  */
 export const FREE_FIRST_VIDEO_MAX_CLIPS = 10;
+
+/**
+ * Hard ceiling on photo count for a free-first-video order. The uploader
+ * blocks past this number. Clips FREE_FIRST_VIDEO_MAX_CLIPS+1 through
+ * FREE_FIRST_VIDEO_HARD_CAP are billed at QUICK_VIDEO_RATE.
+ *
+ * Per Phase 1A spec v1.2 §4.1: free-first-video path is 5–10 photos free,
+ * clips 11–14 at $4.95/clip. Without this hard cap the uploader silently
+ * refused to let users add an 11th photo and the $4.95 upsell was dead.
+ */
+export const FREE_FIRST_VIDEO_HARD_CAP = 14;
 
 /**
  * Minimum number of clips required to place a free-first-video order.
@@ -192,6 +205,8 @@ export async function getSubscriptionStateServer(
  * Pricing rules:
  *   - Without credit: photoCount × QUICK_VIDEO_RATE
  *   - With credit:    max(0, photoCount - FREE_FIRST_VIDEO_MAX_CLIPS) × QUICK_VIDEO_RATE
+ *     (callers are expected to enforce photoCount ≤ FREE_FIRST_VIDEO_HARD_CAP;
+ *     this helper does not cap the value.)
  */
 export function computeQuickVideoPricing(
   photoCount: number,
