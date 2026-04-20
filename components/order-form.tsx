@@ -13,6 +13,8 @@
 //   - Always "both" orientation (no fee; pipeline renders landscape + crops
 //     vertical via ffmpeg)
 //   - Photo Enhancement toggle with subscriber-aware copy
+//   - Your Info fields persist to lens_usage on upload/step-advance (v1.2
+//     fix for silent drop where only brand colors were being saved)
 // Removed from UI (but left intact in code/DB for future resurrection):
 //   - Voiceover step (VoiceoverSelector file stays dormant)
 //   - Branding wizard step (BrandingSelector file stays dormant for Design
@@ -69,6 +71,7 @@ import {
   FREE_FIRST_VIDEO_MAX_CLIPS,
 } from "@/lib/subscription-state";
 import { extractBrandColor, saveBrandColorToProfile } from "@/lib/brand-color-extraction";
+import { saveProfileFields } from "@/lib/lens-usage-profile";
 import { useOrderFormAutosave } from "@/lib/hooks/use-order-form-autosave";
 import { createClient } from "@/lib/supabase/client";
 
@@ -337,6 +340,12 @@ export function OrderForm() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // In-flight flag for the "save profile fields on Continue" step. Keeps the
+  // Continue button disabled during the Supabase update so we don't advance
+  // mid-write and leave the user looking at the next step before their name
+  // has landed.
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // ── Skip-branding modal state ──
   const [showSkipModal, setShowSkipModal] = useState(false);
@@ -712,7 +721,15 @@ export function OrderForm() {
     setUploadingHeadshot(true);
     const url = await uploadToCloudinary(file, "headshots");
     setUploadingHeadshot(false);
-    if (url) setHeadshotUrl(url);
+    if (url) {
+      setHeadshotUrl(url);
+      // Persist to lens_usage so the mini-pipeline can read it at render time.
+      if (subState.userId) {
+        await saveProfileFields(createClient(), subState.userId, {
+          saved_headshot_url: url,
+        });
+      }
+    }
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -723,6 +740,12 @@ export function OrderForm() {
     setUploadingLogo(false);
     if (url) {
       setLogoUrl(url);
+      // Persist logo URL alongside the existing brand color extraction path.
+      if (subState.userId) {
+        await saveProfileFields(createClient(), subState.userId, {
+          saved_logo_url: url,
+        });
+      }
       // Fire-and-forget brand color extraction + profile save
       try {
         const color = await extractBrandColor(file);
@@ -735,13 +758,38 @@ export function OrderForm() {
     }
   };
 
+  // ─── Your Info: save-and-advance ────────────────────────────────────────
+  // Persists name / phone / brokerage / email to lens_usage before the user
+  // leaves the step (including the skip-anyway path, so any partial fill
+  // still lands). Prior behavior advanced with no DB write at all.
+  const saveYourInfoAndAdvance = useCallback(
+    async (goToStep: number) => {
+      if (subState.userId) {
+        setSavingProfile(true);
+        try {
+          await saveProfileFields(createClient(), subState.userId, {
+            saved_agent_name: agentName,
+            saved_phone: agentPhone,
+            saved_email: agentEmail,
+            saved_company: agentBrokerage,
+          });
+        } finally {
+          setSavingProfile(false);
+        }
+      }
+      setCurrentStep(goToStep);
+    },
+    [subState.userId, agentName, agentPhone, agentEmail, agentBrokerage]
+  );
+
   // ─── Step validation ────────────────────────────────────────────────────
   const canProceedFromCurrentStep = useCallback((): boolean => {
     switch (currentStepKey) {
       case "your-info": {
         // Fields are OPTIONAL — don't block on missing branding info.
-        // Still wait for any in-flight uploads to finish so we don't drop them.
-        return !uploadingHeadshot && !uploadingLogo;
+        // Still wait for any in-flight uploads / profile saves to finish so
+        // we don't drop them.
+        return !uploadingHeadshot && !uploadingLogo && !savingProfile;
       }
       case "upload":
         if (isUploadMode) {
@@ -774,6 +822,7 @@ export function OrderForm() {
     currentStepKey,
     uploadingHeadshot,
     uploadingLogo,
+    savingProfile,
     isUploadMode,
     isUrlMode,
     photos.length,
@@ -805,10 +854,12 @@ export function OrderForm() {
     setShowSkipModal(true);
   };
 
-  const handleSkipConfirmed = () => {
+  const handleSkipConfirmed = async () => {
     setBrandingSkipped(true);
     setShowSkipModal(false);
-    setCurrentStep(currentStep + 1);
+    // Save whatever partial fill exists before advancing (empty strings are
+    // coerced to null inside the helper).
+    await saveYourInfoAndAdvance(currentStep + 1);
   };
 
   // ─── Submit handler ─────────────────────────────────────────────────────
@@ -1170,7 +1221,7 @@ export function OrderForm() {
                 totalSteps={totalSteps}
                 canProceed={canProceedFromCurrentStep()}
                 onBack={() => setCurrentStep(currentStep - 1)}
-                onNext={() => setCurrentStep(currentStep + 1)}
+                onNext={() => saveYourInfoAndAdvance(currentStep + 1)}
                 onSubmit={handleSubmitOrder}
                 isSubmitting={isSubmitting}
                 canSubmit={canProceedFromCurrentStep()}
@@ -1833,7 +1884,7 @@ export function OrderForm() {
               isQuickVideo={isQuickVideo}
               isSubscriber={subState.isBranded}
               hasFreeFirstVideoCredit={subState.hasFreeFirstVideoCredit}
-            />
+            );
           </div>
         )}
       </div>
