@@ -12,6 +12,10 @@
 //   - Free-first-video credit now applies to tier-priced orders (15+ photos)
 //     as a flat $49.50 off, clamped to ≥ $0. Mirrors the pricing logic in
 //     order-form.tsx so the sidebar and submit math never disagree.
+//   - Credit-eligible users see Total = $0 from photo 1–10 (matches the
+//     "First video on us" promise). Tier label swaps to "Your Free Video"
+//     when credit fully covers the base. 5-photo submit minimum is enforced
+//     in order-form.tsx, not here.
 
 "use client";
 
@@ -83,23 +87,27 @@ export function OrderSummary({
     return { price: 0, originalPrice: 0, tier: "Contact us" };
   };
 
-  const { price, originalPrice, tier } = getBaseBeforeCredit();
+  const base = getBaseBeforeCredit();
+  const { price, originalPrice } = base;
+
+  // Tier label swap: when the credit covers the entire base (photo count
+  // 0–10), show "Your Free Video" instead of the tier name, so the sidebar
+  // reads honestly as a free promo rather than discounted "Standard" pricing.
+  const tier =
+    hasFreeFirstVideoCredit && photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS
+      ? "Your Free Video"
+      : base.tier;
 
   // ── Free-first-video credit (mirror of order-form.tsx logic) ──────────
   //
-  // For credit holders below the 5-photo minimum, we still show the credit
-  // as covering the full base price — so the user sees "$0.00 total" and
-  // "First video on us" matching, not a confusing $79 with a banner. The
-  // 5-photo minimum is enforced at submit time (effectiveMinPhotos in
-  // order-form.tsx), not at pricing time.
+  // Credit-eligible users at 0–10 photos see a fully free video (Total = $0)
+  // regardless of Quick Video threshold. The 5-photo submit minimum is
+  // enforced separately in order-form.tsx; the sidebar stays aligned with
+  // the "First video on us" promise from the landing page.
   const creditValue = (() => {
     if (!hasFreeFirstVideoCredit) return 0;
-    // Credit-eligible users at 0–10 photos see a fully free video (Total $0)
-    // regardless of Quick Video threshold. The 5-photo submit minimum is
-    // enforced separately; the sidebar stays aligned with the "First video
-    // on us" promise from the landing page.
     if (photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS) {
-      return price;
+      return price; // full coverage
     }
     // 11+ photos: partial credit.
     if (isQuickVideo) {
@@ -150,16 +158,12 @@ export function OrderSummary({
     features.push("1 revision included");
   }
 
-  // Show the banner for anyone with an unused free-first-video credit,
-  // regardless of photo count — so the user sees the promise from the first
-  // photo (or zero photos) and isn't bait-and-switched by a $79 tier price.
-  // Credit line items (discount row, "you pay today") still only appear when
-  // the credit actually applies (photoCount >= FREE_FIRST_VIDEO_MIN_CLIPS).
+  // Banner is visible for anyone with an unused free-first-video credit.
+  // `creditActive` drives the "You pay today" display — it kicks in any
+  // time the credit has nonzero value, so the sidebar shows $0 all the way
+  // from photo 1 and stays coherent with the "First video on us" banner.
   const bannerVisible = hasFreeFirstVideoCredit;
-  const creditActive =
-    hasFreeFirstVideoCredit &&
-    photoCount >= FREE_FIRST_VIDEO_MIN_CLIPS &&
-    creditValue > 0;
+  const creditActive = hasFreeFirstVideoCredit && creditValue > 0;
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 sticky top-24">
@@ -196,7 +200,7 @@ export function OrderSummary({
             <p className="text-muted-foreground mb-3">
               For orders with more than 35 photos, please contact us:
             </p>
-            <a
+            
               href="tel:+18455366954"
               className="inline-flex items-center gap-2 text-primary font-semibold hover:underline text-lg"
             >
