@@ -698,16 +698,20 @@ export function OrderForm() {
 
   const getFreeFirstVideoCredit = () => {
     if (!subState.hasFreeFirstVideoCredit) return 0;
+    // 0–10 photos: credit fully covers the base (Total = $0) so the UX
+    // matches the "First video on us" promise all the way through. The
+    // 5-photo submit minimum gates the user, not pricing.
+    if (photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS) {
+      return getBaseBeforeCredit();
+    }
+    // 11+ photos: partial credit applied.
     if (isQuickVideo) {
-      // Quick Video: credit covers first FREE_FIRST_VIDEO_MAX_CLIPS clips.
+      // Quick Video (11–14): credit covers first 10 clips at per-clip rate.
       const baseBefore = Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
-      const creditValue =
-        Math.min(photoCount, FREE_FIRST_VIDEO_MAX_CLIPS) * QUICK_VIDEO_RATE;
+      const creditValue = FREE_FIRST_VIDEO_MAX_CLIPS * QUICK_VIDEO_RATE;
       return Math.min(baseBefore, Math.round(creditValue * 100) / 100);
     }
-    // Tier-priced branch — covers 15+ orders AND the under-5-photo state
-    // where the user has a credit but hasn't yet reached the Quick Video
-    // minimum. Flat $49.50, clamped to the base price.
+    // Tier-priced (15+): flat $49.50 off.
     const baseBefore = getBaseBeforeCredit();
     return Math.min(baseBefore, FREE_FIRST_VIDEO_TIER_CREDIT);
   };
