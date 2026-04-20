@@ -86,14 +86,21 @@ export function OrderSummary({
   const { price, originalPrice, tier } = getBaseBeforeCredit();
 
   // ── Free-first-video credit (mirror of order-form.tsx logic) ──────────
+  //
+  // For credit holders below the 5-photo minimum, we still show the credit
+  // as covering the full base price — so the user sees "$0.00 total" and
+  // "First video on us" matching, not a confusing $79 with a banner. The
+  // 5-photo minimum is enforced at submit time (effectiveMinPhotos in
+  // order-form.tsx), not at pricing time.
   const creditValue = (() => {
     if (!hasFreeFirstVideoCredit) return 0;
-    if (photoCount < FREE_FIRST_VIDEO_MIN_CLIPS) return 0;
     if (isQuickVideo) {
       const freeClipsCount = Math.min(photoCount, FREE_FIRST_VIDEO_MAX_CLIPS);
       return Math.min(price, round2(freeClipsCount * QUICK_VIDEO_RATE));
     }
-    // Tier-priced (15+): flat $49.50, clamped to base.
+    // Tier-priced branch — covers both 15+ orders AND the under-5-photo
+    // "about to become a Quick Video" transition state. Flat $49.50 credit
+    // covers the full $79 tier, zeroing the total below the minimum too.
     return Math.min(price, FREE_FIRST_VIDEO_TIER_CREDIT);
   })();
 
