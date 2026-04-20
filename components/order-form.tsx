@@ -843,10 +843,9 @@ export function OrderForm() {
         if (isUploadMode) {
           if (photos.length === 0 || photos.length > STANDARD_MAX_PHOTOS || !allUploadsComplete) return false;
           if (photos.length < effectiveMinPhotos) return false;
-          // Special features chip picker lives inside the photo-uploader's
-          // questionnaire. We also gate here — at least 1 filled. Skipped
-          // when user opted out of branded bonus content.
-          if (!brandingSkipped && !hasAtLeastOneFeature(specialFeatures)) return false;
+          // Special features validation removed — the PhotoUploader
+          // questionnaire is now the only source for this data and it's
+          // already filled in before the user arrives at Photos.
           return true;
         }
         if (isUrlMode) {
