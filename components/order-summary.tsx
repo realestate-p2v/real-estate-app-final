@@ -1,8 +1,6 @@
 // components/order-summary.tsx
 // Phase 1A refactor — preserves all working modes (URL, Quick Video, 1080P).
 // Removes voiceover (spec Section 4). Swaps legacy branding/custom-branding line.
-// Adds free-first-video credit handling (zeroes the first FREE_FIRST_VIDEO_MAX_CLIPS
-// Quick Video clips). Removes retired "48-hour delivery" language (master doc Part 1).
 //
 // v1.2 changes:
 //   - "Both Orientations" is no longer a $15 paid add-on. Pipeline renders
@@ -11,6 +9,9 @@
 //     list now states both orientations as baseline inclusion.
 //   - Free-first-video banner copy fixed: trial activates at account creation
 //     (or claim), NOT at delivery. Prior copy misrepresented the product.
+//   - Free-first-video credit now applies to tier-priced orders (15+ photos)
+//     as a flat $49.50 off, clamped to ≥ $0. Mirrors the pricing logic in
+//     order-form.tsx so the sidebar and submit math never disagree.
 
 "use client";
 
@@ -18,8 +19,15 @@ import { Check, Phone, Sparkles } from "lucide-react";
 import {
   QUICK_VIDEO_RATE,
   FREE_FIRST_VIDEO_MAX_CLIPS,
-  computeQuickVideoPricing,
+  FREE_FIRST_VIDEO_MIN_CLIPS,
 } from "@/lib/subscription-state";
+
+/**
+ * Dollar value of the free-first-video credit when it's applied to a
+ * tier-priced order (15+ photos). Kept in sync with the same constant in
+ * components/order-form.tsx — if you change one, change the other.
+ */
+const FREE_FIRST_VIDEO_TIER_CREDIT = 49.5;
 
 interface OrderSummaryProps {
   photoCount: number;
@@ -31,7 +39,7 @@ interface OrderSummaryProps {
   isQuickVideo?: boolean;
   /** Subscriber state drives photo-editing pricing (free vs $2.99/photo). */
   isSubscriber?: boolean;
-  /** Active free-first-video credit — zeros the first N Quick Video clips. */
+  /** Active free-first-video credit — landing-page claim, unused. */
   hasFreeFirstVideoCredit?: boolean;
 }
 
@@ -40,99 +48,80 @@ export function OrderSummary({
   brandingOption = "unbranded",
   includeEditedPhotos = false,
   resolution = "768P",
-  // `orientation` is kept in the props for back-compat with callers that still
-  // pass it, but it no longer affects pricing. Both orientations are always
-  // delivered free.
+  // `orientation` kept in props for back-compat; no longer affects pricing.
   orientation = "both",
   isUrlMode = false,
   isQuickVideo = false,
   isSubscriber = false,
   hasFreeFirstVideoCredit = false,
 }: OrderSummaryProps) {
-  const getPricing = () => {
+  // ── Base price (before credit) ────────────────────────────────────────
+  const getBaseBeforeCredit = (): {
+    price: number;
+    originalPrice: number;
+    tier: string;
+  } => {
     if (isQuickVideo && photoCount > 0) {
-      const qv = computeQuickVideoPricing(photoCount, hasFreeFirstVideoCredit);
       return {
-        price: qv.displayPrice,
-        chargedPrice: qv.chargedPrice,
+        price: round2(photoCount * QUICK_VIDEO_RATE),
         originalPrice: 0,
         tier: `Quick Video (${photoCount} clips)`,
-        freeClips: qv.freeClips,
-        paidClips: qv.paidClips,
       };
     }
     if (photoCount === 0) {
-      return {
-        price: 0,
-        chargedPrice: 0,
-        originalPrice: 0,
-        tier: "Select photos to see price",
-        freeClips: 0,
-        paidClips: 0,
-      };
+      return { price: 0, originalPrice: 0, tier: "Select photos to see price" };
     }
     if (photoCount <= 15) {
-      return {
-        price: 79,
-        chargedPrice: 79,
-        originalPrice: 119,
-        tier: "Standard (up to 15 photos)",
-        freeClips: 0,
-        paidClips: photoCount,
-      };
+      return { price: 79, originalPrice: 119, tier: "Standard (up to 15 photos)" };
     }
     if (photoCount <= 25) {
-      return {
-        price: 99,
-        chargedPrice: 99,
-        originalPrice: 149,
-        tier: "Professional (16-25 photos)",
-        freeClips: 0,
-        paidClips: photoCount,
-      };
+      return { price: 99, originalPrice: 149, tier: "Professional (16-25 photos)" };
     }
     if (photoCount <= 35) {
-      return {
-        price: 109,
-        chargedPrice: 109,
-        originalPrice: 179,
-        tier: "Premium (26-35 photos)",
-        freeClips: 0,
-        paidClips: photoCount,
-      };
+      return { price: 109, originalPrice: 179, tier: "Premium (26-35 photos)" };
     }
-    return {
-      price: 0,
-      chargedPrice: 0,
-      originalPrice: 0,
-      tier: "Contact us",
-      freeClips: 0,
-      paidClips: 0,
-    };
+    return { price: 0, originalPrice: 0, tier: "Contact us" };
   };
 
-  const { price, chargedPrice, originalPrice, tier, freeClips, paidClips } = getPricing();
+  const { price, originalPrice, tier } = getBaseBeforeCredit();
+
+  // ── Free-first-video credit (mirror of order-form.tsx logic) ──────────
+  const creditValue = (() => {
+    if (!hasFreeFirstVideoCredit) return 0;
+    if (photoCount < FREE_FIRST_VIDEO_MIN_CLIPS) return 0;
+    if (isQuickVideo) {
+      const freeClipsCount = Math.min(photoCount, FREE_FIRST_VIDEO_MAX_CLIPS);
+      return Math.min(price, round2(freeClipsCount * QUICK_VIDEO_RATE));
+    }
+    // Tier-priced (15+): flat $49.50, clamped to base.
+    return Math.min(price, FREE_FIRST_VIDEO_TIER_CREDIT);
+  })();
+
+  const chargedPrice = Math.max(0, round2(price - creditValue));
+  const freeClips =
+    hasFreeFirstVideoCredit && isQuickVideo
+      ? Math.min(photoCount, FREE_FIRST_VIDEO_MAX_CLIPS)
+      : 0;
+  const paidClips =
+    isQuickVideo ? Math.max(0, photoCount - freeClips) : 0;
+
   const showContactUs = photoCount > 35 && !isQuickVideo;
 
-  // ── Add-on pricing (voiceover removed; orientation retired as a paid
-  //    add-on — both orientations are delivered on every order for free) ──
+  // ── Add-ons (voiceover removed; orientation always free) ──────────────
   const editedPhotosPrice = includeEditedPhotos
     ? isSubscriber
-      ? 0 // free for subscribers + active-trial users
+      ? 0
       : photoCount * 2.99
     : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
   const urlServicePrice = isUrlMode ? 25 : 0;
   const totalAddons = editedPhotosPrice + resolutionPrice + urlServicePrice;
 
-  // Display total — what user sees as they build the order (before free credit).
-  const totalPrice = price + totalAddons;
-  // Charged total — what Stripe bills (after free credit; add-ons still chargeable per Matt).
-  const chargedTotal = chargedPrice + totalAddons;
+  const totalPrice = round2(price + totalAddons); // display (pre-credit)
+  const chargedTotal = round2(chargedPrice + totalAddons); // post-credit
 
   const features: string[] = [];
   features.push(resolution === "1080P" ? "1080P Full HD video" : "768P HD video");
-  // Both orientations are always delivered — not a toggleable add-on.
   features.push("Landscape + Vertical videos (both included)");
   if (includeEditedPhotos) {
     features.push(
@@ -141,21 +130,24 @@ export function OrderSummary({
   }
   features.push("Cinematic motion clips");
   features.push("Choice of music");
-  features.push("Delivery in minutes"); // replaces "48-hour delivery"
+  features.push("Delivery in minutes");
   if (isQuickVideo) {
     features.push("Paid revisions available");
   } else {
     features.push("1 revision included");
   }
 
-  const freeVideoActive = hasFreeFirstVideoCredit && isQuickVideo && photoCount > 0;
+  const creditActive =
+    hasFreeFirstVideoCredit &&
+    photoCount >= FREE_FIRST_VIDEO_MIN_CLIPS &&
+    creditValue > 0;
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 sticky top-24">
       <h3 className="text-xl font-bold text-foreground mb-4">Order Summary</h3>
 
-      {/* ── Free-first-video banner ── */}
-      {freeVideoActive && (
+      {/* Free-first-video banner */}
+      {creditActive && (
         <div className="mb-4 rounded-xl border border-green-300 bg-green-50 p-3 flex items-start gap-2">
           <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -184,7 +176,7 @@ export function OrderSummary({
             <p className="text-muted-foreground mb-3">
               For orders with more than 35 photos, please contact us:
             </p>
-            <a
+            
               href="tel:+18455366954"
               className="inline-flex items-center gap-2 text-primary font-semibold hover:underline text-lg"
             >
@@ -209,26 +201,34 @@ export function OrderSummary({
                       LENS SUBSCRIBER
                     </span>
                   </div>
-                  {freeVideoActive && (
+                  {creditActive && (
                     <div className="flex justify-between items-center text-xs text-green-700 pt-1">
                       <span>Free-first-video credit ({freeClips} clip{freeClips !== 1 ? "s" : ""})</span>
-                      <span className="font-semibold">− ${(price - chargedPrice).toFixed(2)}</span>
+                      <span className="font-semibold">− ${creditValue.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Base price</span>
-                  <div className="text-right">
-                    {originalPrice > 0 && (
-                      <span className="text-muted-foreground line-through text-sm mr-2">
-                        ${originalPrice}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Base price</span>
+                    <div className="text-right">
+                      {originalPrice > 0 && (
+                        <span className="text-muted-foreground line-through text-sm mr-2">
+                          ${originalPrice}
+                        </span>
+                      )}
+                      <span className="font-semibold text-foreground">
+                        {price > 0 ? `$${price}` : "--"}
                       </span>
-                    )}
-                    <span className="font-semibold text-foreground">
-                      {price > 0 ? `$${price}` : "--"}
-                    </span>
+                    </div>
                   </div>
+                  {creditActive && (
+                    <div className="flex justify-between items-center text-xs text-green-700 pt-1">
+                      <span>Free-first-video credit</span>
+                      <span className="font-semibold">− ${creditValue.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -272,7 +272,7 @@ export function OrderSummary({
 
             {/* Total */}
             <div className="py-4">
-              {freeVideoActive ? (
+              {creditActive ? (
                 <>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground line-through">Subtotal</span>
@@ -286,7 +286,7 @@ export function OrderSummary({
                       ${chargedTotal.toFixed(2)}
                     </span>
                   </div>
-                  {paidClips > 0 && (
+                  {isQuickVideo && paidClips > 0 && (
                     <p className="text-xs text-muted-foreground mt-2 text-right">
                       {paidClips} clip{paidClips !== 1 ? "s" : ""} past the free {FREE_FIRST_VIDEO_MAX_CLIPS}-clip limit
                     </p>
@@ -312,7 +312,7 @@ export function OrderSummary({
             </div>
 
             {/* Quick Video note */}
-            {isQuickVideo && !freeVideoActive && (
+            {isQuickVideo && !creditActive && (
               <p className="text-xs text-muted-foreground">
                 Quick Videos include branding and music. Paid revisions available after delivery.
               </p>
@@ -332,4 +332,8 @@ export function OrderSummary({
       </div>
     </div>
   );
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
