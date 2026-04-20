@@ -137,6 +137,12 @@ export function OrderSummary({
     features.push("1 revision included");
   }
 
+  // Show the banner for anyone with an unused free-first-video credit,
+  // regardless of photo count — so the user sees the promise from the first
+  // photo (or zero photos) and isn't bait-and-switched by a $79 tier price.
+  // Credit line items (discount row, "you pay today") still only appear when
+  // the credit actually applies (photoCount >= FREE_FIRST_VIDEO_MIN_CLIPS).
+  const bannerVisible = hasFreeFirstVideoCredit;
   const creditActive =
     hasFreeFirstVideoCredit &&
     photoCount >= FREE_FIRST_VIDEO_MIN_CLIPS &&
@@ -147,14 +153,15 @@ export function OrderSummary({
       <h3 className="text-xl font-bold text-foreground mb-4">Order Summary</h3>
 
       {/* Free-first-video banner */}
-      {creditActive && (
+      {bannerVisible && (
         <div className="mb-4 rounded-xl border border-green-300 bg-green-50 p-3 flex items-start gap-2">
           <Sparkles className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-bold text-green-800">First video on us</p>
             <p className="text-xs text-green-700 mt-0.5">
-              Up to {FREE_FIRST_VIDEO_MAX_CLIPS} clips free. Additional clips are $
-              {QUICK_VIDEO_RATE.toFixed(2)} each. Your Lens Pro trial is active.
+              {photoCount < FREE_FIRST_VIDEO_MIN_CLIPS
+                ? `Upload at least ${FREE_FIRST_VIDEO_MIN_CLIPS} photos to claim your free video (up to ${FREE_FIRST_VIDEO_MAX_CLIPS} clips free). Your Lens Pro trial is active.`
+                : `Up to ${FREE_FIRST_VIDEO_MAX_CLIPS} clips free. Additional clips are $${QUICK_VIDEO_RATE.toFixed(2)} each. Your Lens Pro trial is active.`}
             </p>
           </div>
         </div>
