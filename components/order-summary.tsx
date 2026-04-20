@@ -200,7 +200,7 @@ export function OrderSummary({
             <p className="text-muted-foreground mb-3">
               For orders with more than 35 photos, please contact us:
             </p>
-            
+            <a
               href="tel:+18455366954"
               className="inline-flex items-center gap-2 text-primary font-semibold hover:underline text-lg"
             >
