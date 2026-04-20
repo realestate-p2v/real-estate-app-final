@@ -1503,6 +1503,18 @@ export function OrderForm() {
                       <button
                         type="button"
                         onClick={() => {
+                          const newPhotos = photos.filter((_, i) => i !== index);
+                          setPhotos(newPhotos);
+                          setSequenceConfirmed(false);
+                        }}
+                        className="h-6 w-6 rounded bg-red-600/80 text-white flex items-center justify-center hover:bg-red-600"
+                        aria-label="Remove photo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
                           if (index === 0) return;
                           const newPhotos = [...photos];
                           [newPhotos[index - 1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
