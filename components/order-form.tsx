@@ -667,8 +667,25 @@ export function OrderForm() {
     }
   }, [photos.length, listingUrl, isUploadMode, isUrlMode, checkoutInitiated]);
 
-  // ─── Pricing (no orientation fee; voiceover fully removed) ──────────────
-  const getBasePrice = () => {
+  // ─── Pricing ────────────────────────────────────────────────────────────
+  //
+  // Base price, then add-ons, then free-first-video credit applied at the END.
+  // Rationale: add-ons (1080P, photo editing, listing URL service) are NOT
+  // zeroed by the credit per Matt. Only the base video is. Computation is:
+  //
+  //   baseAfterCredit = max(0, baseBeforeCredit − creditValue)
+  //   total           = baseAfterCredit + addOns
+  //
+  // Credit only applies if the user has hasFreeFirstVideoCredit (landing-page
+  // claimer, unused). The credit is applied regardless of photo count so the
+  // sidebar matches the banner — the 5-photo submit minimum is enforced
+  // separately via effectiveMinPhotos / canProceedFromCurrentStep.
+  //
+  // Dollar value of the credit on tier-priced orders (15+ photos). Matches
+  // the same constant in components/order-summary.tsx — keep in sync.
+  const FREE_FIRST_VIDEO_TIER_CREDIT = 49.5;
+
+  const getBaseBeforeCredit = () => {
     if (isUrlMode && listingPackage) return listingPackage.price;
     if (isQuickVideo) {
       return Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
@@ -678,12 +695,39 @@ export function OrderForm() {
     if (photoCount <= 35) return 109;
     return 0;
   };
+
+  const getFreeFirstVideoCredit = () => {
+    if (!subState.hasFreeFirstVideoCredit) return 0;
+    if (isQuickVideo) {
+      // Quick Video: credit covers first FREE_FIRST_VIDEO_MAX_CLIPS clips.
+      const baseBefore = Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
+      const creditValue =
+        Math.min(photoCount, FREE_FIRST_VIDEO_MAX_CLIPS) * QUICK_VIDEO_RATE;
+      return Math.min(baseBefore, Math.round(creditValue * 100) / 100);
+    }
+    // Tier-priced branch — covers 15+ orders AND the under-5-photo state
+    // where the user has a credit but hasn't yet reached the Quick Video
+    // minimum. Flat $49.50, clamped to the base price.
+    const baseBefore = getBaseBeforeCredit();
+    return Math.min(baseBefore, FREE_FIRST_VIDEO_TIER_CREDIT);
+  };
+
   const getEditedPhotosPrice = () =>
     includeEditedPhotos && !subState.isBranded ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => (resolution === "1080P" ? 10 : 0);
   const getUrlServicePrice = () => (isUrlMode ? 25 : 0);
-  const getTotalPrice = () =>
-    getBasePrice() + getEditedPhotosPrice() + getResolutionPrice() + getUrlServicePrice();
+
+  /**
+   * Final charged total: (base − credit, floored at $0) + add-ons.
+   * Add-ons remain chargeable even on credit-applied orders.
+   */
+  const getTotalPrice = () => {
+    const base = getBaseBeforeCredit();
+    const credit = getFreeFirstVideoCredit();
+    const baseAfterCredit = Math.max(0, base - credit);
+    const addons = getEditedPhotosPrice() + getResolutionPrice() + getUrlServicePrice();
+    return Math.round((baseAfterCredit + addons) * 100) / 100;
+  };
 
   // ─── Cloudinary upload helper ───────────────────────────────────────────
   const uploadToCloudinary = async (file: Blob, folder: string): Promise<string | null> => {
@@ -956,8 +1000,15 @@ export function OrderForm() {
           : null,
       };
 
-      // Free-first-video path: new endpoint, skip Stripe entirely
-      if (subState.hasFreeFirstVideoCredit && isQuickVideo) {
+      // Free-first-video path: new endpoint, skip Stripe entirely.
+      // Only 5–10 clips go through this endpoint ($0). 11+ clips go through
+      // the paid Stripe flow below, where getTotalPrice() already subtracts
+      // the credit from the base.
+      const useFreeFirstVideoEndpoint =
+        subState.hasFreeFirstVideoCredit &&
+        isQuickVideo &&
+        photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS;
+      if (useFreeFirstVideoEndpoint) {
         const resp = await fetch("/api/orders/free-first-video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
