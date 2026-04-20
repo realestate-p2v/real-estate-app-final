@@ -1,8 +1,16 @@
 // components/order-summary.tsx
-// Phase 1A refactor — preserves all working modes (URL, Quick Video, orientation, 1080P).
+// Phase 1A refactor — preserves all working modes (URL, Quick Video, 1080P).
 // Removes voiceover (spec Section 4). Swaps legacy branding/custom-branding line.
-// Adds free-first-video credit handling (zeroes the first 10 Quick Video clips).
-// Removes retired "48-hour delivery" language (master doc Part 1).
+// Adds free-first-video credit handling (zeroes the first FREE_FIRST_VIDEO_MAX_CLIPS
+// Quick Video clips). Removes retired "48-hour delivery" language (master doc Part 1).
+//
+// v1.2 changes:
+//   - "Both Orientations" is no longer a $15 paid add-on. Pipeline renders
+//     landscape once and crops vertical at zero Minimax cost; both orientations
+//     are delivered free on every order. Add-on line item removed; features
+//     list now states both orientations as baseline inclusion.
+//   - Free-first-video banner copy fixed: trial activates at account creation
+//     (or claim), NOT at delivery. Prior copy misrepresented the product.
 
 "use client";
 
@@ -23,7 +31,7 @@ interface OrderSummaryProps {
   isQuickVideo?: boolean;
   /** Subscriber state drives photo-editing pricing (free vs $2.99/photo). */
   isSubscriber?: boolean;
-  /** Active free-first-video credit — zeros the first 10 Quick Video clips. */
+  /** Active free-first-video credit — zeros the first N Quick Video clips. */
   hasFreeFirstVideoCredit?: boolean;
 }
 
@@ -32,7 +40,10 @@ export function OrderSummary({
   brandingOption = "unbranded",
   includeEditedPhotos = false,
   resolution = "768P",
-  orientation = "landscape",
+  // `orientation` is kept in the props for back-compat with callers that still
+  // pass it, but it no longer affects pricing. Both orientations are always
+  // delivered free.
+  orientation = "both",
   isUrlMode = false,
   isQuickVideo = false,
   isSubscriber = false,
@@ -103,16 +114,16 @@ export function OrderSummary({
   const { price, chargedPrice, originalPrice, tier, freeClips, paidClips } = getPricing();
   const showContactUs = photoCount > 35 && !isQuickVideo;
 
-  // ── Add-on pricing (voiceover removed) ──
+  // ── Add-on pricing (voiceover removed; orientation retired as a paid
+  //    add-on — both orientations are delivered on every order for free) ──
   const editedPhotosPrice = includeEditedPhotos
     ? isSubscriber
       ? 0 // free for subscribers + active-trial users
       : photoCount * 2.99
     : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
-  const orientationPrice = orientation === "both" ? 15 : 0;
   const urlServicePrice = isUrlMode ? 25 : 0;
-  const totalAddons = editedPhotosPrice + resolutionPrice + orientationPrice + urlServicePrice;
+  const totalAddons = editedPhotosPrice + resolutionPrice + urlServicePrice;
 
   // Display total — what user sees as they build the order (before free credit).
   const totalPrice = price + totalAddons;
@@ -121,13 +132,8 @@ export function OrderSummary({
 
   const features: string[] = [];
   features.push(resolution === "1080P" ? "1080P Full HD video" : "768P HD video");
-  features.push(
-    orientation === "both"
-      ? "Landscape + Vertical videos"
-      : orientation === "vertical"
-      ? "Vertical (9:16) video"
-      : "Landscape (16:9) video"
-  );
+  // Both orientations are always delivered — not a toggleable add-on.
+  features.push("Landscape + Vertical videos (both included)");
   if (includeEditedPhotos) {
     features.push(
       isSubscriber ? "Professional photo editing (included with Lens)" : "Professional photo editing"
@@ -156,7 +162,7 @@ export function OrderSummary({
             <p className="text-sm font-bold text-green-800">First video on us</p>
             <p className="text-xs text-green-700 mt-0.5">
               Up to {FREE_FIRST_VIDEO_MAX_CLIPS} clips free. Additional clips are $
-              {QUICK_VIDEO_RATE.toFixed(2)} each. Your Lens Pro trial starts when your video delivers.
+              {QUICK_VIDEO_RATE.toFixed(2)} each. Your Lens Pro trial is active.
             </p>
           </div>
         </div>
@@ -178,7 +184,7 @@ export function OrderSummary({
             <p className="text-muted-foreground mb-3">
               For orders with more than 35 photos, please contact us:
             </p>
-            <a
+            
               href="tel:+18455366954"
               className="inline-flex items-center gap-2 text-primary font-semibold hover:underline text-lg"
             >
@@ -227,10 +233,9 @@ export function OrderSummary({
               )}
             </div>
 
-            {/* Add-ons */}
+            {/* Add-ons (orientation no longer listed — always free) */}
             {(editedPhotosPrice > 0 ||
               resolutionPrice > 0 ||
-              orientationPrice > 0 ||
               urlServicePrice > 0) && (
               <div className="py-4 border-b border-border space-y-3">
                 <span className="text-sm font-medium text-muted-foreground">Add-ons:</span>
@@ -254,12 +259,6 @@ export function OrderSummary({
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-foreground">1080P HD Upgrade</span>
                     <span className="font-semibold text-foreground">+$10</span>
-                  </div>
-                )}
-                {orientationPrice > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Both Orientations</span>
-                    <span className="font-semibold text-foreground">+$15</span>
                   </div>
                 )}
                 {urlServicePrice > 0 && (
