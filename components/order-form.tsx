@@ -49,11 +49,11 @@ import {
 import { PhotoUploader, type PhotoItem, buildRoomTags } from "@/components/photo-uploader";
 import { MusicSelector } from "@/components/music-selector";
 import { OrderSummary } from "@/components/order-summary";
-import {
-  SpecialFeaturesPicker,
-  hasAtLeastOneFeature,
-  type SpecialFeaturesValue,
-} from "@/components/order-form/special-features-picker";
+// Special-features chip picker was retired in v1.2. The PhotoUploader
+// questionnaire is now the only UI for this data; it reports changes
+// via its onSpecialFeaturesChange callback which we wire into the
+// `specialFeatures` state below. Downstream JSONB shape unchanged.
+import type { SpecialFeaturesValue } from "@/components/order-form/special-features-picker";
 import { DraftSaveBar } from "@/components/draft-save-bar";
 import { hasConsent } from "@/components/cookie-consent";
 import { Input } from "@/components/ui/input";
@@ -1353,6 +1353,28 @@ export function OrderForm() {
                     initialBathrooms={propertyBathrooms ? parseInt(propertyBathrooms) : undefined}
                     minPhotos={effectiveMinPhotos}
                     maxPhotos={effectiveMaxPhotos}
+                    onSpecialFeaturesChange={(val) => {
+                      // Map the questionnaire's shape to the existing
+                      // specialFeatures JSONB shape. Flatten "other" fields
+                      // into the same key so downstream code doesn't need
+                      // to learn a new schema.
+                      const combinedFeatures = [
+                        ...val.features,
+                        ...(val.featureOther.trim() ? [val.featureOther.trim()] : []),
+                      ];
+                      const combinedViews = [
+                        ...val.views,
+                        ...(val.viewOther.trim() ? [val.viewOther.trim()] : []),
+                      ];
+                      setSpecialFeatures({
+                        ...(combinedFeatures.length > 0
+                          ? { features: combinedFeatures }
+                          : {}),
+                        ...(combinedViews.length > 0
+                          ? { views: combinedViews }
+                          : {}),
+                      } as SpecialFeaturesValue);
+                    }}
                   />
 
                   {/* Special Features picker removed in v1.2 — the property
