@@ -500,11 +500,11 @@ export function OrderForm() {
     ? FREE_FIRST_VIDEO_MIN_CLIPS
     : NON_SUBSCRIBER_MIN_PHOTOS;
 
-  // Free-first-video cap: 10 photos max for the promo. Otherwise 35.
-  const effectiveMaxPhotos =
-    subState.hasFreeFirstVideoCredit && quickVideoEligible
-      ? FREE_FIRST_VIDEO_MAX_CLIPS
-      : STANDARD_MAX_PHOTOS;
+  // Upload cap is the standard 35-photo ceiling for everyone. Free-first-video
+  // users are NOT hard-capped at 10 — they get $0 on the first 10 clips (5–10
+  // use the free endpoint; 11–14 bill $4.95/clip on the excess through Stripe;
+  // 15+ bill tier pricing minus the $49.50 credit through Stripe).
+  const effectiveMaxPhotos = STANDARD_MAX_PHOTOS;
 
   // "Your Info" step is shown when this is a first-order user (regardless of
   // subscription). They get the branded sample content. Anyone else skips.
