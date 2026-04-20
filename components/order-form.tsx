@@ -1355,14 +1355,11 @@ export function OrderForm() {
                     maxPhotos={effectiveMaxPhotos}
                   />
 
-                  {/* Special Features chips — JSONB, narrative data for DW.
-                      Hidden when user opted out of branded bonus content
-                      (features only feed bonus-content copy, nothing else). */}
-                  {!brandingSkipped && (
-                    <div className="pt-4 border-t border-border">
-                      <SpecialFeaturesPicker value={specialFeatures} onChange={setSpecialFeatures} />
-                    </div>
-                  )}
+                  {/* Special Features picker removed in v1.2 — the property
+                      questionnaire inside PhotoUploader already captures this
+                      data and writes it to `specialFeatures` state via its own
+                      chip UI. Having two pickers on the Photos step was
+                      confusing and split the feature set across two UIs. */}
 
                   {/* Subscriber Quick Video banner */}
                   {isQuickVideo && (
@@ -1448,12 +1445,8 @@ export function OrderForm() {
                     />
                   </div>
 
-                  {/* Special features — hidden when user opted out of branded bonus content */}
-                  {!brandingSkipped && (
-                    <div className="pt-4 border-t border-border">
-                      <SpecialFeaturesPicker value={specialFeatures} onChange={setSpecialFeatures} />
-                    </div>
-                  )}
+                  {/* Special Features picker removed in v1.2 — see note on
+                      the upload-mode branch above. */}
 
                   <div
                     className={`rounded-xl border-2 p-4 transition-colors ${
