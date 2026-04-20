@@ -94,13 +94,19 @@ export function OrderSummary({
   // order-form.tsx), not at pricing time.
   const creditValue = (() => {
     if (!hasFreeFirstVideoCredit) return 0;
-    if (isQuickVideo) {
-      const freeClipsCount = Math.min(photoCount, FREE_FIRST_VIDEO_MAX_CLIPS);
-      return Math.min(price, round2(freeClipsCount * QUICK_VIDEO_RATE));
+    // Credit-eligible users at 0–10 photos see a fully free video (Total $0)
+    // regardless of Quick Video threshold. The 5-photo submit minimum is
+    // enforced separately; the sidebar stays aligned with the "First video
+    // on us" promise from the landing page.
+    if (photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS) {
+      return price;
     }
-    // Tier-priced branch — covers both 15+ orders AND the under-5-photo
-    // "about to become a Quick Video" transition state. Flat $49.50 credit
-    // covers the full $79 tier, zeroing the total below the minimum too.
+    // 11+ photos: partial credit.
+    if (isQuickVideo) {
+      // Quick Video (11–14 photos): credit covers first 10 clips at per-clip rate.
+      return Math.min(price, round2(FREE_FIRST_VIDEO_MAX_CLIPS * QUICK_VIDEO_RATE));
+    }
+    // Tier-priced (15+): flat $49.50 credit.
     return Math.min(price, FREE_FIRST_VIDEO_TIER_CREDIT);
   })();
 
