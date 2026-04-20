@@ -84,6 +84,18 @@ interface PhotoUploaderProps {
   /** Hard maximum. Default 35. Free-first-video promo users cap at 10
    *  (enforced via `maxPhotos` prop from parent). */
   maxPhotos?: number;
+  /** Optional callback that receives the questionnaire's special-features and
+   *  notable-views whenever they change. The parent form uses this to populate
+   *  `specialFeatures` JSONB on the submitted order, so downstream consumers
+   *  (description generator, flyer renderer, listing page) still get the
+   *  feature data after the separate SpecialFeaturesPicker was retired in
+   *  v1.2. */
+  onSpecialFeaturesChange?: (value: {
+    features: string[];
+    featureOther: string;
+    views: string[];
+    viewOther: string;
+  }) => void;
 }
 
 // ═══════════════════════════════════════════════════
@@ -477,6 +489,7 @@ export function PhotoUploader({
   initialBathrooms,
   minPhotos = 1,
   maxPhotos = 35,
+  onSpecialFeaturesChange,
 }: PhotoUploaderProps) {
   const [phase, setPhase] = useState<"questionnaire" | "guided">(
     photos.length > 0 ? "guided" : "questionnaire"
@@ -509,6 +522,24 @@ export function PhotoUploader({
       setAnswers((prev) => ({ ...prev, bathrooms: initialBathrooms }));
     }
   }, [initialBathrooms]);
+
+  // Push questionnaire special-features + views up to the parent form on
+  // every change, so the order form can write them into `special_features`
+  // JSONB at submit time.
+  useEffect(() => {
+    onSpecialFeaturesChange?.({
+      features: answers.features,
+      featureOther: answers.featureOther,
+      views: answers.views,
+      viewOther: answers.viewOther,
+    });
+  }, [
+    answers.features,
+    answers.featureOther,
+    answers.views,
+    answers.viewOther,
+    onSpecialFeaturesChange,
+  ]);
 
   const [uploadSteps, setUploadSteps] = useState<UploadStep[]>([]);
   const [stepPhotoIds, setStepPhotoIds] = useState<Record<string, string[]>>({});
