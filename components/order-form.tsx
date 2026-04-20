@@ -1884,7 +1884,7 @@ export function OrderForm() {
               isQuickVideo={isQuickVideo}
               isSubscriber={subState.isBranded}
               hasFreeFirstVideoCredit={subState.hasFreeFirstVideoCredit}
-            );
+            />
           </div>
         )}
       </div>
