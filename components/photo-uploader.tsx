@@ -514,6 +514,39 @@ export function PhotoUploader({
   const [stepPhotoIds, setStepPhotoIds] = useState<Record<string, string[]>>({});
   const [openCropIndex, setOpenCropIndex] = useState<number | null>(null);
 
+  // Rehydration: if the component mounts with photos already in state (e.g.
+  // the user navigated Back to this step, or a draft was restored) but we
+  // have no uploadSteps built yet, rebuild them from the current answers and
+  // re-bin the existing photos into their step buckets by roomCategory. This
+  // is what lets the user see their photos, delete them, or add more after
+  // leaving and returning to the Photos step. Previously uploadSteps stayed
+  // empty, currentStep was undefined, and render() returned null — stranding
+  // the user with no uploader UI.
+  useEffect(() => {
+    if (phase !== "guided") return;
+    if (uploadSteps.length > 0) return;
+    if (photos.length === 0) return;
+
+    const steps = buildUploadSteps(answers);
+    setUploadSteps(steps);
+
+    // Bin photos into steps by their roomCategory. Photos without a category
+    // (legacy drafts) fall into the last step as a catch-all so nothing gets
+    // lost.
+    const bins: Record<string, string[]> = {};
+    for (const step of steps) bins[step.id] = [];
+    const fallbackStepId = steps[steps.length - 1]?.id;
+    for (const p of photos) {
+      const cat = p.roomCategory;
+      if (cat && bins[cat]) {
+        bins[cat].push(p.id);
+      } else if (fallbackStepId) {
+        bins[fallbackStepId].push(p.id);
+      }
+    }
+    setStepPhotoIds(bins);
+  }, [phase, photos.length, answers.bedrooms, answers.bathrooms]);
+
   const currentStep = uploadSteps[currentStepIndex] || null;
 
   const currentStepPhotos = useMemo(() => {
@@ -943,6 +976,17 @@ export function PhotoUploader({
   // ═══════════════════════════════════════════════════
   // RENDER — GUIDED UPLOAD STEPS
   // ═══════════════════════════════════════════════════
+
+ if (phase === "guided" && !currentStep && photos.length > 0) {
+    // Uploader is rehydrating from restored state — show a tiny placeholder
+    // instead of rendering null. This shouldn't be visible for more than a
+    // frame, because the rehydration useEffect above fires immediately.
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (phase === "guided" && currentStep) {
     const StepIcon = currentStep.icon;
