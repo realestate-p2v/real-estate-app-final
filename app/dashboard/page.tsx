@@ -81,26 +81,12 @@ const mcStyles = `
     0%, 100% { transform: translateY(0); }
     50%      { transform: translateY(-2px); }
   }
-  @keyframes mc-welcome-stream {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+  @keyframes mc-logo-pulse {
+    0%, 100% { opacity: 0.08; transform: scale(1); }
+    50%      { opacity: 0.22; transform: scale(1.04); }
   }
-  .mc-welcome-text {
-    background: linear-gradient(
-      90deg,
-      rgba(255,255,255,0.15) 0%,
-      rgba(255,255,255,0.15) 40%,
-      rgba(34,211,238,1) 50%,
-      rgba(255,255,255,0.15) 60%,
-      rgba(255,255,255,0.15) 100%
-    );
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: mc-welcome-stream 2.2s linear infinite;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+  .mc-logo-pulse {
+    animation: mc-logo-pulse 1.8s ease-in-out infinite;
   }
   .mc-start-here {
     animation: mc-start-pulse 2.4s ease-in-out infinite;
@@ -570,31 +556,19 @@ export default function DashboardPage() {
   };
 
   if (!coreReady) {
-    const displayName = user?.name || "back";
     return (
       <div className="min-h-screen bg-gray-900 relative overflow-hidden">
         <Navigation />
         <style dangerouslySetInnerHTML={{ __html: mcStyles }} />
 
-        {/* Large faded logo */}
+        {/* Pulsing logo */}
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0 px-6">
           <img
             src="/logo.png"
             alt=""
             aria-hidden="true"
-            className="w-[min(70vw,680px)] h-auto"
-            style={{ opacity: 0.15 }}
+            className="mc-logo-pulse w-[min(40vw,280px)] h-auto"
           />
-        </div>
-
-        {/* Streaming welcome text */}
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10 px-6">
-          <div
-            className="mc-welcome-text text-center"
-            style={{ fontSize: "clamp(2rem, 6vw, 4.5rem)" }}
-          >
-            Welcome {displayName}
-          </div>
         </div>
       </div>
     );
