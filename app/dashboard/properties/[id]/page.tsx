@@ -550,13 +550,16 @@ function PropertyPageInner() {
   const mediaCount = videos.length + remixExports.length + orderPhotos.length + orderClips.length + allCoachApproved.length;
   const marketingCount = nonRemixExports.length + stagings.length + descriptions.length;
 
-  /* ─── Tab definitions ─── */
-  const tabs: { id: TabId; label: string; icon: any; count?: number }[] = [
-    { id: "overview", label: "Overview", icon: LayoutGrid },
-    { id: "media", label: "Media", icon: Video, count: mediaCount },
-    { id: "marketing", label: "Marketing", icon: Megaphone, count: marketingCount },
-    { id: "website", label: "Website", icon: Globe },
-    { id: "bookings", label: "Bookings", icon: CalendarDays, count: unreadShowings || undefined },
+  /* ─── Tab definitions (color-coded per section) ─── */
+  const tabs: {
+    id: TabId; label: string; icon: any; count?: number;
+    colors: { text: string; textDim: string; bg: string; ring: string; dot: string };
+  }[] = [
+    { id: "overview",  label: "Overview",  icon: LayoutGrid,   colors: { text: "text-cyan-300",    textDim: "text-cyan-400",    bg: "bg-cyan-400/10",    ring: "ring-cyan-400/30",    dot: "bg-cyan-400" } },
+    { id: "media",     label: "Media",     icon: Video,        count: mediaCount,        colors: { text: "text-violet-300",  textDim: "text-violet-400",  bg: "bg-violet-400/10",  ring: "ring-violet-400/30",  dot: "bg-violet-400" } },
+    { id: "marketing", label: "Marketing", icon: Megaphone,    count: marketingCount,    colors: { text: "text-orange-300",  textDim: "text-orange-400",  bg: "bg-orange-400/10",  ring: "ring-orange-400/30",  dot: "bg-orange-400" } },
+    { id: "website",   label: "Website",   icon: Globe,        colors: { text: "text-emerald-300", textDim: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/30", dot: "bg-emerald-400" } },
+    { id: "bookings",  label: "Bookings",  icon: CalendarDays, count: unreadShowings || undefined, colors: { text: "text-blue-300",    textDim: "text-blue-400",    bg: "bg-blue-400/10",    ring: "ring-blue-400/30",    dot: "bg-blue-400" } },
   ];
 
   /* ═════════════════════════════════════════════════════════
@@ -615,55 +618,81 @@ function PropertyPageInner() {
 
       {/* ═══ HEADER ═══ */}
       <div className="mc-animate flex items-start gap-3 mb-6">
-        <Link href="/dashboard/properties" className="mt-2 text-white/50 hover:text-white transition-colors"><ArrowLeft className="h-5 w-5" /></Link>
+      {/* ═══ HEADER with inline quick actions ═══ */}
+      <div className="mc-animate flex items-start gap-3 mb-6">
+        <Link href="/dashboard/properties" className="mt-2 text-white/50 hover:text-white transition-colors flex-shrink-0"><ArrowLeft className="h-5 w-5" /></Link>
+
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap mb-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white truncate">{property.address}</h1>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[property.status] || STATUS_STYLES.active}`}>{property.status}</span>
-            {pubPublished && <span className="text-xs font-bold text-green-300 bg-green-400/15 ring-1 ring-green-400/30 px-2.5 py-1 rounded-full">● Live</span>}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            {/* Title + status */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 flex-wrap mb-1">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white truncate">{property.address}</h1>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[property.status] || STATUS_STYLES.active}`}>{property.status}</span>
+                {pubPublished && <span className="text-xs font-bold text-green-300 bg-green-400/15 ring-1 ring-green-400/30 px-2.5 py-1 rounded-full">● Live</span>}
+              </div>
+              <p className="text-base text-white/55">
+                {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
+                {property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}
+              </p>
+            </div>
+
+            {/* Inline icon-only quick actions — subtle, tooltip-labeled */}
+            <div className="flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
+              <Link href={`/order?${qs}`} title="Order Video" aria-label="Order Video" className="p-2.5 rounded-lg text-white/60 hover:text-cyan-300 hover:bg-white/[0.06] transition-colors">
+                <Film className="h-4 w-4" />
+              </Link>
+              {[
+                { href: `/dashboard/lens/coach?${qs}`, icon: Camera, label: "Photo Coach" },
+                { href: `/dashboard/lens/descriptions?${qs}`, icon: FileText, label: "Write Description" },
+                { href: `/dashboard/lens/staging?${qs}`, icon: Sofa, label: "Stage Room" },
+                { href: `/dashboard/lens/design-studio?${qs}`, icon: PenTool, label: "Create Graphic" },
+              ].map(({ href, icon: Icon, label }) => (
+                isSubscriber ? (
+                  <Link key={label} href={href} title={label} aria-label={label} className="p-2.5 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors">
+                    <Icon className="h-4 w-4" />
+                  </Link>
+                ) : (
+                  <Link key={label} href="/lens" title={`${label} (Subscribe)`} aria-label={`${label} (Subscribe)`} className="p-2.5 rounded-lg text-white/30 hover:text-white/50 hover:bg-white/[0.04] transition-colors">
+                    <Lock className="h-4 w-4" />
+                  </Link>
+                )
+              ))}
+            </div>
           </div>
-          <p className="text-base text-white/55">
-            {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
-            {property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}
-          </p>
         </div>
       </div>
 
-      {/* ═══ QUICK ACTIONS ═══ */}
-      <div className="mc-animate flex flex-wrap gap-2 mb-6" style={{ animationDelay: "0.05s" }}>
-        <Link href={`/order?${qs}`} className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${a.bg} border ${a.border} text-sm font-semibold ${a.textLight} ${a.bgHover} transition-all`}>
-          <Film className="h-4 w-4" />Order Video
-        </Link>
-        {[
-          { href: `/dashboard/lens/coach?${qs}`, icon: Camera, label: "Photo Coach" },
-          { href: `/dashboard/lens/descriptions?${qs}`, icon: FileText, label: "Write Description" },
-          { href: `/dashboard/lens/staging?${qs}`, icon: Sofa, label: "Stage Room" },
-          { href: `/dashboard/lens/design-studio?${qs}`, icon: PenTool, label: "Create Graphic" },
-        ].map(({ href, icon: Icon, label }) => (
-          isSubscriber
-            ? <Link key={label} href={href} className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm font-semibold text-white/80 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all`}><Icon className="h-4 w-4" />{label}</Link>
-            : <Link key={label} href="/lens" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-sm font-semibold text-white/40 hover:text-white/60 transition-all"><Lock className="h-4 w-4" />{label}</Link>
-        ))}
-      </div>
-
-      {/* ═══ TABS ═══ */}
+      {/* ═══ TABS (color-coded per section) ═══ */}
       <div className="mc-animate sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-gray-900/80 backdrop-blur-xl border-b border-white/[0.05] mb-6" style={{ animationDelay: "0.1s" }}>
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+            const c = tab.colors;
             return (
               <button
                 key={tab.id}
                 onClick={() => changeTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${isActive ? `${a.bg} ${a.textLight} ring-1 ${a.border}` : "text-white/55 hover:text-white hover:bg-white/[0.04]"}`}
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                  isActive
+                    ? `${c.bg} ${c.text} ring-1 ${c.ring}`
+                    : `text-white/55 hover:text-white hover:bg-white/[0.04]`
+                }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={`h-4 w-4 ${isActive ? c.text : c.textDim}`} />
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/15" : "bg-white/[0.08]"}`}>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    isActive
+                      ? "bg-white/15 text-white"
+                      : `${c.bg} ${c.text}`
+                  }`}>
                     {tab.count}
                   </span>
+                )}
+                {isActive && (
+                  <span className={`absolute left-4 right-4 -bottom-3 h-0.5 rounded-full ${c.dot}`} />
                 )}
               </button>
             );
