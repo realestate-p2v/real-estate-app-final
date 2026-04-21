@@ -8,7 +8,7 @@
 //    because the form should send paid orders through /api/checkout)
 // 3. Promote the draft order OR insert a new row at status='new'
 //    (skips Stripe entirely; pipeline picks up on status='new')
-// 4. Mark free_first_video_used=true on lens_usage
+// 4. Mark free_first_video_used=true on lens_usage (upsert; verified)
 // 5. Save agent info to lens_usage (first-order side effect)
 // 6. Mirror special_features + listing_status to agent_properties
 // 7. Return orderId so the form can redirect to /order/processing
@@ -18,6 +18,18 @@
 // defend in depth here: vertical_addon is hard-coded to false on the
 // insert/update, regardless of what the request body says. Paying would
 // break the "first video free" promise.
+//
+// v1.3.1: Hardened credit-mark. Previously, a silently-failed update on
+// lens_usage left users with free_first_video_used=false even after their
+// free order was delivered, causing the banner to keep showing and the
+// credit to keep applying to subsequent orders. Now we:
+//   - Use upsert so a missing lens_usage row can't silently no-op.
+//   - Log the actual Supabase error instead of swallowing with a generic
+//     catch.
+//   - Read back the row post-write and log loudly if the flag didn't land.
+// The order is still considered successful even if the credit-mark fails
+// (the pipeline should still render the video), but support will now see
+// the failure in logs immediately.
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -297,19 +309,69 @@ export async function POST(request: Request) {
       orderRow = data;
     }
 
-    // ── Mark the credit used (atomically) ──
-    // If this fails we still return success — the order exists. Log for support.
+    // ── Mark the credit used (hardened: upsert + verify) ───────────────
+    //
+    // Why upsert instead of update: the previous code used a plain .update()
+    // which silently no-ops if no row matches the .eq() filter. In practice
+    // this left users with free_first_video_used=false even after their
+    // free order delivered, so the banner kept showing and the credit
+    // kept applying to subsequent orders. Upsert guarantees a row exists
+    // after the call.
+    //
+    // Why verify after: even with upsert, downstream triggers or column
+    // constraints could silently drop the value. We read the row back and
+    // log loudly if the flag didn't land. The order itself still succeeds
+    // either way — a stale banner is recoverable, a lost order isn't.
+    const nowIso = new Date().toISOString();
     try {
-      await supabase
+      const { error: markError } = await supabase
         .from("lens_usage")
-        .update({
-          free_first_video_used: true,
-          free_first_video_used_at: new Date().toISOString(),
-        })
-        .eq("user_id", userId)
-        .eq("free_first_video_used", false); // idempotency guard
+        .upsert(
+          {
+            user_id: userId,
+            free_first_video_used: true,
+            free_first_video_used_at: nowIso,
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (markError) {
+        console.error(
+          "[free-first-video] CREDIT MARK FAILED — user will have stale banner:",
+          { userId, orderId, error: markError }
+        );
+      } else {
+        // Verify the flag actually landed. If it didn't, log loudly so
+        // support can fix it before the user sees a stale banner.
+        const { data: verify, error: verifyError } = await supabase
+          .from("lens_usage")
+          .select("free_first_video_used, free_first_video_used_at")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (verifyError) {
+          console.error(
+            "[free-first-video] CREDIT MARK VERIFY FAILED:",
+            { userId, orderId, error: verifyError }
+          );
+        } else if (!verify?.free_first_video_used) {
+          console.error(
+            "[free-first-video] CREDIT MARK DID NOT LAND — upsert returned no error but flag is still false:",
+            { userId, orderId, verify }
+          );
+        } else {
+          console.log(
+            "[free-first-video] Credit marked used:",
+            userId.slice(0, 8),
+            verify.free_first_video_used_at
+          );
+        }
+      }
     } catch (err) {
-      console.error("[free-first-video] credit mark failed:", err);
+      console.error(
+        "[free-first-video] CREDIT MARK THREW — user will have stale banner:",
+        { userId, orderId, err }
+      );
     }
 
     // ── Ensure property portfolio entry exists ──
@@ -389,3 +451,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
