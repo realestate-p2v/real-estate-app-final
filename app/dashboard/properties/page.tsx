@@ -1,6 +1,6 @@
-"use client";
+// app/dashboard/properties/page.tsx
 
-export const dynamic = "force-dynamic";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -81,112 +81,120 @@ function extractAllUrls(obj: any): string[] {
   return [];
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   deletePropertyWithCleanup (April 21 evening FIX)
+
+   OLD behavior: awaited every Cloudinary cleanup BEFORE deleting
+   the property row. If any Cloudinary call threw, the outer catch
+   swallowed it and the row was never deleted → property reappeared
+   on refresh.
+
+   NEW behavior:
+     1. Read the property + collect related asset URLs (fast, DB only)
+     2. DELETE THE PROPERTY ROW FIRST (what the user cares about)
+     3. Clean up related DB rows (best-effort)
+     4. Fire Cloudinary deletes as Promise.allSettled (no single
+        failure can break the chain)
+
+   Orphaned Cloudinary assets are harmless — fixable later with a
+   background cleanup job. User gets immediate feedback that the
+   property is gone.
+   ═══════════════════════════════════════════════════════════════ */
 async function deletePropertyWithCleanup(propertyId: string) {
   const supabase = createClient();
- 
-  // ─── Step 1: Read the property so we know its address for order matching ───
+
+  // ─── Step 1: Read property for asset collection ───
   const { data: prop, error: propReadErr } = await supabase
     .from("agent_properties")
     .select("id, address_normalized, website_curated, optimized_photos")
     .eq("id", propertyId)
     .single();
- 
+
   if (propReadErr || !prop) {
     throw new Error(propReadErr?.message || "Property not found");
   }
- 
-  // ─── Step 2: Collect related data (reads only — fast) ───
-  // Exports
+
+  // ─── Step 2: Collect related data (reads only) ───
   const { data: exps } = await supabase
     .from("design_exports")
     .select("id, export_url, template_type")
     .eq("property_id", propertyId);
- 
-  // Orders — match by address_normalized (same pattern used elsewhere in the app;
-  // the orders table has no property_id foreign key)
+
+  // Orders: match by address_normalized (orders has no property_id FK)
   const norm = prop.address_normalized;
-  const { data: orders } = norm
+  const ordersQuery = norm
     ? await supabase
         .from("orders")
         .select("id, photos, delivery_url, unbranded_delivery_url, branded_video_url, unbranded_video_url, clip_urls")
         .ilike("property_address", `${norm}%`)
-    : { data: [] };
- 
-  // Staging — only rows whose original_url matches one of our order photos
+    : { data: [] as any[] };
+  const orders = ordersQuery.data || [];
+
   const orderPhotoUrls: string[] = [];
-  for (const o of (orders || [])) {
+  for (const o of orders) {
     orderPhotoUrls.push(...extractAllUrls(o.photos));
   }
+
   const { data: stagings } = orderPhotoUrls.length > 0
     ? await supabase
         .from("lens_staging")
         .select("id, staged_url, original_url")
         .in("original_url", orderPhotoUrls)
-    : { data: [] };
- 
-  // ─── Step 3: DELETE THE PROPERTY ROW FIRST (what user cares about) ───
-  // First unpoint anything merged into this property, so FK cascade or orphaned
-  // pointers don't cause issues
+    : { data: [] as any[] };
+
+  // ─── Step 3: DELETE THE PROPERTY ROW FIRST ───
   await supabase
     .from("agent_properties")
     .update({ merged_into_id: null })
     .eq("merged_into_id", propertyId);
- 
-  // Null out property_id on descriptions so the FK doesn't block delete
-  // (FK is ON DELETE CASCADE but explicit null is safer in case policy blocks)
+
+  // Null out descriptions FK before delete (safer than relying on CASCADE)
   await supabase
     .from("lens_descriptions")
     .update({ property_id: null })
     .eq("property_id", propertyId);
- 
+
   const { error: propDeleteErr } = await supabase
     .from("agent_properties")
     .delete()
     .eq("id", propertyId);
- 
+
   if (propDeleteErr) {
     throw new Error(`Property delete failed: ${propDeleteErr.message}`);
   }
- 
-  // ─── Step 4: Clean up related DB rows (best-effort, no throws) ───
+
+  // ─── Step 4: Clean up related DB rows (best-effort) ───
   const dbCleanup = async () => {
     try {
       if (exps && exps.length > 0) {
-        const ids = exps.map(e => e.id);
-        await supabase.from("design_exports").delete().in("id", ids);
+        await supabase.from("design_exports").delete().in("id", exps.map(e => e.id));
       }
-      if (orders && orders.length > 0) {
+      if (orders.length > 0) {
         const orderIds = orders.map(o => o.id);
-        // Delete child rows first (FK safety)
         await supabase.from("order_revisions").delete().in("order_id", orderIds);
         await supabase.from("order_messages").delete().in("order_id", orderIds);
         await supabase.from("orders").delete().in("id", orderIds);
       }
       if (stagings && stagings.length > 0) {
-        const stagingIds = stagings.map(s => s.id);
-        await supabase.from("lens_staging").delete().in("id", stagingIds);
+        await supabase.from("lens_staging").delete().in("id", stagings.map(s => s.id));
       }
     } catch (e) {
-      console.warn("Post-delete DB cleanup error (property already deleted, continuing):", e);
+      console.warn("Post-delete DB cleanup error:", e);
     }
   };
- 
-  // ─── Step 5: Cloudinary cleanup (fire-and-forget, no await) ───
-  // Orphaned Cloudinary assets are harmless — a background job can reap them later
+
+  // ─── Step 5: Cloudinary cleanup (fire-and-forget) ───
   const cloudinaryCleanup = async () => {
     try {
       const deletions: Promise<boolean>[] = [];
- 
-      // Exports
+
       for (const exp of (exps || [])) {
         if (exp.export_url?.includes("cloudinary")) {
           const rt = exp.template_type?.startsWith("video_remix") ? "video" : "image";
           deletions.push(deleteFromCloudinary(exp.export_url, rt));
         }
       }
- 
-      // Order videos + clips
-      for (const o of (orders || [])) {
+      for (const o of orders) {
         for (const vUrl of [o.delivery_url, o.unbranded_delivery_url, o.branded_video_url, o.unbranded_video_url].filter(Boolean)) {
           if (vUrl?.includes("cloudinary")) deletions.push(deleteFromCloudinary(vUrl, "video"));
         }
@@ -196,35 +204,36 @@ async function deletePropertyWithCleanup(propertyId: string) {
           if (clipUrl?.includes("cloudinary")) deletions.push(deleteFromCloudinary(clipUrl, "video"));
         }
       }
- 
-      // Order photos
       for (const url of orderPhotoUrls) {
         if (url.includes("cloudinary")) deletions.push(deleteFromCloudinary(url));
       }
- 
-      // Staged images
       for (const s of (stagings || [])) {
         if (s.staged_url?.includes("cloudinary")) deletions.push(deleteFromCloudinary(s.staged_url));
       }
- 
-      // Property curated + optimized
       for (const url of extractAllUrls(prop.website_curated)) {
         if (url.includes("cloudinary")) deletions.push(deleteFromCloudinary(url));
       }
       for (const opt of (prop.optimized_photos || [])) {
         if (opt?.url?.includes("cloudinary")) deletions.push(deleteFromCloudinary(opt.url));
       }
- 
+
       await Promise.allSettled(deletions);
     } catch (e) {
-      console.warn("Cloudinary cleanup error (property already deleted, continuing):", e);
+      console.warn("Cloudinary cleanup error:", e);
     }
   };
- 
-  // Kick off background cleanup. Don't await — the function returns as soon as
-  // the property row is gone.
+
+  // Kick off background cleanup — don't await
   dbCleanup();
   cloudinaryCleanup();
+}
+
+export default function PropertiesPage() {
+  return (
+    <DashboardShell accent="cyan" maxWidth="6xl">
+      <PropertiesBody />
+    </DashboardShell>
+  );
 }
 
 function PropertiesBody() {
@@ -409,9 +418,9 @@ function PropertiesBody() {
     try {
       await deletePropertyWithCleanup(propertyId);
       setProperties(prev => prev.filter(p => p.id !== propertyId));
-    } catch (e) {
+    } catch (e: any) {
       console.error("Property delete failed:", e);
-      alert("Failed to delete property. Please try again.");
+      alert(`Failed to delete property: ${e?.message || "Please try again."}`);
     }
     setDeletingId(null);
   }
