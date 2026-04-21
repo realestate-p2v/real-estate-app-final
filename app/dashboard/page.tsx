@@ -1,3 +1,5 @@
+// app/dashboard/page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -227,6 +229,7 @@ interface LensSubscription {
 interface RecentProperty {
   id: string;
   address: string;
+  address_normalized?: string | null;
   city: string | null;
   state: string | null;
   status: string;
@@ -237,6 +240,8 @@ interface RecentProperty {
   special_features: string[] | null;
   hero_image_url?: string | null;
   website_curated?: any;
+  /** Dashboard-only derived field: first photo from this property's most recent order */
+  order_thumb?: string | null;
 }
 
 /* ─────────────────────────────────────────────
@@ -434,7 +439,7 @@ export default function DashboardPage() {
         supabase.from("lens_enhancements").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("agent_properties").select("*", { count: "exact", head: true }).eq("user_id", authUser.id),
         supabase.from("agent_properties")
-          .select("id, address, city, state, status, bedrooms, bathrooms, sqft, price, special_features, website_curated")
+          .select("id, address, address_normalized, city, state, status, bedrooms, bathrooms, sqft, price, special_features, website_curated")
           .eq("user_id", authUser.id).is("merged_into_id", null)
           .order("updated_at", { ascending: false }).limit(5),
         supabase.from("agent_websites")
@@ -453,7 +458,48 @@ export default function DashboardPage() {
       setDescriptionCount(descCountResult.count || 0);
       setEnhancementCount(enhanceCountResult.count || 0);
       setPropertyCount(propCountResult.count || 0);
-      if (propsResult.data) setRecentProperties(propsResult.data);
+
+      if (propsResult.data && propsResult.data.length > 0) {
+        // ─── Enrich each property with its first order photo as fallback thumb ───
+        // The agent_properties.website_curated field is only populated after the user
+        // manually curates their website. For the common case (ordered a video, didn't
+        // build a website yet) we need to pull the first photo from the most recent
+        // paid order that matches the property's address_normalized.
+        const props = propsResult.data;
+
+        // Fetch all paid orders for this user that might match our recent properties.
+        // We fetch once and match client-side to avoid N+1 queries.
+        const { data: ordersWithPhotos } = await supabase
+          .from("orders")
+          .select("property_address, photos, created_at")
+          .eq("user_id", authUser.id)
+          .eq("payment_status", "paid")
+          .not("photos", "is", null)
+          .order("created_at", { ascending: false });
+
+        const enriched: RecentProperty[] = props.map((prop: any) => {
+          let orderThumb: string | null = null;
+          if (ordersWithPhotos && prop.address_normalized) {
+            // Find the most recent order whose property_address starts with this
+            // property's normalized address. Uses the same prefix-match pattern
+            // the property detail page uses.
+            const norm = prop.address_normalized;
+            const matchingOrder = ordersWithPhotos.find((o: any) => {
+              if (!o.property_address) return false;
+              const orderAddr = o.property_address.toLowerCase().trim();
+              return orderAddr.startsWith(norm) || norm.startsWith(orderAddr);
+            });
+            if (matchingOrder?.photos && Array.isArray(matchingOrder.photos)) {
+              const firstPhoto = matchingOrder.photos.find((p: any) => p?.secure_url);
+              if (firstPhoto) orderThumb = firstPhoto.secure_url;
+            }
+          }
+          return { ...prop, order_thumb: orderThumb };
+        });
+
+        setRecentProperties(enriched);
+      }
+
       if (agentWebsiteResult.data && agentWebsiteResult.data.length > 0) {
         setAgentWebsite(agentWebsiteResult.data[0]);
       }
@@ -479,9 +525,11 @@ export default function DashboardPage() {
     return p.toString();
   };
 
-  /* ─── Pull the first usable image out of a property's website_curated blob ─── */
+  /* ─── Pull the first usable image out of a property — ordered by data quality ─── */
+  // Priority: explicit hero → order photo (most common) → curated website photo → null
   const getPropertyThumb = (prop: RecentProperty): string | null => {
     if (prop.hero_image_url) return prop.hero_image_url;
+    if (prop.order_thumb) return prop.order_thumb;
     const curated = prop.website_curated;
     if (!curated) return null;
     const extract = (arr: any): string | null => {
@@ -492,6 +540,12 @@ export default function DashboardPage() {
     };
     if (Array.isArray(curated)) return extract(curated);
     return extract(curated.photos) || extract(curated.hero) || extract(curated.images) || null;
+  };
+
+  /* ─── Downsize Cloudinary URLs for the thumb grid ─── */
+  const thumbnailize = (url: string): string => {
+    if (!url?.includes("/upload/")) return url;
+    return url.replace("/upload/", "/upload/w_200,h_200,c_fill,q_auto,f_auto/");
   };
 
   if (!coreReady) {
@@ -813,7 +867,7 @@ export default function DashboardPage() {
                     >
                       {thumb ? (
                         <img
-                          src={thumb}
+                          src={thumbnailize(thumb)}
                           alt={prop.address}
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           loading="lazy"
