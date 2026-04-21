@@ -20,7 +20,6 @@ export default function HomePage() {
     <main className="min-h-screen">
       <Navigation />
       <HeroSection />
-      <Testimonials />
       <DemoSection />
       <SaleBanner />
       <BrokerageCTA />
@@ -29,6 +28,7 @@ export default function HomePage() {
       <TrustSection />
       <CTASection />
       <FAQ />
+       <Testimonials />
       <ContactSection />
       <LensySmart />
       <Footer />
