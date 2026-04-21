@@ -15,6 +15,9 @@
 //   - Photo Enhancement toggle with subscriber-aware copy
 //   - Your Info fields persist to lens_usage on upload/step-advance (v1.2
 //     fix for silent drop where only brand colors were being saved)
+//   - Vertical Add-on ($15): paid upgrade that unlocks a separately-framed
+//     vertical render at Minimax (vs. the default ffmpeg crop). Hidden on
+//     the free-first-video path. Pipeline reads orders.vertical_addon.
 // Removed from UI (but left intact in code/DB for future resurrection):
 //   - Voiceover step (VoiceoverSelector file stays dormant)
 //   - Branding wizard step (BrandingSelector file stays dormant for Design
@@ -96,6 +99,7 @@ const LISTING_PACKAGES: ListingPackage[] = [
 const QUICK_VIDEO_RATE = 4.95;
 const NON_SUBSCRIBER_MIN_PHOTOS = 15; // tier 1 entry point
 const STANDARD_MAX_PHOTOS = 35;
+const VERTICAL_ADDON_PRICE = 15;
 
 interface StepDef {
   label: string;
@@ -322,6 +326,7 @@ export function OrderForm() {
   const [customAudioFile, setCustomAudioFile] = useState<File | null>(null);
   const [resolution, setResolution] = useState<"768P" | "1080P">("768P");
   const [includeEditedPhotos, setIncludeEditedPhotos] = useState(false);
+  const [verticalAddon, setVerticalAddon] = useState(false);
   const [sequenceConfirmed, setSequenceConfirmed] = useState(false);
   const [photoPermission, setPhotoPermission] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -510,6 +515,21 @@ export function OrderForm() {
   // subscription). They get the branded sample content. Anyone else skips.
   const showYourInfoStep = isFirstOrder === true;
 
+  // Vertical add-on is ONLY available on paid orders. Free-first-video path
+  // cannot show the option — the $15 charge would break the "first video
+  // free" promise. Backend defense-in-depth also refuses to honor it.
+  const showVerticalAddon = isFirstOrder === false;
+
+  // Defense-in-depth: if the user checked the add-on and then somehow
+  // transitioned into a first-order state (e.g. race on state load), force
+  // it off so pricing and payload can never carry a live $15 into the
+  // free path.
+  useEffect(() => {
+    if (!showVerticalAddon && verticalAddon) {
+      setVerticalAddon(false);
+    }
+  }, [showVerticalAddon, verticalAddon]);
+
   // ─── Step definitions ────────────────────────────────────────────────────
   const steps: StepDef[] = useMemo(() => {
     const arr: StepDef[] = [];
@@ -560,6 +580,7 @@ export function OrderForm() {
       brandingData: { type: "unbranded" },
       includeEditedPhotos,
       photoEditing: includeEditedPhotos,
+      verticalAddon,
       specialFeatures,
       includeAddressOnCard: true,
       includeUnbranded: false,
@@ -607,6 +628,7 @@ export function OrderForm() {
       if (payload.musicSelection) setMusicSelection(payload.musicSelection);
       if (payload.resolution) setResolution(payload.resolution as "768P" | "1080P");
       if (typeof payload.includeEditedPhotos === "boolean") setIncludeEditedPhotos(payload.includeEditedPhotos);
+      if (typeof payload.verticalAddon === "boolean") setVerticalAddon(payload.verticalAddon);
       if (payload.specialFeatures) setSpecialFeatures(payload.specialFeatures);
       if (payload.photoInputMode === "url" || payload.photoInputMode === "upload") {
         setPhotoInputMode(payload.photoInputMode);
@@ -642,6 +664,7 @@ export function OrderForm() {
     musicSelection,
     resolution,
     includeEditedPhotos,
+    verticalAddon,
     specialFeatures,
     agentName,
     agentPhone,
@@ -670,8 +693,9 @@ export function OrderForm() {
   // ─── Pricing ────────────────────────────────────────────────────────────
   //
   // Base price, then add-ons, then free-first-video credit applied at the END.
-  // Rationale: add-ons (1080P, photo editing, listing URL service) are NOT
-  // zeroed by the credit per Matt. Only the base video is. Computation is:
+  // Rationale: add-ons (1080P, photo editing, listing URL service, vertical
+  // add-on) are NOT zeroed by the credit per Matt. Only the base video is.
+  // Computation is:
   //
   //   baseAfterCredit = max(0, baseBeforeCredit − creditValue)
   //   total           = baseAfterCredit + addOns
@@ -720,6 +744,11 @@ export function OrderForm() {
     includeEditedPhotos && !subState.isBranded ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => (resolution === "1080P" ? 10 : 0);
   const getUrlServicePrice = () => (isUrlMode ? 25 : 0);
+  // Vertical add-on: belt-and-suspenders — both the showVerticalAddon gate
+  // (no UI on free path) and this guard (no price on free path) must be
+  // true for the $15 to appear in the total.
+  const getVerticalAddonPrice = () =>
+    verticalAddon && showVerticalAddon ? VERTICAL_ADDON_PRICE : 0;
 
   /**
    * Final charged total: (base − credit, floored at $0) + add-ons.
@@ -729,7 +758,11 @@ export function OrderForm() {
     const base = getBaseBeforeCredit();
     const credit = getFreeFirstVideoCredit();
     const baseAfterCredit = Math.max(0, base - credit);
-    const addons = getEditedPhotosPrice() + getResolutionPrice() + getUrlServicePrice();
+    const addons =
+      getEditedPhotosPrice() +
+      getResolutionPrice() +
+      getUrlServicePrice() +
+      getVerticalAddonPrice();
     return Math.round((baseAfterCredit + addons) * 100) / 100;
   };
 
@@ -950,6 +983,10 @@ export function OrderForm() {
         utmData = {};
       }
 
+      // Final belt-and-suspenders guard at payload construction: the add-on
+      // can only go true on a paid, non-first-order flow.
+      const effectiveVerticalAddon = verticalAddon && showVerticalAddon;
+
       const orderPayload = {
         // Pre-existing /api/orders contract
         customer: { name: agentName, email: agentEmail, phone: agentPhone },
@@ -972,6 +1009,7 @@ export function OrderForm() {
         voiceoverScript: "",
         voiceoverVoice: "",
         includeEditedPhotos,
+        vertical_addon: effectiveVerticalAddon,
         includeUnbranded: false,
         customIntroCardUrl: null,
         customOutroCardUrl: null,
@@ -1720,6 +1758,40 @@ export function OrderForm() {
                 </div>
               </div>
 
+              {/* Vertical Add-on — hidden entirely on free-first-video path.
+                  Default-path customers already get a vertical version via
+                  ffmpeg crop of the landscape; this upgrade unlocks a
+                  separately-framed Minimax render for social. */}
+              {showVerticalAddon && (
+                <div className="border-t border-border pt-8">
+                  <div className="flex items-center justify-between p-5 bg-muted/80 rounded-xl">
+                    <div className="pr-4">
+                      <p className="font-bold text-base">
+                        Add a vertical version{" "}
+                        {verticalAddon ? (
+                          <span className="text-muted-foreground text-sm font-normal ml-1">
+                            (+${VERTICAL_ADDON_PRICE})
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm font-normal ml-1">
+                            (+${VERTICAL_ADDON_PRICE})
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Optimized for Instagram Reels and TikTok. Separately framed — not a crop
+                        of the landscape.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={verticalAddon}
+                      onCheckedChange={setVerticalAddon}
+                      className="scale-150 mr-2 data-[state=checked]:bg-primary border-1 border-slate-400"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Photo Enhancement */}
               <div className="border-t border-border pt-8">
                 <div className="flex items-center justify-between p-5 bg-muted/80 rounded-xl">
@@ -1929,6 +2001,7 @@ export function OrderForm() {
             includeEditedPhotos={includeEditedPhotos}
             resolution={resolution}
             orientation="both"
+            verticalAddon={verticalAddon && showVerticalAddon}
             isUrlMode={isUrlMode}
             isQuickVideo={isQuickVideo}
             isSubscriber={subState.isBranded}
@@ -1961,6 +2034,7 @@ export function OrderForm() {
               includeEditedPhotos={includeEditedPhotos}
               resolution={resolution}
               orientation="both"
+              verticalAddon={verticalAddon && showVerticalAddon}
               isUrlMode={isUrlMode}
               isQuickVideo={isQuickVideo}
               isSubscriber={subState.isBranded}
