@@ -518,7 +518,7 @@ export function OrderForm() {
   // Vertical add-on is ONLY available on paid orders. Free-first-video path
   // cannot show the option — the $15 charge would break the "first video
   // free" promise. Backend defense-in-depth also refuses to honor it.
-  const showVerticalAddon = isFirstOrder === false;
+  const showVerticalAddon = isFirstOrder === false && !subState.hasFreeFirstVideoCredit;
 
   // Defense-in-depth: if the user checked the add-on and then somehow
   // transitioned into a first-order state (e.g. race on state load), force
