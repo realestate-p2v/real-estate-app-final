@@ -11,6 +11,12 @@
 //   property row.
 // - Accepts special_features (jsonb), room_tags (jsonb), photo_editing
 //   (bool), is_first_order (bool), listing_status (text).
+// - Accepts vertical_addon (bool): paid $15 upgrade that tells the pipeline
+//   to render a separately-framed vertical at Minimax instead of cropping
+//   the landscape. Pricing is already baked into totalPrice by the
+//   frontend (matches the pattern used by photo_editing / 1080P / URL
+//   service — one Stripe line item for the computed total). We just
+//   persist the flag so pipeline.py can read it.
 // - On first order: writes agent_info to lens_usage so returning users
 //   get auto-fill on their second+ orders. Per Matt: second+ orders
 //   pre-fill from profile; edits on those orders stay per-order (do NOT
@@ -96,6 +102,10 @@ export async function POST(request: Request) {
       is_first_order,
       listing_status,
       agent_info,
+
+      // Vertical add-on (v1.3): paid $15 upgrade for a separately-framed
+      // vertical render at Minimax. Pipeline reads orders.vertical_addon.
+      vertical_addon,
     } = body;
 
     if (!customer?.email) {
@@ -119,6 +129,13 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
     const photoCount = uploadedPhotos?.length || 0;
+
+    // Vertical add-on sanity: coerce to strict bool, and refuse to honor
+    // the flag on first-order flows. The frontend already hides the UI
+    // and zeroes the payload on that path, but we defend in depth here
+    // too — no amount of payload-tampering can result in a first-order
+    // row with vertical_addon = true.
+    const verticalAddonResolved = !!vertical_addon && !is_first_order;
 
     // ── Build the payload that applies to both INSERT and UPDATE paths ──
     const orderFields: Record<string, any> = {
@@ -163,6 +180,11 @@ export async function POST(request: Request) {
       room_tags: room_tags || [],
       photo_editing: !!photo_editing,
       is_first_order: !!is_first_order,
+
+      // v1.3: vertical add-on flag. Pipeline reads this to decide whether
+      // to render vertical separately at Minimax (true) or crop from the
+      // landscape via ffmpeg (false).
+      vertical_addon: verticalAddonResolved,
     };
 
     let orderId: string;
@@ -290,7 +312,8 @@ export async function POST(request: Request) {
       orderId,
       userId ? `(user: ${userId.slice(0, 8)})` : "(no user)",
       is_first_order ? "(first order 🎉)" : "",
-      is_quick_video ? "(quick video)" : ""
+      is_quick_video ? "(quick video)" : "",
+      verticalAddonResolved ? "(vertical add-on +$15)" : ""
     );
 
     return NextResponse.json({
