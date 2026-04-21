@@ -1,3 +1,5 @@
+// app/components/HeroSection.tsx (or wherever this file lives — keep the existing path)
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -5,8 +7,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  Clock,
-  ShieldCheck,
   Sparkles,
   Camera,
   PenTool,
@@ -18,6 +18,8 @@ import {
   Film,
   Percent,
   ImageIcon,
+  Zap,
+  ShieldCheck,
   ChevronDown,
 } from "lucide-react";
 
@@ -100,7 +102,7 @@ export function HeroSection() {
     init();
   }, []);
 
-  // NEW: any logged-in user redirects to dashboard
+  // Any logged-in user redirects to dashboard
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
       router.push("/dashboard");
@@ -116,7 +118,6 @@ export function HeroSection() {
     );
   }
 
-  // Show spinner while redirecting (for ANY logged-in user now)
   if (isLoggedIn) {
     return (
       <>
@@ -128,7 +129,6 @@ export function HeroSection() {
     );
   }
 
-  // Non-subscriber — marketing hero
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: heroStyles }} />
@@ -178,58 +178,67 @@ function MarketingHero({
             <div className="grid items-center gap-10 lg:grid-cols-[1fr_380px] lg:gap-12 xl:grid-cols-[1fr_420px]">
               {/* LEFT */}
               <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+                {/* Eyebrow */}
                 <div className="hero-animate mb-5" style={{ animationDelay: "0.1s" }}>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white/85 backdrop-blur-md sm:text-sm">
                     <Sparkles className="h-3.5 w-3.5 text-green-400" />
-                    AI-Powered Real Estate Marketing
+                    Real Estate Marketing, Simplified
                   </span>
                 </div>
 
+                {/* Locked headline */}
                 <h1 className="hero-animate max-w-2xl text-[2.25rem] font-extrabold leading-[1.06] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[3.75rem]" style={{ animationDelay: "0.25s" }}>
-                  Listing Videos.<br />Photo Coaching.<br /><span className="text-green-400">Your Entire Marketing Team.</span>
+                  We turn listing photos into <span className="text-green-400">cinematic video</span> and endless marketing content.
                 </h1>
 
+                {/* Locked subhead */}
                 <p className="hero-animate mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg sm:leading-relaxed" style={{ animationDelay: "0.4s" }}>
-                  With P2V Lens access, 10% off cinematic walkthrough videos, AI photo coaching, marketing design, listing descriptions, virtual staging — everything you need to market your listings, in one subscription.
+                  Instantly create flyers, Reels, social posts, and more. No design experience needed.
+                </p>
+
+                {/* Locked mechanism sentence */}
+                <p className="hero-animate mt-4 max-w-lg text-sm font-medium leading-relaxed text-white/65 sm:text-base" style={{ animationDelay: "0.5s" }}>
+                  Upload your listing photos <span className="text-green-400/90">→</span> We make your video <span className="text-green-400/90">→</span> Your marketing builds itself.
                 </p>
 
                 {/* Tool chips */}
                 <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
                   {tools.map((tool, i) => (
-                    <span key={tool.label} className={`hero-chip-animate inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold backdrop-blur-sm sm:text-sm ${tool.featured ? "border-green-400/30 bg-green-400/10 text-green-300" : "border-white/15 bg-white/[0.07] text-white/80"}`} style={{ animationDelay: `${0.5 + i * 0.07}s` }}>
+                    <span key={tool.label} className={`hero-chip-animate inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold backdrop-blur-sm sm:text-sm ${tool.featured ? "border-green-400/30 bg-green-400/10 text-green-300" : "border-white/15 bg-white/[0.07] text-white/80"}`} style={{ animationDelay: `${0.6 + i * 0.07}s` }}>
                       <tool.icon className={`h-3.5 w-3.5 ${tool.featured ? "text-green-400" : "text-white/60"}`} />
                       {tool.label}
                     </span>
                   ))}
-                  <span className="hero-chip-animate inline-flex items-center rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/60 backdrop-blur-sm sm:text-sm" style={{ animationDelay: `${0.5 + tools.length * 0.07}s` }}>+10 more</span>
+                  <span className="hero-chip-animate inline-flex items-center rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/60 backdrop-blur-sm sm:text-sm" style={{ animationDelay: `${0.6 + tools.length * 0.07}s` }}>+9 more</span>
                 </div>
 
-                {/* CTA */}
+                {/* CTAs — Video primary, Lens secondary */}
                 <div className="hero-animate mt-8 flex flex-col items-center gap-4 sm:flex-row sm:gap-5 lg:items-start" style={{ animationDelay: "0.95s" }}>
-                  <Link href="/lens" passHref>
+                  <Link href="/order" passHref>
                     <Button size="lg" className="hero-glow-btn group h-auto rounded-xl bg-green-500 px-8 py-4 text-base font-extrabold text-white transition-all hover:bg-green-400 sm:text-lg">
-                      Explore P2V Lens — $27.95/mo
+                      Create a Listing Video — $79
                       <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
                     </Button>
                   </Link>
-                  <Link href="/order" passHref>
+                  <Link href="/lens" passHref>
                     <Button variant="outline" size="lg" className="h-auto rounded-xl border-white/15 bg-white/[0.05] px-6 py-4 text-base font-bold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 sm:text-lg">
-                      Create a Listing Video — <span className="ml-1 text-white/40 line-through">$119</span><span className="ml-1.5 text-green-400">$79</span>
+                      Explore P2V Lens — 15 AI Tools, $27/mo
                     </Button>
                   </Link>
                 </div>
 
                 {/* Perks */}
                 <div className="hero-animate-fade mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-white/60 sm:text-sm lg:justify-start" style={{ animationDelay: "1.15s" }}>
-                  <span className="inline-flex items-center gap-1"><Percent className="h-3.5 w-3.5 text-green-400/80" />10% off every video</span>
+                  <span className="inline-flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-green-400/80" />From upload to video in minutes</span>
+                  <span className="inline-flex items-center gap-1"><Percent className="h-3.5 w-3.5 text-green-400/80" />10% off videos for subscribers</span>
                   <span className="inline-flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5 text-green-400/80" />Free photo enhancement</span>
-                  <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-green-400/80" />Quick Videos starting at $24</span>
-                  <span className="inline-flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-green-400/80" />Access to 14 AI powered tools</span>
+                  <span className="inline-flex items-center gap-1"><Film className="h-3.5 w-3.5 text-green-400/80" />Quick Videos under $25</span>
                 </div>
               </div>
 
               {/* RIGHT — Info cards */}
               <div className="flex flex-col gap-3 sm:gap-4">
+                {/* Stats card */}
                 <div className="hero-animate rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl sm:p-6" style={{ animationDelay: "0.6s" }}>
                   <div className="mb-3 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-green-400" />
@@ -238,31 +247,33 @@ function MarketingHero({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-xl bg-white/[0.04] p-3.5 text-center">
                       <p className="text-2xl font-extrabold text-green-400 sm:text-3xl">403%</p>
-                      <p className="mt-0.5 text-[11px] leading-tight text-white/60 sm:text-xs">more inquiries<br />with video — NAR</p>
+                      <p className="mt-0.5 text-[11px] leading-tight text-white/60 sm:text-xs">more inquiries<br />with video</p>
                     </div>
                     <div className="rounded-xl bg-white/[0.04] p-3.5 text-center">
                       <p className="text-2xl font-extrabold text-green-400 sm:text-3xl">32%</p>
-                      <p className="mt-0.5 text-[11px] leading-tight text-white/60 sm:text-xs">faster sales with<br />pro photos — RESA</p>
+                      <p className="mt-0.5 text-[11px] leading-tight text-white/60 sm:text-xs">faster sales with<br />pro photos</p>
                     </div>
                   </div>
                 </div>
 
+                {/* Remix card */}
                 <div className="hero-animate rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl sm:p-6" style={{ animationDelay: "0.75s" }}>
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-400/10 ring-1 ring-green-400/20">
                       <Repeat className="h-4.5 w-4.5 text-green-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white sm:text-[0.95rem]">Buy the clips once. Remix them forever.</p>
-                      <p className="mt-1 text-xs leading-relaxed text-white/60 sm:text-sm sm:leading-relaxed">Recut clips into Just Listed, Open House, Just Sold, social teasers — unlimited times in Design Studio, no extra cost.</p>
+                      <p className="text-sm font-bold text-white sm:text-[0.95rem]">One listing. A month of content.</p>
+                      <p className="mt-1 text-xs leading-relaxed text-white/60 sm:text-sm sm:leading-relaxed">Recut every clip into Just Listed, Open House, Just Sold, and social teasers — unlimited remixes, no extra cost.</p>
                     </div>
                   </div>
                 </div>
 
+                {/* Trust card */}
                 <div className="hero-animate rounded-2xl border border-white/10 bg-white/[0.05] p-4 backdrop-blur-xl sm:p-5" style={{ animationDelay: "0.9s" }}>
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:text-sm"><Clock className="h-3.5 w-3.5 text-green-400/90" />Under 12h delivery</div>
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:text-sm"><ShieldCheck className="h-3.5 w-3.5 text-green-400/90" />Satisfaction guarantee</div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:text-sm"><Zap className="h-3.5 w-3.5 text-green-400/90" />Ready in minutes</div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:text-sm"><ShieldCheck className="h-3.5 w-3.5 text-green-400/90" />Human-checked for quality</div>
                   </div>
                 </div>
               </div>
@@ -279,7 +290,7 @@ function MarketingHero({
       {/* Bottom bar */}
       <div className="relative z-10 border-t border-white/[0.06] bg-gray-950/80 px-6 py-3 backdrop-blur-sm">
         <p className="text-center text-sm font-medium text-white/60 sm:text-base">
-          Built by real estate marketers with <span className="font-bold text-white/90">20+ years of experience</span>
+          Built by a real estate photographer with <span className="font-bold text-white/90">over a decade of experience</span>. Made in the USA.
         </p>
       </div>
     </section>
