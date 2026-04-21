@@ -2,14 +2,19 @@
 // Phase 1A refactor — preserves all working modes (URL, Quick Video, 1080P).
 // Removes voiceover (spec Section 4). Swaps legacy branding/custom-branding line.
 //
-// v1.2 changes:
-//   - "Both Orientations" is no longer a $15 paid add-on. Pipeline renders
-//     landscape once and crops vertical at zero Minimax cost; both orientations
-//     are delivered free on every order. Add-on line item removed; features
-//     list now states both orientations as baseline inclusion.
-//   - Free-first-video banner copy fixed: trial activates at account creation
-//     (or claim), NOT at delivery. Prior copy misrepresented the product.
-//   - Free-first-video credit now applies to tier-priced orders (15+ photos)
+// v1.3 changes (overrules prior v1.2 decision):
+//   - "Add a vertical version" is re-introduced as a $15 paid add-on. Default
+//     orders still deliver both orientations (landscape rendered at Minimax;
+//     vertical cropped by ffmpeg at no extra cost). Paying $15 unlocks a
+//     separately-framed Minimax render optimized for Reels/TikTok. The
+//     pipeline reads orders.vertical_addon to decide which path to take.
+//   - Features list now describes the baseline vertical as a smart crop of
+//     the landscape, so customers understand what the upgrade adds.
+//
+// v1.2 (retained):
+//   - Free-first-video banner copy: trial activates at account creation
+//     (or claim), NOT at delivery.
+//   - Free-first-video credit applies to tier-priced orders (15+ photos)
 //     as a flat $49.50 off, clamped to ≥ $0. Mirrors the pricing logic in
 //     order-form.tsx so the sidebar and submit math never disagree.
 //   - Credit-eligible users see Total = $0 from photo 1–10 (matches the
@@ -33,12 +38,20 @@ import {
  */
 const FREE_FIRST_VIDEO_TIER_CREDIT = 49.5;
 
+/**
+ * Vertical add-on price. Kept in sync with the same constant in
+ * components/order-form.tsx — if you change one, change the other.
+ */
+const VERTICAL_ADDON_PRICE = 15;
+
 interface OrderSummaryProps {
   photoCount: number;
   brandingOption?: string;
   includeEditedPhotos?: boolean;
   resolution?: string;
   orientation?: string;
+  /** Paid upgrade: separately-framed vertical render at Minimax (+$15). */
+  verticalAddon?: boolean;
   isUrlMode?: boolean;
   isQuickVideo?: boolean;
   /** Subscriber state drives photo-editing pricing (free vs $2.99/photo). */
@@ -54,6 +67,7 @@ export function OrderSummary({
   resolution = "768P",
   // `orientation` kept in props for back-compat; no longer affects pricing.
   orientation = "both",
+  verticalAddon = false,
   isUrlMode = false,
   isQuickVideo = false,
   isSubscriber = false,
@@ -128,7 +142,7 @@ export function OrderSummary({
 
   const showContactUs = photoCount > 35 && !isQuickVideo;
 
-  // ── Add-ons (voiceover removed; orientation always free) ──────────────
+  // ── Add-ons (voiceover removed; baseline vertical is free, upgraded vertical $15) ──
   const editedPhotosPrice = includeEditedPhotos
     ? isSubscriber
       ? 0
@@ -136,14 +150,20 @@ export function OrderSummary({
     : 0;
   const resolutionPrice = resolution === "1080P" ? 10 : 0;
   const urlServicePrice = isUrlMode ? 25 : 0;
-  const totalAddons = editedPhotosPrice + resolutionPrice + urlServicePrice;
+  const verticalAddonPrice = verticalAddon ? VERTICAL_ADDON_PRICE : 0;
+  const totalAddons =
+    editedPhotosPrice + resolutionPrice + urlServicePrice + verticalAddonPrice;
 
   const totalPrice = round2(price + totalAddons); // display (pre-credit)
   const chargedTotal = round2(chargedPrice + totalAddons); // post-credit
 
   const features: string[] = [];
   features.push(resolution === "1080P" ? "1080P Full HD video" : "768P HD video");
-  features.push("Landscape + Vertical videos (both included)");
+  features.push(
+    verticalAddon
+      ? "Landscape + separately-optimized Vertical (upgraded)"
+      : "Landscape + Vertical (smart-cropped) videos"
+  );
   if (includeEditedPhotos) {
     features.push(
       isSubscriber ? "Professional photo editing (included with Lens)" : "Professional photo editing"
@@ -257,10 +277,12 @@ export function OrderSummary({
               )}
             </div>
 
-            {/* Add-ons (orientation no longer listed — always free) */}
+            {/* Add-ons */}
             {(editedPhotosPrice > 0 ||
               resolutionPrice > 0 ||
-              urlServicePrice > 0) && (
+              urlServicePrice > 0 ||
+              verticalAddonPrice > 0 ||
+              (includeEditedPhotos && isSubscriber)) && (
               <div className="py-4 border-b border-border space-y-3">
                 <span className="text-sm font-medium text-muted-foreground">Add-ons:</span>
                 {editedPhotosPrice > 0 && (
@@ -283,6 +305,14 @@ export function OrderSummary({
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-foreground">1080P HD Upgrade</span>
                     <span className="font-semibold text-foreground">+$10</span>
+                  </div>
+                )}
+                {verticalAddonPrice > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Vertical Version</span>
+                    <span className="font-semibold text-foreground">
+                      +${VERTICAL_ADDON_PRICE}
+                    </span>
                   </div>
                 )}
                 {urlServicePrice > 0 && (
