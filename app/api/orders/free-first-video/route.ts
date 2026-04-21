@@ -12,6 +12,12 @@
 // 5. Save agent info to lens_usage (first-order side effect)
 // 6. Mirror special_features + listing_status to agent_properties
 // 7. Return orderId so the form can redirect to /order/processing
+//
+// v1.3: The $15 vertical add-on exists on paid orders but is NEVER honored
+// on this endpoint. The order form hides the UI on the free path, but we
+// defend in depth here: vertical_addon is hard-coded to false on the
+// insert/update, regardless of what the request body says. Paying would
+// break the "first video free" promise.
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -94,6 +100,10 @@ export async function POST(request: Request) {
     }
 
     // ── Guard: only legit Quick Video counts qualify for the zero-cost path ──
+    //
+    // NOTE: vertical_addon is deliberately NOT destructured from body here.
+    // It is hard-coded to false on the order row below, so reading it would
+    // only invite accidental use downstream.
     const {
       customer,
       uploadedPhotos,
@@ -159,14 +169,21 @@ export async function POST(request: Request) {
     // ── Compute any add-on charges that might survive on a "free" order ──
     // Per Matt: "Only base video free; add-ons still chargeable." But we're
     // also skipping Stripe here. If the user selected chargeable add-ons
-    // (1080P, or photo editing while non-subscriber), reject — they should
-    // be going through /api/checkout instead.
+    // (1080P, vertical add-on, or photo editing while non-subscriber),
+    // reject — they should be going through /api/checkout instead.
+    //
+    // The vertical add-on check reads straight from body.vertical_addon
+    // (not a destructured var) to make it visually obvious that this is a
+    // rejection guard, not a field we're going to honor. The order row
+    // hard-codes vertical_addon to false below regardless.
     const addon1080 = resolution === "1080P";
+    const addonVertical = !!body.vertical_addon;
     // Photo editing is free for subscribers/trial users (all free-first
     // users are trial subscribers by construction), so this shouldn't add cost.
     // If somehow a non-subscriber reaches this endpoint with photo editing on,
     // reject.
-    const hasPaidAddons = addon1080 || (includeEditedPhotos && !usage.is_subscriber);
+    const hasPaidAddons =
+      addon1080 || addonVertical || (includeEditedPhotos && !usage.is_subscriber);
 
     if (hasPaidAddons) {
       return NextResponse.json(
@@ -222,6 +239,12 @@ export async function POST(request: Request) {
       room_tags: room_tags || [],
       photo_editing: !!photo_editing,
       is_first_order: true, // always true for this endpoint
+
+      // v1.3: vertical add-on is NEVER honored on the free-first-video
+      // path. Hard-coded false regardless of request body — the $15 charge
+      // would break the "first video free" promise. Pipeline will deliver
+      // a cropped vertical as usual (default-path behavior).
+      vertical_addon: false,
     };
 
     let orderId: string;
