@@ -1,3 +1,5 @@
+// app/dashboard/lens/descriptions/page.tsx
+
 "use client";
 
 import { useState, useEffect, useCallback, Suspense, type ReactNode } from "react";
@@ -384,7 +386,13 @@ function DescriptionWriterInner() {
       const res = await fetch("/api/lens/description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrls, propertyData, style, userId: user?.id }),
+        body: JSON.stringify({
+          photoUrls,
+          propertyData,
+          style,
+          userId: user?.id,
+          propertyId: selectedPropertyId, // ← NEW: upsert key. Backend returns 403 if this propertyId doesn't belong to userId.
+        }),
       });
 
       const data = await res.json();
