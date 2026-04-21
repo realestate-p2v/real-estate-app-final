@@ -201,7 +201,7 @@ function MarketingHero({
                   </Link>
                   <Link href="/lens" passHref>
                     <Button variant="outline" size="lg" className="h-auto rounded-xl border-white/15 bg-white/[0.05] px-6 py-4 text-base font-bold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 sm:text-lg">
-                      P2V Lens — 15 AI Tools, $27/mo ✨
+                      ✨ P2V Lens — 15 AI Tools, $27/mo
                     </Button>
                   </Link>
                 </div>
