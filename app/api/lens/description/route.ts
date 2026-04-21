@@ -136,21 +136,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Check if non-subscriber has already used their free trial
-    const { data: existingDescriptions, error: countError } = await supabaseAdmin
-      .from("lens_descriptions")
-      .select("id")
-      .eq("user_id", userId);
-
-    // Admin god mode — always treated as subscriber
+    // ─── Entitlement check ───────────────────────────────────────────────
+    // A user is entitled to generate descriptions if ANY of these are true:
+    //   1. They are an admin
+    //   2. Their lens_usage.is_subscriber is true (covers paid Pro/Tools AND free_prize tier)
+    //   3. Their trial_expires_at OR free_lens_expires_at is in the future (active trial)
+    //   4. Non-subscribers: they have not yet used their 1 free description
+    // ────────────────────────────────────────────────────────────────────
     const ADMIN_EMAILS = ["realestatephoto2video@gmail.com"];
     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
-    const isSubscriber = ADMIN_EMAILS.includes(userData?.user?.email || "");
-    if (!isSubscriber && existingDescriptions && existingDescriptions.length >= 1) {
-      return NextResponse.json(
-        { error: "free_trial_used", message: "Subscribe to P2V Lens to generate more descriptions." },
-        { status: 403 }
-      );
+    const userEmail = userData?.user?.email || "";
+    const isAdmin = ADMIN_EMAILS.includes(userEmail);
+
+    let isEntitled = isAdmin;
+
+    if (!isAdmin) {
+      const { data: usage } = await supabaseAdmin
+        .from("lens_usage")
+        .select("is_subscriber, subscription_tier, trial_expires_at, free_lens_expires_at")
+        .eq("user_id", userId)
+        .single();
+
+      const now = new Date();
+      const isSubscriber = !!usage?.is_subscriber;
+      const trialActive = usage?.trial_expires_at && new Date(usage.trial_expires_at) > now;
+      const freeLensActive = usage?.free_lens_expires_at && new Date(usage.free_lens_expires_at) > now;
+
+      isEntitled = isSubscriber || !!trialActive || !!freeLensActive;
+
+      if (!isEntitled) {
+        // Free-tier user: allow 1 free description, block after
+        const { data: existingDescriptions } = await supabaseAdmin
+          .from("lens_descriptions")
+          .select("id")
+          .eq("user_id", userId);
+
+        if (existingDescriptions && existingDescriptions.length >= 1) {
+          return NextResponse.json(
+            { error: "free_trial_used", message: "Subscribe to P2V Lens to generate more descriptions." },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     // Step 1: Analyze each photo with Claude Vision (parallel, max 10)
