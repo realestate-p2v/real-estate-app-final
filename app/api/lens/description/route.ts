@@ -1,3 +1,5 @@
+// app/api/lens/description/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -79,7 +81,6 @@ Rules:
   }
 }
 
-// Extract Cloudinary public_id from a secure_url
 function extractPublicId(url: string): string | null {
   try {
     const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
@@ -120,7 +121,7 @@ async function deleteFromCloudinary(publicId: string): Promise<void> {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { photoUrls, propertyData, style, userId, fromCoach } = body;
+    const { photoUrls, propertyData, style, userId, fromCoach, propertyId } = body;
 
     if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length === 0) {
       return NextResponse.json({ error: "At least one photo URL is required" }, { status: 400 });
@@ -134,6 +135,27 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    // ─── Verify propertyId belongs to this user (if provided) ────────────
+    // propertyId is optional for backward compatibility, but when provided
+    // we confirm ownership before using it as part of the upsert key.
+    let verifiedPropertyId: string | null = null;
+    if (propertyId) {
+      const { data: ownedProperty } = await supabaseAdmin
+        .from("agent_properties")
+        .select("id")
+        .eq("id", propertyId)
+        .eq("user_id", userId)
+        .single();
+      if (ownedProperty) {
+        verifiedPropertyId = ownedProperty.id;
+      } else {
+        return NextResponse.json(
+          { error: "Property not found or does not belong to user" },
+          { status: 403 }
+        );
+      }
     }
 
     // ─── Entitlement check ───────────────────────────────────────────────
@@ -242,19 +264,51 @@ CRITICAL Requirements:
       600
     );
 
-    // Step 4: Save to Supabase (description + property data only, no photo URLs)
-    const { data: saved, error: saveError } = await supabaseAdmin
-      .from("lens_descriptions")
-      .insert({
-        user_id: userId,
-        property_data: propertyData,
-        photo_analyses: validAnalyses,
-        style,
-        description: description.trim(),
-        status: "complete",
-      })
-      .select()
-      .single();
+    // ─── Step 4: UPSERT to Supabase ──────────────────────────────────────
+    // When propertyId is provided, upsert on (user_id, property_id) — this
+    // means generating a new description for the same property REPLACES
+    // the existing one. Enforced at DB level by partial unique index.
+    //
+    // When propertyId is NOT provided (legacy callers), insert normally.
+    // ────────────────────────────────────────────────────────────────────
+    let saved: any = null;
+    let saveError: any = null;
+
+    if (verifiedPropertyId) {
+      const { data, error } = await supabaseAdmin
+        .from("lens_descriptions")
+        .upsert(
+          {
+            user_id: userId,
+            property_id: verifiedPropertyId,
+            property_data: propertyData,
+            photo_analyses: validAnalyses,
+            style,
+            description: description.trim(),
+            status: "complete",
+          },
+          { onConflict: "user_id,property_id" }
+        )
+        .select()
+        .single();
+      saved = data;
+      saveError = error;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from("lens_descriptions")
+        .insert({
+          user_id: userId,
+          property_data: propertyData,
+          photo_analyses: validAnalyses,
+          style,
+          description: description.trim(),
+          status: "complete",
+        })
+        .select()
+        .single();
+      saved = data;
+      saveError = error;
+    }
 
     if (saveError) {
       console.error("Save error:", saveError);
@@ -296,6 +350,56 @@ CRITICAL Requirements:
     console.error("Description API error:", err);
     return NextResponse.json(
       { error: "Failed to generate description. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+
+// ─── DELETE: remove a description ────────────────────────────────────────
+// Used by the delete button on the property page.
+// Requires userId in the body; verifies ownership before deleting.
+// ───────────────────────────────────────────────────────────────────────
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { descriptionId, userId } = body;
+
+    if (!descriptionId || !userId) {
+      return NextResponse.json(
+        { error: "descriptionId and userId are required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: desc } = await supabaseAdmin
+      .from("lens_descriptions")
+      .select("id, user_id")
+      .eq("id", descriptionId)
+      .single();
+
+    if (!desc) {
+      return NextResponse.json({ error: "Description not found" }, { status: 404 });
+    }
+    if (desc.user_id !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("lens_descriptions")
+      .delete()
+      .eq("id", descriptionId);
+
+    if (error) {
+      console.error("Delete error:", error);
+      return NextResponse.json({ error: "Failed to delete description" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Description DELETE error:", err);
+    return NextResponse.json(
+      { error: "Failed to delete description" },
       { status: 500 }
     );
   }
