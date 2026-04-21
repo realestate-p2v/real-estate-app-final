@@ -616,8 +616,6 @@ function PropertyPageInner() {
         );
       })()}
 
-      {/* ═══ HEADER ═══ */}
-      <div className="mc-animate flex items-start gap-3 mb-6">
       {/* ═══ HEADER with inline quick actions ═══ */}
       <div className="mc-animate flex items-start gap-3 mb-6">
         <Link href="/dashboard/properties" className="mt-2 text-white/50 hover:text-white transition-colors flex-shrink-0"><ArrowLeft className="h-5 w-5" /></Link>
