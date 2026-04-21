@@ -1,3 +1,5 @@
+// app/lens/page.tsx (or wherever this file lives — keep the existing path)
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -31,7 +33,6 @@ import {
   Download,
   Share2,
   Monitor,
-  Play,
   Shield,
   TrendingUp,
   Video,
@@ -129,10 +130,6 @@ export default function LensPage() {
       {/* ═══ HOW IT WORKS — Warm & Inviting ═══ */}
       <section className="py-20 sm:py-24 border-t border-white/[0.04]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold">Here&apos;s How It Works</h2>
-            <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">From photos to a full marketing suite in four simple steps — and you get to try everything before you commit.</p>
-          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { step: "1", icon: Camera, title: "Upload Your Photos", desc: "Send us your listing photos and we'll turn them into a cinematic walkthrough video.", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20", border: "border-cyan-400/15" },
@@ -150,17 +147,6 @@ export default function LensPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ═══ SOCIAL PROOF ═══ */}
-      <section className="border-y border-white/[0.04] bg-white/[0.02]">
-        <div className="mx-auto max-w-5xl px-4 py-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 text-center">
-          <div className="flex items-center gap-2"><Play className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60">Listings with video get <span className="text-cyan-400">403% more inquiries</span></span></div>
-          <div className="hidden sm:block h-5 w-px bg-white/[0.08]" />
-          <div className="flex items-center gap-2"><Camera className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60">Professional photos sell <span className="text-cyan-400">32% faster</span></span></div>
-          <div className="hidden sm:block h-5 w-px bg-white/[0.08]" />
-          <div className="flex items-center gap-2"><Star className="h-4 w-4 text-cyan-400" /><span className="text-sm font-semibold text-white/60"><span className="text-cyan-400">10+ AI tools</span> built for real estate</span></div>
         </div>
       </section>
 
@@ -215,35 +201,12 @@ export default function LensPage() {
         </div>
       </section>
 
-      {/* ═══ TOOLS — THE VIDEO ═══ */}
+      {/* ═══ TOOLS ═══ */}
       <section id="features" className="py-20 sm:py-24 border-t border-white/[0.04]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-extrabold">Everything Your Marketing Needs</h2>
             <p className="mt-4 text-lg text-white/40 max-w-2xl mx-auto">15 tools organized around how you actually work — capture, create, publish, and win clients. Try them all free for 10 days after your first video order.</p>
-          </div>
-
-          {/* THE VIDEO */}
-          <div className="mb-14">
-            <div className="flex items-center gap-2 mb-5">
-              <Film className="h-4 w-4 text-cyan-400" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400">The Video</h3>
-              <div className="flex-1 h-px bg-white/[0.06] ml-3" />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                { icon: Video, title: "Order a Video", desc: "Cinematic listing walkthrough from your photos. You own every clip. Includes 10-day free trial of all tools.", color: "text-cyan-400", bg: "bg-cyan-400/10", ring: "ring-cyan-400/20" },
-                { icon: Film, title: "Video Remix", desc: "Recut your clips into social-ready videos with music and branding. Unlimited remixes — free forever with any video purchase.", color: "text-purple-400", bg: "bg-purple-400/10", ring: "ring-purple-400/20" },
-              ].map((tool, i) => (
-                <div key={i} className="group rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tool.bg} ring-1 ${tool.ring} mb-4 transition-transform group-hover:scale-110`}>
-                    <tool.icon className={`h-6 w-6 ${tool.color}`} />
-                  </div>
-                  <h4 className="text-lg font-bold text-white/90 mb-2 group-hover:text-cyan-300 transition-colors">{tool.title}</h4>
-                  <p className="text-sm text-white/40 leading-relaxed">{tool.desc}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* CREATE */}
