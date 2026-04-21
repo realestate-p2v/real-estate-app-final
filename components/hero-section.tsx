@@ -172,7 +172,7 @@ function MarketingHero({
               <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
                 {/* Headline */}
                 <h1 className="hero-animate max-w-2xl text-[2.25rem] font-extrabold leading-[1.06] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[3.75rem]" style={{ animationDelay: "0.15s" }}>
-                  Listing photos in. <span className="text-green-400">Cinematic video</span> and endless marketing out.
+                  Listing photos in. <span className="text-green-400">Cinematic video</span> plus endless marketing out.
                 </h1>
 
                 {/* Subhead */}
@@ -201,7 +201,7 @@ function MarketingHero({
                   </Link>
                   <Link href="/lens" passHref>
                     <Button variant="outline" size="lg" className="h-auto rounded-xl border-white/15 bg-white/[0.05] px-6 py-4 text-base font-bold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 sm:text-lg">
-                      P2V Lens — 15 AI Tools, $27/mo
+                      P2V Lens — 15 AI Tools, $27/mo ✨
                     </Button>
                   </Link>
                 </div>
