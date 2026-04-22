@@ -1,14 +1,8 @@
 // app/api/render/branded-vertical-overlay/route.tsx
 //
-// Server-side PNG renderer for the first-buyer bonus content vertical
-// social video. Renders the Satori-compatible variant of InfoBarTemplate
-// (see components/design-studio/info-bar-template-satori.tsx for why
-// this has its own variant) at 1080×1920.
-//
-// Auth: Authorization: Bearer ${RENDER_SECRET}
-//
-// Fonts: DM Sans loaded dynamically via Google Fonts CSS parse.
-// Detailed logging so failures are debuggable in Vercel Runtime Logs.
+// Server-side PNG renderer for first-buyer bonus content.
+// Loads DM Sans TTF from the repo's own /public/fonts directory —
+// no external font CDN dependency, no regex fragility.
 
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
@@ -26,47 +20,28 @@ const BADGE = getBadgeConfig("just-listed");
 const FONT_FAMILY = "DM Sans";
 
 /**
- * Fetch a Google Font as TTF binary data.
- * Uses an old-browser UA to force TTF (not woff2).
- * Permissive regex to find any .ttf URL in the returned stylesheet.
- * Full logging so font-load failures are visible in Vercel Logs.
+ * Compute the origin this request came in on, so we can construct
+ * absolute URLs to our own public/fonts assets. Works both in
+ * Vercel production (https://realestatephoto2video.com) and in
+ * preview deployments (https://project-abc.vercel.app).
  */
-async function loadGoogleFont(
-  family: string,
-  weight: number
+function getOrigin(request: Request): string {
+  const url = new URL(request.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+async function loadLocalFont(
+  origin: string,
+  filename: string
 ): Promise<ArrayBuffer> {
-  const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
-    family
-  )}:wght@${weight}&display=swap`;
-
-  console.log(`[font] Fetching CSS: ${cssUrl}`);
-
-  const cssRes = await fetch(cssUrl, {
-    headers: {
-      "User-Agent": "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)",
-    },
-  });
-  const css = await cssRes.text();
-  console.log(
-    `[font] CSS length: ${css.length} bytes, preview: ${css.slice(0, 300)}`
-  );
-
-  const match = css.match(/url\(([^)]+\.ttf)\)/i);
-  if (!match) {
-    console.error(`[font] No .ttf URL in CSS for ${family} ${weight}`);
-    throw new Error(`No TTF URL for ${family} ${weight}`);
+  const fontUrl = `${origin}/fonts/${filename}`;
+  console.log(`[font] Loading: ${fontUrl}`);
+  const res = await fetch(fontUrl);
+  if (!res.ok) {
+    throw new Error(`Font fetch failed: ${res.status} for ${fontUrl}`);
   }
-  const ttfUrl = match[1];
-  console.log(`[font] TTF URL: ${ttfUrl}`);
-
-  const ttfRes = await fetch(ttfUrl);
-  if (!ttfRes.ok) {
-    throw new Error(
-      `TTF fetch failed: ${ttfRes.status} ${ttfRes.statusText} for ${ttfUrl}`
-    );
-  }
-  const data = await ttfRes.arrayBuffer();
-  console.log(`[font] Loaded ${data.byteLength} bytes for ${family} ${weight}`);
+  const data = await res.arrayBuffer();
+  console.log(`[font] Loaded ${data.byteLength} bytes from ${filename}`);
   return data;
 }
 
@@ -154,7 +129,8 @@ export async function GET(request: Request) {
     );
   }
 
-  // ─── Load DM Sans fonts (best-effort) ───────────────────────────────
+  // ─── Load DM Sans from /public/fonts ───────────────────────────────
+  const origin = getOrigin(request);
   let fontsConfig: {
     name: string;
     data: ArrayBuffer;
@@ -163,16 +139,16 @@ export async function GET(request: Request) {
   }[] = [];
   try {
     const [fontRegular, fontBold] = await Promise.all([
-      loadGoogleFont("DM Sans", 400),
-      loadGoogleFont("DM Sans", 700),
+      loadLocalFont(origin, "DMSans-Regular.ttf"),
+      loadLocalFont(origin, "DMSans-Bold.ttf"),
     ]);
     fontsConfig = [
       { name: "DM Sans", data: fontRegular, weight: 400, style: "normal" },
       { name: "DM Sans", data: fontBold, weight: 700, style: "normal" },
     ];
-    console.log(`[font] Both weights loaded successfully`);
+    console.log(`[font] Both weights loaded — fontsConfig ready`);
   } catch (err) {
-    console.error("[font] Load failed, falling back:", err);
+    console.error("[font] Local font load failed:", err);
   }
 
   // ─── Build template props ──────────────────────────────────────────
