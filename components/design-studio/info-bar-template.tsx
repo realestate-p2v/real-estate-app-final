@@ -251,7 +251,7 @@ export function InfoBarTemplate({
     >
       <div
         style={{
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
           height: bH,
           padding: `0 ${Math.round(22 * unit)}px`,
