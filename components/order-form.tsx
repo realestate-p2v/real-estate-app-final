@@ -869,6 +869,32 @@ export function OrderForm() {
     [subState.userId, agentName, agentPhone, agentEmail, agentBrokerage]
   );
 
+// ─── Inline name-rescue submit ──────────────────────────────────────────
+  // Called from the inline prompt on the Review step when submit fired
+  // without an agentName and the lens_usage fallback also came up empty.
+  // Saves the name to lens_usage so the user doesn't hit this again, then
+  // re-invokes the full submit path.
+  const handleInlineNameSubmit = useCallback(async () => {
+    const trimmed = inlineNameValue.trim();
+    if (!trimmed) return;
+    if (subState.userId) {
+      try {
+        await saveProfileFields(createClient(), subState.userId, {
+          saved_agent_name: trimmed,
+        });
+      } catch (err) {
+        console.error("[order-form] inline name save failed:", err);
+        // Non-fatal — still proceed with the submit, the name lives in
+        // local state for this order even if the profile write fails.
+      }
+    }
+    setAgentName(trimmed);
+    setShowInlineNamePrompt(false);
+    // Fire submit again — this time resolvedName will pick up the local
+    // agentName we just set, no round-trip needed.
+    handleSubmitOrder();
+  }, [inlineNameValue, subState.userId]);
+
   // ─── Step validation ────────────────────────────────────────────────────
   const canProceedFromCurrentStep = useCallback((): boolean => {
     switch (currentStepKey) {
@@ -2017,6 +2043,47 @@ export function OrderForm() {
                 </Link>
                 .
               </p>
+
+              {/* Inline name-rescue prompt — appears only when submit fired
+                  without an agentName AND the saved_agent_name fallback also
+                  came up empty. Replaces the old alert() + forced back-nav. */}
+              {showInlineNamePrompt && (
+                <div className="rounded-xl border-2 border-amber-400 bg-amber-50 p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <p className="font-semibold text-amber-900">
+                        One more thing — what name should we put on your video?
+                      </p>
+                      <p className="text-sm text-amber-800">
+                        We need this to brand your bonus content. We&apos;ll remember it for next time.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      value={inlineNameValue}
+                      onChange={(e) => setInlineNameValue(e.target.value)}
+                      placeholder="Jane Smith"
+                      className="h-11 flex-1 bg-white"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && inlineNameValue.trim()) {
+                          e.preventDefault();
+                          handleInlineNameSubmit();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleInlineNameSubmit}
+                      disabled={!inlineNameValue.trim() || isSubmitting}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold h-11 px-5"
+                    >
+                      Continue with this name
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <StepNavigation
                 currentStep={currentStep}
