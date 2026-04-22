@@ -773,7 +773,6 @@ export default function DashboardPage() {
             {[
               { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-300" },
               { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-300" },
-              { icon: Film, label: "Video Remix", href: "/dashboard/lens/remix", color: "text-indigo-300" },
               { icon: User, label: "Agent Profile", href: "/dashboard/profile", color: "text-blue-300" },
               { icon: Settings, label: "Account Settings", href: "/dashboard/settings", color: "text-white/80" },
             ].map((item) => (
