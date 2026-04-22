@@ -745,7 +745,7 @@ function DescriptionWriterInner() {
           </div>
 
           {/* AI Photo Analysis block removed 4/22/2026 — was producing unreadable output; underlying state still populated in case we reinstate */}
-          )}
+          
         </div>
       </div>
 
