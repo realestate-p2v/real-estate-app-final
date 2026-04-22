@@ -766,8 +766,31 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ═══ QUICK LINKS ═══ */}
+        <div className="mc-animate mt-6" style={{ animationDelay: "0.12s" }}>
+          <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Quick Links</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {[
+              { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-300" },
+              { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-300" },
+              { icon: Film, label: "Video Remix", href: "/dashboard/lens/remix", color: "text-indigo-300" },
+              { icon: User, label: "Agent Profile", href: "/dashboard/profile", color: "text-blue-300" },
+              { icon: Settings, label: "Account Settings", href: "/dashboard/settings", color: "text-white/80" },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] py-4 px-3 text-center transition-all hover:border-cyan-400/30 hover:bg-white/[0.1]"
+              >
+                <item.icon className={`h-5 w-5 ${item.color} transition-opacity`} />
+                <span className="text-[11px] font-bold text-white/80 group-hover:text-white transition-colors">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* ═══ TOOLS GRID — HERO ═══ */}
-        <div id="tools" className="mc-animate mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
+        <div id="tools" className="mc-animate mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
           {tools.map((tool, i) => {
             const isScrollLink = tool.href.startsWith("#");
             const isExternal = tool.href.startsWith("http");
@@ -835,29 +858,6 @@ export default function DashboardPage() {
               </Wrapper>
             );
           })}
-        </div>
-
-        {/* ═══ QUICK ACTIONS ═══ */}
-        <div className="mc-animate mt-8" style={{ animationDelay: "0.45s" }}>
-          <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Quick Links</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {[
-              { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-300" },
-              { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-300" },
-              { icon: Film, label: "Video Remix", href: "/dashboard/lens/remix", color: "text-indigo-300" },
-              { icon: User, label: "Agent Profile", href: "/dashboard/profile", color: "text-blue-300" },
-              { icon: Settings, label: "Account Settings", href: "/dashboard/settings", color: "text-white/80" },
-            ].map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] py-4 px-3 text-center transition-all hover:border-cyan-400/30 hover:bg-white/[0.1]"
-              >
-                <item.icon className={`h-5 w-5 ${item.color} transition-opacity`} />
-                <span className="text-[11px] font-bold text-white/80 group-hover:text-white transition-colors">{item.label}</span>
-              </Link>
-            ))}
-          </div>
         </div>
 
         {/* ═══ RECENT PROPERTIES — quick links with auto-fill ═══ */}
