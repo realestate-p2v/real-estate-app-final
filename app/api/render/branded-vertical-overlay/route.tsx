@@ -19,8 +19,8 @@
 // The InfoBarTemplate "story" size layout (1080×1920, stacked agent-above-
 // property) is the one rendered here. Badge is always "JUST LISTED".
 // Accent color is always "#ffffff" per product decision. Bar color is the
-// agent's extracted brand color (lens_usage.saved_brand_color_hex) with a
-// dark-slate fallback for the edge case where extraction never ran.
+// agent's extracted brand color (lens_usage.saved_brand_color_primary) with
+// a dark-slate fallback for the edge case where extraction never ran.
 
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
       ? price.toLocaleString("en-US")
       : undefined;
 
-  const barColor = profile.saved_brand_color_hex || BAR_COLOR_FALLBACK;
+  const barColor = profile.saved_brand_color_primary || BAR_COLOR_FALLBACK;
 
   // ─── Render to PNG via @vercel/og ────────────────────────────────────
   // Size id "story" triggers the 1080×1920 stacked layout in InfoBarTemplate.
