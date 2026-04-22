@@ -244,7 +244,7 @@ export function InfoBarTemplate({
     <div
       style={{
         position: "absolute",
-        top: `calc(${pp}% - ${Math.round(bH * 0.5)}px)`,
+        top: Math.round((h * pp) / 100 - bH * 0.5),
         right: px,
         zIndex: 10,
       }}
