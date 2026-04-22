@@ -245,14 +245,19 @@ export function InfoBarTemplate({
   );
 
   // ─── Badge subcomponent ───
+  // Outer wrapper spans the full canvas width so the pill can size
+  // naturally and right-align via justify-content without overflowing
+  // beyond the visible frame.
   const Badge = () => (
     <div
       style={{
         display: "flex",
         position: "absolute",
         top: badgeTop,
+        left: 0,
         right: 0,
         paddingRight: px,
+        justifyContent: "flex-end",
         zIndex: 10,
       }}
     >
