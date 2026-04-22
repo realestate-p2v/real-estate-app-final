@@ -251,7 +251,8 @@ export function InfoBarTemplate({
         display: "flex",
         position: "absolute",
         top: badgeTop,
-        right: px,
+        right: 0,
+        paddingRight: px,
         zIndex: 10,
       }}
     >
