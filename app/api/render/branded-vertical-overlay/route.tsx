@@ -1,29 +1,18 @@
 // app/api/render/branded-vertical-overlay/route.tsx
 //
-// Server-side PNG renderer for the first-buyer bonus content vertical social
-// video. Renders the same InfoBarTemplate that Design Studio uses, at
-// 1080×1920, with videoElement=undefined and listingPhoto=null so the
-// background is transparent. video_brander.py (on the pipeline droplet)
-// fetches this PNG and composites it over the ffmpeg-cropped vertical
-// video via `ffmpeg -filter_complex "[0:v][1:v]overlay=0:0"`.
+// Server-side PNG renderer for the first-buyer bonus content vertical
+// social video. Renders the Satori-compatible variant of InfoBarTemplate
+// (see components/design-studio/info-bar-template-satori.tsx for why
+// this has its own variant) at 1080×1920.
 //
-// Auth: the route is reachable only by callers that present
-// `Authorization: Bearer ${RENDER_SECRET}` — the same secret is set on the
-// droplet's systemd service environment.
+// Auth: Authorization: Bearer ${RENDER_SECRET}
 //
-// Data sources:
-//   orders               — order metadata, property basics, agent_property_id
-//   agent_properties     — sqft, price (fields the order form doesn't store)
-//   lens_usage           — saved agent profile + extracted brand color
-//
-// Fonts: DM Sans (regular + bold) is resolved from the Google Fonts
-// stylesheet at cold start. The stylesheet gives us live TTF URLs; we
-// fetch those and pass the binary data to Satori. This avoids hard-
-// coding URLs that Google rotates over time.
+// Fonts: DM Sans loaded dynamically via Google Fonts CSS parse.
+// Detailed logging so failures are debuggable in Vercel Runtime Logs.
 
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
-import { InfoBarTemplate } from "@/components/design-studio/info-bar-template";
+import { InfoBarTemplateSatori } from "@/components/design-studio/info-bar-template-satori";
 import { getBadgeConfig } from "@/components/design-studio/helpers";
 
 export const runtime = "edge";
@@ -37,45 +26,47 @@ const BADGE = getBadgeConfig("just-listed");
 const FONT_FAMILY = "DM Sans";
 
 /**
- * Resolve a Google Font to its current TTF binary data.
- *
- * The /css2 endpoint returns a stylesheet referencing the current CDN
- * URLs. We parse the first src: url(...) that points to a .ttf, then
- * fetch that binary.
+ * Fetch a Google Font as TTF binary data.
+ * Uses an old-browser UA to force TTF (not woff2).
+ * Permissive regex to find any .ttf URL in the returned stylesheet.
+ * Full logging so font-load failures are visible in Vercel Logs.
  */
 async function loadGoogleFont(
   family: string,
   weight: number
 ): Promise<ArrayBuffer> {
-  // Use a UA string old enough that Google serves TTF instead of woff2.
-  // woff2 is not decodable by Satori in the Edge runtime.
-  const css = await fetch(
-    `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
-      family
-    )}:wght@${weight}&display=swap`,
-    {
-      headers: {
-        "User-Agent":
-          "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)",
-      },
-    }
-  ).then((r) => r.text());
+  const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
+    family
+  )}:wght@${weight}&display=swap`;
 
-  // Permissive: first TTF-looking URL in the CSS wins.
-  // Some responses have format('truetype'), others just have .ttf in the URL.
-  const urlMatch =
-    css.match(/src:\s*url\(([^)]+\.ttf)\)/i) ||
-    css.match(/url\(([^)]+\.ttf)\)/i);
-  if (!urlMatch) {
-    console.error(
-      `[loadGoogleFont] No TTF URL in CSS for ${family} ${weight}. CSS: ${css.slice(0, 500)}`
-    );
-    throw new Error(`Could not find TTF URL for ${family} ${weight}`);
+  console.log(`[font] Fetching CSS: ${cssUrl}`);
+
+  const cssRes = await fetch(cssUrl, {
+    headers: {
+      "User-Agent": "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)",
+    },
+  });
+  const css = await cssRes.text();
+  console.log(
+    `[font] CSS length: ${css.length} bytes, preview: ${css.slice(0, 300)}`
+  );
+
+  const match = css.match(/url\(([^)]+\.ttf)\)/i);
+  if (!match) {
+    console.error(`[font] No .ttf URL in CSS for ${family} ${weight}`);
+    throw new Error(`No TTF URL for ${family} ${weight}`);
   }
-  const ttfUrl = urlMatch[1];
-  console.log(`[loadGoogleFont] Fetching ${family} ${weight} from ${ttfUrl}`);
-  const data = await fetch(ttfUrl).then((r) => r.arrayBuffer());
-  console.log(`[loadGoogleFont] Got ${data.byteLength} bytes for ${family} ${weight}`);
+  const ttfUrl = match[1];
+  console.log(`[font] TTF URL: ${ttfUrl}`);
+
+  const ttfRes = await fetch(ttfUrl);
+  if (!ttfRes.ok) {
+    throw new Error(
+      `TTF fetch failed: ${ttfRes.status} ${ttfRes.statusText} for ${ttfUrl}`
+    );
+  }
+  const data = await ttfRes.arrayBuffer();
+  console.log(`[font] Loaded ${data.byteLength} bytes for ${family} ${weight}`);
   return data;
 }
 
@@ -163,10 +154,13 @@ export async function GET(request: Request) {
     );
   }
 
-  // ─── Load DM Sans fonts via Google Fonts stylesheet lookup ─────────
-  // If font loading fails for any reason, we fall back to a no-fonts
-  // render rather than 500ing the whole request.
-  let fontsConfig: { name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal" }[] = [];
+  // ─── Load DM Sans fonts (best-effort) ───────────────────────────────
+  let fontsConfig: {
+    name: string;
+    data: ArrayBuffer;
+    weight: 400 | 700;
+    style: "normal";
+  }[] = [];
   try {
     const [fontRegular, fontBold] = await Promise.all([
       loadGoogleFont("DM Sans", 400),
@@ -176,12 +170,12 @@ export async function GET(request: Request) {
       { name: "DM Sans", data: fontRegular, weight: 400, style: "normal" },
       { name: "DM Sans", data: fontBold, weight: 700, style: "normal" },
     ];
+    console.log(`[font] Both weights loaded successfully`);
   } catch (err) {
-    // Log but don't fail — Satori will use built-in fallback.
-    console.error("[branded-vertical-overlay] Font load failed:", err);
+    console.error("[font] Load failed, falling back:", err);
   }
 
-  // ─── Build the template props ───────────────────────────────────────
+  // ─── Build template props ──────────────────────────────────────────
   const addressLine2 = [order.property_city, order.property_state]
     .filter(Boolean)
     .join(", ");
@@ -193,10 +187,10 @@ export async function GET(request: Request) {
 
   const barColor = profile.saved_brand_color_primary || BAR_COLOR_FALLBACK;
 
-  // ─── Render to PNG via @vercel/og ────────────────────────────────────
+  // ─── Render via @vercel/og ─────────────────────────────────────────
   return new ImageResponse(
     (
-      <InfoBarTemplate
+      <InfoBarTemplateSatori
         size={{ id: "story", width: OUT_W, height: OUT_H }}
         listingPhoto={null}
         videoElement={undefined}
