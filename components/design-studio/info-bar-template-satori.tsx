@@ -103,7 +103,7 @@ export function InfoBarTemplateSatori({
   // px = left padding of info bar content (breathing from the left edge).
   // prx = right padding, reduced to pull content closer to the right edge.
   const px = Math.round((isPostcard ? 44 : isStory ? 56 : 36) * unit);
-  const prx = Math.round((isPostcard ? 44 : isStory ? 32 : 36) * unit);
+  const prx = Math.round((isPostcard ? 44 : isStory ? 16 : 36) * unit);
   const py = Math.round((isStory ? 28 : 20) * unit);
 
   const hs = Math.round(barH * (isStory ? 0.36 : isPostcard ? 0.78 : 0.52));
@@ -277,7 +277,7 @@ export function InfoBarTemplateSatori({
       style={{
         display: "flex",
         position: "absolute",
-        top: badgeTop,
+        top: Math.round(badgeTop - bH * 0.8),
         right: prx,
         zIndex: 20,
       }}
