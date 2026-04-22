@@ -769,7 +769,7 @@ export default function DashboardPage() {
         {/* ═══ QUICK LINKS ═══ */}
         <div className="mc-animate mt-6" style={{ animationDelay: "0.12s" }}>
           <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">Quick Links</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { icon: Video, label: "My Videos", href: "/dashboard/videos", color: "text-purple-300" },
               { icon: Home, label: "My Properties", href: "/dashboard/properties", color: "text-emerald-300" },
