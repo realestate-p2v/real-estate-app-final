@@ -744,23 +744,7 @@ function DescriptionWriterInner() {
             )}
           </div>
 
-          {photoAnalyses.length > 0 && (
-            <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-sm" style={{ animationDelay: "0.35s" }}>
-              <h2 className="text-lg font-bold text-white mb-1">AI Photo Analysis</h2>
-              <p className="text-xs text-white/40 mb-4">
-                {photoAnalyses.length} photos analyzed{photosSkipped > 0 ? `, ${photosSkipped} skipped (too dark/blurry)` : ""}
-              </p>
-              <div className="space-y-3">
-                {photoAnalyses.map((analysis, i) => (
-                  <div key={i} className="flex items-start gap-3 text-sm">
-                    <div className={`flex-shrink-0 h-6 w-6 rounded-full ${a.bg} flex items-center justify-center ring-1 ${a.ring}`}>
-                      <Camera className={`h-3 w-3 ${a.text}`} />
-                    </div>
-                    <p className="text-white/65 leading-relaxed">{analysis}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* AI Photo Analysis block removed 4/22/2026 — was producing unreadable output; underlying state still populated in case we reinstate */}
           )}
         </div>
       </div>
