@@ -1,35 +1,22 @@
 // components/design-studio/info-bar-template-satori.tsx
 //
-// SATORI-SPECIFIC variant of InfoBarTemplate, used exclusively by the
+// SATORI-SPECIFIC variant of InfoBarTemplate — used exclusively by the
 // server-side PNG renderer at /api/render/branded-vertical-overlay.
 //
-// Why this exists as a separate file:
-//   - Design Studio's client-side InfoBarTemplate uses the full CSS spec
-//     through html2canvas-pro in a real browser. It works perfectly.
-//   - @vercel/og uses Satori, a subset-of-CSS rasterizer. It requires
-//     explicit display:flex on every multi-child div, rejects calc(),
-//     rejects inline-flex, and has other idiosyncrasies.
-//   - Rather than trying to maintain one file that works in both worlds
-//     (and risking Design Studio regressions), this Satori-only copy
-//     applies the necessary tweaks while leaving the Design Studio
-//     template pristine.
+// This is a SEPARATE file from info-bar-template.tsx so Design Studio
+// (which imports the latter) keeps working on its battle-tested code
+// path regardless of what we do here.
 //
-// What's different from the Design Studio version:
-//   - Every div has explicit display:flex
-//   - calc() replaced with pre-computed pixel values
+// Tweaks vs. the Design Studio version:
+//   - Every multi-child div has explicit display:flex (Satori requirement)
+//   - No calc(), values pre-computed
 //   - inline-flex → flex
-//   - Badge wrapper spans full width with justify-content:flex-end
-//   - Badge itself shrunk slightly to prevent overflow
-//   - Gradient widened for smoother photo→bar transition
-//   - Font weights use 400/700 only (matching loaded DM Sans weights)
-//   - Secondary text opacity bumped from 0.55 → 0.65 for legibility
-//
-// What's identical:
-//   - Layout proportions (pp=58, bar=42)
-//   - Padding px=56 (same breathing room as Design Studio)
-//   - All typography scale factors
-//   - Color math (tp, ts, tm, dc)
-//   - Badge position at photo/bar boundary
+//   - Badge has a FIXED WIDTH instead of auto-sizing — prevents clipping
+//     at the canvas right edge. Text center-aligned within the fixed pill.
+//   - Gradient widened 140px → 240px for smoother photo→bar blend
+//   - Right-side content padding reduced so text reaches closer to edge
+//     (the previous render had too much empty space on the right)
+//   - Font weights 400/700 only (matching loaded DM Sans weights)
 
 import { User, Image as ImageIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -113,16 +100,20 @@ export function InfoBarTemplateSatori({
 
   const pp = isPostcard ? 55 : 58;
   const barH = h * (1 - pp / 100);
-  // Matches Design Studio: px=56 for story. No extra padding added.
+  // px = left padding of info bar content (breathing from the left edge).
+  // prx = right padding, reduced to pull content closer to the right edge.
   const px = Math.round((isPostcard ? 44 : isStory ? 56 : 36) * unit);
+  const prx = Math.round((isPostcard ? 44 : isStory ? 32 : 36) * unit);
   const py = Math.round((isStory ? 28 : 20) * unit);
 
   const hs = Math.round(barH * (isStory ? 0.36 : isPostcard ? 0.78 : 0.52));
   const hb = Math.round((isStory ? 4 : isPostcard ? 4 : 3) * unit);
-  // Badge sized slightly smaller than Design Studio (0.072 → 0.06) to
-  // prevent Satori's box-model from clipping the pill at the right edge.
-  const bH = Math.round(barH * (isStory ? 0.06 : isPostcard ? 0.16 : 0.14));
-  const bF = Math.round(barH * (isStory ? 0.03 : isPostcard ? 0.065 : 0.052));
+
+  // Badge — fixed size (no auto-sizing to prevent overflow).
+  const bH = Math.round(barH * (isStory ? 0.07 : isPostcard ? 0.16 : 0.14));
+  const bF = Math.round(barH * (isStory ? 0.034 : isPostcard ? 0.065 : 0.052));
+  const badgeWidth = Math.round((isStory ? 320 : isPostcard ? 240 : 200) * unit);
+
   const anF = responsiveSize(
     Math.round(barH * (isStory ? 0.08 : isPostcard ? 0.125 : 0.082)),
     an,
@@ -142,14 +133,12 @@ export function InfoBarTemplateSatori({
   const dtF = Math.round(barH * (isStory ? 0.048 : isPostcard ? 0.074 : 0.055));
   const prF = Math.round(barH * (isStory ? 0.105 : isPostcard ? 0.185 : 0.15));
 
-  // Pre-computed values (Satori doesn't support calc()).
   const badgeTop = Math.round((h * pp) / 100 - bH * 0.5);
   const photoHeight = Math.round((h * pp) / 100);
   const infoBarHeight = Math.round((h * (100 - pp)) / 100);
 
   const ad2F = Math.round(adF * 0.75);
 
-  // Gradient widened (140 → 240) for smoother blend into the info bar.
   const gradientHeight = Math.round(240 * unit);
 
   // ─── Headshot subcomponent ───
@@ -280,16 +269,16 @@ export function InfoBarTemplateSatori({
   );
 
   // ─── Badge subcomponent ───
+  // The pill has a FIXED WIDTH, positioned from the right by prx.
+  // Text is centered inside via justifyContent. This guarantees the
+  // pill never overflows the canvas regardless of text content width.
   const Badge = () => (
     <div
       style={{
         display: "flex",
         position: "absolute",
         top: badgeTop,
-        left: 0,
-        right: 0,
-        paddingRight: px,
-        justifyContent: "flex-end",
+        right: prx,
         zIndex: 20,
       }}
     >
@@ -297,9 +286,9 @@ export function InfoBarTemplateSatori({
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
+          width: badgeWidth,
           height: bH,
-          paddingLeft: Math.round(18 * unit),
-          paddingRight: Math.round(18 * unit),
           backgroundColor: usedBadge,
           borderRadius: Math.round(4 * unit),
           boxShadow: `0 ${Math.round(4 * unit)}px ${Math.round(
@@ -466,7 +455,7 @@ export function InfoBarTemplateSatori({
               left: 0,
               right: 0,
               bottom: 0,
-              padding: `${py}px ${Math.round(44 * unit)}px ${py}px ${px}px`,
+              padding: `${py}px ${prx}px ${py}px ${px}px`,
               gap: Math.round(20 * unit),
             }}
           >
