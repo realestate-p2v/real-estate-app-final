@@ -346,11 +346,17 @@ export function OrderForm() {
   const [uploadingHeadshot, setUploadingHeadshot] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // In-flight flag for the "save profile fields on Continue" step. Keeps the
+// In-flight flag for the "save profile fields on Continue" step. Keeps the
   // Continue button disabled during the Supabase update so we don't advance
   // mid-write and leave the user looking at the next step before their name
   // has landed.
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Inline name-rescue prompt on the Review step. Shown when submit fires
+  // without an `agentName` AND the lens_usage fallback also came up empty.
+  // Avoids the old alert() + forced back-navigation to Step 1.
+  const [showInlineNamePrompt, setShowInlineNamePrompt] = useState(false);
+  const [inlineNameValue, setInlineNameValue] = useState("");
 
   // ── Skip-branding modal state ──
   const [showSkipModal, setShowSkipModal] = useState(false);
