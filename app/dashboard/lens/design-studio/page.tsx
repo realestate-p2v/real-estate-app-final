@@ -19,7 +19,6 @@ import {
 } from "@/components/design-studio/helpers";
 import { InfoBarTemplate } from "@/components/design-studio/info-bar-template";
 
-}
 
 // ─── MagazineCoverTemplate ───────────────────────────────────────────────────
 function MagazineCoverTemplate({size,listingPhoto,videoElement,headshot,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,logo,fontFamily,barColor,accentColor,brandShadow,badgeText}:any){
