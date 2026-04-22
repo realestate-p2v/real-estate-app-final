@@ -714,11 +714,11 @@ function DescriptionWriterInner() {
               )}
             </div>
 
-            {description ? (
+            {{description ? (
               <DarkTextarea
                 value={editedDescription}
                 onChange={setEditedDescription}
-                rows={12}
+                rows={24}
                 resize={false}
               />
             ) : (
