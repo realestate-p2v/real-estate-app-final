@@ -383,11 +383,15 @@ export function OrderForm() {
       const st = params.get("state")?.replace(/\+/g, " ");
       const beds = params.get("beds");
       const baths = params.get("baths");
+      const sqft = params.get("sqft");
+      const price = params.get("price");
       if (addr) setPropertyAddress(addr);
       if (city) setPropertyCity(city);
       if (st) setPropertyState(st);
       if (beds) setPropertyBedrooms(beds);
       if (baths) setPropertyBathrooms(baths);
+      if (sqft) setPropertySqft(sqft);
+      if (price) setPropertyPrice(price);
     } catch {
       /* ignore */
     }
@@ -565,6 +569,8 @@ export function OrderForm() {
       propertyState,
       propertyBedrooms,
       propertyBathrooms,
+      propertySqft,
+      propertyPrice,
       listingStatus,
       photos: photos.map((p, i) => ({
         id: p.id,
@@ -612,6 +618,8 @@ export function OrderForm() {
       if (payload.propertyState) setPropertyState(payload.propertyState);
       if (payload.propertyBedrooms) setPropertyBedrooms(String(payload.propertyBedrooms));
       if (payload.propertyBathrooms) setPropertyBathrooms(String(payload.propertyBathrooms));
+      if (payload.propertySqft) setPropertySqft(String(payload.propertySqft));
+      if (payload.propertyPrice) setPropertyPrice(String(payload.propertyPrice));
       if (payload.listingStatus) setListingStatus(payload.listingStatus);
       if (Array.isArray(payload.photos) && payload.photos.length > 0) {
         const restored = payload.photos
@@ -662,6 +670,8 @@ export function OrderForm() {
     propertyState,
     propertyBedrooms,
     propertyBathrooms,
+    propertySqft,
+    propertyPrice,
     listingStatus,
     photos.length,
     photoInputMode,
@@ -1937,6 +1947,18 @@ export function OrderForm() {
                     type="number"
                     value={propertyBathrooms}
                     onChange={(e) => setPropertyBathrooms(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Sq Ft"
+                    type="number"
+                    value={propertySqft}
+                    onChange={(e) => setPropertySqft(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Price ($)"
+                    type="number"
+                    value={propertyPrice}
+                    onChange={(e) => setPropertyPrice(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
