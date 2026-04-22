@@ -113,7 +113,7 @@ function VideoThumbnail({ order }: { order: Order }) {
           loading="lazy"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/10 transition-colors">
-          <div className="h-14 w-14 rounded-full bg-cyan-400/90 flex items-center justify-center backdrop-blur-sm shadow-lg shadow-cyan-400/30 ring-2 ring-white/20">
+          <div className="h-14 w-14 rounded-full bg-rose-400/90 flex items-center justify-center backdrop-blur-sm shadow-lg shadow-rose-400/30 ring-2 ring-white/20">
             <Play className="h-5 w-5 text-gray-900 ml-0.5" fill="currentColor" />
           </div>
         </div>
@@ -122,7 +122,7 @@ function VideoThumbnail({ order }: { order: Order }) {
   }
 
   return (
-    <div className="aspect-video flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(99,102,241,0.12) 50%, rgba(168,85,247,0.1) 100%)" }}>
+    <div className="aspect-video flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(225,29,72,0.15) 0%, rgba(159,18,57,0.12) 50%, rgba(127,29,29,0.1) 100%)" }}>
       <Video className="h-10 w-10 text-white/25" />
     </div>
   );
@@ -200,8 +200,8 @@ export default function MyVideosPage() {
       <style dangerouslySetInnerHTML={{ __html: mvStyles }} />
 
       {/* Background — radial gradients + grid overlay (matches dashboard) */}
-      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(56,189,248,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 85% 80%, rgba(99,102,241,0.04) 0%, transparent 60%)" }} />
-      <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(56,189,248,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+      <div className="pointer-events-none fixed inset-0 z-0" style={{ background: "radial-gradient(ellipse 60% 50% at 15% 20%, rgba(225,29,72,0.06) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 85% 80%, rgba(159,18,57,0.05) 0%, transparent 60%)" }} />
+      <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(225,29,72,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(225,29,72,.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
 
@@ -211,9 +211,9 @@ export default function MyVideosPage() {
             <h1 className="text-3xl font-extrabold text-white">My Videos</h1>
             <p className="text-white/50 mt-1 text-sm">All your orders and delivered videos</p>
           </div>
-          <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold rounded-xl">
+          <Button asChild className="bg-rose-500 hover:bg-rose-400 text-white font-extrabold rounded-xl text-lg px-7 py-6 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 transition-shadow">
             <Link href="/order">
-              <Play className="mr-2 h-4 w-4" />
+              <Play className="mr-2 h-5 w-5" fill="currentColor" />
               New Order
             </Link>
           </Button>
@@ -221,18 +221,18 @@ export default function MyVideosPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-rose-400" />
           </div>
         ) : orders.length === 0 ? (
           <div className="mv-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-12 text-center space-y-4" style={{ animationDelay: "0.1s" }}>
-            <div className="h-16 w-16 rounded-2xl bg-cyan-400/10 ring-1 ring-cyan-400/20 flex items-center justify-center mx-auto">
-              <Video className="h-8 w-8 text-cyan-400" />
+            <div className="h-16 w-16 rounded-2xl bg-rose-400/10 ring-1 ring-rose-400/20 flex items-center justify-center mx-auto">
+              <Video className="h-8 w-8 text-rose-400" />
             </div>
             <h2 className="text-xl font-bold text-white">No orders yet</h2>
             <p className="text-white/50">
               When you place your first order, your videos will appear here.
             </p>
-            <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold rounded-xl mt-4">
+            <Button asChild className="bg-rose-500 hover:bg-rose-400 text-white font-extrabold rounded-xl text-lg px-7 py-6 mt-4 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 transition-shadow">
               <Link href="/order">Create My Listing Video</Link>
             </Button>
           </div>
@@ -243,7 +243,7 @@ export default function MyVideosPage() {
             {activeOrders.length > 0 && (
               <div className="mv-animate" style={{ animationDelay: "0.1s" }}>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-cyan-400" />
+                  <Clock className="h-4 w-4 text-rose-400" />
                   In Progress ({activeOrders.length})
                 </h2>
                 <div className="space-y-2.5">
@@ -253,12 +253,12 @@ export default function MyVideosPage() {
                     return (
                       <div
                         key={order.id}
-                        className="mv-chip-animate rounded-xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-5 flex items-center justify-between gap-4 transition-all hover:border-cyan-400/20 hover:bg-white/[0.06]"
+                        className="mv-chip-animate rounded-xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-5 flex items-center justify-between gap-4 transition-all hover:border-rose-400/20 hover:bg-white/[0.06]"
                         style={{ animationDelay: `${0.15 + i * 0.04}s` }}
                       >
                         <div className="flex items-center gap-4 min-w-0">
-                          <div className="h-11 w-11 rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/20 flex items-center justify-center flex-shrink-0">
-                            <Video className="h-5 w-5 text-cyan-400" />
+                          <div className="h-11 w-11 rounded-xl bg-rose-400/10 ring-1 ring-rose-400/20 flex items-center justify-center flex-shrink-0">
+                            <Video className="h-5 w-5 text-rose-400" />
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-bold text-white truncate">{getOrderName(order)}</h3>
@@ -300,7 +300,7 @@ export default function MyVideosPage() {
                     return (
                       <div
                         key={order.id}
-                        className="mv-chip-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-cyan-400/20 hover:bg-white/[0.05]"
+                        className="mv-chip-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all hover:border-rose-400/20 hover:bg-white/[0.05]"
                         style={{ animationDelay: `${0.2 + i * 0.05}s` }}
                       >
                         <Link href={`/video/${order.order_id || order.id}`} className="block">
@@ -308,7 +308,7 @@ export default function MyVideosPage() {
                         </Link>
                         <div className="p-5 space-y-3">
                           <Link href={`/video/${order.order_id || order.id}`} className="block">
-                            <h3 className="font-bold text-lg text-white hover:text-cyan-300 transition-colors">{getOrderName(order)}</h3>
+                            <h3 className="font-bold text-lg text-white hover:text-rose-300 transition-colors">{getOrderName(order)}</h3>
                             <div className="flex items-center gap-3 text-xs text-white/50 mt-1 flex-wrap">
                               <span>{order.photo_count || 0} photos</span>
                               <span className="text-white/20">|</span>
@@ -396,13 +396,13 @@ export default function MyVideosPage() {
                     return (
                       <div
                         key={order.id}
-                        className="mv-chip-animate rounded-2xl border border-white/[0.04] bg-white/[0.02] backdrop-blur-sm overflow-hidden opacity-75 hover:opacity-100 hover:border-cyan-400/20 hover:bg-white/[0.05] transition-all"
+                        className="mv-chip-animate rounded-2xl border border-white/[0.04] bg-white/[0.02] backdrop-blur-sm overflow-hidden opacity-75 hover:opacity-100 hover:border-rose-400/20 hover:bg-white/[0.05] transition-all"
                         style={{ animationDelay: `${0.25 + i * 0.05}s` }}
                       >
                         <Link href={`/video/${order.order_id || order.id}`} className="block">
                           <VideoThumbnail order={order} />
                           <div className="p-5 pb-3">
-                            <h3 className="font-bold text-lg text-white hover:text-cyan-300 transition-colors">{getOrderName(order)}</h3>
+                            <h3 className="font-bold text-lg text-white hover:text-rose-300 transition-colors">{getOrderName(order)}</h3>
                             <div className="flex items-center gap-3 text-xs text-white/50 mt-1 flex-wrap">
                               <span>{formatDate(order.created_at)}</span>
                               <span className="text-white/20">|</span>
@@ -411,7 +411,7 @@ export default function MyVideosPage() {
                           </div>
                         </Link>
                         <div className="flex gap-2 px-5 pb-5 flex-wrap">
-                          <Button asChild size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold">
+                          <Button asChild size="sm" className="bg-rose-500 hover:bg-rose-400 text-white font-bold">
                             <Link href={`/video/${order.order_id || order.id}`}>
                               <Play className="mr-1.5 h-3.5 w-3.5" />
                               View Video
