@@ -47,8 +47,8 @@ async function loadGoogleFont(
   family: string,
   weight: number
 ): Promise<ArrayBuffer> {
-  // Safari UA forces Google to serve TTFs (otherwise we get woff2,
-  // which Satori can't decode in the Edge runtime).
+  // Use a UA string old enough that Google serves TTF instead of woff2.
+  // woff2 is not decodable by Satori in the Edge runtime.
   const css = await fetch(
     `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
       family
@@ -56,17 +56,26 @@ async function loadGoogleFont(
     {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+          "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)",
       },
     }
   ).then((r) => r.text());
 
-  const match = css.match(/src:\s*url\(([^)]+)\)\s*format\(['"]?truetype/);
-  if (!match) {
-    throw new Error(`Could not find TTF URL in Google Fonts CSS for ${family} ${weight}`);
+  // Permissive: first TTF-looking URL in the CSS wins.
+  // Some responses have format('truetype'), others just have .ttf in the URL.
+  const urlMatch =
+    css.match(/src:\s*url\(([^)]+\.ttf)\)/i) ||
+    css.match(/url\(([^)]+\.ttf)\)/i);
+  if (!urlMatch) {
+    console.error(
+      `[loadGoogleFont] No TTF URL in CSS for ${family} ${weight}. CSS: ${css.slice(0, 500)}`
+    );
+    throw new Error(`Could not find TTF URL for ${family} ${weight}`);
   }
-  const ttfUrl = match[1];
+  const ttfUrl = urlMatch[1];
+  console.log(`[loadGoogleFont] Fetching ${family} ${weight} from ${ttfUrl}`);
   const data = await fetch(ttfUrl).then((r) => r.arrayBuffer());
+  console.log(`[loadGoogleFont] Got ${data.byteLength} bytes for ${family} ${weight}`);
   return data;
 }
 
