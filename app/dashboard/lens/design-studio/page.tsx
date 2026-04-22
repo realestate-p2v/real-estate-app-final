@@ -9,18 +9,17 @@ import {
   Clock, ArrowUp, ArrowDown, Trash2, Lock,
 } from "lucide-react";
 import { GateOverlay } from "@/components/gate-overlay";
+import {
+  isLightColor,
+  hexToRgba,
+  responsiveSize,
+  darken,
+  getBadgeConfig,
+  truncateText,
+} from "@/components/design-studio/helpers";
+import { InfoBarTemplate } from "@/components/design-studio/info-bar-template";
 
-function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
-function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
-function responsiveSize(base:number,text:string,maxChars:number):number{if(!text||text.length<=maxChars)return base;return Math.max(base*0.5,Math.round(base*Math.max(maxChars/text.length,0.55)));}
-function darken(hex:string,pct:number):string{const n=parseInt(hex.replace("#",""),16);return `rgb(${Math.max(0,(n>>16)-Math.round(2.55*pct))},${Math.max(0,((n>>8)&0xff)-Math.round(2.55*pct))},${Math.max(0,(n&0xff)-Math.round(2.55*pct))})`;}
-function getBadgeConfig(id:string){const m:Record<string,{text:string;color:string}>={"just-listed":{text:"JUST LISTED",color:"#2563eb"},"open-house":{text:"OPEN HOUSE",color:"#059669"},"price-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"just-sold":{text:"JUST SOLD",color:"#d97706"},"for-rent":{text:"FOR RENT",color:"#16a34a"},"magazine-cover":{text:"JUST LISTED",color:"#2563eb"},"magazine-rent":{text:"FOR RENT",color:"#16a34a"},"stamp-listed":{text:"JUST LISTED",color:"#2563eb"},"stamp-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"stamp-rent":{text:"FOR RENT",color:"#16a34a"},"cinematic-listed":{text:"JUST LISTED",color:"#2563eb"},"cinematic-reduced":{text:"PRICE REDUCED",color:"#dc2626"},"cinematic-rent":{text:"FOR RENT",color:"#16a34a"},"bold-frame":{text:"PRICE REDUCED",color:"#dc2626"},"frame-rent":{text:"FOR RENT",color:"#16a34a"}};return m[id]||m["just-listed"];}
-function truncateText(text:string,max:number):string{if(!text)return text;const clean=text.replace(/\*{1,2}([^*]+)\*{1,2}/g,"$1");if(clean.length<=max)return clean;return clean.substring(0,max).trimEnd()+"\u2026";}
 
-
-
-// ─── InfoBarTemplate ───────────────────────────────────────────────────────────
-function InfoBarTemplate({size,listingPhoto,videoElement,headshot,logo,address,addressLine2,beds,baths,sqft,price,agentName,phone,brokerage,badgeText,badgeColor,fontFamily,barColor,accentColor}:any){
   const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
   const accent=accentColor||"#ffffff",usedBadge=accentColor||badgeColor,barLight=isLightColor(barColor);
   const tp=barLight?"#111827":"#ffffff",ts=barLight?"rgba(17,24,39,0.55)":"rgba(255,255,255,0.55)";
