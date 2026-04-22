@@ -103,7 +103,7 @@ export function InfoBarTemplateSatori({
   // px = left padding of info bar content (breathing from the left edge).
   // prx = right padding, reduced to pull content closer to the right edge.
   const px = Math.round((isPostcard ? 44 : isStory ? 56 : 36) * unit);
-  const prx = Math.round((isPostcard ? 44 : isStory ? 16 : 36) * unit);
+  const prx = Math.round((isPostcard ? 44 : isStory ? 8 : 36) * unit);
   const py = Math.round((isStory ? 28 : 20) * unit);
 
   const hs = Math.round(barH * (isStory ? 0.36 : isPostcard ? 0.78 : 0.52));
@@ -455,7 +455,10 @@ export function InfoBarTemplateSatori({
               left: 0,
               right: 0,
               bottom: 0,
-              padding: `${py}px ${prx}px ${py}px ${px}px`,
+              paddingTop: py,
+              paddingRight: prx,
+              paddingBottom: py,
+              paddingLeft: px,
               gap: Math.round(20 * unit),
             }}
           >
