@@ -16,44 +16,59 @@
 //   agent_properties     — sqft, price (fields the order form doesn't store)
 //   lens_usage           — saved agent profile + extracted brand color
 //
-// The InfoBarTemplate "story" size layout (1080×1920, stacked agent-above-
-// property) is the one rendered here. Badge is always "JUST LISTED".
-// Accent color is always "#ffffff" per product decision. Bar color is the
-// agent's extracted brand color (lens_usage.saved_brand_color_primary) with
-// a dark-slate fallback for the edge case where extraction never ran.
-//
-// Fonts: DM Sans (regular + bold) is loaded from Google Fonts' static CDN
-// at cold start and passed to Satori via the fonts: option. Without this
-// Satori falls back to its built-in font, which doesn't match Design
-// Studio's look.
+// Fonts: DM Sans (regular + bold) is resolved from the Google Fonts
+// stylesheet at cold start. The stylesheet gives us live TTF URLs; we
+// fetch those and pass the binary data to Satori. This avoids hard-
+// coding URLs that Google rotates over time.
 
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
 import { InfoBarTemplate } from "@/components/design-studio/info-bar-template";
 import { getBadgeConfig } from "@/components/design-studio/helpers";
 
-// @vercel/og / next/og runs on the Edge runtime by default. Edge is fine
-// here — we only do three Supabase reads plus a couple of font fetches.
 export const runtime = "edge";
 
-// Output dimensions — must match the cropped vertical video ffmpeg produces
-// in pipeline.py's crop_clips_to_vertical() helper. 1080×1920 = 9:16.
 const OUT_W = 1080;
 const OUT_H = 1920;
 
-const BAR_COLOR_FALLBACK = "#111827"; // slate-900 — for agents with no
-                                      // extracted brand color yet
-const ACCENT_COLOR = "#ffffff";       // locked per product decision
-const BADGE = getBadgeConfig("just-listed"); // { text: "JUST LISTED", color: "#2563eb" }
+const BAR_COLOR_FALLBACK = "#111827";
+const ACCENT_COLOR = "#ffffff";
+const BADGE = getBadgeConfig("just-listed");
 const FONT_FAMILY = "DM Sans";
 
-// Google Fonts v15 static URLs for DM Sans (captured from
-// https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700).
-// Satori accepts ttf or otf data; we use ttf here.
-const FONT_URL_REGULAR =
-  "https://fonts.gstatic.com/s/dmsans/v15/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwS.ttf";
-const FONT_URL_BOLD =
-  "https://fonts.gstatic.com/s/dmsans/v15/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZC_1ZBJWdbnoEwS.ttf";
+/**
+ * Resolve a Google Font to its current TTF binary data.
+ *
+ * The /css2 endpoint returns a stylesheet referencing the current CDN
+ * URLs. We parse the first src: url(...) that points to a .ttf, then
+ * fetch that binary.
+ */
+async function loadGoogleFont(
+  family: string,
+  weight: number
+): Promise<ArrayBuffer> {
+  // Safari UA forces Google to serve TTFs (otherwise we get woff2,
+  // which Satori can't decode in the Edge runtime).
+  const css = await fetch(
+    `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
+      family
+    )}:wght@${weight}&display=swap`,
+    {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+      },
+    }
+  ).then((r) => r.text());
+
+  const match = css.match(/src:\s*url\(([^)]+)\)\s*format\(['"]?truetype/);
+  if (!match) {
+    throw new Error(`Could not find TTF URL in Google Fonts CSS for ${family} ${weight}`);
+  }
+  const ttfUrl = match[1];
+  const data = await fetch(ttfUrl).then((r) => r.arrayBuffer());
+  return data;
+}
 
 export async function GET(request: Request) {
   // ─── Auth ───────────────────────────────────────────────────────────
@@ -71,8 +86,6 @@ export async function GET(request: Request) {
   }
 
   // ─── Supabase lookup ────────────────────────────────────────────────
-  // Service-role key so we can read across user rows without an auth session.
-  // This endpoint is already gated by RENDER_SECRET so it's safe to use here.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) {
@@ -80,7 +93,6 @@ export async function GET(request: Request) {
   }
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  // 1) Order — get property basics + user_id + agent_property_id
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
@@ -92,7 +104,6 @@ export async function GET(request: Request) {
     return new Response(`Order not found: ${orderId}`, { status: 404 });
   }
 
-  // 2) agent_properties — sqft + price (fields not stored on orders)
   let sqft: number | null = null;
   let price: number | null = null;
   if (order.agent_property_id) {
@@ -107,7 +118,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // 3) lens_usage — saved agent profile + brand color
   const { data: profile, error: profileErr } = await supabase
     .from("lens_usage")
     .select(
@@ -116,10 +126,6 @@ export async function GET(request: Request) {
     .eq("user_id", order.user_id)
     .maybeSingle();
 
-  // Defense-in-depth: bonus content is only supposed to render for users
-  // who completed Your Info. sample_worker.py is responsible for that
-  // gating — but we re-check here in case something slips through, so
-  // we don't produce an empty-branded overlay.
   if (!profile?.saved_agent_name || !profile?.saved_headshot_url) {
     return new Response(
       JSON.stringify(
@@ -148,21 +154,29 @@ export async function GET(request: Request) {
     );
   }
 
-  // ─── Load DM Sans fonts (Satori requires binary font data) ──────────
-  // These run in parallel with each other. Edge caches the responses,
-  // so repeat invocations after the first cold start are near-instant.
-  const [fontRegular, fontBold] = await Promise.all([
-    fetch(FONT_URL_REGULAR).then((r) => r.arrayBuffer()),
-    fetch(FONT_URL_BOLD).then((r) => r.arrayBuffer()),
-  ]);
+  // ─── Load DM Sans fonts via Google Fonts stylesheet lookup ─────────
+  // If font loading fails for any reason, we fall back to a no-fonts
+  // render rather than 500ing the whole request.
+  let fontsConfig: { name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal" }[] = [];
+  try {
+    const [fontRegular, fontBold] = await Promise.all([
+      loadGoogleFont("DM Sans", 400),
+      loadGoogleFont("DM Sans", 700),
+    ]);
+    fontsConfig = [
+      { name: "DM Sans", data: fontRegular, weight: 400, style: "normal" },
+      { name: "DM Sans", data: fontBold, weight: 700, style: "normal" },
+    ];
+  } catch (err) {
+    // Log but don't fail — Satori will use built-in fallback.
+    console.error("[branded-vertical-overlay] Font load failed:", err);
+  }
 
   // ─── Build the template props ───────────────────────────────────────
   const addressLine2 = [order.property_city, order.property_state]
     .filter(Boolean)
     .join(", ");
 
-  // Format price with thousands separators for display.
-  // agent_properties.price is stored as plain integer (e.g. 425000).
   const priceDisplay =
     typeof price === "number" && price > 0
       ? price.toLocaleString("en-US")
@@ -171,10 +185,6 @@ export async function GET(request: Request) {
   const barColor = profile.saved_brand_color_primary || BAR_COLOR_FALLBACK;
 
   // ─── Render to PNG via @vercel/og ────────────────────────────────────
-  // Size id "story" triggers the 1080×1920 stacked layout in InfoBarTemplate.
-  // videoElement and listingPhoto are both undefined/null so the Photo
-  // subcomponent renders its placeholder area transparent-over-gradient.
-  // ffmpeg composites the real video frame underneath at runtime.
   return new ImageResponse(
     (
       <InfoBarTemplate
@@ -202,10 +212,7 @@ export async function GET(request: Request) {
     {
       width: OUT_W,
       height: OUT_H,
-      fonts: [
-        { name: "DM Sans", data: fontRegular, weight: 400, style: "normal" },
-        { name: "DM Sans", data: fontBold, weight: 700, style: "normal" },
-      ],
+      ...(fontsConfig.length > 0 ? { fonts: fontsConfig } : {}),
     }
   );
 }
