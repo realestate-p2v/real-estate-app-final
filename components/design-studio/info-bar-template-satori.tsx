@@ -320,6 +320,7 @@ export function InfoBarTemplateSatori({
         flex: 1,
         flexDirection: "column" as const,
         justifyContent: "center",
+        alignItems: "flex-end",
         textAlign: "right" as const,
         minWidth: 0,
       }}
