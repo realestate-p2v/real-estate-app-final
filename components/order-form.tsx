@@ -950,10 +950,42 @@ export function OrderForm() {
 
   // ─── Submit handler ─────────────────────────────────────────────────────
   const handleSubmitOrder = async () => {
-    if (!agentName || !agentEmail) {
-      alert("Please fill in your name and email.");
+    // Email check stays strict — returning users have it editable on Review,
+    // first-order users have it locked to their auth account so it's always
+    // populated. If it's missing here, something is genuinely wrong.
+    if (!agentEmail) {
+      alert("Please fill in your email.");
       return;
     }
+
+    // Name fallback (v1.2 — Task 2 of pre-1B stabilization handoff).
+    // Three-tier resolution:
+    //   1. agentName already set → proceed.
+    //   2. agentName empty but lens_usage.saved_agent_name exists → use that.
+    //   3. Both empty → show inline prompt on Review step, bail without alert.
+    let resolvedName = agentName.trim();
+    if (!resolvedName && subState.userId) {
+      try {
+        const supabase = createClient();
+        const { data: profile } = await supabase
+          .from("lens_usage")
+          .select("saved_agent_name")
+          .eq("user_id", subState.userId)
+          .maybeSingle();
+        const saved = profile?.saved_agent_name?.trim();
+        if (saved) {
+          resolvedName = saved;
+          setAgentName(saved);
+        }
+      } catch (err) {
+        console.error("[order-form] saved_agent_name lookup failed:", err);
+      }
+    }
+    if (!resolvedName) {
+      setShowInlineNamePrompt(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Flush autosave + promote draft
@@ -995,7 +1027,7 @@ export function OrderForm() {
 
       const orderPayload = {
         // Pre-existing /api/orders contract
-        customer: { name: agentName, email: agentEmail, phone: agentPhone },
+        customer: { name: resolvedName, email: agentEmail, phone: agentPhone },
         uploadedPhotos,
         listing_url: isUrlMode ? listingUrl.trim() : null,
         listing_package_price: isUrlMode && listingPackage ? listingPackage.price : null,
@@ -1037,7 +1069,7 @@ export function OrderForm() {
         listing_status: listingStatus,
         agent_info: isFirstOrder
           ? {
-              name: agentName,
+              name: resolvedName,
               phone: agentPhone,
               email: agentEmail,
               company: agentBrokerage,
@@ -1092,7 +1124,7 @@ export function OrderForm() {
               amount: getTotalPrice() * 100,
             },
           ],
-          customerDetails: { name: agentName, email: agentEmail, phone: agentPhone },
+          customerDetails: { name: resolvedName, email: agentEmail, phone: agentPhone },
           orderData: {
             orderId: createdOrderId,
             photoCount: isUrlMode && listingPackage ? listingPackage.photoCount : photoCount,
