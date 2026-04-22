@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X, User, LogOut, Bell, FileText, Video, ChevronDown, BookOpen, Camera, HelpCircle, Users, Shield, Play, Building2, Sparkles, Settings, Home, Film } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { CountdownTimer } from "@/components/countdown-timer";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -106,14 +105,10 @@ export function Navigation() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-20 items-center justify-between">
             
-            {/* Left — Logo + Clickable Timer */}
+            {/* Left — Logo */}
             <div className="flex items-center gap-6">
               <Link href="/" className="flex-shrink-0">
                 <Image src="/logo.png" alt="Logo" width={192} height={77} className="h-12 w-auto" />
-              </Link> 
-              <div className="hidden md:block h-10 w-[1px] bg-white/30" />
-              <Link href="/order" className="hidden md:block hover:opacity-80 transition-opacity">
-                <CountdownTimer />
               </Link>
             </div>
            
@@ -311,11 +306,6 @@ export function Navigation() {
                     </div>
                   </div>
                 )}
-
-                {/* Timer (mobile) */}
-                <Link href="/order" onClick={() => setIsOpen(false)} className="flex justify-center py-2 bg-white/5 rounded-xl mb-3 md:hidden">
-                  <CountdownTimer />
-                </Link>
 
                 {user && (
                   <Link href="/dashboard/notifications" onClick={() => setIsOpen(false)}
