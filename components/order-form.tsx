@@ -368,6 +368,8 @@ export function OrderForm() {
   const [propertyState, setPropertyState] = useState("");
   const [propertyBedrooms, setPropertyBedrooms] = useState("");
   const [propertyBathrooms, setPropertyBathrooms] = useState("");
+  const [propertySqft, setPropertySqft] = useState("");
+  const [propertyPrice, setPropertyPrice] = useState("");
   const [listingStatus, setListingStatus] = useState<string>("Active");
 
   const [formData, setFormData] = useState({ notes: "" });
