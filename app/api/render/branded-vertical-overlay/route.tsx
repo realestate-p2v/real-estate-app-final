@@ -96,10 +96,10 @@ export async function GET(request: Request) {
   }
 
   // 3) lens_usage — saved agent profile + brand color
-  const { data: profile } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from("lens_usage")
     .select(
-      "saved_agent_name, saved_phone, saved_company, saved_headshot_url, saved_logo_url, saved_brand_color_hex"
+      "saved_agent_name, saved_phone, saved_company, saved_headshot_url, saved_logo_url, saved_brand_color_primary"
     )
     .eq("user_id", order.user_id)
     .maybeSingle();
@@ -110,8 +110,20 @@ export async function GET(request: Request) {
   // we don't produce an empty-branded overlay.
   if (!profile?.saved_agent_name || !profile?.saved_headshot_url) {
     return new Response(
-      "Agent profile incomplete — bonus content not eligible",
-      { status: 404 }
+      JSON.stringify({
+        reason: "Agent profile incomplete — bonus content not eligible",
+        debug: {
+          user_id: order.user_id,
+          profile_returned: profile === null ? "null" : profile === undefined ? "undefined" : "object",
+          has_agent_name: !!profile?.saved_agent_name,
+          has_headshot: !!profile?.saved_headshot_url,
+          supabase_error: profileErr ? profileErr.message : null,
+        },
+      }, null, 2),
+      {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 
