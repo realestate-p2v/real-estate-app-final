@@ -19,28 +19,6 @@ import {
 } from "@/components/design-studio/helpers";
 import { InfoBarTemplate } from "@/components/design-studio/info-bar-template";
 
-
-  const w=size.width,h=size.height,isStory=size.id==="story",isPostcard=size.id==="postcard",unit=w/1080;
-  const accent=accentColor||"#ffffff",usedBadge=accentColor||badgeColor,barLight=isLightColor(barColor);
-  const tp=barLight?"#111827":"#ffffff",ts=barLight?"rgba(17,24,39,0.55)":"rgba(255,255,255,0.55)";
-  const tm=barLight?"rgba(17,24,39,0.40)":"rgba(255,255,255,0.35)",dc=barLight?"rgba(0,0,0,0.10)":"rgba(255,255,255,0.12)";
-  const an=agentName||"Agent Name",br=brokerage||"Brokerage",ph=phone||"(555) 000-0000";
-  const ad=address||"123 Main Street",ad2=addressLine2||"";
-  const det=[beds&&`${beds} BD`,baths&&`${baths} BA`,sqft&&`${sqft} SF`].filter(Boolean).join("  \u00b7  ")||"3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
-  const pr=price?`$${price}`:"$000,000";
-  const pp=isPostcard?55:58,barH=h*(1-pp/100);
-  const px=Math.round((isPostcard?44:isStory?56:36)*unit),py=Math.round((isStory?28:20)*unit);
-  const hs=Math.round(barH*(isStory?0.36:isPostcard?0.78:0.52)),hb=Math.round((isStory?4:isPostcard?4:3)*unit);
-  const bH=Math.round(barH*(isStory?0.072:isPostcard?0.16:0.14)),bF=Math.round(barH*(isStory?0.036:isPostcard?0.065:0.052));
-  const anF=responsiveSize(Math.round(barH*(isStory?0.080:isPostcard?0.125:0.082)),an,14);
-  const brF=responsiveSize(Math.round(barH*(isStory?0.056:isPostcard?0.080:0.055)),br,24);
-  const phF=Math.round(barH*(isStory?0.054:isPostcard?0.074:0.052));
-  const adF=responsiveSize(Math.round(barH*(isStory?0.072:isPostcard?0.110:0.094)),ad,16);
-  const dtF=Math.round(barH*(isStory?0.048:isPostcard?0.074:0.055));
-  const prF=Math.round(barH*(isStory?0.105:isPostcard?0.185:0.15));
-  const Headshot=()=>headshot?(<div style={{width:hs,height:hs,borderRadius:"50%",padding:hb,background:accentColor?`linear-gradient(135deg,${accentColor},${hexToRgba(accentColor,0.4)})`:barLight?"linear-gradient(135deg,rgba(0,0,0,0.15),rgba(0,0,0,0.05))":"linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.1))",flexShrink:0}}><img src={headshot} alt="" style={{width:"100%",height:"100%",borderRadius:"50%",objectFit:"cover",display:"block"}}/></div>):<div style={{width:hs,height:hs,borderRadius:"50%",backgroundColor:barLight?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.06)",border:`${hb}px solid ${dc}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><User style={{width:hs*0.38,height:hs*0.38,color:tm}}/></div>;
-  const Photo=()=>(<div style={{position:"absolute",top:0,left:0,right:0,height:`${pp}%`}}>{videoElement?<div data-video-area style={{width:"100%",height:"100%",position:"relative",overflow:"hidden"}}>{videoElement}</div>:listingPhoto?<img src={listingPhoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",backgroundColor:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center"}}><ImageIcon style={{width:64*unit,height:64*unit,color:"rgba(255,255,255,0.12)"}}/></div>}<div style={{position:"absolute",bottom:0,left:0,right:0,height:Math.round(140*unit),backgroundImage:`linear-gradient(to top,${barColor} 0%,${hexToRgba(barColor,0.85)} 30%,${hexToRgba(barColor,0.4)} 65%,transparent 100%)`}}/></div>);
-  const Badge=()=>(<div style={{position:"absolute",top:`calc(${pp}% - ${Math.round(bH*0.5)}px)`,right:px,zIndex:10}}><div style={{display:"inline-flex",alignItems:"center",height:bH,padding:`0 ${Math.round(22*unit)}px`,backgroundColor:usedBadge,borderRadius:Math.round(4*unit),boxShadow:`0 ${Math.round(4*unit)}px ${Math.round(20*unit)}px ${hexToRgba(usedBadge,0.45)}`}}><span style={{fontSize:bF,fontWeight:800,color:isLightColor(usedBadge)?"#111":"#fff",letterSpacing:"0.14em",textTransform:"uppercase" as const,lineHeight:1}}>{badgeText}</span></div></div>);
 }
 
 // ─── MagazineCoverTemplate ───────────────────────────────────────────────────
