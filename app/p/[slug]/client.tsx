@@ -1,7 +1,7 @@
 // ============================================================
 // FILE: app/p/[slug]/client.tsx
 // ============================================================
-"use client";
+"use client"; 
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -101,7 +101,7 @@ function Lightbox({ photos, startIndex, onClose }: { photos: string[]; startInde
       <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-10"><X className="h-7 w-7" /></button>
       <button onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + photos.length) % photos.length); }} className="absolute left-4 text-white/70 hover:text-white z-10"><ChevronLeft className="h-10 w-10" /></button>
       <button onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % photos.length); }} className="absolute right-4 text-white/70 hover:text-white z-10"><ChevronRight className="h-10 w-10" /></button>
-      <img src={photos[idx]?.includes("/upload/") ? photos[idx].replace("/upload/", "/upload/w_1400,h_900,c_fit/") : photos[idx]} alt={`Photo ${idx + 1}`} className="max-h-[90vh] max-w-[95vw] object-contain" onClick={(e) => e.stopPropagation()} />
+      <img src={photos[idx]} alt={`Photo ${idx + 1}`} className="max-h-[90vh] max-w-[95vw] object-contain" onClick={(e) => e.stopPropagation()} />
       <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">{idx + 1} / {photos.length}</p>
     </div>
   );
@@ -296,7 +296,7 @@ export default function PropertyWebsiteClient({
         {heroVideo ? (
           <video src={heroVideo} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
         ) : heroPhoto ? (
-          <img src={heroPhoto.includes("/upload/") ? heroPhoto.replace("/upload/", "/upload/w_1920,h_1080,c_fill,q_auto/") : heroPhoto} alt={property.address} className="absolute inset-0 w-full h-full object-cover" />
+          <img src={heroPhoto} alt={property.address} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
         )}
@@ -485,11 +485,10 @@ export default function PropertyWebsiteClient({
                 <h2 className={`text-2xl font-extrabold ${t.heading} mb-6 ${t.heroFont}`}>Photos</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {photos.map((url: string, i: number) => {
-                    const thumb = url.includes("/upload/") ? url.replace("/upload/", "/upload/w_600,h_450,c_fill,q_auto/") : url;
                     return (
                       <button key={i} onClick={() => setLightboxIndex(i)} className={`relative rounded-xl overflow-hidden group ${i === 0 ? "sm:col-span-2 sm:row-span-2" : ""}`}>
                         <div className="aspect-[4/3] bg-gray-200">
-                          <img src={thumb} alt={`Photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         </div>
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                       </button>
