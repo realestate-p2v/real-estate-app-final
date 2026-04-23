@@ -1,26 +1,31 @@
 // lib/hooks/use-order-form-autosave.ts
-// Phase 1A Section 9 — autosave hook.
+// Phase 1A Section 9 — manual-save draft hook (v2).
 //
-// Behavior:
-// - On first address entry: create agent_properties row (status='draft')
-//   and orders row (is_draft=true) linked to it.
-// - Every ~3 seconds on change: debounced update to both rows.
-// - On submit: parent promotes draft (flips is_draft=false, status='active').
-// - On mount: if ?draft=<id> present OR most recent draft exists, rehydrate.
-// - localStorage cache as secondary safety net (survives tab close before
-//   first Supabase save completes).
+// Change from v1:
+//   - Removed debounced auto-save. Drafts are now ONLY persisted when
+//     the parent calls saveNow() (wired to the Save button in
+//     DraftSaveBar).
+//   - Removed localStorage caching. Every save goes to Supabase only.
+//   - Removed auto-rehydrate on mount. Old drafts do NOT reappear when
+//     the user opens the order form — they start with an empty state.
+//     A separate "Resume draft" UI (future) will handle explicit
+//     rehydration via ?draft=<id>.
+//   - markChanged() still flips hasUnsavedChanges so the Save bar can
+//     indicate pending state, but it no longer triggers any write.
 //
-// This hook does NOT manage the Cloudinary upload lifecycle — the photo
-// uploader continues to own that. We only persist already-uploaded photo
-// metadata (secure_url, description, etc.).
+// Behavior preserved:
+//   - On explicit saveNow(): create or update linked agent_properties
+//     + orders rows (is_draft=true, status='draft').
+//   - On submit (promoteDraft): flip is_draft=false, status='active'.
+//   - If the user isn't logged in, saveNow() is a no-op (nothing to
+//     persist remotely, and we no longer cache locally).
+//   - Interface and return shape identical to v1 — no caller changes
+//     needed.
 
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const DEBOUNCE_MS = 3000;
-const LOCAL_CACHE_KEY = "p2v_order_draft_v1";
 
 export interface OrderDraftPayload {
   // Property
@@ -58,7 +63,8 @@ export interface OrderDraftPayload {
     notes: string;
   };
 
-  // UI-only (not persisted to Supabase but cached in localStorage)
+  // UI-only (kept in the interface so callers can pass it through; not
+  // persisted to Supabase columns)
   photoInputMode?: string;
   listingUrl?: string;
   listingPackage?: Record<string, unknown> | null;
@@ -69,8 +75,16 @@ export interface OrderDraftPayload {
 export interface UseOrderFormAutosaveOptions {
   /** Returns the current draft state snapshot for saving. */
   getPayload: () => OrderDraftPayload;
-  /** Called when a draft is rehydrated on mount. */
-  onRehydrate: (payload: OrderDraftPayload, ids: { agentPropertyId: string; orderId: string }) => void;
+  /**
+   * Called when a draft is rehydrated on mount. Retained for interface
+   * compatibility; v2 of this hook never calls it automatically. A
+   * future "Resume draft" flow can re-enable rehydration by reading
+   * ?draft=<id> and calling onRehydrate explicitly.
+   */
+  onRehydrate: (
+    payload: OrderDraftPayload,
+    ids: { agentPropertyId: string; orderId: string }
+  ) => void;
 }
 
 export interface OrderFormAutosaveState {
@@ -80,31 +94,33 @@ export interface OrderFormAutosaveState {
   lastSavedAt: Date | null;
   hasUnsavedChanges: boolean;
   isLoggedIn: boolean;
-  /** Manually request a save (parent can call on blur of important fields). */
+  /** Persist the current draft to Supabase. Called on Save button click. */
   saveNow: () => Promise<void>;
-  /** Mark that something changed — triggers debounced save. */
+  /**
+   * Mark state as dirty so the Save bar can show "Unsaved changes".
+   * Does NOT trigger any write in v2 — saving is strictly manual.
+   */
   markChanged: () => void;
   /** Called by the parent right before submit to flip draft → active. */
-  promoteDraft: () => Promise<{ orderId: string | null; agentPropertyId: string | null }>;
+  promoteDraft: () => Promise<{
+    orderId: string | null;
+    agentPropertyId: string | null;
+  }>;
 }
 
-/**
- * Small helper to generate a short unique order_id (text column on orders).
- * Matches the shape the existing webhook / API expects.
- */
 function generateOrderIdString(): string {
   const ts = Date.now().toString(36);
   const rand = Math.random().toString(36).substring(2, 8);
   return `ord_${ts}_${rand}`;
 }
 
-/** Normalize an address for the address_normalized column. */
 function normalizeAddress(addr: string): string {
   return addr.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 export function useOrderFormAutosave({
   getPayload,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onRehydrate,
 }: UseOrderFormAutosaveOptions): OrderFormAutosaveState {
   const [agentPropertyId, setAgentPropertyId] = useState<string | null>(null);
@@ -115,173 +131,47 @@ export function useOrderFormAutosave({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const userIdRef = useRef<string | null>(null);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rehydratedRef = useRef(false);
   const supabase = useRef(createClient()).current;
 
   // ───────────────────────────────────────────────────────────────────────
-  // Rehydrate on mount
+  // Mount: figure out auth state only. No rehydrate, no cache read.
   // ───────────────────────────────────────────────────────────────────────
-
   useEffect(() => {
-    if (rehydratedRef.current) return;
-    rehydratedRef.current = true;
-
     (async () => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) {
+        if (user) {
+          setIsLoggedIn(true);
+          userIdRef.current = user.id;
+        } else {
           setIsLoggedIn(false);
-          // Try localStorage-only rehydrate for guest drafts
-          try {
-            const cached = localStorage.getItem(LOCAL_CACHE_KEY);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (parsed?.payload) onRehydrate(parsed.payload, { agentPropertyId: "", orderId: "" });
-            }
-          } catch {
-            /* ignore */
-          }
-          return;
         }
-        setIsLoggedIn(true);
-        userIdRef.current = user.id;
-
-        // Priority 1: draft id in URL (magic-link return)
-        const params = new URLSearchParams(window.location.search);
-        const draftParam = params.get("draft");
-
-        let targetOrder: any = null;
-
-        if (draftParam) {
-          const { data } = await supabase
-            .from("orders")
-            .select("*")
-            .eq("order_id", draftParam)
-            .eq("user_id", user.id)
-            .eq("is_draft", true)
-            .maybeSingle();
-          if (data) targetOrder = data;
-        }
-
-        // Priority 2: most recent in-progress draft for this user
-        if (!targetOrder) {
-          const { data } = await supabase
-            .from("orders")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("is_draft", true)
-            .order("draft_last_saved_at", { ascending: false, nullsFirst: false })
-            .limit(1)
-            .maybeSingle();
-          if (data) targetOrder = data;
-        }
-
-        if (!targetOrder) {
-          // No server draft — try localStorage as final fallback
-          try {
-            const cached = localStorage.getItem(LOCAL_CACHE_KEY);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (parsed?.payload) onRehydrate(parsed.payload, { agentPropertyId: "", orderId: "" });
-            }
-          } catch {
-            /* ignore */
-          }
-          return;
-        }
-
-        // Pull the linked agent_property
-        let propertyRow: any = null;
-        if (targetOrder.agent_property_id) {
-          const { data } = await supabase
-            .from("agent_properties")
-            .select("*")
-            .eq("id", targetOrder.agent_property_id)
-            .maybeSingle();
-          propertyRow = data;
-        }
-
-        const payload: OrderDraftPayload = {
-          propertyAddress: propertyRow?.address || targetOrder.property_address || "",
-          propertyCity: propertyRow?.city || targetOrder.property_city || "",
-          propertyState: propertyRow?.state || targetOrder.property_state || "",
-          propertyZip: propertyRow?.zip || "",
-          propertyBedrooms: propertyRow?.bedrooms ?? targetOrder.property_bedrooms ?? "",
-          propertyBathrooms: propertyRow?.bathrooms ?? targetOrder.property_bathrooms ?? "",
-          propertySqft: propertyRow?.sqft ?? "",
-          propertyPrice: propertyRow?.price ?? "",
-          listingStatus: propertyRow?.listing_status || "",
-          photos: targetOrder.photos || [],
-          roomTags: targetOrder.room_tags || [],
-          musicSelection: targetOrder.music_selection || "",
-          resolution: targetOrder.resolution || "768P",
-          orientation: targetOrder.orientation || "landscape",
-          brandingSelection: targetOrder.branding?.type || "unbranded",
-          brandingData: targetOrder.branding || { type: "unbranded" },
-          includeEditedPhotos: !!targetOrder.include_edited_photos,
-          photoEditing: !!targetOrder.photo_editing,
-          specialFeatures: targetOrder.special_features || propertyRow?.special_features_v2 || {},
-          includeAddressOnCard: targetOrder.include_address_on_card !== false,
-          includeUnbranded: !!targetOrder.include_unbranded,
-          customIntroCardUrl: targetOrder.custom_intro_card_url || null,
-          customOutroCardUrl: targetOrder.custom_outro_card_url || null,
-          formData: {
-            name: targetOrder.customer_name || "",
-            email: targetOrder.customer_email || "",
-            phone: targetOrder.customer_phone || "",
-            notes: targetOrder.special_instructions || "",
-          },
-        };
-
-        setAgentPropertyId(targetOrder.agent_property_id);
-        setOrderId(targetOrder.order_id);
-        setLastSavedAt(
-          targetOrder.draft_last_saved_at ? new Date(targetOrder.draft_last_saved_at) : null
-        );
-
-        onRehydrate(payload, {
-          agentPropertyId: targetOrder.agent_property_id || "",
-          orderId: targetOrder.order_id || "",
-        });
       } catch (err) {
-        console.error("[autosave] rehydrate error:", err);
+        console.error("[autosave] auth check error:", err);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ───────────────────────────────────────────────────────────────────────
-  // Save logic
+  // Persist (explicit only — called by saveNow or promoteDraft)
   // ───────────────────────────────────────────────────────────────────────
-
   const persist = useCallback(async () => {
-    // Always write localStorage first (survives closure)
-    try {
-      const payload = getPayload();
-      localStorage.setItem(
-        LOCAL_CACHE_KEY,
-        JSON.stringify({ savedAt: Date.now(), payload })
-      );
-    } catch {
-      /* ignore storage errors (quota, private mode) */
-    }
-
     const userId = userIdRef.current;
     if (!userId) {
-      // Not logged in — localStorage only
+      // Not logged in — nothing to write and no local cache in v2.
       setHasUnsavedChanges(false);
       return;
     }
 
     const payload = getPayload();
     const address = payload.propertyAddress?.trim();
-
-    // Cannot create the draft row without an address. Wait for the user
-    // to enter one — until then, everything lives in localStorage.
     if (!address) {
+      // Can't create a draft without an address. Silently no-op — the
+      // Save button can still be pressed but no row is created until
+      // the user enters an address.
       setHasUnsavedChanges(false);
       return;
     }
@@ -291,7 +181,7 @@ export function useOrderFormAutosave({
       let propertyId = agentPropertyId;
       let orderIdStr = orderId;
 
-      // Create agent_properties row on first save
+      // Create or update agent_properties row
       if (!propertyId) {
         const { data, error } = await supabase
           .from("agent_properties")
@@ -327,7 +217,6 @@ export function useOrderFormAutosave({
         propertyId = data.id;
         setAgentPropertyId(propertyId);
       } else {
-        // Update existing property row
         await supabase
           .from("agent_properties")
           .update({
@@ -355,7 +244,7 @@ export function useOrderFormAutosave({
           .eq("id", propertyId);
       }
 
-      // Create orders row on first save
+      // Create or update orders row
       if (!orderIdStr) {
         const newOrderIdStr = generateOrderIdString();
         const { data, error } = await supabase
@@ -382,7 +271,9 @@ export function useOrderFormAutosave({
             music_selection: payload.musicSelection || null,
             resolution: payload.resolution || "768P",
             orientation: payload.orientation || "landscape",
-            branding: payload.brandingData || { type: payload.brandingSelection || "unbranded" },
+            branding: payload.brandingData || {
+              type: payload.brandingSelection || "unbranded",
+            },
             include_edited_photos: !!payload.includeEditedPhotos,
             photo_editing: !!payload.photoEditing,
             special_features: payload.specialFeatures || {},
@@ -421,7 +312,9 @@ export function useOrderFormAutosave({
             music_selection: payload.musicSelection || null,
             resolution: payload.resolution || "768P",
             orientation: payload.orientation || "landscape",
-            branding: payload.brandingData || { type: payload.brandingSelection || "unbranded" },
+            branding: payload.brandingData || {
+              type: payload.brandingSelection || "unbranded",
+            },
             include_edited_photos: !!payload.includeEditedPhotos,
             photo_editing: !!payload.photoEditing,
             special_features: payload.specialFeatures || {},
@@ -450,29 +343,21 @@ export function useOrderFormAutosave({
   }, [agentPropertyId, orderId, getPayload, supabase]);
 
   // ───────────────────────────────────────────────────────────────────────
-  // Debounced trigger
+  // Public API
   // ───────────────────────────────────────────────────────────────────────
 
+  // markChanged: flag only, no write.
   const markChanged = useCallback(() => {
     setHasUnsavedChanges(true);
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      void persist();
-    }, DEBOUNCE_MS);
-  }, [persist]);
+  }, []);
 
   const saveNow = useCallback(async () => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     await persist();
   }, [persist]);
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Promote draft on submit
-  // ───────────────────────────────────────────────────────────────────────
-
   const promoteDraft = useCallback(async () => {
-    // Flush any pending save first
-    await saveNow();
+    // Flush anything the user typed since their last Save click.
+    await persist();
 
     if (agentPropertyId) {
       try {
@@ -503,22 +388,8 @@ export function useOrderFormAutosave({
       }
     }
 
-    // Clear localStorage on successful promotion
-    try {
-      localStorage.removeItem(LOCAL_CACHE_KEY);
-    } catch {
-      /* ignore */
-    }
-
     return { orderId, agentPropertyId };
-  }, [agentPropertyId, orderId, saveNow, supabase]);
-
-  // Flush on unmount so nothing is lost when the user navigates away
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
-  }, []);
+  }, [agentPropertyId, orderId, persist, supabase]);
 
   return {
     agentPropertyId,
