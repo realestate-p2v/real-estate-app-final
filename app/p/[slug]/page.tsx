@@ -107,7 +107,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // OG image — first curated photo
   const ogImage = (curated.photos || [])[0] || null;
-  const ogImageUrl = ogImage;
+  const ogImageUrl = ogImage?.includes("/upload/")
+    ? ogImage.replace("/upload/", "/upload/w_1200,h_630,c_fill,q_auto/")
+    : ogImage;
 
   return {
     title: pageTitle,
