@@ -121,7 +121,7 @@ export default async function DeliveryPage({ params }: Props) {
   const hasFlyer = !!data.branded_flyer_sample_url;
   const hasListingPage = !!(data.website_slug && data.website_published);
   const listingPageUrl = hasListingPage
-    ? `https://${data.website_slug}.p2v.homes`
+    ? `https://realestatephoto2video.com/p/${data.website_slug}`
     : null;
 
   const showBonusSection =
@@ -208,7 +208,7 @@ export default async function DeliveryPage({ params }: Props) {
                   title="9:16 social clip"
                   description="Your video with headshot, brokerage, and contact info baked in. Drop it into Reels, TikTok, or Shorts."
                   href={data.branded_vertical_sample_url}
-                  ctaLabel="Watch"
+                  ctaLabel="Download"
                   mediaUrl={data.branded_vertical_sample_url}
                   mediaType="video"
                 />
@@ -267,15 +267,13 @@ function BonusCard({
 }) {
   return (
     <div className="rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.08] overflow-hidden flex flex-col">
-      {/* Preview */}
-      <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
-        {mediaType === "video" && mediaUrl ? (
+     {mediaType === "video" && mediaUrl ? (
           <video
             src={mediaUrl}
-            muted
+            controls
             playsInline
             preload="metadata"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-black"
           />
         ) : mediaType === "image" && mediaUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -308,8 +306,12 @@ function BonusCard({
           {description}
         </p>
         <a
-          href={href}
-          target="_blank"
+          href={
+            mediaType === "video" && href.includes("/upload/")
+              ? href.replace("/upload/", "/upload/fl_attachment/")
+              : href
+          }
+          target={mediaType === "video" ? "_self" : "_blank"}
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
         >
