@@ -10,11 +10,10 @@ type Props = {
 async function getPropertyData(slug: string) {
   const supabase = await createClient();
 
-  const { data: property } = await supabase
+const { data: property } = await supabase
     .from("agent_properties")
     .select("*")
     .eq("website_slug", slug)
-    .eq("website_published", true)
     .is("merged_into_id", null)
     .single();
 
