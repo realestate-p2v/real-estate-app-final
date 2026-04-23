@@ -616,24 +616,30 @@ function PropertyPageInner() {
         );
       })()}
 
-      {/* ═══ HEADER with inline quick actions ═══ */}
+     {/* ═══ HEADER with inline quick actions ═══ */}
       <div className="mc-animate flex items-start gap-3 mb-6">
         <Link href="/dashboard/properties" className="mt-2 text-white/50 hover:text-white transition-colors flex-shrink-0"><ArrowLeft className="h-5 w-5" /></Link>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             {/* Title + status */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3 flex-wrap mb-1">
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white truncate">{property.address}</h1>
+            <div className="min-w-0 w-full md:w-auto md:flex-1">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-1">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white break-words">{property.address}</h1>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[property.status] || STATUS_STYLES.active}`}>{property.status}</span>
                 {pubPublished && <span className="text-xs font-bold text-green-300 bg-green-400/15 ring-1 ring-green-400/30 px-2.5 py-1 rounded-full">● Live</span>}
               </div>
-              <p className="text-base text-white/55">
+              <p
+                className="text-sm sm:text-base text-white/55 truncate"
+                title={`${[property.city, property.state, property.zip].filter(Boolean).join(", ")}${property.property_type ? ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}` : ""}`}
+              >
                 {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
                 {property.property_type && ` · ${PROPERTY_TYPES[property.property_type] || property.property_type}`}
               </p>
             </div>
+
+            {/* Inline icon-only quick actions — subtle, tooltip-labeled */}
+            <div className="flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
 
             {/* Inline icon-only quick actions — subtle, tooltip-labeled */}
             <div className="flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
