@@ -638,8 +638,8 @@ function PropertyPageInner() {
               </p>
             </div>
 
-            {/* Inline icon-only quick actions — subtle, tooltip-labeled */}
-            <div className="flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
+           {/* Inline icon-only quick actions — subtle, tooltip-labeled (desktop only; mobile uses tab pills) */}
+            <div className="hidden md:flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
               <Link href={`/order?${qs}`} title="Order Video" aria-label="Order Video" className="p-2.5 rounded-lg text-white/60 hover:text-cyan-300 hover:bg-white/[0.06] transition-colors">
                 <Film className="h-4 w-4" />
               </Link>
@@ -681,9 +681,9 @@ function PropertyPageInner() {
                     : `text-white/55 hover:text-white hover:bg-white/[0.04]`
                 }`}
               >
-                <Icon className={`h-4 w-4 ${isActive ? c.text : c.textDim}`} />
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
+               <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isActive ? c.text : c.textDim}`} />
+                  <span className="hidden md:inline">{tab.label}</span>
+                  {tab.count !== undefined && tab.count > 0 && (
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     isActive
                       ? "bg-white/15 text-white"
