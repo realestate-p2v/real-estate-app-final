@@ -3,23 +3,19 @@
 // SATORI-SPECIFIC variant of ListingFlyerTemplate — used exclusively by the
 // server-side PNG renderer at /api/render/branded-flyer.
 //
-// This is a SEPARATE file from the inline ListingFlyerTemplate in
-// app/dashboard/lens/design-studio/page.tsx so the Design Studio keeps
-// working on its battle-tested client-side code path regardless of
-// what we do here.
-//
 // Tweaks vs. the Design Studio version:
 //   - Every multi-child div has explicit display:flex (Satori requirement)
 //   - Emojis dropped from URL labels (Satori has no emoji font loaded)
 //   - word-break:break-all → break-word (Satori-friendly wrapping)
-//   - flex-wrap on amenity chips kept; each chip has known dimensions
+//   - Bottom photo row uses justifyContent:space-between (Satori rounds
+//     fractional pixel widths and the cumulative drift was pushing the
+//     4th chip off-canvas with explicit margins; space-between fixes it)
+//   - Description split on \n and rendered as multiple <p> tags so
+//     paragraph breaks from Claude-generated descriptions render
+//   - Header text sizes bumped for stronger agent presence
+//   - Amenity IDs humanized ("water_heater" → "Water Heater")
 //   - Font weights locked to 400/700 (matching loaded DM Sans)
 //   - Hard-coded 2550x3300 canvas (matches print flyer aspect)
-//   - Fixed widths for photo columns (58% / 42%) pre-computed to pixels
-//     so Satori doesn't have to resolve percentages at layout time
-//
-// Props omit all the interactive-only bits from Design Studio's version
-// (uploading, branding toggle, etc.) and expose a clean data-driven API.
 
 import { User, Image as ImageIcon } from "lucide-react";
 import { isLightColor, hexToRgba, truncateText } from "./helpers";
@@ -45,6 +41,29 @@ export interface ListingFlyerTemplateSatoriProps {
   stagingUrl?: string;
   accentColor?: string;
   fontFamily?: string;
+}
+
+/**
+ * Turn a raw amenity ID like "water_heater" or "ev_charging" into a
+ * title-cased display label ("Water Heater", "Ev Charging").
+ * Keep it pure so we don't need another import.
+ */
+function humanizeAmenity(raw: string): string {
+  if (!raw) return raw;
+  return raw
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Split a description on newlines into paragraphs. Collapses multiple
+ * blank lines so \n\n and \n both act as paragraph breaks.
+ */
+function splitParagraphs(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 }
 
 export function ListingFlyerTemplateSatori({
@@ -79,7 +98,7 @@ export function ListingFlyerTemplateSatori({
   const accentTextRgb = accentLight ? "0,0,0" : "255,255,255";
 
   const ACCENT_BAR = 12;
-  const BRAND_H = 220;
+  const BRAND_H = 240; // bumped from 220 for larger header text
   const PHOTO_H = 1240;
 
   const ad = address || "123 Main Street";
@@ -97,10 +116,10 @@ export function ListingFlyerTemplateSatori({
       .join("  \u00b7  ") || "3 BD  \u00b7  2 BA  \u00b7  1,800 SF";
 
   const amList = Array.isArray(amenities)
-    ? amenities.filter(Boolean)
+    ? amenities.filter(Boolean).map(humanizeAmenity)
     : [];
 
-  const desc = truncateText(description || "", 1536);
+  const descParagraphs = splitParagraphs(truncateText(description || "", 1536));
 
   const photoCount = (photos || []).length;
   const p1 = photos?.[0] || null;
@@ -110,7 +129,6 @@ export function ListingFlyerTemplateSatori({
   const showBottomRow = photoCount > 3 && bottomRow.length > 0;
   const bottomPhotoH = showBottomRow ? 340 : 0;
 
-  // URLs (emojis dropped — plain labels only)
   const urlRows: { label: string; url: string }[] = [];
   if (listingUrl) urlRows.push({ label: "View full listing:", url: listingUrl });
   if (videoUrl) urlRows.push({ label: "Watch the video tour:", url: videoUrl });
@@ -119,13 +137,15 @@ export function ListingFlyerTemplateSatori({
 
   const hsz = BRAND_H - 40;
 
-  // Pre-computed column widths for photo block (Satori prefers px over %)
+  // Photo block layout (pre-computed, Satori prefers px over %)
   const photoBlockW = W - M * 2;
   const leftPhotoW = Math.round(photoBlockW * 0.58);
   const PHOTO_GAP = 20;
   const rightPhotoW = photoBlockW - leftPhotoW - PHOTO_GAP;
   const rightPhotoH = Math.round((PHOTO_H - PHOTO_GAP) / 2);
-  const bottomPhotoW = Math.round((photoBlockW - PHOTO_GAP * 3) / 4);
+  // Bottom row: compute chip width for image rendering but let flexbox
+  // handle positioning via space-between to avoid rounding drift.
+  const bottomPhotoW = Math.floor((photoBlockW - PHOTO_GAP * 3) / 4);
 
   return (
     <div
@@ -206,7 +226,7 @@ export function ListingFlyerTemplateSatori({
           </div>
         )}
 
-        {/* Agent info block */}
+        {/* Agent info block — bumped font sizes */}
         <div
           style={{
             display: "flex",
@@ -218,7 +238,7 @@ export function ListingFlyerTemplateSatori({
         >
           <p
             style={{
-              fontSize: 52,
+              fontSize: 60,
               fontWeight: 700,
               color: accentText,
               margin: 0,
@@ -229,11 +249,11 @@ export function ListingFlyerTemplateSatori({
           </p>
           <p
             style={{
-              fontSize: 40,
+              fontSize: 46,
               fontWeight: 400,
-              color: `rgba(${accentTextRgb},0.70)`,
+              color: `rgba(${accentTextRgb},0.75)`,
               margin: 0,
-              marginTop: 6,
+              marginTop: 8,
             }}
           >
             {brokerage || "Real Estate"}
@@ -242,16 +262,16 @@ export function ListingFlyerTemplateSatori({
             <div
               style={{
                 display: "flex",
-                marginTop: 8,
+                marginTop: 10,
               }}
             >
               {phone && (
                 <span
                   style={{
-                    fontSize: 38,
-                    color: `rgba(${accentTextRgb},0.85)`,
+                    fontSize: 44,
+                    color: `rgba(${accentTextRgb},0.90)`,
                     fontWeight: 700,
-                    marginRight: 32,
+                    marginRight: 36,
                   }}
                 >
                   {phone}
@@ -260,8 +280,8 @@ export function ListingFlyerTemplateSatori({
               {email && (
                 <span
                   style={{
-                    fontSize: 38,
-                    color: `rgba(${accentTextRgb},0.75)`,
+                    fontSize: 44,
+                    color: `rgba(${accentTextRgb},0.80)`,
                     fontWeight: 400,
                   }}
                 >
@@ -441,7 +461,7 @@ export function ListingFlyerTemplateSatori({
           </div>
         </div>
 
-        {/* Bottom row: 4 photos */}
+        {/* Bottom row: 4 photos with space-between layout */}
         {showBottomRow && (
           <>
             <div
@@ -456,11 +476,11 @@ export function ListingFlyerTemplateSatori({
                 display: "flex",
                 width: photoBlockW,
                 height: bottomPhotoH,
+                justifyContent: "space-between",
               }}
             >
               {[0, 1, 2, 3].map((i) => {
                 const photo = bottomRow[i] || null;
-                const isLast = i === 3;
                 return (
                   <div
                     key={i}
@@ -469,7 +489,6 @@ export function ListingFlyerTemplateSatori({
                       width: bottomPhotoW,
                       height: bottomPhotoH,
                       overflow: "hidden",
-                      marginRight: isLast ? 0 : PHOTO_GAP,
                     }}
                   >
                     {photo ? (
@@ -620,19 +639,30 @@ export function ListingFlyerTemplateSatori({
             </div>
           )}
 
-          {/* Description */}
-          {desc && (
-            <p
+          {/* Description — rendered as separate <p> per paragraph */}
+          {descParagraphs.length > 0 && (
+            <div
               style={{
-                fontSize: 38,
-                color: "#555555",
-                lineHeight: 1.65,
-                margin: 0,
+                display: "flex",
+                flexDirection: "column",
                 marginTop: 22,
               }}
             >
-              {desc}
-            </p>
+              {descParagraphs.map((para, i) => (
+                <p
+                  key={i}
+                  style={{
+                    fontSize: 38,
+                    color: "#555555",
+                    lineHeight: 1.65,
+                    margin: 0,
+                    marginTop: i === 0 ? 0 : 20,
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
           )}
         </div>
       </div>
