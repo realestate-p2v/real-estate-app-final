@@ -397,8 +397,13 @@ export function InfoBarTemplateSatori({
     </div>
   );
 
-  // ─── Story (vertical 1080x1920) layout ───
+ // ─── Story (vertical 1080x1920) layout ───
   if (isStory) {
+    // Overlay mode: when no photo AND no video are provided, we're being used
+    // as a transparent overlay on top of a real video (Architecture 4 flow).
+    // Skip <Photo /> entirely so the top 58% of the canvas stays transparent
+    // and the video shows through via ffmpeg's overlay composite.
+    const isOverlayMode = !listingPhoto && !videoElement;
     return (
       <div
         style={{
@@ -408,9 +413,10 @@ export function InfoBarTemplateSatori({
           width: w,
           height: h,
           fontFamily,
+          background: "transparent",
         }}
       >
-        <Photo />
+        {!isOverlayMode && <Photo />}
         <Badge />
         <div
           style={{
@@ -546,6 +552,7 @@ export function InfoBarTemplateSatori({
   }
 
   // ─── Square / Postcard layout ───
+  const isOverlayMode = !listingPhoto && !videoElement;
   return (
     <div
       style={{
@@ -555,9 +562,10 @@ export function InfoBarTemplateSatori({
         width: w,
         height: h,
         fontFamily,
+        background: "transparent",
       }}
     >
-      <Photo />
+      {!isOverlayMode && <Photo />}
       <Badge />
       <div
         style={{
