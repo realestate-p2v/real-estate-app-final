@@ -3,7 +3,13 @@
 // Client component for a single bonus card on the delivery page.
 // Thumbnail fills the card preview; tap opens a full-screen lightbox.
 // Download buttons on both the card and the lightbox. Link-type cards
-// open an external page in a new tab instead of a lightbox.
+// open an external page in a new tab and show a link-icon overlay on
+// the thumbnail.
+//
+// Uses raw Cloudinary URLs (no transforms) because this account has
+// restrictions that 404 on-the-fly transform URLs. CSS object-cover
+// handles scaling. For video thumbnails we render the <video> element
+// with preload="metadata" so the browser shows the first frame.
 
 "use client";
 
@@ -23,21 +29,6 @@ function withAttachmentFlag(url: string): string {
   if (!url.includes("/upload/")) return url;
   if (url.includes("fl_attachment")) return url;
   return url.replace("/upload/", "/upload/fl_attachment/");
-}
-
-function thumbnailize(url: string, w = 600, h = 400): string {
-  if (!url || !url.includes("/upload/")) return url;
-  // Videos: use so_1 (second 1 as poster) + scaled dimensions
-  if (/\.(mp4|mov|webm)$/i.test(url)) {
-    return url
-      .replace(
-        "/video/upload/",
-        `/video/upload/so_1,w_${w},h_${h},c_fill,f_jpg/`
-      )
-      .replace(/\.(mp4|mov|webm)$/i, ".jpg");
-  }
-  // Images: scaled and fitted
-  return url.replace("/upload/", `/upload/w_${w},h_${h},c_fill,f_auto,q_auto/`);
 }
 
 export default function BonusCard({
@@ -66,8 +57,8 @@ export default function BonusCard({
   }, [lightboxOpen]);
 
   const isInteractive = mediaType === "video" || mediaType === "image";
-  const downloadUrl = mediaUrl ? withAttachmentFlag(mediaUrl) : null;
-  const thumbUrl = mediaUrl ? thumbnailize(mediaUrl, 600, 400) : null;
+  const downloadUrl =
+    mediaUrl && mediaType !== "link" ? withAttachmentFlag(mediaUrl) : null;
 
   const handlePreviewClick = () => {
     if (isInteractive) {
@@ -87,22 +78,55 @@ export default function BonusCard({
           className="aspect-video bg-black flex items-center justify-center overflow-hidden group relative w-full"
           aria-label={`Open ${title}`}
         >
-          {thumbUrl ? (
+          {mediaType === "video" && mediaUrl ? (
+            <>
+              <video
+                src={mediaUrl}
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover pointer-events-none"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all">
+                  <span className="text-gray-900 text-xl ml-1">▶</span>
+                </div>
+              </div>
+            </>
+          ) : mediaType === "image" && mediaUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={thumbUrl}
+              src={mediaUrl}
               alt={title}
               className="w-full h-full object-cover"
             />
+          ) : mediaType === "link" && mediaUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl}
+                alt={title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/45 transition-colors">
+                <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-6 w-6 text-gray-900"
+                  >
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="text-white/20 text-5xl">🔗</div>
-          )}
-          {mediaType === "video" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-              <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all">
-                <span className="text-gray-900 text-xl ml-1">▶</span>
-              </div>
-            </div>
           )}
         </button>
 
