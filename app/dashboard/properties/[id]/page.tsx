@@ -640,9 +640,6 @@ function PropertyPageInner() {
 
             {/* Inline icon-only quick actions — subtle, tooltip-labeled */}
             <div className="flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
-
-            {/* Inline icon-only quick actions — subtle, tooltip-labeled */}
-            <div className="flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
               <Link href={`/order?${qs}`} title="Order Video" aria-label="Order Video" className="p-2.5 rounded-lg text-white/60 hover:text-cyan-300 hover:bg-white/[0.06] transition-colors">
                 <Film className="h-4 w-4" />
               </Link>
