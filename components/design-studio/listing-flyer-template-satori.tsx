@@ -7,13 +7,14 @@
 //   - Every multi-child div has explicit display:flex (Satori requirement)
 //   - Emojis dropped from URL labels (Satori has no emoji font loaded)
 //   - word-break:break-all → break-word (Satori-friendly wrapping)
-//   - Bottom photo row uses justifyContent:space-between (Satori rounds
-//     fractional pixel widths and the cumulative drift was pushing the
-//     4th chip off-canvas with explicit margins; space-between fixes it)
+//   - Bottom 4-photo row uses explicit marginRight per chip (not
+//     justifyContent:space-between, which had a rendering bug where
+//     the row drifted off-canvas) + wrapped in overflow:hidden guard
 //   - Description split on \n and rendered as multiple <p> tags so
 //     paragraph breaks from Claude-generated descriptions render
+//   - Description line-height 1.5 for readable but compact paragraphs
 //   - Header text sizes bumped for stronger agent presence
-//   - Amenity IDs humanized ("water_heater" → "Water Heater")
+//   - Amenity IDs humanized ("water_heater" → "Water Heater"; "ac" → "AC")
 //   - Font weights locked to 400/700 (matching loaded DM Sans)
 //   - Hard-coded 2550x3300 canvas (matches print flyer aspect)
 
@@ -44,15 +45,22 @@ export interface ListingFlyerTemplateSatoriProps {
 }
 
 /**
- * Turn a raw amenity ID like "water_heater" or "ev_charging" into a
- * title-cased display label ("Water Heater", "Ev Charging").
- * Keep it pure so we don't need another import.
+ * Turn a raw amenity ID like "water_heater" into a display label.
+ * Special-cases short acronyms that should render uppercase
+ * ("ac" → "AC", "ev_charging" → "EV Charging").
  */
 function humanizeAmenity(raw: string): string {
   if (!raw) return raw;
+  const ACRONYMS = new Set(["ac", "ev", "hoa", "hvac"]);
   return raw
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => {
+      const lower = word.toLowerCase();
+      if (ACRONYMS.has(lower)) return lower.toUpperCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
 }
 
 /**
@@ -98,7 +106,7 @@ export function ListingFlyerTemplateSatori({
   const accentTextRgb = accentLight ? "0,0,0" : "255,255,255";
 
   const ACCENT_BAR = 12;
-  const BRAND_H = 240; // bumped from 220 for larger header text
+  const BRAND_H = 240;
   const PHOTO_H = 1240;
 
   const ad = address || "123 Main Street";
@@ -143,8 +151,8 @@ export function ListingFlyerTemplateSatori({
   const PHOTO_GAP = 20;
   const rightPhotoW = photoBlockW - leftPhotoW - PHOTO_GAP;
   const rightPhotoH = Math.round((PHOTO_H - PHOTO_GAP) / 2);
-  // Bottom row: compute chip width for image rendering but let flexbox
-  // handle positioning via space-between to avoid rounding drift.
+  // Bottom row: 4 chips with 3 gaps. Use floor so total width never exceeds
+  // the container; any leftover pixels accumulate on the right edge as white.
   const bottomPhotoW = Math.floor((photoBlockW - PHOTO_GAP * 3) / 4);
 
   return (
@@ -187,7 +195,6 @@ export function ListingFlyerTemplateSatori({
           paddingRight: 60,
         }}
       >
-        {/* Headshot */}
         {headshot ? (
           <img
             src={headshot}
@@ -226,7 +233,6 @@ export function ListingFlyerTemplateSatori({
           </div>
         )}
 
-        {/* Agent info block — bumped font sizes */}
         <div
           style={{
             display: "flex",
@@ -292,7 +298,6 @@ export function ListingFlyerTemplateSatori({
           )}
         </div>
 
-        {/* Logo */}
         {logo && (
           <img
             src={logo}
@@ -315,7 +320,8 @@ export function ListingFlyerTemplateSatori({
           position: "absolute",
           top: M + ACCENT_BAR + BRAND_H,
           left: M,
-          right: M,
+          width: photoBlockW,
+          overflow: "hidden",
         }}
       >
         {/* Top row: hero + 2 stacked */}
@@ -334,6 +340,7 @@ export function ListingFlyerTemplateSatori({
               height: PHOTO_H,
               overflow: "hidden",
               flexShrink: 0,
+              marginRight: PHOTO_GAP,
             }}
           >
             {p1 ? (
@@ -370,16 +377,6 @@ export function ListingFlyerTemplateSatori({
             )}
           </div>
 
-          {/* Gap */}
-          <div
-            style={{
-              display: "flex",
-              width: PHOTO_GAP,
-              height: PHOTO_H,
-              flexShrink: 0,
-            }}
-          />
-
           {/* Right stack */}
           <div
             style={{
@@ -387,6 +384,7 @@ export function ListingFlyerTemplateSatori({
               flexDirection: "column",
               width: rightPhotoW,
               height: PHOTO_H,
+              flexShrink: 0,
             }}
           >
             <div
@@ -395,6 +393,7 @@ export function ListingFlyerTemplateSatori({
                 width: rightPhotoW,
                 height: rightPhotoH,
                 overflow: "hidden",
+                marginBottom: PHOTO_GAP,
               }}
             >
               {p2 ? (
@@ -420,13 +419,6 @@ export function ListingFlyerTemplateSatori({
                 />
               )}
             </div>
-            <div
-              style={{
-                display: "flex",
-                width: rightPhotoW,
-                height: PHOTO_GAP,
-              }}
-            />
             <div
               style={{
                 display: "flex",
@@ -461,63 +453,60 @@ export function ListingFlyerTemplateSatori({
           </div>
         </div>
 
-        {/* Bottom row: 4 photos with space-between layout */}
+        {/* Bottom row: 4 photos, explicit marginRight per chip */}
         {showBottomRow && (
-          <>
-            <div
-              style={{
-                display: "flex",
-                width: photoBlockW,
-                height: PHOTO_GAP,
-              }}
-            />
-            <div
-              style={{
-                display: "flex",
-                width: photoBlockW,
-                height: bottomPhotoH,
-                justifyContent: "space-between",
-              }}
-            >
-              {[0, 1, 2, 3].map((i) => {
-                const photo = bottomRow[i] || null;
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      width: bottomPhotoW,
-                      height: bottomPhotoH,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {photo ? (
-                      <img
-                        src={photo}
-                        alt=""
-                        width={bottomPhotoW}
-                        height={bottomPhotoH}
-                        style={{
-                          width: bottomPhotoW,
-                          height: bottomPhotoH,
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          display: "flex",
-                          width: "100%",
-                          height: "100%",
-                          backgroundColor: "#1e293b",
-                        }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              width: photoBlockW,
+              height: bottomPhotoH,
+              marginTop: PHOTO_GAP,
+              flexShrink: 0,
+              overflow: "hidden",
+            }}
+          >
+            {[0, 1, 2, 3].map((i) => {
+              const photo = bottomRow[i] || null;
+              const isLast = i === 3;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    width: bottomPhotoW,
+                    height: bottomPhotoH,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    marginRight: isLast ? 0 : PHOTO_GAP,
+                  }}
+                >
+                  {photo ? (
+                    <img
+                      src={photo}
+                      alt=""
+                      width={bottomPhotoW}
+                      height={bottomPhotoH}
+                      style={{
+                        width: bottomPhotoW,
+                        height: bottomPhotoH,
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: "#1e293b",
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {/* ─── DETAILS BLOCK ─── */}
@@ -534,7 +523,6 @@ export function ListingFlyerTemplateSatori({
             borderBottom: `3px solid ${hexToRgba(accent, 0.12)}`,
           }}
         >
-          {/* Address + price row */}
           <div
             style={{
               display: "flex",
@@ -600,7 +588,6 @@ export function ListingFlyerTemplateSatori({
             </p>
           </div>
 
-          {/* Amenity chips */}
           {amList.length > 0 && (
             <div
               style={{
@@ -639,7 +626,6 @@ export function ListingFlyerTemplateSatori({
             </div>
           )}
 
-          {/* Description — rendered as separate <p> per paragraph */}
           {descParagraphs.length > 0 && (
             <div
               style={{
@@ -654,9 +640,9 @@ export function ListingFlyerTemplateSatori({
                   style={{
                     fontSize: 38,
                     color: "#555555",
-                    lineHeight: 1.65,
+                    lineHeight: 1.5,
                     margin: 0,
-                    marginTop: i === 0 ? 0 : 20,
+                    marginTop: i === 0 ? 0 : 18,
                   }}
                 >
                   {para}
@@ -667,7 +653,7 @@ export function ListingFlyerTemplateSatori({
         </div>
       </div>
 
-      {/* ─── URL FOOTER (if URLs present) ─── */}
+      {/* ─── URL FOOTER ─── */}
       {hasUrls && (
         <div
           style={{
@@ -719,7 +705,6 @@ export function ListingFlyerTemplateSatori({
         </div>
       )}
 
-      {/* ─── AGENT FOOTER (fallback if no URLs) ─── */}
       {!hasUrls && (
         <div
           style={{
