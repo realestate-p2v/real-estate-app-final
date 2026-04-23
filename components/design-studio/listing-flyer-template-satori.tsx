@@ -638,7 +638,7 @@ export function ListingFlyerTemplateSatori({
                 <p
                   key={i}
                   style={{
-                    fontSize: 38,
+                    fontSize: 40,
                     color: "#555555",
                     lineHeight: 1.5,
                     margin: 0,
