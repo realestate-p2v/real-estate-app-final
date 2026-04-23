@@ -35,6 +35,7 @@ type DeliveryData = {
   agent_property_id: string | null;
   website_slug: string | null;
   website_published: boolean | null;
+  hero_photo_url: string | null;
 };
 
 async function getDeliveryData(orderId: string): Promise<DeliveryData | null> {
@@ -76,6 +77,7 @@ async function getDeliveryData(orderId: string): Promise<DeliveryData | null> {
     ...order,
     website_slug: websiteSlug,
     website_published: websitePublished,
+    hero_photo_url: heroPhotoUrl,
   };
 }
 
@@ -219,7 +221,7 @@ export default async function DeliveryPage({ params }: Props) {
                   tag="Listing page"
                   title="Public property website"
                   description="A shareable URL where buyers can see your video, photos, and property details."
-                  mediaUrl={null}
+                  mediaUrl={data.hero_photo_url}
                   mediaType="link"
                   linkUrl={listingPageUrl}
                 />
