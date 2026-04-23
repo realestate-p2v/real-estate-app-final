@@ -177,14 +177,20 @@ export async function GET(request: Request) {
     }
   }
 
-  // Photos — prefer order photos (already curated for video), fall back to
+ // Photos — prefer order photos (already curated for video), fall back to
   // an empty array and let the template handle placeholders.
-  const photoUrls: string[] = Array.isArray(order.photos)
+  // Each URL is shrunk via Cloudinary transforms before Satori fetches it.
+  // The hero gets a larger target (1400px) than the secondary slots (800px)
+  // since it renders at roughly 1.75x the size on the flyer.
+  const rawPhotoUrls: string[] = Array.isArray(order.photos)
     ? order.photos
         .map((p: any) => p?.secure_url || p?.url)
         .filter(Boolean)
         .slice(0, 7)
     : [];
+  const photoUrls: string[] = rawPhotoUrls.map((u, i) =>
+    optimizeCloudinaryUrl(u, i === 0 ? 1400 : 800)
+  );
 
   // ─── Load DM Sans from /public/fonts ───────────────────────────────
   const origin = getOrigin(request);
