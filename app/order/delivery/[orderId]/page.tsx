@@ -56,15 +56,19 @@ async function getDeliveryData(orderId: string): Promise<DeliveryData | null> {
 
   let websiteSlug: string | null = null;
   let websitePublished = false;
+  let heroPhotoUrl: string | null = null;
   if (order.agent_property_id) {
     const { data: prop } = await supabase
       .from("agent_properties")
-      .select("website_slug, website_published")
+      .select("website_slug, website_published, website_curated")
       .eq("id", order.agent_property_id)
       .maybeSingle();
     if (prop) {
       websiteSlug = prop.website_slug ?? null;
       websitePublished = prop.website_published ?? false;
+      const curated = (prop.website_curated || {}) as Record<string, any>;
+      const photos = Array.isArray(curated.photos) ? curated.photos : [];
+      heroPhotoUrl = photos[0] || null;
     }
   }
 
