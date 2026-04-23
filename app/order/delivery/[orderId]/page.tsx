@@ -267,7 +267,9 @@ function BonusCard({
 }) {
   return (
     <div className="rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.08] overflow-hidden flex flex-col">
-     {mediaType === "video" && mediaUrl ? (
+      {/* Preview */}
+      <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
+        {mediaType === "video" && mediaUrl ? (
           <video
             src={mediaUrl}
             controls
@@ -293,7 +295,6 @@ function BonusCard({
           <div className="text-white/20 text-5xl">🔗</div>
         )}
       </div>
-
       {/* Body */}
       <div className="p-5 flex flex-col flex-1">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300 mb-2">
