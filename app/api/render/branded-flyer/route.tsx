@@ -62,7 +62,7 @@ function optimizeCloudinaryUrl(url: string, targetWidth: number): string {
   if (/\/upload\/[a-z]_[^\/]+\//.test(url)) return url;
   return url.replace(
     "/upload/",
-    `/upload/w_${targetWidth},c_fill,f_auto,q_auto/`
+    `/upload/w_${targetWidth},c_limit,f_auto,q_auto/`
   );
 }
 
