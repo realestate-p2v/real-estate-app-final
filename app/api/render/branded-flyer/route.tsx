@@ -45,6 +45,27 @@ async function loadLocalFont(
   return data;
 }
 
+/**
+ * Rewrite a Cloudinary URL to inject a sizing transform. Satori's Edge
+ * runtime times out on slow/large image fetches — shrinking these before
+ * Satori downloads them prevents empty photo slots from appearing when a
+ * single image runs slow. Non-Cloudinary URLs pass through unchanged.
+ *
+ * The hero photo on the flyer renders at ~1400px wide at most, so 1400px
+ * source resolution is more than enough. f_auto serves webp to modern
+ * fetchers; q_auto picks the smallest quality that doesn't visibly degrade.
+ */
+function optimizeCloudinaryUrl(url: string, targetWidth: number): string {
+  if (!url || typeof url !== "string") return url;
+  if (!url.includes("cloudinary.com") || !url.includes("/upload/")) return url;
+  // Skip if already transformed (don't stack transforms)
+  if (/\/upload\/[a-z]_[^\/]+\//.test(url)) return url;
+  return url.replace(
+    "/upload/",
+    `/upload/w_${targetWidth},c_fill,f_auto,q_auto/`
+  );
+}
+
 export async function GET(request: Request) {
   // ─── Auth ───────────────────────────────────────────────────────────
   const authHeader = request.headers.get("authorization") || "";
