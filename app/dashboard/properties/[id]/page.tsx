@@ -1123,12 +1123,53 @@ function PropertyPageInner() {
                   </button>
                 </div>
               </div>
-            ) : subscriptionTier !== "pro" ? (
-              <SectionCard title="Publish to Website">
-                <EmptyState icon={Globe} title="Create your property website" hint="Photos, videos, staging, and lead capture on your own branded page. Own it for $399 or subscribe to Lens Pro."
-                  action={<Button onClick={() => setShowUpgradeModal(true)} className={`${a.btnBg} ${a.btnBgHover} text-white font-bold`}><Globe className="h-4 w-4 mr-2" />Get Your Website</Button>} />
-              </SectionCard>
-            ) : null}
+            ) : subscriptionTier === "pro" ? (
+              <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.04] overflow-hidden">
+                <div className="relative h-48 sm:h-56 bg-black overflow-hidden">
+                  {heroThumb ? <img src={heroThumb} alt={property.address} className="w-full h-full object-cover opacity-60" /> : <div className="w-full h-full flex items-center justify-center"><Globe className="h-16 w-16 text-white/20" /></div>}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+                  <div className="absolute top-4 left-4"><span className="text-emerald-300 bg-emerald-400/20 backdrop-blur-sm text-xs font-bold px-3 py-1 rounded-full ring-1 ring-emerald-400/40">Not yet published</span></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <p className="text-white/70 text-sm font-medium mb-1">Your Pro Property Website</p>
+                    <p className="text-white text-xl sm:text-2xl font-extrabold">{property.address}</p>
+                    <p className="text-white/70 text-sm mt-1 truncate">Ready to go live at {pubSlug}.p2v.homes</p>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <button onClick={togglePublish} disabled={pubSaving} className={`inline-flex items-center gap-1.5 ${a.btnBg} ${a.btnBgHover} text-white font-bold text-sm px-5 py-2 rounded-full`}>
+                    {pubSaving ? <><Loader2 className="h-4 w-4 animate-spin" />Publishing...</> : <><Globe className="h-4 w-4" />Set up your website now</>}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.04] overflow-hidden">
+                  <a href={`https://realestatephoto2video.com/p/${pubSlug}`} target="_blank" rel="noopener noreferrer" className="block">
+                    <div className="relative h-48 sm:h-56 bg-black overflow-hidden">
+                      {heroThumb ? <img src={heroThumb} alt={property.address} className="w-full h-full object-cover opacity-80" /> : <div className="w-full h-full flex items-center justify-center"><Globe className="h-16 w-16 text-white/20" /></div>}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute top-4 left-4"><span className="text-cyan-300 bg-cyan-400/20 backdrop-blur-sm text-xs font-bold px-3 py-1 rounded-full ring-1 ring-cyan-400/40">● Live</span></div>
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <p className="text-white/70 text-sm font-medium mb-1">Your Listing Page</p>
+                        <p className="text-white text-xl sm:text-2xl font-extrabold">{property.address}</p>
+                        <p className="text-white/70 text-sm mt-1 truncate">realestatephoto2video.com/p/{pubSlug}</p>
+                      </div>
+                    </div>
+                  </a>
+                  <div className="p-4 flex items-center gap-3 flex-wrap">
+                    <a href={`https://realestatephoto2video.com/p/${pubSlug}`} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1.5 ${a.btnBg} ${a.btnBgHover} text-white font-bold text-sm px-5 py-2 rounded-full`}><Eye className="h-4 w-4" />View your listing page</a>
+                    <button onClick={() => { navigator.clipboard.writeText(`https://realestatephoto2video.com/p/${pubSlug}`); setSlugCopied(true); setTimeout(() => setSlugCopied(false), 2000); }} className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/60 hover:text-white">
+                      {slugCopied ? <><CheckCircle className="h-4 w-4 text-green-400" />Copied!</> : <><Copy className="h-4 w-4" />Copy Link</>}
+                    </button>
+                  </div>
+                </div>
+
+                <SectionCard title="Want your own branded website?">
+                  <EmptyState icon={Globe} title="Upgrade to a full property website" hint="A custom-branded page at your-slug.p2v.homes with photos, videos, staging, booking, lead capture, and more. Own it for $399 or subscribe to Lens Pro."
+                    action={<Button onClick={() => setShowUpgradeModal(true)} className={`${a.btnBg} ${a.btnBgHover} text-white font-bold`}><Globe className="h-4 w-4 mr-2" />Get Your Website</Button>} />
+                </SectionCard>
+              </>
+            )}
 
             {subscriptionTier === "pro" && (
               <>
