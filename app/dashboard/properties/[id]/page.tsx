@@ -638,28 +638,7 @@ function PropertyPageInner() {
               </p>
             </div>
 
-           {/* Inline icon-only quick actions — subtle, tooltip-labeled (desktop only; mobile uses tab pills) */}
-            <div className="hidden md:flex items-center gap-1 flex-shrink-0 bg-white/[0.03] ring-1 ring-white/[0.06] rounded-xl p-1">
-              <Link href={`/order?${qs}`} title="Order Video" aria-label="Order Video" className="p-2.5 rounded-lg text-white/60 hover:text-cyan-300 hover:bg-white/[0.06] transition-colors">
-                <Film className="h-4 w-4" />
-              </Link>
-              {[
-                { href: `/dashboard/lens/coach?${qs}`, icon: Camera, label: "Photo Coach" },
-                { href: `/dashboard/lens/descriptions?${qs}`, icon: FileText, label: "Write Description" },
-                { href: `/dashboard/lens/staging?${qs}`, icon: Sofa, label: "Stage Room" },
-                { href: `/dashboard/lens/design-studio?${qs}`, icon: PenTool, label: "Create Graphic" },
-              ].map(({ href, icon: Icon, label }) => (
-                isSubscriber ? (
-                  <Link key={label} href={href} title={label} aria-label={label} className="p-2.5 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors">
-                    <Icon className="h-4 w-4" />
-                  </Link>
-                ) : (
-                  <Link key={label} href="/lens" title={`${label} (Subscribe)`} aria-label={`${label} (Subscribe)`} className="p-2.5 rounded-lg text-white/30 hover:text-white/50 hover:bg-white/[0.04] transition-colors">
-                    <Lock className="h-4 w-4" />
-                  </Link>
-                )
-              ))}
-            </div>
+           
           </div>
         </div>
       </div>
