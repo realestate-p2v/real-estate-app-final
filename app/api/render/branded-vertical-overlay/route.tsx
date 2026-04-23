@@ -11,8 +11,10 @@ import { getBadgeConfig } from "@/components/design-studio/helpers";
 
 export const runtime = "edge";
 
-const OUT_W = 1080;
-const OUT_H = 1920;
+// Match the main pipeline's vertical video dimensions (768x1364).
+// If the main pipeline's output size ever changes, update both numbers here.
+const OUT_W = 768;
+const OUT_H = 1364;
 
 const BAR_COLOR_FALLBACK = "#111827";
 const ACCENT_COLOR = "#ffffff";
