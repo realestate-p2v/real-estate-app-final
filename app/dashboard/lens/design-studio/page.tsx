@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useRef, useCallback, useEffect, Suspense, type ReactNode } from "react";
 import {
   ChevronDown, Download, Upload, Image as ImageIcon, PenTool, Home, DollarSign,
   CheckCircle, X, Loader2, Palette, CreditCard, User, MapPin,
@@ -448,7 +448,7 @@ function SwatchGrid({colors,current,onSelect,showLabels}:{colors:any[];current:s
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-export default function DesignStudioV2(){
+function DesignStudioContent(){
   const[activeTab,setActiveTab]=useState("templates");
   const[leftPanel,setLeftPanel]=useState("templates");
   const[selectedTemplate,setSelectedTemplate]=useState("just-listed");
@@ -1012,5 +1012,19 @@ export default function DesignStudioV2(){
       {exporting&&exportStatus&&<div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",padding:"12px 20px",borderRadius:12,background:"var(--ss)",border:"1px solid var(--sbr)",boxShadow:"0 8px 32px rgba(0,0,0,0.4)",display:"flex",alignItems:"center",gap:10,fontFamily:"var(--sf)",zIndex:101}}><Loader2 size={14} color="var(--sa)" className="animate-spin"/><div><p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0}}>{exportProgress>0?`Exporting ${exportProgress}%`:"Preparing..."}</p><p style={{fontSize:10,color:"var(--std)",margin:0,marginTop:2}}>{exportStatus}</p></div>{exportProgress>0&&<div style={{width:36,height:36,borderRadius:"50%",background:`conic-gradient(var(--sa) ${exportProgress*3.6}deg, var(--sbr) 0deg)`,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:28,height:28,borderRadius:"50%",background:"var(--ss)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"var(--st)"}}>{exportProgress}%</div></div>}</div>}
       {showGate&&<GateOverlay gateType={gateType} toolName="Design Studio" onClose={()=>setShowGate(false)}/>}
     </div></>
+  );
+}
+export default function DesignStudioV2() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", background: "#0f0f1a", color: "#fff" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Loader2 style={{ animation: "spin 1s linear infinite" }} />
+          <span style={{ fontSize: "18px", fontWeight: 600 }}>Loading Design Studio...</span>
+        </div>
+      </div>
+    }>
+      <DesignStudioContent />
+    </Suspense>
   );
 }
