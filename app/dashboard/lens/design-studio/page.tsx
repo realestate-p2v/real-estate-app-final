@@ -933,21 +933,7 @@ function DesignStudioContent(){
   return(
     <><style>{css}</style>
     <div className="sr">
-      <div className="st">
-        <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:"1px solid var(--sbr)",marginRight:6}}><div style={{width:30,height:30,background:"linear-gradient(135deg,var(--sa),#a855f7)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
-        <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
-        <div className="ssp"/>
-        <div className="sac" style={isMobile?{display:"none"}:undefined}>
-          <button className="bi" title="Undo"><Undo2 size={15}/></button>
-          <button className="bi" title="Redo"><Redo2 size={15}/></button>
-          <div className="td"/>
-          <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
-            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
-          </button>
-        </div>
-      </div>
-
-      {/* Unified tool header — Back + Property selector */}
+      {/* Unified tool header — Back + Property selector (pinned to very top) */}
       <div className="tool-header-row">
         <ToolHeader
           selectedPropertyId={selectedPropertyId}
@@ -960,6 +946,20 @@ function DesignStudioContent(){
           properties={userProperties}
           allowManualEntry
         />
+      </div>
+
+      <div className="st">
+        <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:"1px solid var(--sbr)",marginRight:6}}><div style={{width:30,height:30,background:"linear-gradient(135deg,var(--sa),#a855f7)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
+        <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
+        <div className="ssp"/>
+        <div className="sac" style={isMobile?{display:"none"}:undefined}>
+          <button className="bi" title="Undo"><Undo2 size={15}/></button>
+          <button className="bi" title="Redo"><Redo2 size={15}/></button>
+          <div className="td"/>
+          <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
+            {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
+          </button>
+        </div>
       </div>
 
       <div className="sb">
@@ -979,8 +979,7 @@ function DesignStudioContent(){
               {/* Image / Video toggle */}
               <div style={{display:"flex",gap:3,marginBottom:14}}><button className={`sp ${mediaMode==="image"?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>{setMediaMode("image");setSelectedVideo(null);}}><ImageIcon size={12} style={{display:"inline",verticalAlign:"middle",marginRight:4}}/>Photo</button><button className={`sp ${mediaMode==="video"?"ac":""}`} style={{flex:1,padding:"8px 0",textAlign:"center" as const}} onClick={()=>{setMediaMode("video");loadUserVideos();}}><Film size={12} style={{display:"inline",verticalAlign:"middle",marginRight:4}}/>Video</button></div>
               {mediaMode==="image"?<>
-                <UploadZone label="Listing Photo" imageUrl={listingPhoto} onUpload={f=>gatedAction(()=>setListingPhoto(URL.createObjectURL(f)))} onClear={()=>setListingPhoto(null)} uploading={false}/>
-                <div style={{marginTop:12}}><span className="fl">Stock Photos</span><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}}>{DEMO_PHOTOS.map((url:string,i:number)=><div key={i} onClick={()=>gatedAction(()=>setListingPhoto(url))} style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>)}</div></div>
+                {!selectedPropertyId?<div style={{padding:"20px 12px",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)",background:"rgba(255,255,255,0.02)"}}><ImageIcon size={22} color="var(--std)" style={{margin:"0 auto 8px",opacity:0.6}}/><p style={{fontSize:11,color:"var(--std)",margin:0,lineHeight:1.5}}>Select a property above to load its photos automatically.</p></div>:flyerPhotos.length===0?<div style={{padding:"20px 12px",textAlign:"center" as const,borderRadius:10,border:"1px dashed var(--sbr)",background:"rgba(255,255,255,0.02)"}}><ImageIcon size={22} color="var(--std)" style={{margin:"0 auto 8px",opacity:0.6}}/><p style={{fontSize:11,color:"var(--std)",margin:0,lineHeight:1.5}}>No photos found for this property yet.</p></div>:<><p style={{fontSize:11,color:"var(--std)",marginBottom:10,lineHeight:1.5}}>Photos auto-loaded from this property’s order. Tap one to use it.</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>{flyerPhotos.map((url:string,i:number)=>(<div key={i} onClick={()=>gatedAction(()=>setListingPhoto(url))} style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",cursor:"pointer",border:listingPhoto===url?"2px solid var(--sa)":"1px solid var(--sbr)",boxShadow:listingPhoto===url?"0 0 0 2px var(--sag)":"none"}}><img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>{listingPhoto===url&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",background:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={10} color="#fff"/></div>}</div>))}</div></>}
               </>:<>
                 {/* Video library */}
                 {selectedVideo&&<div style={{marginBottom:12,borderRadius:10,overflow:"hidden",border:"2px solid var(--sa)",position:"relative"}}><video src={selectedVideo.url} style={{width:"100%",aspectRatio:"16/9",objectFit:"cover"}} muted playsInline/><div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 10px",background:"linear-gradient(transparent,rgba(0,0,0,0.7))"}}><p style={{fontSize:10,color:"#fff",fontWeight:600,margin:0}}>{selectedVideo.address}</p></div><button onClick={()=>setSelectedVideo(null)} style={{position:"absolute",top:6,right:6,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,0.7)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><X size={10} color="#fff"/></button></div>}
