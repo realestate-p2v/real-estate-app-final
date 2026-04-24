@@ -18,6 +18,8 @@ import {
   truncateText,
 } from "@/components/design-studio/helpers";
 import { InfoBarTemplate } from "@/components/design-studio/info-bar-template";
+import { ToolHeader } from "@/components/tool-header";
+import { useRouter, useSearchParams } from "next/navigation";
 
 
 // ─── MagazineCoverTemplate ───────────────────────────────────────────────────
@@ -526,6 +528,8 @@ export default function DesignStudioV2(){
   const[theme,setTheme]=useState<"dark"|"light">("dark");
   const[mobilePanel,setMobilePanel]=useState<string|null>(null);
   const[isMobile,setIsMobile]=useState(false);
+  const router=useRouter();
+  const searchParams=useSearchParams();
   useEffect(()=>{const check=()=>setIsMobile(window.innerWidth<850);check();window.addEventListener("resize",check);return()=>window.removeEventListener("resize",check);},[]);
   useEffect(()=>{if(mobilePanel){document.body.style.overflow="hidden";}else{document.body.style.overflow="";}return()=>{document.body.style.overflow="";};},[mobilePanel]);
   const previewRef=useRef<HTMLDivElement>(null);
@@ -870,6 +874,7 @@ export default function DesignStudioV2(){
     .ps{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;appearance:none;cursor:pointer;}.ps:focus{border-color:var(--sa);}
     .am-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--sbr);background:var(--si);cursor:pointer;font-size:11px;font-weight:600;color:var(--std);transition:all 0.15s;font-family:var(--sf);}.am-chip:hover{background:var(--sih);color:var(--st);}.am-chip.ac{border-color:var(--sa);background:var(--sag);color:var(--sa);}
     .back-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;margin-right:4px;}.back-btn:hover{background:var(--sih);color:var(--st);}
+    .tool-header-row{padding:12px 18px;background:var(--ss);border-bottom:1px solid var(--sbr);flex-shrink:0;}
     #lensy-chat-widget,#lensy-chat-bubble,.lensy-widget,.lensy-bubble,[data-lensy],[id*='lensy'],iframe[src*='lensy']{display:none!important;visibility:hidden!important;}
     @media(max-width:849px){
       .st{height:auto;min-height:48px;flex-wrap:wrap;padding:8px 10px;gap:6px;}
@@ -888,6 +893,7 @@ export default function DesignStudioV2(){
       .mob-export-fab{position:fixed;bottom:72px;right:16px;z-index:88;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--sa),#7c3aed);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(99,102,241,0.4);}
       .mob-export-fab:active{transform:scale(0.95);}
       .mob-prop-sel{width:100%!important;margin-left:0!important;}
+      .tool-header-row{padding:10px 12px;}
     }
   `;
 
@@ -896,10 +902,8 @@ export default function DesignStudioV2(){
     <><style>{css}</style>
     <div className="sr">
       <div className="st">
-        <a href="/dashboard" className="back-btn" title="Back"><ChevronLeft size={14}/></a>
         <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:"1px solid var(--sbr)",marginRight:6}}><div style={{width:30,height:30,background:"linear-gradient(135deg,var(--sa),#a855f7)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><PenTool size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Design Studio</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
-        <div style={{marginLeft:isMobile?0:12,display:"flex",alignItems:"center",gap:8,flex:isMobile?"1 1 100%":undefined}}><Home size={14} color="var(--sa)"/><select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:isMobile?"100%":220}}><option value="">Select property...</option>{userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}<option value="__new__">{"\uff0b"} Enter manually</option></select></div>
         <div className="ssp"/>
         <div className="sac" style={isMobile?{display:"none"}:undefined}>
           <button className="bi" title="Undo"><Undo2 size={15}/></button>
@@ -909,6 +913,23 @@ export default function DesignStudioV2(){
             {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
           </button>
         </div>
+      </div>
+
+      {/* Unified tool header — Back + Property selector */}
+      <div className="tool-header-row">
+        <ToolHeader
+          selectedPropertyId={selectedPropertyId}
+          onSelectProperty={(id)=>{
+            const params=new URLSearchParams(searchParams.toString());
+            if(id===null){handleSelectProperty("");params.delete("propertyId");}
+            else if(id==="__new__"){handleSelectProperty("__new__");params.delete("propertyId");}
+            else{handleSelectProperty(id);params.set("propertyId",id);}
+            const qs=params.toString();
+            router.replace(qs?`?${qs}`:window.location.pathname);
+          }}
+          properties={userProperties}
+          allowManualEntry
+        />
       </div>
 
       <div className="sb">
