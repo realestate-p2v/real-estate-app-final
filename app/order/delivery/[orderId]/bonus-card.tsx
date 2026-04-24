@@ -2,9 +2,9 @@
 //
 // Client component for a single bonus card on the delivery page.
 // Thumbnail fills the card preview; tap opens a full-screen lightbox.
-// Download buttons on both the card and the lightbox. Link-type cards
-// open an external page in a new tab and show a link-icon overlay on
-// the thumbnail.
+// Three buttons in the card footer: Open (lightbox/external), Download
+// (when applicable), and Edit in tool (deep-links to the Lens tool that
+// created this bonus, with propertyId preselected).
 //
 // Uses raw Cloudinary URLs (no transforms) because this account has
 // restrictions that 404 on-the-fly transform URLs. CSS object-cover
@@ -22,6 +22,8 @@ type Props = {
   mediaUrl: string | null;
   mediaType: "video" | "image" | "link";
   linkUrl?: string;
+  editLabel: string;
+  editUrl: string;
 };
 
 function withAttachmentFlag(url: string): string {
@@ -38,6 +40,8 @@ export default function BonusCard({
   mediaUrl,
   mediaType,
   linkUrl,
+  editLabel,
+  editUrl,
 }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -142,28 +146,28 @@ export default function BonusCard({
             {description}
           </p>
 
-          {/* CTA row */}
-          <div className="flex items-center gap-2">
+          {/* CTA row — Open + Download + Edit */}
+          <div className="flex flex-wrap items-center gap-2">
             {isInteractive ? (
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
+                className="flex-1 min-w-[88px] inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
               >
                 Open →
               </button>
             ) : (
-              <a
+              
                 href={linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
+                className="flex-1 min-w-[88px] inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
               >
                 View page →
               </a>
             )}
             {downloadUrl && (
-              <a
+              
                 href={downloadUrl}
                 className="inline-flex items-center justify-center bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
                 title="Download"
@@ -172,6 +176,12 @@ export default function BonusCard({
                 ⬇
               </a>
             )}
+            
+              href={editUrl}
+              className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 bg-indigo-500/15 hover:bg-indigo-500/25 ring-1 ring-indigo-400/30 text-indigo-200 font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
+            >
+              {editLabel} →
+            </a>
           </div>
         </div>
       </div>
@@ -222,7 +232,7 @@ export default function BonusCard({
 
             {/* Lightbox action bar */}
             {downloadUrl && (
-              <a
+              
                 href={downloadUrl}
                 className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors shadow-lg"
               >
