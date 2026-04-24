@@ -26,6 +26,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { GateOverlay } from "@/components/gate-overlay";
 import { SpinWheel } from "@/components/spin-wheel";
+import { ToolHeader } from "@/components/tool-header";
 
 type Style = "professional" | "luxury" | "conversational" | "concise";
 
@@ -492,19 +493,24 @@ function DescriptionWriterInner() {
 
   return (
     <>
-      {/* Header */}
-      <div className="mc-animate flex items-center gap-3 mb-8">
-        <Link href="/dashboard" className="text-white/50 hover:text-white transition-colors">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
-            AI Listing Description Writer
-          </h1>
-          <p className="text-white/50 mt-1">
-            Upload photos + enter property details → get an MLS-ready description
-          </p>
-        </div>
+      {/* Unified tool header — Back + Property selector */}
+      <div className="mc-animate">
+        <ToolHeader
+          selectedPropertyId={selectedPropertyId}
+          onSelectProperty={(id) => handleSelectProperty(id ?? "")}
+          properties={userProperties}
+          allowManualEntry
+        />
+      </div>
+
+      {/* Tool title */}
+      <div className="mc-animate mb-8" style={{ animationDelay: "0.02s" }}>
+        <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          AI Listing Description Writer
+        </h1>
+        <p className="text-white/50 mt-1">
+          Upload photos + enter property details → get an MLS-ready description
+        </p>
       </div>
 
       {/* Subscription / trial badge */}
@@ -529,32 +535,7 @@ function DescriptionWriterInner() {
         </div>
       )}
 
-      {/* Property Selector */}
-      {userProperties.length > 0 && (
-        <div className="mc-animate rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 mb-6 backdrop-blur-sm" style={{ animationDelay: "0.1s" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <Home className={`h-5 w-5 ${a.text}`} />
-            <h2 className="text-lg font-bold text-white">Select a Property</h2>
-          </div>
-          <p className="text-sm text-white/50 mb-3">
-            Choose a property to auto-fill details and photos, or enter everything manually.
-          </p>
-          <select
-            value={selectedPropertyId || ""}
-            onChange={(e) => handleSelectProperty(e.target.value)}
-            className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white focus:border-${a.text.replace("text-", "")}/40 focus:outline-none`}
-            style={{ colorScheme: "dark" }}
-          >
-            <option value="">Select property...</option>
-            {userProperties.map((p: any) => (
-              <option key={p.id} value={p.id} className="bg-gray-900">
-                {p.address}{p.city ? `, ${p.city}` : ""}
-              </option>
-            ))}
-            <option value="__new__" className="bg-gray-900">＋ Enter details manually</option>
-          </select>
-        </div>
-      )}
+      {/* Property selector moved into ToolHeader at top of page */}
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left Column: Inputs */}
