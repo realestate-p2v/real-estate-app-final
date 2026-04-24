@@ -701,7 +701,7 @@ export default function DashboardPage() {
 
         {/* ═══ PAGE TITLE ═══ */}
         <div className="mc-animate mb-2" style={{ animationDelay: "0.07s" }}>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">P2V Lens | AI Tools</h1>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">P2V Lens&nbsp; |&nbsp; AI Tools</h1>
         </div>
 
         {/* ═══ TRIAL BANNER — active trial ═══ */}
