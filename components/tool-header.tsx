@@ -37,35 +37,37 @@ export type ToolHeaderProps = {
   // (default: "__new__") so the parent can wipe its form state.
   allowManualEntry?: boolean;
   manualEntryValue?: string; // defaults to "__new__"
-
-  // Optional label override for the property selector eyebrow
-  // (default: "Working on")
-  propertyEyebrow?: string;
 };
 
 // Tailwind class strings hoisted to module scope — avoids Turbopack parser edge cases
 // with long template-string interpolation inside JSX.
 const BACK_BTN_CLASS =
-  // Layout: self-start keeps the pill from stretching full-width when the header stacks on mobile.
-  // min-h-[40px] gives a comfortable tap target without overwhelming desktop.
-  "self-start inline-flex items-center gap-2 rounded-full " +
-  "px-4 py-2 md:px-5 md:py-2.5 min-h-[40px] " +
+  // Layout: self-start prevents full-width stretch on mobile; min-h ensures tap target.
+  "group self-start inline-flex items-center gap-2 rounded-full " +
+  "px-4 py-2.5 md:px-5 md:py-3 min-h-[44px] " +
   "text-[13px] md:text-sm font-semibold tracking-tight " +
-  // Subtle frosted pill — slightly brighter than the surrounding surface so it reads as interactive
-  "bg-white/[0.08] text-white/90 ring-1 ring-white/[0.12] " +
-  "shadow-sm shadow-black/20 " +
-  "hover:bg-white/[0.14] hover:text-white hover:ring-white/[0.22] hover:shadow-md " +
+  // Soft gradient pill with subtle inner highlight — reads as a polished UI element
+  "bg-gradient-to-b from-white/[0.10] to-white/[0.04] " +
+  "text-white/85 " +
+  "ring-1 ring-white/[0.14] " +
+  "shadow-[0_1px_0_0_rgba(255,255,255,0.08)_inset,0_2px_8px_-2px_rgba(0,0,0,0.4)] " +
+  // Hover: brighten gradient, strengthen ring/shadow, nudge arrow left
+  "hover:from-white/[0.16] hover:to-white/[0.08] " +
+  "hover:text-white hover:ring-white/[0.25] " +
+  "hover:shadow-[0_1px_0_0_rgba(255,255,255,0.14)_inset,0_4px_14px_-2px_rgba(0,0,0,0.5)] " +
   "active:scale-[0.97] " +
-  "transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/40 " +
+  "transition-all duration-200 ease-out " +
+  "focus:outline-none focus:ring-2 focus:ring-white/50 " +
   "shrink-0";
 
 const PROP_EYEBROW_CLASS =
   "text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] text-white/50 mb-1.5";
 
 const PROP_SELECT_BASE =
-  "w-full md:min-w-[280px] lg:min-w-[340px] md:w-auto " +
+  "w-full md:min-w-[320px] lg:min-w-[380px] md:w-auto " +
   "appearance-none cursor-pointer " +
-  "rounded-xl px-5 py-3 pr-12 " +
+  "rounded-xl px-5 pr-12 " +
+  "min-h-[52px] " +
   "text-base font-bold text-white " +
   "bg-emerald-500/[0.08] " +
   "hover:bg-emerald-500/[0.12] " +
@@ -100,7 +102,6 @@ export function ToolHeader({
   backHref,
   allowManualEntry = false,
   manualEntryValue = "__new__",
-  propertyEyebrow = "Working on",
 }: ToolHeaderProps) {
   const router = useRouter();
   const autoSelectedRef = useRef<string | null>(null);
@@ -159,7 +160,7 @@ export function ToolHeader({
       data-tool-header="true"
     >
       {/* Primary row: Back + Property */}
-      <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
         {/* Back button */}
         <button
           type="button"
@@ -167,13 +168,12 @@ export function ToolHeader({
           className={BACK_BTN_CLASS}
           aria-label="Back to tools"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
           <span>Back to tools</span>
         </button>
 
-        {/* Property selector — wrapped so the eyebrow label sits above the control */}
+        {/* Property selector */}
         <div className="flex-1 md:flex-none">
-          <div className={PROP_EYEBROW_CLASS}>{propertyEyebrow}</div>
           <div className="relative">
             <Home
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60"
