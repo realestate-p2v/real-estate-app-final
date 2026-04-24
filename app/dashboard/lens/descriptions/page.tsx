@@ -494,7 +494,7 @@ function DescriptionWriterInner() {
   return (
     <>
       {/* Unified tool header — Back + Property selector */}
-      <div className="mc-animate">
+      <div className="mc-animate mb-6">
         <ToolHeader
           selectedPropertyId={selectedPropertyId}
           onSelectProperty={(id) => handleSelectProperty(id ?? "")}
