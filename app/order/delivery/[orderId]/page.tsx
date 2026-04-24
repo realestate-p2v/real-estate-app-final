@@ -9,11 +9,21 @@
 // already signed in — which is what makes the bonus-card Edit
 // buttons actually work, and what makes the Navigation bar show
 // their account menu.
+//
+// Vertical order (top to bottom):
+//   1. Nav bar
+//   2. Header (title + address)
+//   3. Main video + download CTA
+//   4. "Make another video" cyan CTA (every order)
+//   5. "Plus 3 bonuses below" chevron (only if bonus section renders)
+//   6. Bonus grid — 3 cards w/ Open + Download + Edit buttons
+//   7. "Made with P2V Lens" indigo ecosystem CTA (only with bonuses)
+//   8. Footer
 
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Download } from "lucide-react";
+import { Download, ChevronDown } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 import BonusCard from "./bonus-card";
 
@@ -103,6 +113,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const mainDownloadBtnClass =
   "inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm px-5 py-3 rounded-full transition-colors shadow-lg";
 
+const reorderBtnClass =
+  "inline-flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-gray-900 font-bold text-sm px-5 py-3 rounded-full transition-colors whitespace-nowrap";
+
+const ecosystemBtnClass =
+  "inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors";
+
 export default async function DeliveryPage({ params }: Props) {
   const { orderId } = await params;
   const data = await getDeliveryData(orderId);
@@ -145,6 +161,7 @@ export default async function DeliveryPage({ params }: Props) {
       <Navigation />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+        {/* Header */}
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-300 mb-2">
             Your video is ready
@@ -157,8 +174,9 @@ export default async function DeliveryPage({ params }: Props) {
           ) : null}
         </div>
 
+        {/* Main video */}
         {mainVideoUrl ? (
-          <section className="mb-12">
+          <section className="mb-8">
             <div className="rounded-2xl overflow-hidden bg-black shadow-2xl ring-1 ring-white/10 aspect-video">
               <video
                 src={mainVideoUrl}
@@ -183,7 +201,7 @@ export default async function DeliveryPage({ params }: Props) {
             </div>
           </section>
         ) : (
-          <section className="mb-12 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
+          <section className="mb-8 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
             <p className="text-base font-bold text-amber-200">
               Your video is still processing.
             </p>
@@ -194,19 +212,49 @@ export default async function DeliveryPage({ params }: Props) {
           </section>
         )}
 
+        {/* "Make another video" CTA — every order, right under the main video */}
+        <div className="mb-10 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 ring-1 ring-cyan-400/25 p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg sm:text-xl font-extrabold text-white mb-1">
+              Got another listing?
+            </h3>
+            <p className="text-sm text-white/65">
+              Order your next video in under 2 minutes — $79 or free with your
+              Lens subscription.
+            </p>
+          </div>
+          <a href="/order" className={reorderBtnClass}>
+            Make another video →
+          </a>
+        </div>
+
+        {/* Chevron affordance — only when bonus section renders */}
+        {showBonusSection ? (
+          <div className="flex flex-col items-center justify-center mb-10 text-white/50">
+            <p className="text-xs font-bold uppercase tracking-[0.14em]">
+              Plus 3 bonuses below
+            </p>
+            <ChevronDown
+              className="h-5 w-5 mt-1 animate-bounce"
+              strokeWidth={2}
+            />
+          </div>
+        ) : null}
+
+        {/* Bonus content */}
         {showBonusSection ? (
           <section>
-            <div className="flex items-center gap-3 mb-5">
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
                 Bonus content
               </h2>
-              <span className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-300 bg-indigo-400/15 ring-1 ring-indigo-400/30 px-2.5 py-1 rounded-full">
-                On the house
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300 bg-emerald-400/15 ring-1 ring-emerald-400/30 px-2.5 py-1 rounded-full">
+                $49 value — FREE
               </span>
             </div>
             <p className="text-sm text-white/55 mb-6">
-              Since this was your first order, we created three extras at no
-              charge.
+              Three pieces of marketing made with P2V Lens — normally a $49
+              value, free with your first order.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -245,6 +293,27 @@ export default async function DeliveryPage({ params }: Props) {
                 />
               ) : null}
             </div>
+          </section>
+        ) : null}
+
+        {/* "Made with P2V Lens" ecosystem CTA — only when bonus section renders */}
+        {showBonusSection ? (
+          <section className="mt-10 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 ring-1 ring-indigo-400/20 p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-300 mb-2">
+              Made with P2V Lens
+            </p>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-white mb-2 leading-snug">
+              Build unlimited marketing like this
+            </h3>
+            <p className="text-sm text-white/65 mb-5 leading-relaxed">
+              Every piece above was created with a Lens AI tool — and you have
+              free access for the next 10 days. Generate more flyers, social
+              clips, virtual staging, photo coach reviews, and 10+ other tools
+              for any of your listings.
+            </p>
+            <a href="/dashboard/lens" className={ecosystemBtnClass}>
+              Explore Lens tools →
+            </a>
           </section>
         ) : null}
 
