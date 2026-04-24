@@ -4,20 +4,17 @@
 // sample_worker.py after the mini-pipeline completes.
 //
 // NO AUTH — anyone with the order_id can view. The order_id is
-// unguessable and the content is intended for sharing by the agent
-// anyway, so this is acceptable. However, the delivery email sends
-// a magic link so first-buyers land here already signed in — which
-// is what makes the bonus-card Edit buttons actually work.
-//
-// Server component fetches data. Bonus cards are rendered by a small
-// client component (./bonus-card) so they can open a lightbox modal
-// on tap without leaving the page. Each card has an Edit button that
-// deep-links to the Lens tool that created the bonus, with the
-// propertyId preselected.
+// unguessable and the content is intended for sharing by the agent.
+// The delivery email sends a magic link so first-buyers land here
+// already signed in — which is what makes the bonus-card Edit
+// buttons actually work, and what makes the Navigation bar show
+// their account menu.
 
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Download } from "lucide-react";
+import { Navigation } from "@/components/navigation";
 import BonusCard from "./bonus-card";
 
 type Props = {
@@ -103,8 +100,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const downloadBtnClass =
-  "inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors";
+const mainDownloadBtnClass =
+  "inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm px-5 py-3 rounded-full transition-colors shadow-lg";
 
 export default async function DeliveryPage({ params }: Props) {
   const { orderId } = await params;
@@ -132,8 +129,6 @@ export default async function DeliveryPage({ params }: Props) {
     data.sample_content_generated &&
     (hasBranded || hasFlyer || hasListingPage);
 
-  // Edit-in-tool URLs for each bonus. All gated on agent_property_id
-  // being present — the tools need it to preselect the property.
   const propertyId = data.agent_property_id;
   const verticalEditUrl = propertyId
     ? `/dashboard/lens/design-studio?template=social&propertyId=${propertyId}`
@@ -147,6 +142,8 @@ export default async function DeliveryPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
+      <Navigation />
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-300 mb-2">
@@ -175,8 +172,9 @@ export default async function DeliveryPage({ params }: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-5">
               {mainVideoDownloadUrl ? (
-                <a href={mainVideoDownloadUrl} className={downloadBtnClass}>
-                  ⬇ Download video
+                <a href={mainVideoDownloadUrl} className={mainDownloadBtnClass}>
+                  <Download className="h-4 w-4" strokeWidth={2.5} />
+                  Download video
                 </a>
               ) : null}
               <p className="text-sm text-white/50">
