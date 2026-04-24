@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Download } from "lucide-react";
-import { Navigation } from "@/components/navigation";
 import BonusCard from "./bonus-card";
 
 type Props = {
@@ -142,7 +141,7 @@ export default async function DeliveryPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
-      <Navigation />
+     
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
         <div className="mb-8">
