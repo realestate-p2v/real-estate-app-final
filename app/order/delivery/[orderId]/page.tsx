@@ -5,11 +5,15 @@
 //
 // NO AUTH — anyone with the order_id can view. The order_id is
 // unguessable and the content is intended for sharing by the agent
-// anyway, so this is acceptable.
+// anyway, so this is acceptable. However, the delivery email sends
+// a magic link so first-buyers land here already signed in — which
+// is what makes the bonus-card Edit buttons actually work.
 //
 // Server component fetches data. Bonus cards are rendered by a small
 // client component (./bonus-card) so they can open a lightbox modal
-// on tap without leaving the page.
+// on tap without leaving the page. Each card has an Edit button that
+// deep-links to the Lens tool that created the bonus, with the
+// propertyId preselected.
 
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
@@ -125,6 +129,19 @@ export default async function DeliveryPage({ params }: Props) {
     data.sample_content_generated &&
     (hasBranded || hasFlyer || hasListingPage);
 
+  // Edit-in-tool URLs for each bonus. All gated on agent_property_id
+  // being present — the tools need it to preselect the property.
+  const propertyId = data.agent_property_id;
+  const verticalEditUrl = propertyId
+    ? `/dashboard/lens/design-studio?template=social&propertyId=${propertyId}`
+    : `/dashboard/lens/design-studio`;
+  const flyerEditUrl = propertyId
+    ? `/dashboard/lens/design-studio?template=listing_flyer&propertyId=${propertyId}`
+    : `/dashboard/lens/design-studio`;
+  const listingEditUrl = propertyId
+    ? `/dashboard/properties/${propertyId}#website`
+    : `/dashboard/properties`;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
@@ -157,7 +174,7 @@ export default async function DeliveryPage({ params }: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-5">
               {mainVideoDownloadUrl && (
-                <a
+                
                   href={mainVideoDownloadUrl}
                   className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors"
                 >
@@ -205,6 +222,8 @@ export default async function DeliveryPage({ params }: Props) {
                   description="Your video with headshot, brokerage, and contact info baked in. Drop it into Reels, TikTok, or Shorts."
                   mediaUrl={data.branded_vertical_sample_url}
                   mediaType="video"
+                  editLabel="Edit in Design Studio"
+                  editUrl={verticalEditUrl}
                 />
               )}
               {hasFlyer && data.branded_flyer_sample_url && (
@@ -214,6 +233,8 @@ export default async function DeliveryPage({ params }: Props) {
                   description="A full-page PNG with your branding, photos, price, and listing details. Print or share digitally."
                   mediaUrl={data.branded_flyer_sample_url}
                   mediaType="image"
+                  editLabel="Edit in Design Studio"
+                  editUrl={flyerEditUrl}
                 />
               )}
               {hasListingPage && listingPageUrl && (
@@ -224,6 +245,8 @@ export default async function DeliveryPage({ params }: Props) {
                   mediaUrl={data.hero_photo_url}
                   mediaType="link"
                   linkUrl={listingPageUrl}
+                  editLabel="Edit website"
+                  editUrl={listingEditUrl}
                 />
               )}
             </div>
