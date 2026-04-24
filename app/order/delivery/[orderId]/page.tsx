@@ -103,6 +103,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const downloadBtnClass =
+  "inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors";
+
 export default async function DeliveryPage({ params }: Props) {
   const { orderId } = await params;
   const data = await getDeliveryData(orderId);
@@ -145,7 +148,6 @@ export default async function DeliveryPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-        {/* Header */}
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-300 mb-2">
             Your video is ready
@@ -153,12 +155,11 @@ export default async function DeliveryPage({ params }: Props) {
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
             {data.property_address || "Your listing"}
           </h1>
-          {cityState && (
+          {cityState ? (
             <p className="text-base text-white/60 mt-1.5">{cityState}</p>
-          )}
+          ) : null}
         </div>
 
-        {/* Main video */}
         {mainVideoUrl ? (
           <section className="mb-12">
             <div className="rounded-2xl overflow-hidden bg-black shadow-2xl ring-1 ring-white/10 aspect-video">
@@ -173,14 +174,11 @@ export default async function DeliveryPage({ params }: Props) {
               />
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-5">
-              {mainVideoDownloadUrl && (
-                
-                  href={mainVideoDownloadUrl}
-                  className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors"
-                >
+              {mainVideoDownloadUrl ? (
+                <a href={mainVideoDownloadUrl} className={downloadBtnClass}>
                   ⬇ Download video
                 </a>
-              )}
+              ) : null}
               <p className="text-sm text-white/50">
                 Ready to post anywhere you share listings.
               </p>
@@ -192,14 +190,13 @@ export default async function DeliveryPage({ params }: Props) {
               Your video is still processing.
             </p>
             <p className="text-sm text-amber-200/70 mt-1">
-              Check back in a few minutes — we'll also email you once it's
+              Check back in a few minutes — we&apos;ll also email you once it&apos;s
               ready.
             </p>
           </section>
         )}
 
-        {/* Bonus content */}
-        {showBonusSection && (
+        {showBonusSection ? (
           <section>
             <div className="flex items-center gap-3 mb-5">
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
@@ -215,7 +212,7 @@ export default async function DeliveryPage({ params }: Props) {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {hasBranded && data.branded_vertical_sample_url && (
+              {hasBranded && data.branded_vertical_sample_url ? (
                 <BonusCard
                   tag="Branded vertical"
                   title="9:16 social clip"
@@ -225,8 +222,8 @@ export default async function DeliveryPage({ params }: Props) {
                   editLabel="Edit in Design Studio"
                   editUrl={verticalEditUrl}
                 />
-              )}
-              {hasFlyer && data.branded_flyer_sample_url && (
+              ) : null}
+              {hasFlyer && data.branded_flyer_sample_url ? (
                 <BonusCard
                   tag="Branded flyer"
                   title="Printable listing sheet"
@@ -236,8 +233,8 @@ export default async function DeliveryPage({ params }: Props) {
                   editLabel="Edit in Design Studio"
                   editUrl={flyerEditUrl}
                 />
-              )}
-              {hasListingPage && listingPageUrl && (
+              ) : null}
+              {hasListingPage && listingPageUrl ? (
                 <BonusCard
                   tag="Listing page"
                   title="Public property website"
@@ -248,10 +245,10 @@ export default async function DeliveryPage({ params }: Props) {
                   editLabel="Edit website"
                   editUrl={listingEditUrl}
                 />
-              )}
+              ) : null}
             </div>
           </section>
-        )}
+        ) : null}
 
         <p className="text-xs text-white/35 mt-12 text-center">
           Questions? Reply to your delivery email — we read every one.
