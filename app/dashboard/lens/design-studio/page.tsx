@@ -551,10 +551,16 @@ function DesignStudioContent(){
   useEffect(()=>{
     if(typeof window==="undefined")return;
     const params=new URLSearchParams(window.location.search);
-    const tpl=params.get("template");const pid=params.get("propertyId");
+    const tpl=params.get("template");
     if(tpl==="listing_flyer")setActiveTab("listing-flyer");
     if(tpl==="social")setActiveTab("templates");
-    if(pid)setSelectedPropertyId(pid);
+    // Property selection is NEVER restored from URL - always starts blank on reload
+    // Also strip any existing propertyId from the URL so it doesn't stick across reloads
+    if(params.has("propertyId")){
+      params.delete("propertyId");
+      const qs=params.toString();
+      window.history.replaceState({},"",qs?`?${qs}`:window.location.pathname);
+    }
   },[]);
 
   useEffect(()=>{
@@ -946,12 +952,10 @@ function DesignStudioContent(){
         <ToolHeader
           selectedPropertyId={selectedPropertyId}
           onSelectProperty={(id)=>{
-            const params=new URLSearchParams(searchParams.toString());
-            if(id===null){handleSelectProperty("");params.delete("propertyId");}
-            else if(id==="__new__"){handleSelectProperty("__new__");params.delete("propertyId");}
-            else{handleSelectProperty(id);params.set("propertyId",id);}
-            const qs=params.toString();
-            router.replace(qs?`?${qs}`:window.location.pathname);
+            // Selection is session-only; never written to URL so it never sticks on reload
+            if(id===null)handleSelectProperty("");
+            else if(id==="__new__")handleSelectProperty("__new__");
+            else handleSelectProperty(id);
           }}
           properties={userProperties}
           allowManualEntry
