@@ -699,6 +699,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ═══ PAGE TITLE ═══ */}
+        <div className="mc-animate mb-2" style={{ animationDelay: "0.07s" }}>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">P2V Lens | AI Tools</h1>
+        </div>
+
         {/* ═══ TRIAL BANNER — active trial ═══ */}
         {access.tier === "trial" && access.trialDaysLeft !== undefined && (
           <div className={`mc-animate mt-4 rounded-xl border p-4 ${access.trialDaysLeft <= 3 ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-cyan-400/15 bg-cyan-400/[0.04]"}`} style={{ animationDelay: "0.08s" }}>
