@@ -44,7 +44,7 @@ export type ToolHeaderProps = {
 const BACK_BTN_CLASS =
   // Layout: self-start prevents full-width stretch on mobile; min-h ensures tap target.
   "group self-start inline-flex items-center gap-2 rounded-full " +
-  "px-4 py-2.5 md:px-5 md:py-3 min-h-[44px] " +
+  "px-[18px] py-2.5 md:px-[22px] md:py-3 min-h-[44px] " +
   "text-[13px] md:text-sm font-semibold tracking-tight " +
   // Soft gradient pill with subtle inner highlight — reads as a polished UI element
   "bg-gradient-to-b from-white/[0.10] to-white/[0.04] " +
