@@ -9,21 +9,11 @@
 // already signed in — which is what makes the bonus-card Edit
 // buttons actually work, and what makes the Navigation bar show
 // their account menu.
-//
-// Vertical order (top to bottom):
-//   1. Nav bar
-//   2. Header (title + address)
-//   3. Main video + download CTA
-//   4. "Make another video" cyan CTA (every order)
-//   5. "Plus 3 bonuses below" chevron (only if bonus section renders)
-//   6. Bonus grid — 3 cards w/ Open + Download + Edit buttons
-//   7. "Made with P2V Lens" indigo ecosystem CTA (only with bonuses)
-//   8. Footer
 
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Download, ChevronDown } from "lucide-react";
+import { Download, ChevronDown, RefreshCw } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 import BonusCard from "./bonus-card";
 
@@ -113,6 +103,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const mainDownloadBtnClass =
   "inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm px-5 py-3 rounded-full transition-colors shadow-lg";
 
+const revisionBtnClass =
+  "inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 ring-1 ring-white/20 text-white font-bold text-sm px-5 py-3 rounded-full transition-colors";
+
 const reorderBtnClass =
   "inline-flex items-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-gray-900 font-bold text-sm px-5 py-3 rounded-full transition-colors whitespace-nowrap";
 
@@ -156,6 +149,8 @@ export default async function DeliveryPage({ params }: Props) {
     ? `/dashboard/properties/${propertyId}#website`
     : `/dashboard/properties`;
 
+  const revisionUrl = `/video/${data.order_id}/revise`;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
       <Navigation />
@@ -195,6 +190,10 @@ export default async function DeliveryPage({ params }: Props) {
                   Download video
                 </a>
               ) : null}
+              <a href={revisionUrl} className={revisionBtnClass}>
+                <RefreshCw className="h-4 w-4" strokeWidth={2.5} />
+                Request a revision
+              </a>
               <p className="text-sm text-white/50">
                 Ready to post anywhere you share listings.
               </p>
