@@ -156,7 +156,7 @@ export function ToolHeader({
 
   return (
     <div
-      className="w-full mb-6"
+      className="w-full"
       data-tool-header="true"
     >
       {/* Primary row: Back + Property */}
