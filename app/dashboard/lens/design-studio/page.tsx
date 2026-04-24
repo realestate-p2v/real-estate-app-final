@@ -549,6 +549,7 @@ export default function DesignStudioV2(){
     const params=new URLSearchParams(window.location.search);
     const tpl=params.get("template");const pid=params.get("propertyId");
     if(tpl==="listing_flyer")setActiveTab("listing-flyer");
+    if(tpl==="social")setActiveTab("templates");
     if(pid)setSelectedPropertyId(pid);
   },[]);
 
