@@ -46,10 +46,17 @@ export type ToolHeaderProps = {
 // Tailwind class strings hoisted to module scope — avoids Turbopack parser edge cases
 // with long template-string interpolation inside JSX.
 const BACK_BTN_CLASS =
-  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold " +
-  "bg-white/[0.06] text-white ring-1 ring-white/[0.1] " +
-  "hover:bg-white/[0.1] hover:ring-white/[0.2] " +
-  "transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 " +
+  // Layout: self-start keeps the pill from stretching full-width when the header stacks on mobile.
+  // min-h-[40px] gives a comfortable tap target without overwhelming desktop.
+  "self-start inline-flex items-center gap-2 rounded-full " +
+  "px-4 py-2 md:px-5 md:py-2.5 min-h-[40px] " +
+  "text-[13px] md:text-sm font-semibold tracking-tight " +
+  // Subtle frosted pill — slightly brighter than the surrounding surface so it reads as interactive
+  "bg-white/[0.08] text-white/90 ring-1 ring-white/[0.12] " +
+  "shadow-sm shadow-black/20 " +
+  "hover:bg-white/[0.14] hover:text-white hover:ring-white/[0.22] hover:shadow-md " +
+  "active:scale-[0.97] " +
+  "transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/40 " +
   "shrink-0";
 
 const PROP_EYEBROW_CLASS =
@@ -152,16 +159,16 @@ export function ToolHeader({
       data-tool-header="true"
     >
       {/* Primary row: Back + Property */}
-      <div className="flex flex-col md:flex-row md:items-end gap-3">
+      <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
         {/* Back button */}
         <button
           type="button"
           onClick={handleBack}
           className={BACK_BTN_CLASS}
-          aria-label="Go back"
+          aria-label="Back to tools"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
+          <span>Back to tools</span>
         </button>
 
         {/* Property selector — wrapped so the eyebrow label sits above the control */}
