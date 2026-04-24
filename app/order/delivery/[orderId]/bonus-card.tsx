@@ -1,19 +1,12 @@
 // app/order/delivery/[orderId]/bonus-card.tsx
 //
 // Client component for a single bonus card on the delivery page.
-// Thumbnail fills the card preview; tap opens a full-screen lightbox.
-// Download buttons on both the card and the lightbox. Link-type cards
-// open an external page in a new tab and show a link-icon overlay on
-// the thumbnail.
-//
-// Uses raw Cloudinary URLs (no transforms) because this account has
-// restrictions that 404 on-the-fly transform URLs. CSS object-cover
-// handles scaling. For video thumbnails we render the <video> element
-// with preload="metadata" so the browser shows the first frame.
+// Three buttons: Open (white), Download (green), Edit (indigo).
 
 "use client";
 
 import { useState, useEffect } from "react";
+import { Download } from "lucide-react";
 
 type Props = {
   tag: string;
@@ -22,6 +15,8 @@ type Props = {
   mediaUrl: string | null;
   mediaType: "video" | "image" | "link";
   linkUrl?: string;
+  editLabel: string;
+  editUrl: string;
 };
 
 function withAttachmentFlag(url: string): string {
@@ -38,10 +33,11 @@ export default function BonusCard({
   mediaUrl,
   mediaType,
   linkUrl,
+  editLabel,
+  editUrl,
 }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  // Close on Escape + prevent body scroll while modal is open
   useEffect(() => {
     if (!lightboxOpen) return;
     const handler = (e: KeyboardEvent) => {
@@ -68,10 +64,18 @@ export default function BonusCard({
     }
   };
 
+  const openBtnClass =
+    "flex-1 min-w-[88px] inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors";
+  const downloadBtnClass =
+    "inline-flex items-center justify-center bg-emerald-500/15 hover:bg-emerald-500/25 ring-1 ring-emerald-400/30 text-emerald-300 font-bold text-sm px-4 py-2.5 rounded-full transition-colors";
+  const editBtnClass =
+    "flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 bg-indigo-500/15 hover:bg-indigo-500/25 ring-1 ring-indigo-400/30 text-indigo-200 font-bold text-sm px-4 py-2.5 rounded-full transition-colors";
+  const lightboxDownloadClass =
+    "inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm px-5 py-3 rounded-full transition-colors shadow-lg";
+
   return (
     <>
       <div className="rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.08] overflow-hidden flex flex-col">
-        {/* Preview — clickable */}
         <button
           type="button"
           onClick={handlePreviewClick}
@@ -130,7 +134,6 @@ export default function BonusCard({
           )}
         </button>
 
-        {/* Body */}
         <div className="p-5 flex flex-col flex-1">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-indigo-300 mb-2">
             {tag}
@@ -142,13 +145,12 @@ export default function BonusCard({
             {description}
           </p>
 
-          {/* CTA row */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isInteractive ? (
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
+                className={openBtnClass}
               >
                 Open →
               </button>
@@ -157,34 +159,35 @@ export default function BonusCard({
                 href={linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
+                className={openBtnClass}
               >
                 View page →
               </a>
             )}
-            {downloadUrl && (
+            {downloadUrl ? (
               <a
                 href={downloadUrl}
-                className="inline-flex items-center justify-center bg-white/10 hover:bg-white/15 text-white font-bold text-sm px-4 py-2.5 rounded-full transition-colors"
+                className={downloadBtnClass}
                 title="Download"
                 aria-label="Download"
               >
-                ⬇
+                <Download className="h-4 w-4" strokeWidth={2.5} />
               </a>
-            )}
+            ) : null}
+            <a href={editUrl} className={editBtnClass}>
+              {editLabel} →
+            </a>
           </div>
         </div>
       </div>
 
-      {/* ─── LIGHTBOX ─── */}
-      {lightboxOpen && mediaUrl && (
+      {lightboxOpen && mediaUrl ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4 py-6 sm:py-10"
           onClick={() => setLightboxOpen(false)}
           role="dialog"
           aria-modal="true"
         >
-          {/* Close button */}
           <button
             type="button"
             onClick={(e) => {
@@ -197,7 +200,6 @@ export default function BonusCard({
             ×
           </button>
 
-          {/* Content */}
           <div
             className="relative max-w-6xl w-full max-h-full flex flex-col items-center gap-4"
             onClick={(e) => e.stopPropagation()}
@@ -220,18 +222,15 @@ export default function BonusCard({
               />
             )}
 
-            {/* Lightbox action bar */}
-            {downloadUrl && (
-              <a
-                href={downloadUrl}
-                className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-full hover:bg-white/90 transition-colors shadow-lg"
-              >
-                ⬇ Download
+            {downloadUrl ? (
+              <a href={downloadUrl} className={lightboxDownloadClass}>
+                <Download className="h-4 w-4" strokeWidth={2.5} />
+                Download
               </a>
-            )}
+            ) : null}
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }
