@@ -1,43 +1,4 @@
-"use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Navigation } from "@/components/navigation";
-import {
-  ArrowLeft,
-  ImageIcon,
-  Check,
-  CheckCircle2,
-  Loader2,
-  Download,
-  AlertCircle,
-  Info,
-} from "lucide-react";
-import { GateOverlay } from "@/components/gate-overlay";
-
-// ── Types ──
-
-interface Props {
-  userId: string;
-  isLensSubscriber?: boolean;
-  gateType?: "buy_video" | "subscribe" | "upgrade_pro";
-}
-
-interface PropertyOption {
-  id: string;
-  address: string;
-  city: string | null;
-  state: string | null;
-}
-
-interface PhotoItem {
-  id: string;
-  url: string;
-  thumbnailUrl: string;
-  width: number;
-  height: number;
-  fileSize: number;
-  fileSizeLoaded: boolean;
   filename: string;
   alreadyOptimized: boolean;
 }
