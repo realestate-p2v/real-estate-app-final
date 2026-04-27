@@ -12,7 +12,6 @@ import {
   Download,
   Info,
 } from "lucide-react";
-import Navigation from "@/components/Navigation";
 import { GateOverlay } from "@/components/gate-overlay";
 
 // ── Types ──
@@ -598,8 +597,6 @@ export default function PhotoOptimizer({ userId, isLensSubscriber = false, gateT
   // ── Render ──
   return (
     <div className="min-h-screen bg-gray-950">
-      <Navigation />
-
       <div className="mx-auto max-w-[900px] px-4 py-8 sm:px-6">
 
         {/* ── TOP BAR ── */}
