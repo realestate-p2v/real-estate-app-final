@@ -64,14 +64,14 @@ export default async function OrderPage() {
             Upload your photos. We'll handle the rest.
           </h1>
           <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed">
-            Cinematic walkthrough plus unlimited remixes for socials, ready in minutes.
+            Cinematic real estate walkthroughs in minutes + free remixes of your clips for social posts for IG, TikTok, YouTube Shorts, and more.
           </p>
           <p className="mt-2 text-sm text-muted-foreground/80">
             <span className="font-semibold text-foreground/70">$4 per clip</span>
             <span className="mx-2">·</span>
             <span>1 free revision</span>
             <span className="mx-2">·</span>
-            <span>Clips ready for our Lens AI tool suite</span>
+            <span>Clips ready for our AI Tools Suite</span>
           </p>
         </div>
 
