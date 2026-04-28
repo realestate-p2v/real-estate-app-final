@@ -72,6 +72,8 @@ import {
   UNAUTHENTICATED_STATE,
   FREE_FIRST_VIDEO_MIN_CLIPS,
   FREE_FIRST_VIDEO_MAX_CLIPS,
+  PER_CLIP_PRICE,
+  URL_CURATION_FEE,
 } from "@/lib/subscription-state";
 import { extractBrandColor, saveBrandColorToProfile } from "@/lib/brand-color-extraction";
 import { saveProfileFields } from "@/lib/lens-usage-profile";
@@ -84,20 +86,25 @@ import { createClient } from "@/lib/supabase/client";
 
 type PhotoInputMode = "upload" | "url";
 
+// URL mode lets the agent pick a target photo count. Matt manually curates
+// which photos to use from the listing (URL_CURATION_FEE charged on top).
+// Pricing is photoCount × PER_CLIP_PRICE + URL_CURATION_FEE.
 interface ListingPackage {
   label: string;
   photoCount: number;
-  price: number;
+  price: number; // total: clips + curation fee
 }
 
 const LISTING_PACKAGES: ListingPackage[] = [
-  { label: "Up to 15 Photos", photoCount: 15, price: 79 },
-  { label: "Up to 25 Photos", photoCount: 25, price: 99 },
-  { label: "Up to 35 Photos", photoCount: 35, price: 109 },
+  { label: "Up to 15 Photos", photoCount: 15, price: 15 * PER_CLIP_PRICE + URL_CURATION_FEE }, // $85
+  { label: "Up to 25 Photos", photoCount: 25, price: 25 * PER_CLIP_PRICE + URL_CURATION_FEE }, // $125
+  { label: "Up to 35 Photos", photoCount: 35, price: 35 * PER_CLIP_PRICE + URL_CURATION_FEE }, // $165
 ];
 
-const QUICK_VIDEO_RATE = 4.95;
-const NON_SUBSCRIBER_MIN_PHOTOS = 15; // tier 1 entry point
+// Minimum number of photos required to place an order. Below this, the
+// uploader shows a "add at least N photos" warning. Pipeline can handle
+// any count from this minimum upward.
+const ORDER_MIN_PHOTOS = FREE_FIRST_VIDEO_MIN_CLIPS; // 5
 const STANDARD_MAX_PHOTOS = 35;
 const VERTICAL_ADDON_PRICE = 15;
 
@@ -508,19 +515,18 @@ export function OrderForm() {
   const photoCount = photos.length;
   const allUploadsComplete = photos.length > 0 && photos.every((p) => p.uploadStatus === "complete");
 
-  const quickVideoEligible = subState.isQuickVideoEligible;
-  const isQuickVideo =
-    quickVideoEligible && isUploadMode && photoCount >= FREE_FIRST_VIDEO_MIN_CLIPS && photoCount < 15;
+  // Quick Video flag: deprecated as a pricing path (all orders are flat $4/clip
+  // now). Kept as `false` for the order record so legacy property-page UI that
+  // checks `is_quick_video` still works for old orders. Reserved for the future
+  // "stale listing refresh" product (5-8 clip videos for off-platform listings).
+  const isQuickVideo = false;
 
-  // Required min for submit changes based on subscription state
-  const effectiveMinPhotos = quickVideoEligible
-    ? FREE_FIRST_VIDEO_MIN_CLIPS
-    : NON_SUBSCRIBER_MIN_PHOTOS;
+  // Required min for submit — same for everyone now (5 photos).
+  const effectiveMinPhotos = ORDER_MIN_PHOTOS;
 
   // Upload cap is the standard 35-photo ceiling for everyone. Free-first-video
-  // users are NOT hard-capped at 10 — they get $0 on the first 10 clips (5–10
-  // use the free endpoint; 11–14 bill $4.95/clip on the excess through Stripe;
-  // 15+ bill tier pricing minus the $49.50 credit through Stripe).
+  // users are NOT hard-capped at 10 — they get $0 on the first 10 clips, then
+  // pay $4 each for clips 11+ at the same per-clip rate.
   const effectiveMaxPhotos = STANDARD_MAX_PHOTOS;
 
   // "Your Info" step is shown when this is a first-order user (regardless of
@@ -710,58 +716,44 @@ export function OrderForm() {
 
   // ─── Pricing ────────────────────────────────────────────────────────────
   //
-  // Base price, then add-ons, then free-first-video credit applied at the END.
-  // Rationale: add-ons (1080P, photo editing, listing URL service, vertical
-  // add-on) are NOT zeroed by the credit per Matt. Only the base video is.
-  // Computation is:
+  // Flat per-clip pricing for everyone:
+  //   - Upload mode: photoCount × PER_CLIP_PRICE
+  //   - URL mode: listingPackage.price (already includes URL_CURATION_FEE)
   //
-  //   baseAfterCredit = max(0, baseBeforeCredit − creditValue)
-  //   total           = baseAfterCredit + addOns
+  // Add-ons (1080P, photo editing, vertical) are billed on top and are NOT
+  // zeroed by the free-first-video credit.
   //
-  // Credit only applies if the user has hasFreeFirstVideoCredit (landing-page
-  // claimer, unused). The credit is applied regardless of photo count so the
-  // sidebar matches the banner — the 5-photo submit minimum is enforced
-  // separately via effectiveMinPhotos / canProceedFromCurrentStep.
-  //
-  // Dollar value of the credit on tier-priced orders (15+ photos). Matches
-  // the same constant in components/order-summary.tsx — keep in sync.
-  const FREE_FIRST_VIDEO_TIER_CREDIT = 49.5;
+  // Free-first-video credit covers up to FREE_FIRST_VIDEO_MAX_CLIPS clips at
+  // PER_CLIP_PRICE. Past that, additional clips are charged at the same
+  // per-clip rate. Mirror of the same logic in components/order-summary.tsx.
 
   const getBaseBeforeCredit = () => {
     if (isUrlMode && listingPackage) return listingPackage.price;
-    if (isQuickVideo) {
-      return Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
-    }
-    if (photoCount <= 15) return 79;
-    if (photoCount <= 25) return 99;
-    if (photoCount <= 35) return 109;
-    return 0;
+    if (photoCount === 0) return 0;
+    return Math.round(photoCount * PER_CLIP_PRICE * 100) / 100;
   };
 
   const getFreeFirstVideoCredit = () => {
-    if (!subState.hasFreeFirstVideoCredit) return 0;
-    // 0–10 photos: credit fully covers the base (Total = $0) so the UX
-    // matches the "First video on us" promise all the way through. The
-    // 5-photo submit minimum gates the user, not pricing.
-    if (photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS) {
-      return getBaseBeforeCredit();
+    if (!subState.hasFreeFirstVideoCredit || photoCount === 0) return 0;
+    // URL mode: credit covers the per-clip portion only, not the curation fee.
+    if (isUrlMode && listingPackage) {
+      const clipsPortion = Math.round(listingPackage.photoCount * PER_CLIP_PRICE * 100) / 100;
+      const maxCredit = Math.round(FREE_FIRST_VIDEO_MAX_CLIPS * PER_CLIP_PRICE * 100) / 100;
+      return Math.min(clipsPortion, maxCredit);
     }
-    // 11+ photos: partial credit applied.
-    if (isQuickVideo) {
-      // Quick Video (11–14): credit covers first 10 clips at per-clip rate.
-      const baseBefore = Math.round(photoCount * QUICK_VIDEO_RATE * 100) / 100;
-      const creditValue = FREE_FIRST_VIDEO_MAX_CLIPS * QUICK_VIDEO_RATE;
-      return Math.min(baseBefore, Math.round(creditValue * 100) / 100);
-    }
-    // Tier-priced (15+): flat $49.50 off.
-    const baseBefore = getBaseBeforeCredit();
-    return Math.min(baseBefore, FREE_FIRST_VIDEO_TIER_CREDIT);
+    // Upload mode: credit covers up to FREE_FIRST_VIDEO_MAX_CLIPS clips.
+    const baseBefore = Math.round(photoCount * PER_CLIP_PRICE * 100) / 100;
+    const maxCredit = Math.round(FREE_FIRST_VIDEO_MAX_CLIPS * PER_CLIP_PRICE * 100) / 100;
+    return Math.min(baseBefore, maxCredit);
   };
 
   const getEditedPhotosPrice = () =>
     includeEditedPhotos && !subState.isBranded ? photos.length * 2.99 : 0;
   const getResolutionPrice = () => (resolution === "1080P" ? 10 : 0);
-  const getUrlServicePrice = () => (isUrlMode ? 25 : 0);
+  // URL mode curation fee: already baked into listingPackage.price, so
+  // getUrlServicePrice() returns 0. Kept as a separate function for clarity
+  // in case we want to break it out as its own line item in the future.
+  const getUrlServicePrice = () => 0;
   // Vertical add-on: belt-and-suspenders — both the showVerticalAddon gate
   // (no UI on free path) and this guard (no price on free path) must be
   // true for the $15 to appear in the total.
@@ -1118,12 +1110,13 @@ export function OrderForm() {
       };
 
       // Free-first-video path: new endpoint, skip Stripe entirely.
-      // Only 5–10 clips go through this endpoint ($0). 11+ clips go through
-      // the paid Stripe flow below, where getTotalPrice() already subtracts
-      // the credit from the base.
+      // Only orders fully covered by the credit go through this endpoint ($0).
+      // Orders past FREE_FIRST_VIDEO_MAX_CLIPS go through the paid Stripe flow
+      // where getTotalPrice() already subtracts the credit from the base.
       const useFreeFirstVideoEndpoint =
         subState.hasFreeFirstVideoCredit &&
-        isQuickVideo &&
+        isUploadMode &&
+        photoCount > 0 &&
         photoCount <= FREE_FIRST_VIDEO_MAX_CLIPS;
       if (useFreeFirstVideoEndpoint) {
         const resp = await fetch("/api/orders/free-first-video", {
@@ -1154,11 +1147,9 @@ export function OrderForm() {
         body: JSON.stringify({
           items: [
             {
-              name: isQuickVideo
-                ? `Quick Video — ${photoCount} clips × $${QUICK_VIDEO_RATE}`
-                : isUrlMode && listingPackage
-                ? `${listingPackage.label} — Listing URL Order`
-                : `${photoCount} Photo Video Package`,
+              name: isUrlMode && listingPackage
+                ? `Real Estate Video — ${listingPackage.label} (URL curation)`
+                : `Real Estate Video — ${photoCount} clip${photoCount !== 1 ? "s" : ""}`,
               amount: getTotalPrice() * 100,
             },
           ],
@@ -1496,33 +1487,10 @@ export function OrderForm() {
                       chip UI. Having two pickers on the Photos step was
                       confusing and split the feature set across two UIs. */}
 
-                  {/* Subscriber Quick Video banner */}
-                  {isQuickVideo && (
-                    <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4">
-                      <div className="flex items-center gap-3">
-                        <Sparkles className="h-5 w-5 text-cyan-600 flex-shrink-0" />
-                        <div>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <p className="font-bold text-cyan-800">
-                              Quick Video — {photoCount} clips × ${QUICK_VIDEO_RATE} = ${(photoCount * QUICK_VIDEO_RATE).toFixed(2)}
-                            </p>
-                            <span className="text-[10px] bg-cyan-100 text-cyan-700 font-bold px-2 py-0.5 rounded-full">
-                              LENS SUBSCRIBER
-                            </span>
-                          </div>
-                          <p className="text-sm text-cyan-700 mt-1">
-                            Pay only for the clips you need — no minimum package required.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Non-subscriber minimum note */}
-                  {!quickVideoEligible && photoCount > 0 && photoCount < NON_SUBSCRIBER_MIN_PHOTOS && (
+                  {/* Minimum photo note */}
+                  {photoCount > 0 && photoCount < ORDER_MIN_PHOTOS && (
                     <p className="text-sm text-amber-600">
-                      Upload at least {NON_SUBSCRIBER_MIN_PHOTOS} photos for the Standard package ($79). Subscribe to
-                      Lens to unlock per-clip pricing from 5 photos.
+                      Add at least {ORDER_MIN_PHOTOS} photos to place your order. Each photo becomes a clip in your video.
                     </p>
                   )}
                 </>
