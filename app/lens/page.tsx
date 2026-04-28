@@ -377,7 +377,7 @@ export default function LensPage() {
                 </Button>
               ) : (
                 <Button onClick={() => handleSubscribe("monthly")} disabled={subscribingTools || loadingUser} className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-5 rounded-xl">
-                  {subscribingTools ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</> : !user && !loadingUser ? <><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</> : <>Subscribe — $27/mo<ArrowRight className="ml-2 h-4 w-4" /></>}
+                  {subscribingTools ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</> : <>Subscribe — $27/mo<ArrowRight className="ml-2 h-4 w-4" /></>}
                 </Button>
               )}
             </div>
@@ -402,7 +402,7 @@ export default function LensPage() {
                 ))}
               </ul>
               <Button onClick={() => handleSubscribe("pro_monthly")} disabled={subscribingPro || loadingUser} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold py-5 rounded-xl">
-                {subscribingPro ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</> : !user && !loadingUser ? <><LogIn className="mr-2 h-4 w-4" />Log In to Subscribe</> : <>Subscribe — $49/mo<ArrowRight className="ml-2 h-4 w-4" /></>}
+                {subscribingPro ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</> : <>Subscribe — $49/mo<ArrowRight className="ml-2 h-4 w-4" /></>}
               </Button>
             </div>
           </div>
