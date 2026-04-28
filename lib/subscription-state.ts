@@ -22,7 +22,7 @@ export interface SubscriptionState {
    */
   isBranded: boolean;
   /**
-   * Quick Video ($4.95/clip, 5–14 clips) unlocked:
+   * Quick Video ($4/clip, 5–14 clips) unlocked:
    * subscriber OR active trial OR admin.
    * Same rule as branding — subscriber perks travel together.
    */
@@ -31,7 +31,7 @@ export interface SubscriptionState {
    * User has an unused free-first-video credit from the promo funnel.
    * When true, checkout applies a $0 adjustment to cover up to
    * FREE_FIRST_VIDEO_MAX_CLIPS clips. Clips past that threshold up to
-   * FREE_FIRST_VIDEO_HARD_CAP are charged at the Quick Video rate.
+   * FREE_FIRST_VIDEO_HARD_CAP are charged at PER_CLIP_PRICE.
    */
   hasFreeFirstVideoCredit: boolean;
   /** Subscription tier when isSubscriber is true: 'tools' | 'pro' | null */
@@ -61,18 +61,18 @@ export const UNAUTHENTICATED_STATE: SubscriptionState = {
 /**
  * Number of clips covered by the free-first-video promo at $0.
  * Clips past this threshold (up to FREE_FIRST_VIDEO_HARD_CAP) are
- * charged at QUICK_VIDEO_RATE.
+ * charged at PER_CLIP_PRICE.
  */
 export const FREE_FIRST_VIDEO_MAX_CLIPS = 10;
 
 /**
  * Hard ceiling on photo count for a free-first-video order. The uploader
  * blocks past this number. Clips FREE_FIRST_VIDEO_MAX_CLIPS+1 through
- * FREE_FIRST_VIDEO_HARD_CAP are billed at QUICK_VIDEO_RATE.
+ * FREE_FIRST_VIDEO_HARD_CAP are billed at PER_CLIP_PRICE.
  *
- * Per Phase 1A spec v1.2 §4.1: free-first-video path is 5–10 photos free,
- * clips 11–14 at $4.95/clip. Without this hard cap the uploader silently
- * refused to let users add an 11th photo and the $4.95 upsell was dead.
+ * Free-first-video path: 5–10 photos free, clips 11–14 at $4/clip.
+ * Without this hard cap the uploader silently refused to let users
+ * add an 11th photo and the per-clip upsell was dead.
  */
 export const FREE_FIRST_VIDEO_HARD_CAP = 14;
 
@@ -82,9 +82,33 @@ export const FREE_FIRST_VIDEO_HARD_CAP = 14;
 export const FREE_FIRST_VIDEO_MIN_CLIPS = 5;
 
 /**
- * Quick Video per-clip rate (keep in sync with order-summary + order-form).
+ * Standard listing video price (15 photos at $4/clip).
+ * The marketing anchor — "Listing video from $60."
  */
-export const QUICK_VIDEO_RATE = 4.95;
+export const STANDARD_VIDEO_PRICE = 60;
+
+/**
+ * Per-clip rate. Same price at order time and post-purchase
+ * (revisions, add-clip-here in the property page editor).
+ * Replaces the old tiered $79/$99/$109 model.
+ */
+export const PER_CLIP_PRICE = 4;
+
+/**
+ * URL mode (paste-Zillow-link) curation fee. Charged on top of
+ * per-clip pricing because Matt manually curates which photos
+ * to use from the listing.
+ */
+export const URL_CURATION_FEE = 25;
+
+/**
+ * Quick Video per-clip rate. Now identical to PER_CLIP_PRICE.
+ * Kept as a separate export for backwards compatibility with
+ * code that imports QUICK_VIDEO_RATE; will be retired when
+ * Quick Video is repurposed as the "stale listing refresh"
+ * product (5-8 clip videos for agents' off-platform old listings).
+ */
+export const QUICK_VIDEO_RATE = PER_CLIP_PRICE;
 
 /**
  * Fetch subscription state for the current authenticated user.
