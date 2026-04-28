@@ -170,11 +170,6 @@ function MarketingHero({
                 Flyers, Reels, social posts. No design skills needed.
               </p>
 
-              {/* Tool inclusion line — replaces chips row */}
-              <p className="hero-animate mt-4 text-sm font-medium text-white/55 sm:text-base" style={{ animationDelay: "0.4s" }}>
-                Includes 15+ AI marketing tools.
-              </p>
-
               {/* Primary CTA — dominant, glowing */}
               <div className="hero-animate mt-10" style={{ animationDelay: "0.55s" }}>
                 <Link href="/order" passHref>
