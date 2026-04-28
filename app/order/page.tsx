@@ -64,7 +64,7 @@ export default async function OrderPage() {
             Upload your photos. We'll handle the rest.
           </h1>
           <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed">
-            Cinematic real estate walkthroughs in minutes + free remixes of your clips for social posts for IG, TikTok, YouTube Shorts, and more.
+            Cinematic real estate walkthroughs in minutes + free remixes of your clips for social posts and more.
           </p>
           <p className="mt-2 text-sm text-muted-foreground/80">
             <span className="font-semibold text-foreground/70">$4 per clip</span>
