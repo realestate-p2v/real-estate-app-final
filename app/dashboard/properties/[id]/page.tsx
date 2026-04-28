@@ -135,6 +135,15 @@ function thumbnailize(url: string, w = 400, h = 300): string {
   return url.replace("/upload/", `/upload/w_${w},h_${h},c_fill/`);
 }
 
+type VideoState = "processing" | "awaiting_review" | "editing" | "accepted";
+
+function getVideoState(order: any, isEditing: boolean): VideoState {
+  if (isEditing) return "editing";
+  if (order.approved_at) return "accepted";
+  if (order.awaiting_approval_at || order.delivered_at) return "awaiting_review";
+  return "processing";
+}
+
 /* ═════════════════════════════════════════════════════════════
    Small shared components
    ═════════════════════════════════════════════════════════════ */
@@ -177,6 +186,7 @@ function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUr
   const [position, setPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const updatePosition = useCallback((clientX: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
