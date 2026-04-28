@@ -112,14 +112,9 @@ export default function LensPage() {
                   <Link href="/dashboard">Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
                 </Button>
               ) : (
-                <>
-                  <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
-                    <Link href="/order">Order a Video — from $20 <ArrowRight className="ml-2 h-5 w-5" /></Link>
-                  </Button>
-                  <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold h-14 px-8 text-lg rounded-xl">
-                    See Plans
-                  </Button>
-                </>
+                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
+                  See Plans <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
               )}
             </div>
           </div>
