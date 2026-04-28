@@ -75,18 +75,34 @@ function LoginContent() {
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-amber-400/[0.04] rounded-full blur-3xl" />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 border-b border-border/60 bg-background/80 backdrop-blur-sm">
+      {/* Header band — matches main site nav blue */}
+      <header
+        className="relative z-10 border-b border-black/10"
+        style={{ backgroundColor: "#0d2a4f" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+          <div className="relative flex h-28 sm:h-32 items-center justify-between">
+            {/* Back link */}
             <Link
               href="/"
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Link>
-            <div className="w-20" />
+
+            {/* Logo — sits on the dark band so silver/red pop */}
+            <Link href="/" className="absolute left-1/2 -translate-x-1/2 inline-block">
+              <Image
+                src="/logo.png"
+                alt="Real Estate Photo 2 Video"
+                width={240}
+                height={96}
+                className="h-16 sm:h-20 w-auto"
+                priority
+              />
+            </Link>
+
             <div className="w-20" />
           </div>
         </div>
@@ -95,20 +111,6 @@ function LoginContent() {
       {/* Main Content */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
         <div className="w-full max-w-md">
-          {/* Logo as focal point */}
-          <div className="flex justify-center mb-8">
-            <Link href="/" className="inline-block">
-              <Image
-                src="/logo.png"
-                alt="Real Estate Photo 2 Video"
-                width={240}
-                height={96}
-                className="h-20 sm:h-24 w-auto"
-                priority
-              />
-            </Link>
-          </div>
-
           {/* Headline */}
           <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-[2.75rem] font-extrabold text-foreground tracking-tight leading-tight">
