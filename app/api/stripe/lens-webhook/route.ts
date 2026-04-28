@@ -109,13 +109,14 @@ export async function POST(request: Request) {
         if (session.metadata?.product !== "lens") break;
 
         const userId = session.metadata?.user_id || session.client_reference_id;
-        const userEmail = session.metadata?.user_email;
+        const userEmail = (session.metadata?.user_email || session.customer_email || "").toLowerCase();
         const plan = session.metadata?.plan || "monthly";
+        const subscriptionTier = session.metadata?.subscription_tier || (plan.startsWith("pro") ? "pro" : "tools");
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
 
-        if (!userId) {
-          console.error("[Lens Webhook] No user_id in session metadata");
+        if (!userEmail) {
+          console.error("[Lens Webhook] No user_email in session metadata or customer_email");
           break;
         }
 
@@ -126,27 +127,80 @@ export async function POST(request: Request) {
           renewsAt = new Date(subscription.current_period_end * 1000).toISOString();
         }
 
-        // Upsert lens_usage — activate subscription
-        const { error } = await supabase
-          .from("lens_usage")
-          .upsert(
-            {
-              user_id: userId,
-              is_subscriber: true,
-              subscription_tier: "Individual",
-              subscription_plan: plan,
+        // ─── Path A: logged-in user (user_id present) ───────────────────
+        if (userId) {
+          const { error } = await supabase
+            .from("lens_usage")
+            .upsert(
+              {
+                user_id: userId,
+                is_subscriber: true,
+                subscription_tier: subscriptionTier,
+                subscription_plan: plan,
+                stripe_customer_id: customerId,
+                stripe_subscription_id: subscriptionId,
+                subscription_started_at: new Date().toISOString(),
+                subscription_renews_at: renewsAt,
+              },
+              { onConflict: "user_id" }
+            );
+
+          if (error) {
+            console.error("[Lens Webhook] Supabase upsert error:", error);
+          } else {
+            console.log(`[Lens Webhook] ✅ Subscription activated for user ${userId} (${userEmail}) — ${plan}`);
+          }
+          break;
+        }
+
+        // ─── Path B: no user_id — try to match by email or store pending ─
+        const { data: existingUsers } = await supabase.auth.admin.listUsers();
+        const existingUser = existingUsers?.users?.find(
+          (u) => u.email?.toLowerCase() === userEmail
+        );
+
+        if (existingUser) {
+          // User already has a Supabase account — activate subscription on their lens_usage
+          const { error } = await supabase
+            .from("lens_usage")
+            .upsert(
+              {
+                user_id: existingUser.id,
+                is_subscriber: true,
+                subscription_tier: subscriptionTier,
+                subscription_plan: plan,
+                stripe_customer_id: customerId,
+                stripe_subscription_id: subscriptionId,
+                subscription_started_at: new Date().toISOString(),
+                subscription_renews_at: renewsAt,
+              },
+              { onConflict: "user_id" }
+            );
+
+          if (error) {
+            console.error("[Lens Webhook] Supabase upsert error (email match):", error);
+          } else {
+            console.log(`[Lens Webhook] ✅ Subscription activated via email match for ${userEmail} → user ${existingUser.id}`);
+          }
+        } else {
+          // No matching user — store as pending. Auth callback will link
+          // this row when the user signs in for the first time.
+          const { error } = await supabase
+            .from("lens_pending_subscriptions")
+            .insert({
+              email: userEmail,
               stripe_customer_id: customerId,
               stripe_subscription_id: subscriptionId,
-              subscription_started_at: new Date().toISOString(),
+              subscription_tier: subscriptionTier,
+              subscription_plan: plan,
               subscription_renews_at: renewsAt,
-            },
-            { onConflict: "user_id" }
-          );
+            });
 
-        if (error) {
-          console.error("[Lens Webhook] Supabase upsert error:", error);
-        } else {
-          console.log(`[Lens Webhook] ✅ Subscription activated for user ${userId} (${userEmail}) — ${plan}`);
+          if (error) {
+            console.error("[Lens Webhook] Pending subscription insert error:", error);
+          } else {
+            console.log(`[Lens Webhook] ⏳ Pending subscription stored for ${userEmail} — awaiting first sign-in`);
+          }
         }
 
         break;
@@ -159,24 +213,28 @@ export async function POST(request: Request) {
         if (subscription.metadata?.product !== "lens") break;
 
         const userId = subscription.metadata?.user_id;
-        if (!userId) break;
-
         const renewsAt = new Date(subscription.current_period_end * 1000).toISOString();
 
-        await supabase
-          .from("lens_usage")
-          .upsert(
-            {
-              user_id: userId,
-              is_subscriber: true,
-              subscription_renews_at: renewsAt,
-              stripe_subscription_id: subscription.id,
-              stripe_customer_id: subscription.customer as string,
-            },
-            { onConflict: "user_id" }
-          );
-
-        console.log(`[Lens Webhook] ✅ Subscription created for ${userId}`);
+        // If we have a user_id, update directly
+        if (userId) {
+          await supabase
+            .from("lens_usage")
+            .upsert(
+              {
+                user_id: userId,
+                is_subscriber: true,
+                subscription_renews_at: renewsAt,
+                stripe_subscription_id: subscription.id,
+                stripe_customer_id: subscription.customer as string,
+              },
+              { onConflict: "user_id" }
+            );
+          console.log(`[Lens Webhook] ✅ Subscription created for ${userId}`);
+        } else {
+          // No user_id — checkout.session.completed already handled this
+          // via email lookup or pending table. Nothing to do here.
+          console.log(`[Lens Webhook] subscription.created without user_id — handled in checkout.session.completed (sub: ${subscription.id})`);
+        }
         break;
       }
 
@@ -187,21 +245,50 @@ export async function POST(request: Request) {
         if (subscription.metadata?.product !== "lens") break;
 
         const userId = subscription.metadata?.user_id;
-        if (!userId) break;
 
-        const { error } = await supabase
-          .from("lens_usage")
-          .update({
-            is_subscriber: false,
-            subscription_renews_at: null,
-            stripe_subscription_id: null,
-          })
-          .eq("user_id", userId);
+        // If we have user_id, deactivate directly
+        if (userId) {
+          const { error } = await supabase
+            .from("lens_usage")
+            .update({
+              is_subscriber: false,
+              subscription_renews_at: null,
+              stripe_subscription_id: null,
+            })
+            .eq("user_id", userId);
 
-        if (error) {
-          console.error("[Lens Webhook] Deactivation error:", error);
+          if (error) {
+            console.error("[Lens Webhook] Deactivation error:", error);
+          } else {
+            console.log(`[Lens Webhook] ❌ Subscription cancelled for user ${userId}`);
+          }
         } else {
-          console.log(`[Lens Webhook] ❌ Subscription cancelled for user ${userId}`);
+          // No user_id — look up by stripe_subscription_id in lens_usage,
+          // then also clean up any pending row.
+          const { data: lensUsageRow } = await supabase
+            .from("lens_usage")
+            .select("user_id")
+            .eq("stripe_subscription_id", subscription.id)
+            .maybeSingle();
+
+          if (lensUsageRow?.user_id) {
+            await supabase
+              .from("lens_usage")
+              .update({
+                is_subscriber: false,
+                subscription_renews_at: null,
+                stripe_subscription_id: null,
+              })
+              .eq("user_id", lensUsageRow.user_id);
+            console.log(`[Lens Webhook] ❌ Subscription cancelled (sub-id lookup) for user ${lensUsageRow.user_id}`);
+          }
+
+          // Also remove unlinked pending row, if any
+          await supabase
+            .from("lens_pending_subscriptions")
+            .delete()
+            .eq("stripe_subscription_id", subscription.id)
+            .is("linked_at", null);
         }
 
         break;
