@@ -35,7 +35,6 @@ import {
   Monitor,
   Shield,
   TrendingUp,
-  Video,
 } from "lucide-react";
 
 export default function LensPage() {
@@ -115,7 +114,7 @@ export default function LensPage() {
               ) : (
                 <>
                   <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
-                    <Link href="/order">Order a Video — from $79 <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                    <Link href="/order">Order a Video — from $20 <ArrowRight className="ml-2 h-5 w-5" /></Link>
                   </Button>
                   <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-bold h-14 px-8 text-lg rounded-xl">
                     See Plans
@@ -150,35 +149,6 @@ export default function LensPage() {
         </div>
       </section>
 
-      {/* ═══ QUICK VIDEOS CTA ═══ */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-cyan-400/20 bg-gradient-to-r from-cyan-400/[0.06] to-indigo-400/[0.04] p-8 sm:p-10 text-center">
-            <div className="inline-flex items-center gap-2 bg-cyan-400/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-400/20 mb-5">
-              <Film className="h-3.5 w-3.5" />
-              SUBSCRIBER EXCLUSIVE
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">Quick Videos — $4.95 per clip</h3>
-            <p className="text-white/50 max-w-xl mx-auto mb-6">Need a fast social teaser or an open house highlight? Lens subscribers get short-form videos starting at just $4.95 per clip. Pick 5–14 clips, add branding and music, delivered in under 12 hours.</p>
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-8">
-              {[
-                { clips: "5 clips", price: "$24.75", label: "Social Teaser" },
-                { clips: "8 clips", price: "$39.60", label: "Listing Refresh" },
-                { clips: "12 clips", price: "$59.40", label: "Open House" },
-              ].map(p => (
-                <div key={p.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-5 py-3 text-center">
-                  <p className="text-lg font-extrabold text-cyan-400">{p.price}</p>
-                  <p className="text-xs text-white/40">{p.label} · {p.clips}</p>
-                </div>
-              ))}
-            </div>
-            <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-5 text-base rounded-xl shadow-lg shadow-cyan-500/20">
-              <Link href="/order">Order Quick Videos <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* ═══ VIDEO REMIX — The Free Hook ═══ */}
       <section className="py-20 sm:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -192,7 +162,7 @@ export default function LensPage() {
             </div>
             <p className="text-white/50 leading-relaxed mb-6">Buy your clips once. Remix them forever. Recut into social teasers, add music, swap branding, create landscape, portrait, and square versions — unlimited. Every time you come back to Remix, you see what else the platform can do.</p>
             <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6">
-              {["Unlimited remixes", "3 aspect ratios", "Music library", "Custom branding", "No watermarks"].map(p => (
+              {["Unlimited remixes", "Vertical, square & landscape formats", "Music library", "Custom branding", "No watermarks"].map(p => (
                 <span key={p} className="flex items-center gap-1.5 text-sm text-white/60"><CheckCircle className="h-3.5 w-3.5 text-purple-400" />{p}</span>
               ))}
             </div>
@@ -369,7 +339,7 @@ export default function LensPage() {
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7">
               <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-3">Start here</p>
               <h3 className="text-xl font-bold text-white mb-1">Order a Video</h3>
-              <div className="flex items-baseline gap-1 mb-4"><span className="text-3xl font-extrabold text-white">$79</span><span className="text-white/40 text-sm">one-time</span></div>
+              <div className="flex items-baseline gap-1 mb-4"><span className="text-3xl font-extrabold text-white">from $20</span><span className="text-white/40 text-sm">$4/clip</span></div>
               <ul className="space-y-2.5 mb-6">
                 {[
                   "Cinematic listing walkthrough",
@@ -492,7 +462,7 @@ export default function LensPage() {
               </Button>
             ) : (
               <Button asChild className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold px-8 py-6 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
-                <Link href="/order">Order Your First Video — $79 <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                <Link href="/order">Order Your First Video — from $20 <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
             )}
           </div>
