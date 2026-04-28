@@ -15,8 +15,9 @@ import {
   Loader2, Lock, Copy, Download, ExternalLink, Image as ImageIcon, Play,
   ChevronDown, ShoppingCart, GripVertical, CheckCircle, Sparkles, Globe,
   Eye, Link2, CalendarDays, Mail, Phone, MessageSquare, Trash2,
-  LayoutGrid, Video, Megaphone,
+  LayoutGrid, Video, Megaphone, AlertCircle,
 } from "lucide-react";
+import PropertyVideoCard from "@/components/property-video-card";
 
 /* ═════════════════════════════════════════════════════════════
    Types and constants
@@ -186,7 +187,6 @@ function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUr
   const [position, setPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
-  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const updatePosition = useCallback((clientX: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
@@ -266,6 +266,20 @@ function PropertyPageInner() {
   const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingDescId, setDeletingDescId] = useState<string | null>(null);
+
+  /* ─── Video review state ─── */
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+
+  /* Awaiting-review videos: paid + delivered + not yet approved.
+     Drives the property-page banner and the State 1 UI on the Videos card. */
+  const awaitingReviewVideos = videos.filter(
+    (v: any) =>
+      v.payment_status === "paid" &&
+      !v.approved_at &&
+      (v.awaiting_approval_at || v.delivered_at)
+  );
+  const hasAwaitingReview = awaitingReviewVideos.length > 0;
+  const firstAwaitingReviewId = awaitingReviewVideos[0]?.order_id || awaitingReviewVideos[0]?.id || null;
 
   const [pubTemplate, setPubTemplate] = useState<string>("modern_clean");
   const [pubModules, setPubModules] = useState<Record<string, boolean>>({
@@ -653,6 +667,42 @@ function PropertyPageInner() {
         </div>
       </div>
 
+      {/* ═══ AWAITING REVIEW BANNER ═══ */}
+      {hasAwaitingReview && (
+        <div className="mc-animate mb-4 rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] p-4 flex items-center justify-between gap-3 flex-wrap" style={{ animationDelay: "0.08s" }}>
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="flex-shrink-0 mt-0.5">
+              <Film className="h-5 w-5 text-cyan-300" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white">
+                {awaitingReviewVideos.length === 1
+                  ? "Your video is ready — review and accept, or request changes."
+                  : `You have ${awaitingReviewVideos.length} videos ready to review.`}
+              </p>
+              <p className="text-xs text-white/60 mt-0.5">
+                1 free re-render of existing clips · New clips $4 each
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => {
+              changeTab("media");
+              setTimeout(() => {
+                if (firstAwaitingReviewId) {
+                  const el = document.getElementById(`video-${firstAwaitingReviewId}`);
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }, 100);
+            }}
+            size="sm"
+            className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold flex-shrink-0"
+          >
+            Review Video <ChevronDown className="h-3.5 w-3.5 ml-1.5 -rotate-90" />
+          </Button>
+        </div>
+      )}
+
       {/* ═══ TABS (color-coded per section) ═══ */}
       <div className="mc-animate sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-gray-900/80 backdrop-blur-xl border-b border-white/[0.05] mb-6" style={{ animationDelay: "0.1s" }}>
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
@@ -832,43 +882,26 @@ function PropertyPageInner() {
               ) : (
                 <div className="space-y-5">
                   {videos.map((order: any) => {
-                    const sc: Record<string, string> = {
-                      delivered: "text-green-300 bg-green-400/15 ring-green-400/30",
-                      complete: "text-green-300 bg-green-400/15 ring-green-400/30",
-                      processing: "text-amber-300 bg-amber-400/15 ring-amber-400/30",
-                      new: "text-blue-300 bg-blue-400/15 ring-blue-400/30",
-                      pending_payment: "text-white/60 bg-white/10 ring-white/20",
-                    };
-                    const versions: { url: string; label: string; isBranded: boolean }[] = [];
-                    if (order.delivery_url) versions.push({ url: order.delivery_url, label: "Branded", isBranded: true });
-                    if (order.unbranded_delivery_url) versions.push({ url: order.unbranded_delivery_url, label: "Unbranded", isBranded: false });
+                    const orderKey = order.order_id || order.id;
                     return (
-                      <div key={order.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
-                        <div className="p-4 flex items-center justify-between flex-wrap gap-2">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-base font-bold text-white">{order.is_quick_video ? "Quick Video" : order.listing_package_label || "Listing Video"}</p>
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ring-1 capitalize ${sc[order.status] || sc.pending_payment}`}>{order.status?.replace(/_/g, " ")}</span>
-                            </div>
-                            <p className="text-sm text-white/50 mt-1">{order.photo_count} photos · {order.orientation} · {new Date(order.created_at).toLocaleDateString()}</p>
-                          </div>
-                          {order.delivery_url && (
-                            <Button asChild size="sm" className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-semibold">
-                              <Link href={`/video/${order.order_id}`}><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Share</Link>
-                            </Button>
-                          )}
-                        </div>
-                        {versions.length > 0 && (
-                          <div className={`${versions.length > 1 ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : ""} px-4 pb-4`}>
-                            {versions.map(v => (
-                              <div key={v.label} className="space-y-2">
-                                {versions.length > 1 && <p className={`text-xs font-bold ${v.isBranded ? a.textLight : "text-white/60"}`}>{v.isBranded ? "🎨 Branded" : "📎 Unbranded"}</p>}
-                                <div className="aspect-video bg-black rounded-lg overflow-hidden"><video src={v.url} controls playsInline preload="metadata" className="w-full h-full" /></div>
-                                <a href={v.url.includes("/upload/") ? v.url.replace("/upload/", "/upload/fl_attachment/") : v.url} download className="inline-flex items-center gap-1 text-sm font-semibold text-white/60 hover:text-white"><Download className="h-3.5 w-3.5" />Download {v.label}</a>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      <div key={order.id} id={`video-${orderKey}`}>
+                        <PropertyVideoCard
+                          order={order}
+                          isEditing={editingOrderId === orderKey}
+                          onEnterEdit={() => setEditingOrderId(orderKey)}
+                          onCancelEdit={() => setEditingOrderId(null)}
+                          onAccepted={() => {
+                            // Optimistic local update so the card switches to "accepted" state immediately
+                            setVideos(videos.map((v: any) =>
+                              v.id === order.id ? { ...v, approved_at: new Date().toISOString() } : v
+                            ));
+                          }}
+                          onChangesSubmitted={() => {
+                            setEditingOrderId(null);
+                            // Reload so we get the fresh order data after revision submit
+                            loadProperty();
+                          }}
+                        />
                       </div>
                     );
                   })}
