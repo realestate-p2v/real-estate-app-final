@@ -1,10 +1,15 @@
-// app/lens/page.tsx (or wherever this file lives — keep the existing path)
+// app/lens/page.tsx
+// Repo: real-estate-app-final
+//
+// Lens marketing/pricing page. Subscribe buttons trigger:
+//   - Logged-in user → POST /api/lens/checkout with user_id → Stripe
+//   - Logged-out user → opens email modal → POST with user_email → Stripe
+// Success URL routes to /lens/welcome.
 
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -23,7 +28,6 @@ import {
   ChevronUp,
   Loader2,
   ImageIcon,
-  LogIn,
   PenTool,
   Film,
   Globe,
@@ -38,13 +42,19 @@ import {
 } from "lucide-react";
 
 export default function LensPage() {
-  const router = useRouter();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [subscribingTools, setSubscribingTools] = useState(false);
   const [subscribingPro, setSubscribingPro] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
+
+  // Email modal state — opens when logged-out user clicks Subscribe
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalPlan, setEmailModalPlan] = useState<string | null>(null);
+  const [modalEmail, setModalEmail] = useState("");
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -61,14 +71,68 @@ export default function LensPage() {
   }, []);
 
   const handleSubscribe = async (plan: string) => {
-    if (!user) { router.push("/login?redirect=/lens"); return; }
+    // Logged-out users → open email modal first
+    if (!user) {
+      setEmailModalPlan(plan);
+      setModalEmail("");
+      setModalError(null);
+      setEmailModalOpen(true);
+      return;
+    }
+
+    // Logged-in users → straight to checkout
     const setter = plan.startsWith("pro") ? setSubscribingPro : setSubscribingTools;
     setter(true);
     try {
-      const res = await fetch("/api/lens/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, user_id: user.id, user_email: user.email }) });
+      const res = await fetch("/api/lens/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, user_id: user.id, user_email: user.email }),
+      });
       const data = await res.json();
-      if (data.success && data.url) { window.location.href = data.url; } else { alert(data.error || "Something went wrong."); }
-    } catch { alert("Something went wrong."); } finally { setter(false); }
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong.");
+      }
+    } catch {
+      alert("Something went wrong.");
+    } finally {
+      setter(false);
+    }
+  };
+
+  const handleModalSubmit = async () => {
+    const trimmedEmail = modalEmail.trim();
+    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+      setModalError("Please enter a valid email.");
+      return;
+    }
+    if (!emailModalPlan) {
+      setModalError("Something went wrong. Please try again.");
+      return;
+    }
+
+    setModalError(null);
+    setModalSubmitting(true);
+
+    try {
+      const res = await fetch("/api/lens/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: emailModalPlan, user_email: trimmedEmail }),
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        setModalError(data.error || "Something went wrong.");
+        setModalSubmitting(false);
+      }
+    } catch {
+      setModalError("Something went wrong. Please try again.");
+      setModalSubmitting(false);
+    }
   };
 
   const faqs = [
@@ -463,6 +527,73 @@ export default function LensPage() {
           </div>
         </div>
       </section>
+
+      {/* ═══ EMAIL MODAL — for logged-out subscribers ═══ */}
+      {emailModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !modalSubmitting) {
+              setEmailModalOpen(false);
+            }
+          }}
+        >
+          <div className="relative w-full max-w-md rounded-2xl border border-cyan-400/20 bg-gray-950 p-7 shadow-2xl">
+            <button
+              onClick={() => !modalSubmitting && setEmailModalOpen(false)}
+              disabled={modalSubmitting}
+              className="absolute top-4 right-4 text-white/40 hover:text-white/80 transition-colors disabled:opacity-30"
+              aria-label="Close"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            <div className="mb-5">
+              <div className="inline-flex items-center gap-2 text-cyan-400 text-xs font-bold tracking-wider uppercase mb-3">
+                <Sparkles className="w-3.5 h-3.5" />
+                {emailModalPlan?.startsWith("pro") ? "Lens Pro — $49/mo" : "Lens Tools — $27/mo"}
+              </div>
+              <h3 className="text-2xl font-extrabold text-white mb-2">Enter your email to continue</h3>
+              <p className="text-sm text-white/50">
+                We'll create your account automatically after payment. Use the same email when you sign in afterward.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="email"
+                value={modalEmail}
+                onChange={(e) => setModalEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleModalSubmit(); }}
+                placeholder="[email protected]"
+                disabled={modalSubmitting}
+                autoFocus
+                className="w-full h-12 px-4 rounded-xl bg-white/[0.05] border border-white/[0.12] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-400/50 focus:bg-white/[0.08] transition-colors disabled:opacity-50"
+              />
+
+              {modalError && (
+                <p className="text-sm text-red-400">{modalError}</p>
+              )}
+
+              <Button
+                onClick={handleModalSubmit}
+                disabled={modalSubmitting || !modalEmail.trim()}
+                className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-white font-bold h-12 rounded-xl shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+              >
+                {modalSubmitting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting to checkout...</>
+                ) : (
+                  <>Continue to Checkout<ArrowRight className="ml-2 h-4 w-4" /></>
+                )}
+              </Button>
+
+              <p className="text-xs text-white/40 text-center pt-1">
+                Secure payment via Stripe. Cancel anytime.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
