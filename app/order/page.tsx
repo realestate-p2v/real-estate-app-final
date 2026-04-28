@@ -61,7 +61,7 @@ export default async function OrderPage() {
         {/* New marketing header — replaces the old EXCLUSIVE PRICING tier banner */}
         <div className="mx-auto max-w-3xl text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
-            Listing video — <span className="text-primary">from $60</span>
+            Upload your photos. We'll handle the rest.
           </h1>
           <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed">
             Cinematic walkthrough plus unlimited remixes for socials, ready in minutes.
@@ -71,7 +71,7 @@ export default async function OrderPage() {
             <span className="mx-2">·</span>
             <span>1 free revision</span>
             <span className="mx-2">·</span>
-            <span>Clips ready for the P2V Lens suite</span>
+            <span>Clips ready for our Lens AI tool suite</span>
           </p>
         </div>
 
