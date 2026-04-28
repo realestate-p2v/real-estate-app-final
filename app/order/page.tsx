@@ -3,7 +3,6 @@ import Link from "next/link";
 import { OrderForm } from "@/components/order-form";
 import { ArrowLeft, Crown, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
-import { SaleBanner } from "@/components/sale-banner";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -59,18 +58,25 @@ export default async function OrderPage() {
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-            Let&apos;s Create Your Walkthrough Video
+        {/* New marketing header — replaces the old EXCLUSIVE PRICING tier banner */}
+        <div className="mx-auto max-w-3xl text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
+            Listing video — <span className="text-primary">from $60</span>
           </h1>
-          <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Upload your photos, arrange them in order, select your music, and
-            checkout. We&apos;ll deliver your HD video within 24 hours.
+          <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed">
+            Cinematic walkthrough plus unlimited remixes for socials, ready in minutes.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground/80">
+            <span className="font-semibold text-foreground/70">$4 per clip</span>
+            <span className="mx-2">·</span>
+            <span>1 free revision</span>
+            <span className="mx-2">·</span>
+            <span>Clips ready for the P2V Lens suite</span>
           </p>
         </div>
 
-        {/* Subscriber gets a Lens perks pill; everyone else gets the sale banner */}
-        {isSubscriber ? (
+        {/* Subscriber gets a Lens perks pill; non-subscribers see no banner — pricing speaks for itself */}
+        {isSubscriber && (
           <div className="mb-6 flex items-center justify-center">
             <div className="inline-flex items-center gap-3 rounded-full border border-cyan-400/30 bg-gradient-to-r from-cyan-400/10 to-indigo-400/10 px-5 py-2.5 backdrop-blur-sm shadow-sm">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-400/20 ring-1 ring-cyan-400/40">
@@ -86,8 +92,6 @@ export default async function OrderPage() {
               <Sparkles className="h-4 w-4 text-cyan-500/70" />
             </div>
           </div>
-        ) : (
-          <SaleBanner />
         )}
 
         <OrderForm />
