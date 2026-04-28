@@ -112,8 +112,8 @@ export default function LensPage() {
                   <Link href="/dashboard">Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" /></Link>
                 </Button>
               ) : (
-                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="bg-cyan-500 hover:bg-cyan-400 text-white font-extrabold h-14 px-8 text-lg rounded-xl shadow-lg shadow-cyan-500/20">
-                  See Plans <ArrowRight className="ml-2 h-5 w-5" />
+                <Button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} className="group bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-gray-950 font-black h-16 px-12 text-xl rounded-2xl shadow-2xl shadow-cyan-500/40 ring-2 ring-cyan-300/40 hover:scale-[1.03] hover:shadow-cyan-400/60 transition-all">
+                  See Plans <ArrowRight className="ml-2.5 h-6 w-6 transition-transform group-hover:translate-x-1" />
                 </Button>
               )}
             </div>
