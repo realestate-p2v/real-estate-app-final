@@ -34,24 +34,31 @@ export default async function OrderPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border">
+      {/* Header band — matches main site nav blue */}
+      <header
+        className="border-b border-black/10"
+        style={{ backgroundColor: "#0d2a4f" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 text-foreground hover:text-primary">
-              <ArrowLeft className="h-5 w-5" />
+          <div className="relative flex h-28 sm:h-32 items-center justify-between">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Link>
-            <Link href="/">
+            <Link href="/" className="absolute left-1/2 -translate-x-1/2 inline-block">
               <Image
                 src="/logo.png"
                 alt="Real Estate Photo 2 Video"
-                width={120}
-                height={48}
-                className="h-10 w-auto"
+                width={240}
+                height={96}
+                className="h-16 sm:h-20 w-auto"
+                priority
               />
             </Link>
-            <div className="w-20" /> {/* Spacer for centering */}
+            <div className="w-20" />
           </div>
         </div>
       </header>
