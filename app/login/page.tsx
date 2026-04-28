@@ -1,3 +1,13 @@
+// app/login/page.tsx
+// Repo: real-estate-app-final
+//
+// Sign in / sign up combined page. Magic-link or Google OAuth.
+// Auth flow unchanged from prior version — only visual refinements:
+//   • Larger logo as focal point
+//   • Subtle gradient background
+//   • Stronger card presence (shadow + spacing)
+//   • Bigger headline + heavier primary button
+
 "use client";
 
 import { useState, Suspense } from "react";
@@ -58,68 +68,88 @@ function LoginContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
+    <main className="relative min-h-screen flex flex-col bg-background overflow-hidden">
+      {/* Subtle gradient backdrop — keeps it friendly, adds depth */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-amber-400/[0.04] rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="relative z-10 border-b border-border/60 bg-background/80 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 text-foreground hover:text-primary">
-              <ArrowLeft className="h-5 w-5" />
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Link>
-            <Link href="/">
-              <Image
-                src="/logo.png"
-                alt="Real Estate Photo 2 Video"
-                width={120}
-                height={48}
-                className="h-10 w-auto"
-              />
-            </Link>
+            <div className="w-20" />
             <div className="w-20" />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-foreground">Welcome Back</h1>
-            <p className="mt-2 text-muted-foreground">
-              Sign in to view your videos, request revisions, and manage your orders.
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
+        <div className="w-full max-w-md">
+          {/* Logo as focal point */}
+          <div className="flex justify-center mb-8">
+            <Link href="/" className="inline-block">
+              <Image
+                src="/logo.png"
+                alt="Real Estate Photo 2 Video"
+                width={240}
+                height={96}
+                className="h-20 sm:h-24 w-auto"
+                priority
+              />
+            </Link>
+          </div>
+
+          {/* Headline */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl sm:text-[2.75rem] font-extrabold text-foreground tracking-tight leading-tight">
+              Welcome back
+            </h1>
+            <p className="mt-3 text-base text-muted-foreground">
+              Sign in to view your videos, manage orders, and access your tools.
             </p>
           </div>
 
           {magicLinkSent ? (
-            <div className="bg-card rounded-2xl border border-border p-8 text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+            <div className="bg-card rounded-2xl border border-border shadow-xl shadow-foreground/[0.04] p-8 sm:p-10 text-center space-y-5">
+              <div className="h-16 w-16 rounded-full bg-green-100 ring-4 ring-green-50 flex items-center justify-center mx-auto">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <h2 className="text-xl font-bold text-foreground">Check Your Email</h2>
-              <p className="text-muted-foreground">
-                We sent a sign-in link to <span className="font-semibold text-foreground">{email}</span>. 
-                Click the link in the email to sign in.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Don't see it? Check your spam folder.
-              </p>
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Check your email</h2>
+                <p className="mt-2 text-muted-foreground">
+                  We sent a sign-in link to{" "}
+                  <span className="font-semibold text-foreground">{email}</span>.
+                </p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Don't see it? Check your spam folder.
+                </p>
+              </div>
               <Button
                 variant="outline"
                 onClick={() => { setMagicLinkSent(false); setEmail(""); }}
-                className="mt-4"
+                className="mt-2"
               >
                 Try a different email
               </Button>
             </div>
           ) : (
-            <div className="bg-card rounded-2xl border border-border p-8 space-y-6">
+            <div className="bg-card rounded-2xl border border-border shadow-xl shadow-foreground/[0.04] p-7 sm:p-8 space-y-6">
               {/* Google Sign In */}
               <button
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border-2 border-border font-semibold text-foreground hover:bg-muted/50 transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 h-12 px-4 rounded-xl border-2 border-border font-semibold text-foreground hover:bg-muted/60 hover:border-border/80 transition-all disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -139,36 +169,36 @@ function LoginContent() {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border" />
                 </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-card px-4 text-muted-foreground">or sign in with email</span>
+                <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                  <span className="bg-card px-4 text-muted-foreground/70 font-semibold">or</span>
                 </div>
               </div>
 
               {/* Magic Link Form */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email address</Label>
+                  <Label htmlFor="email" className="text-sm font-semibold">Email address</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="[email protected]"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleMagicLink(e); }}
-                    className="h-11"
+                    className="h-12 text-base"
                   />
                 </div>
                 <Button
                   onClick={handleMagicLink}
                   disabled={loading || !email.trim()}
-                  className="w-full py-6 text-base bg-primary"
+                  className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
                 >
                   {loading ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   ) : (
                     <Mail className="mr-2 h-5 w-5" />
                   )}
-                  Send Magic Link
+                  Send magic link
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   No password needed — we'll email you a secure sign-in link.
@@ -184,7 +214,7 @@ function LoginContent() {
             </div>
           )}
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground mt-6">
             Don't have an account? Just sign in — we'll create one for you automatically.
           </p>
         </div>
