@@ -223,7 +223,7 @@ function MarketingHero({
                   <Repeat className="h-5 w-5 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-base font-bold text-white">One listing. A month of content.</p>
+                  <p className="text-base font-bold text-white">One listing. Endless content.</p>
                   <p className="mt-1.5 text-sm leading-relaxed text-white/65">
                     Remix your clips into Reels, social posts, and YouTube Shorts — free, unlimited.
                   </p>
