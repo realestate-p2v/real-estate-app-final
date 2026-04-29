@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("lens_remix_drafts")
-      .select("id, name, property_id, created_at, updated_at, state")
+      .select("id, name, property_id, created_at, updated_at, exported_at, state")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         property_id: d.property_id,
         created_at: d.created_at,
         updated_at: d.updated_at,
+        exported_at: d.exported_at ?? null,
         clip_count: clips.length,
         total_duration: Math.round(totalDuration * 10) / 10,
         size: d.state?.size || "landscape",
