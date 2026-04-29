@@ -302,20 +302,6 @@ function detectAerial(label: string): boolean {
   return /\b(drone|aerial|overhead|bird'?s?[\s-]?eye|sky[\s-]?view|above|elevation|fly[\s-]?over)\b/.test(s);
 }
 
-// Resolve the best display name for an order's clip group.
-// Tries property_address first, then matches property_id against agent_properties.
-function resolveOrderDisplayName(
-  order: { property_address?: string | null; property_id?: string | null },
-  properties: Array<{ id: string; address?: string | null }>
-): string {
-  if (order.property_address && order.property_address.trim()) return order.property_address.trim();
-  if (order.property_id) {
-    const p = properties.find(x => x.id === order.property_id);
-    if (p?.address) return p.address;
-  }
-  return "Unknown Property";
-}
-
 // Normalize an address for fuzzy matching when merging orders by property.
 function normalizeAddr(a: string): string {
   return (a || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -661,25 +647,20 @@ export default function DesignStudioV2(){
     try{
       const supabase=(await import("@/lib/supabase/client")).createClient();
       const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-      // Fetch orders + agent_properties in parallel for the address resolution fallback
-      const[ordersRes,propsRes]=await Promise.all([
-        supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,clip_urls,photos,created_at,property_address,property_id").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false}),
-        supabase.from("agent_properties").select("id,address").eq("user_id",user.id).is("merged_into_id",null),
-      ]);
-      const orders=ordersRes.data||[];
-      const properties=propsRes.data||[];
-      const vids=orders.filter((o:any)=>o.unbranded_delivery_url||o.delivery_url);
+      const{data:orders,error:ordersErr}=await supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,clip_urls,photos,created_at,property_address").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false});
+      if(ordersErr){console.error("[remix] orders query failed:",ordersErr);setLoadingVideos(false);return;}
+      const vids=(orders||[]).filter((o:any)=>o.unbranded_delivery_url||o.delivery_url);
       setHasVideoOrders(vids.length>0);
       setUserVideos(vids.map((o:any)=>({orderId:o.order_id,url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,hasUnbranded:!!o.unbranded_delivery_url,date:new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})})));
 
       // Group clips by property (merging multi-order properties).
-      // Key by normalized address so "302 Dionnes Way" and "302 dionnes way" land in the same bucket.
+      // Key by normalized property_address so "302 Dionnes Way" and "302 dionnes way" land in the same bucket.
       type ClipEntry={url:string;thumbnail:string|null;label:string;isAerial:boolean;orderId:string;orderDate:string;orderTimestamp:number;position:number};
       const groups=new Map<string,{displayName:string;orderIds:Set<string>;latestTs:number;latestDate:string;clips:ClipEntry[]}>();
 
       for(const o of vids){
-        const displayName=resolveOrderDisplayName({property_address:o.property_address,property_id:o.property_id},properties);
-        const key=normalizeAddr(displayName)||o.order_id; // fallback to orderId if no name at all
+        const displayName=(o.property_address&&o.property_address.trim())?o.property_address.trim():"Unknown Property";
+        const key=normalizeAddr(displayName)||o.order_id; // fallback to orderId so unknown-property orders don't all collapse together
         const ts=new Date(o.created_at).getTime();
         const dateLabel=new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
         const orderThumb=o.photos?.[0]?.secure_url||null;
@@ -701,8 +682,6 @@ export default function DesignStudioV2(){
         }
       }
 
-      // Sort groups by most recent activity (newest first), and clips within each group
-      // by orderTimestamp desc, then by position asc.
       const sources=Array.from(groups.entries())
         .sort((a,b)=>b[1].latestTs-a[1].latestTs)
         .map(([propertyKey,g])=>({
@@ -715,7 +694,7 @@ export default function DesignStudioV2(){
             .map(c=>({url:c.url,thumbnail:c.thumbnail,label:c.label,isAerial:c.isAerial,orderId:c.orderId,orderDate:c.orderDate})),
         }));
       setRemixClipSources(sources);
-    }catch(err){console.error("Video load error:",err);}
+    }catch(err){console.error("[remix] Video load error:",err);}
     setLoadingVideos(false);
   };
 
@@ -1209,10 +1188,32 @@ export default function DesignStudioV2(){
 
   const videoPreviewEl=(mediaMode==="video"&&selectedVideo?.url)?(<div style={{width:"100%",height:"100%",position:"relative"}} data-video-area><video src={selectedVideo.url} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>):undefined;
 
+  // Video Remix empty states render as overlays in `.spf` (native CSS pixels), not inside
+  // the scaled <div data-export-target>. Putting them inside the scaled wrapper makes
+  // the copy display at scale × intended size (e.g., 22px × 0.27 = 6px) which is unreadable.
+  const remixEmptyState=(activeTab==="video-remix")?(
+    hasVideoOrders===false?(
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:14,fontFamily:"var(--sf)",padding:24,textAlign:"center" as const,zIndex:3,pointerEvents:"auto" as const}}>
+        <div style={{width:56,height:56,borderRadius:14,background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.15))",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={26} color="rgba(99,102,241,0.7)"/></div>
+        <p style={{fontSize:16,color:"rgba(255,255,255,0.85)",fontWeight:700,margin:0}}>No Videos Yet</p>
+        <p style={{fontSize:12,color:"rgba(255,255,255,0.45)",margin:0,maxWidth:300,lineHeight:1.5}}>Order a listing video to unlock Video Remix. Buy the clips once, remix them forever.</p>
+        <a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:8,background:"linear-gradient(135deg,var(--sa),#a855f7)",color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none",marginTop:4}}>Order a Video</a>
+      </div>
+    ):(remixClips.length===0?(
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:12,fontFamily:"var(--sf)",padding:24,textAlign:"center" as const,zIndex:3,pointerEvents:"none" as const}}>
+        <div style={{width:64,height:64,borderRadius:14,border:"2px dashed rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={28} color="rgba(255,255,255,0.25)"/></div>
+        <p style={{fontSize:13,color:"rgba(255,255,255,0.55)",fontWeight:600,margin:0,maxWidth:260,lineHeight:1.5}}>Add clips from the left panel to start remixing</p>
+      </div>
+    ):null)
+  ):null;
+
   const renderPreview=()=>{
     if(activeTab==="video-remix"){
-      if(hasVideoOrders===false)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:20,fontFamily:"var(--sf)",padding:40,textAlign:"center" as const}}><div style={{width:100,height:100,borderRadius:24,background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.15))",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={40} color="rgba(99,102,241,0.5)"/></div><p style={{fontSize:22,color:"rgba(255,255,255,0.7)",fontWeight:700,margin:0}}>No Videos Yet</p><p style={{fontSize:14,color:"rgba(255,255,255,0.35)",margin:0,maxWidth:400,lineHeight:1.6}}>Order a listing video to unlock Video Remix. Buy the clips once, remix them forever.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,var(--sa),#a855f7)",color:"#fff",fontSize:13,fontWeight:700,textDecoration:"none"}}>Order a Video</a></div>;
-      if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,border:"2px dashed rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={48} color="rgba(255,255,255,0.12)"/></div><p style={{fontSize:18,color:"rgba(255,255,255,0.3)",fontWeight:600,margin:0}}>Add clips from the left panel to start remixing</p></div>;
+      // Empty states are handled outside the scaled wrapper (see remixEmptyState above).
+      // Inside the scaled wrapper we just paint a black canvas for empty cases so the
+      // export-target dimensions stay correct.
+      if(hasVideoOrders===false)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10"}}/>;
+      if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10"}}/>;
       const currentClip=remixClips[remixPlayingIdx]||remixClips[0];
       return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",position:"relative",overflow:"hidden"}}>
         {remixClips.map((clip,i)=><video
@@ -1583,8 +1584,9 @@ export default function DesignStudioV2(){
         <div className="sc">
           <div className="scb"/>
           <div className="scc">
-            <div className="spf" ref={previewRef} style={{width:pW,height:pH}}>
+            <div className="spf" ref={previewRef} style={{width:pW,height:pH,position:"relative"}}>
               <div data-export-target="true" style={{width:rawW,height:rawH,transform:`scale(${scale})`,transformOrigin:"top left"}}>{renderPreview()}</div>
+              {remixEmptyState}
             </div>
           </div>
           {/* Remix timeline — YouTube Studio style */}
