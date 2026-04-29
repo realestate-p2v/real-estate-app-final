@@ -27,7 +27,11 @@ import {
   PresetSpec,
   PresetInputs,
   SlotMeaning,
+  PaceId,
+  PACE_PRESETS,
   clipMatchesMeaning,
+  clipLooselyMatchesMeaning,
+  clipShouldNotMatchMeaning,
   slotPrefersAerial,
 } from "@/lib/remix-presets";
 
@@ -58,6 +62,7 @@ export type GeneratedSlot = {
 export type GenerateResult = {
   slots: GeneratedSlot[];
   inputs: PresetInputs;
+  pace: PaceId;
   // For naming the resulting draft.
   presetId: RemixPresetId;
   propertyDisplayName: string | null;
@@ -84,10 +89,15 @@ type Props = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Pick a default clip for a slot meaning, preferring:
-// 1. aerial clips for aerial-preferring slots
-// 2. label match via clipMatchesMeaning
-// 3. fallback to any non-broken unused clip
+// Pick a default clip for a slot meaning. Cascade:
+//  1. Aerial-preferred slots: try aerial clips first
+//  2. Strict label match (clipMatchesMeaning) — e.g. "Master Bedroom" → primary_bedroom
+//  3. Loose label match (clipLooselyMatchesMeaning) — e.g. "Bedroom 2" → primary_bedroom
+//  4. Anti-match-aware last resort: any unused, non-broken clip whose label is
+//     not explicitly disqualified for this meaning. Skips "Entryway" for a
+//     bedroom slot rather than auto-filling it as a fallback.
+//  5. Absolute last resort: first available clip (returns null if pool empty).
+//
 // Returns null if no eligible clip exists (modal renders "Pick a clip").
 function pickDefaultForSlot(
   meaning: SlotMeaning,
@@ -100,19 +110,32 @@ function pickDefaultForSlot(
   );
   if (available.length === 0) return null;
 
-  // Aerial-preferring: try aerial clips first.
+  // 1. Aerial-preferring: try aerial clips first.
   if (slotPrefersAerial(meaning)) {
     const aerial = available.find((c) => c.isAerial);
     if (aerial) return aerial;
   }
 
-  const matched = available.find((c) =>
+  // 2. Strict match.
+  const strict = available.find((c) =>
     clipMatchesMeaning(c.label, c.isAerial, meaning)
   );
-  if (matched) return matched;
+  if (strict) return strict;
 
-  // Last-resort fallback: first available clip that ISN'T aerial (preserve
-  // aerials for slots that actually want them).
+  // 3. Loose match (e.g. "Bedroom 2" for primary_bedroom).
+  const loose = available.find((c) =>
+    clipLooselyMatchesMeaning(c.label, c.isAerial, meaning)
+  );
+  if (loose) return loose;
+
+  // 4. Anti-match-aware last resort: skip explicitly disqualified labels and
+  // skip aerials (preserve them for slots that actually want them).
+  const safeFallback = available.find(
+    (c) => !c.isAerial && !clipShouldNotMatchMeaning(c.label, meaning)
+  );
+  if (safeFallback) return safeFallback;
+
+  // 5. Absolute last resort: any non-aerial clip, or anything.
   const nonAerial = available.find((c) => !c.isAerial);
   return nonAerial || available[0];
 }
@@ -154,6 +177,9 @@ export default function RemixPresetModal(props: Props) {
 
   // Inputs collected from the agent.
   const [inputs, setInputs] = useState<PresetInputs>({});
+
+  // Per-draft pace (Fast/Medium/Slow). Persists into PresetDraftMeta.
+  const [pace, setPace] = useState<PaceId>("medium");
 
   // Are we using the cross-property pool? Toggled by the under-clip warning.
   const [useCrossProperty, setUseCrossProperty] = useState(false);
@@ -215,9 +241,9 @@ export default function RemixPresetModal(props: Props) {
   const canGenerate = filledCount === baseSlotCount && inputsValid;
 
   // ── Auto-Fill (Lens-only) ──────────────────────────────────────────────
-  // Random valid clip per slot, drone-aware on aerial slots, broken-aware.
-  // Different from the default fill: random ordering of the pool, so subsequent
-  // taps surface different combinations.
+  // Same matching cascade as pickDefaultForSlot, but on a randomly-shuffled
+  // pool so subsequent taps surface different combinations. Strict → loose →
+  // anti-skip → any.
   const autoFill = () => {
     if (!isLensSubscriber) return;
     const used = new Set<string>();
@@ -226,11 +252,12 @@ export default function RemixPresetModal(props: Props) {
       .sort(() => Math.random() - 0.5);
     const next: (RemixSourceClip | null)[] = [];
     for (const slot of preset.slots) {
-      // First aerial if slot prefers it
       let pick: RemixSourceClip | undefined;
+      // 1. Aerial-preferring slot: aerial first
       if (slotPrefersAerial(slot.meaning)) {
         pick = shuffled.find((c) => c.isAerial && !used.has(c.url));
       }
+      // 2. Strict label match
       if (!pick) {
         pick = shuffled.find(
           (c) =>
@@ -238,6 +265,24 @@ export default function RemixPresetModal(props: Props) {
             clipMatchesMeaning(c.label, c.isAerial, slot.meaning)
         );
       }
+      // 3. Loose match
+      if (!pick) {
+        pick = shuffled.find(
+          (c) =>
+            !used.has(c.url) &&
+            clipLooselyMatchesMeaning(c.label, c.isAerial, slot.meaning)
+        );
+      }
+      // 4. Anti-match-aware fallback
+      if (!pick) {
+        pick = shuffled.find(
+          (c) =>
+            !used.has(c.url) &&
+            !c.isAerial &&
+            !clipShouldNotMatchMeaning(c.label, slot.meaning)
+        );
+      }
+      // 5. Anything left
       if (!pick) {
         pick = shuffled.find((c) => !used.has(c.url));
       }
@@ -292,6 +337,7 @@ export default function RemixPresetModal(props: Props) {
     return {
       slots,
       inputs,
+      pace,
       presetId,
       propertyDisplayName: selectedPropertyDisplayName,
     };
@@ -772,6 +818,83 @@ export default function RemixPresetModal(props: Props) {
               )}
             </div>
           )}
+
+          {/* Pace selector — Fast / Medium / Slow */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid var(--sbr)",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--st)",
+                  margin: 0,
+                  fontFamily: "var(--sf)",
+                }}
+              >
+                Pace
+              </p>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "var(--std)",
+                  margin: 0,
+                  marginTop: 1,
+                  fontFamily: "var(--sf)",
+                }}
+              >
+                {paceCopy(pace, preset)}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                borderRadius: 8,
+                border: "1px solid var(--sbr)",
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              {(["fast", "medium", "slow"] as PaceId[]).map((p) => {
+                const isActive = pace === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPace(p)}
+                    style={{
+                      padding: "6px 12px",
+                      border: "none",
+                      borderLeft:
+                        p === "medium" ? "1px solid var(--sbr)" : "none",
+                      borderRight:
+                        p === "medium" ? "1px solid var(--sbr)" : "none",
+                      background: isActive
+                        ? `linear-gradient(135deg, ${preset.cardTheme.gradientFrom}, ${preset.cardTheme.gradientTo})`
+                        : "rgba(255,255,255,0.02)",
+                      color: isActive ? "#fff" : "var(--std)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "var(--sf)",
+                      textTransform: "capitalize",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Slot rows */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1433,5 +1556,23 @@ function humanLabelForMeaning(m: SlotMeaning): string {
       return "Best clip";
     default:
       return "Clip";
+  }
+}
+
+// ─── Pace copy ────────────────────────────────────────────────────────────────
+// Returns the descriptive line shown under "Pace" in the modal. Computes the
+// preset's total duration at the chosen pace so the agent sees what they're
+// getting: "Fast · ~11s — punchy, scroll-stopping" etc.
+function paceCopy(pace: PaceId, preset: PresetSpec): string {
+  const baseTotal = preset.slots.reduce((sum, s) => sum + s.defaultDuration, 0);
+  const scaled = baseTotal * PACE_PRESETS[pace];
+  const seconds = Math.round(scaled);
+  switch (pace) {
+    case "fast":
+      return `~${seconds}s · punchy, scroll-stopping`;
+    case "medium":
+      return `~${seconds}s · balanced default`;
+    case "slow":
+      return `~${seconds}s · cinematic, lets shots breathe`;
   }
 }
