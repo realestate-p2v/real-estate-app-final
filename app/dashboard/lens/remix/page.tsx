@@ -1,4 +1,4 @@
- "use client";
+"use client";
 import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
 import {
   ChevronDown, Download, Upload, Image as ImageIcon, PenTool, Home, DollarSign,
@@ -9,6 +9,7 @@ import {
   Clock, ArrowUp, ArrowDown, Trash2, Lock, Save, Copy,
 } from "lucide-react";
 import { GateOverlay } from "@/components/gate-overlay";
+import ToolHeader from "@/components/tool-header";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
 function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
@@ -376,51 +377,96 @@ function SwatchGrid({colors,current,onSelect,showLabels}:{colors:any[];current:s
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
-function RemixLibraryGrid(){
-  const[remixes,setRemixes]=useState<any[]>([]);
+type RemixGridDraft={id:string;name:string;property_id:string|null;updated_at:string;exported_at:string|null;clip_count:number;total_duration:number;size:string};
+function RemixLibraryGrid({onLoadDraft,refreshKey}:{onLoadDraft:(id:string)=>void;refreshKey:number}){
+  const[drafts,setDrafts]=useState<RemixGridDraft[]>([]);
   const[loading,setLoading]=useState(true);
-  const[viewModal,setViewModal]=useState<any>(null);
-  const[deleteConfirm,setDeleteConfirm]=useState<string|null>(null);
+  const[deleteConfirm,setDeleteConfirm]=useState<{id:string;name:string}|null>(null);
   const[deleting,setDeleting]=useState(false);
-  useEffect(()=>{
-    (async()=>{
-      const supabase=(await import("@/lib/supabase/client")).createClient();
-      const{data:{user}}=await supabase.auth.getUser();
-      if(!user){setLoading(false);return;}
-      const{data}=await supabase.from("design_exports").select("*").eq("user_id",user.id).like("template_type","video_remix%").order("created_at",{ascending:false});
-      setRemixes(data||[]);
-      setLoading(false);
-    })();
-  },[]);
+
+  const fetchAll=async()=>{
+    setLoading(true);
+    try{
+      // No propertyId filter — this gallery is user-wide. The API auths via cookies.
+      const resp=await fetch(`/api/lens/remix/drafts`);
+      if(!resp.ok){setDrafts([]);setLoading(false);return;}
+      const data=await resp.json();
+      setDrafts(data.drafts||[]);
+    }catch(e){console.error("[gallery] fetch error:",e);setDrafts([]);}
+    setLoading(false);
+  };
+  useEffect(()=>{fetchAll();},[refreshKey]);
+
   const handleDelete=async(id:string)=>{
     setDeleting(true);
     try{
-      const supabase=(await import("@/lib/supabase/client")).createClient();
-      const item=remixes.find(r=>r.id===id);
-      if(item?.export_url&&item.export_url.includes("cloudinary")){
-        await deleteFromCloudinary(item.export_url,"video");
-      }
-      await supabase.from("design_exports").delete().eq("id",id);
-      setRemixes(prev=>prev.filter(r=>r.id!==id));
-      if(viewModal?.id===id)setViewModal(null);
-    }catch(e){console.error("Delete failed:",e);}
+      const resp=await fetch(`/api/lens/remix/drafts/${encodeURIComponent(id)}`,{method:"DELETE"});
+      if(!resp.ok){const err=await resp.json().catch(()=>({}));console.error("[gallery] delete failed:",err);}
+      else{setDrafts(prev=>prev.filter(d=>d.id!==id));}
+    }catch(e){console.error("[gallery] delete exception:",e);}
     setDeleting(false);setDeleteConfirm(null);
   };
+
   if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 0"}}><Loader2 size={24} className="animate-spin" color="var(--std)"/></div>;
-  if(remixes.length===0)return<div style={{textAlign:"center",padding:"48px 0",borderRadius:16,border:"2px dashed var(--sbr)",background:"rgba(255,255,255,0.01)"}}><Film size={40} color="rgba(255,255,255,0.1)" style={{margin:"0 auto 12px"}}/><p style={{fontSize:14,color:"var(--std)",margin:0}}>No remixes exported yet</p><p style={{fontSize:12,color:"var(--std)",margin:"4px 0 0",opacity:0.6}}>Use the editor above to create your first remix</p></div>;
+  if(drafts.length===0)return<div style={{textAlign:"center",padding:"48px 0",borderRadius:16,border:"2px dashed var(--sbr)",background:"rgba(255,255,255,0.01)"}}><Film size={40} color="rgba(255,255,255,0.1)" style={{margin:"0 auto 12px"}}/><p style={{fontSize:14,color:"var(--std)",margin:0}}>No remixes yet</p><p style={{fontSize:12,color:"var(--std)",margin:"4px 0 0",opacity:0.6}}>Build a remix in the editor above and click Save Draft</p></div>;
+
+  // Split drafts into the two buckets. Remixes (exported at least once) come first
+  // since they're the agent's "ready to share" items; drafts sit below as WIP.
+  const exportedDrafts=drafts.filter(d=>d.exported_at);
+  const unexportedDrafts=drafts.filter(d=>!d.exported_at);
+
+  const renderCard=(d:RemixGridDraft)=>(
+    <div key={d.id} style={{borderRadius:12,border:"1px solid var(--sbr)",overflow:"hidden",background:"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.2s",position:"relative",display:"flex",flexDirection:"column"}} onClick={()=>onLoadDraft(d.id)}>
+      <div style={{aspectRatio:"16/9",position:"relative",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <Film size={36} color="rgba(255,255,255,0.15)"/>
+        {d.exported_at&&<div style={{position:"absolute",top:8,right:8,padding:"2px 8px",borderRadius:99,background:"rgba(34,197,94,0.18)",border:"1px solid rgba(34,197,94,0.35)",fontSize:9,fontWeight:700,color:"#22c55e",letterSpacing:"0.04em"}}>EXPORTED</div>}
+      </div>
+      <div style={{padding:12,flex:1,display:"flex",flexDirection:"column"}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+          <p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}} title={d.name}>{d.name}</p>
+          <button onClick={e=>{e.stopPropagation();setDeleteConfirm({id:d.id,name:d.name});}} style={{background:"none",border:"none",cursor:"pointer",padding:2,opacity:0.4,transition:"opacity 0.2s",flexShrink:0}} onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0.4")}><Trash2 size={13} color="#ef4444"/></button>
+        </div>
+        <p style={{fontSize:10,color:"var(--std)",margin:"6px 0 0"}}>{d.clip_count} clip{d.clip_count!==1?"s":""} {"\u00b7"} {d.total_duration}s {"\u00b7"} {d.size}</p>
+        <p style={{fontSize:10,color:"var(--std)",margin:"2px 0 0",opacity:0.65}}>Updated {new Date(d.updated_at).toLocaleDateString()}</p>
+        <div style={{flex:1}}/>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:10,paddingTop:8,borderTop:"1px solid var(--sbr)"}}>
+          <span style={{fontSize:11,fontWeight:600,color:"var(--sa)"}}>Open & Export</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return<>
     {/* Delete confirmation modal */}
-    {deleteConfirm&&<div onClick={()=>setDeleteConfirm(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)"}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:380,width:"90%",textAlign:"center"}}><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Trash2 size={22} color="#ef4444"/></div><h3 style={{fontSize:16,fontWeight:700,color:"var(--st)",margin:"0 0 8px"}}>Delete this remix?</h3><p style={{fontSize:13,color:"var(--std)",margin:"0 0 20px"}}>This will permanently delete the remix and its cloud storage file. This cannot be undone.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>setDeleteConfirm(null)} style={{padding:"8px 20px",borderRadius:99,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button><button onClick={()=>handleDelete(deleteConfirm)} disabled={deleting} style={{padding:"8px 20px",borderRadius:99,border:"none",background:"#ef4444",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:deleting?0.6:1}}>{deleting?"Deleting...":"Delete"}</button></div></div></div>}
-    {/* View modal */}
-    {viewModal&&<div onClick={()=>setViewModal(null)} style={{position:"fixed",inset:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.8)",backdropFilter:"blur(4px)",padding:16}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",width:"100%",maxWidth:800,maxHeight:"90vh",overflow:"hidden",boxShadow:"0 24px 48px rgba(0,0,0,0.4)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderBottom:"1px solid var(--sbr)"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"rgba(124,58,237,0.15)",padding:"2px 8px",borderRadius:99}}>Video Remix</span><span style={{fontSize:11,color:"var(--std)"}}>{new Date(viewModal.created_at).toLocaleDateString()}</span></div><button onClick={()=>setViewModal(null)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><X size={18} color="var(--std)"/></button></div><div style={{background:"#000"}}><video src={viewModal.export_url||viewModal.overlay_video_url} controls autoPlay playsInline style={{width:"100%",maxHeight:"60vh",objectFit:"contain"}}/></div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderTop:"1px solid var(--sbr)"}}><div style={{display:"flex",alignItems:"center",gap:12}}><a href={((viewModal.export_url||viewModal.overlay_video_url)||"").replace("/upload/","/upload/fl_attachment/")} download style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sa)",color:"#fff",fontWeight:700,fontSize:13,padding:"8px 16px",borderRadius:99,textDecoration:"none"}}><Download size={14}/>Download</a></div><button onClick={()=>{setViewModal(null);setDeleteConfirm(viewModal.id);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"none",border:"1px solid rgba(239,68,68,0.3)",color:"#ef4444",fontWeight:600,fontSize:12,padding:"6px 14px",borderRadius:99,cursor:"pointer"}}><Trash2 size={13}/>Delete</button></div></div></div>}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
-      {remixes.map(r=>{
-        const dl=r.export_url||r.overlay_video_url;
-        let thumb:string|null=null;
-        if(dl?.includes("cloudinary.com")&&dl.includes("/video/upload/"))thumb=dl.replace("/video/upload/","/video/upload/so_1,w_500,h_280,c_fill,f_jpg/").replace(/\.(mp4|mov|webm)$/i,".jpg");
-        return<div key={r.id} style={{borderRadius:12,border:"1px solid var(--sbr)",overflow:"hidden",background:"rgba(255,255,255,0.02)",cursor:"pointer",transition:"all 0.2s",position:"relative"}} onClick={()=>setViewModal(r)}><div style={{aspectRatio:"16/9",position:"relative",background:"#000"}}>{thumb?<img src={thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={32} color="rgba(255,255,255,0.1)"/></div>}<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.2s"}} className="group-hover-show"><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center"}}><Play size={20} color="#fff" style={{marginLeft:2}}/></div></div></div><div style={{padding:12}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"rgba(124,58,237,0.15)",padding:"2px 8px",borderRadius:99}}>Video Remix</span><span style={{fontSize:10,fontWeight:700,color:"#0891b2",background:"rgba(8,145,178,0.15)",padding:"2px 8px",borderRadius:99}}>MP4</span></div><button onClick={e=>{e.stopPropagation();setDeleteConfirm(r.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:4,opacity:0.4,transition:"opacity 0.2s"}} onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0.4")}><Trash2 size={14} color="#ef4444"/></button></div><p style={{fontSize:11,color:"var(--std)",margin:"8px 0 0"}}>{new Date(r.created_at).toLocaleDateString()}</p><div style={{display:"flex",alignItems:"center",gap:12,marginTop:8,paddingTop:8,borderTop:"1px solid var(--sbr)"}}><span style={{fontSize:11,fontWeight:600,color:"var(--sa)"}}>Watch</span><a href={dl?.includes("/upload/")?dl.replace("/upload/","/upload/fl_attachment/"):dl} download onClick={e=>e.stopPropagation()} style={{fontSize:11,fontWeight:600,color:"var(--std)",textDecoration:"none"}}>Download</a></div></div></div>;
-      })}
-    </div>
+    {deleteConfirm&&<div onClick={()=>setDeleteConfirm(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)"}}><div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:380,width:"90%",textAlign:"center"}}><div style={{width:48,height:48,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Trash2 size={22} color="#ef4444"/></div><h3 style={{fontSize:16,fontWeight:700,color:"var(--st)",margin:"0 0 8px"}}>Delete this draft?</h3><p style={{fontSize:13,color:"var(--std)",margin:"0 0 4px"}}>"{deleteConfirm.name}"</p><p style={{fontSize:12,color:"var(--std)",margin:"0 0 20px",opacity:0.7}}>This cannot be undone.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>setDeleteConfirm(null)} disabled={deleting} style={{padding:"8px 20px",borderRadius:99,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button><button onClick={()=>handleDelete(deleteConfirm.id)} disabled={deleting} style={{padding:"8px 20px",borderRadius:99,border:"none",background:"#ef4444",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:deleting?0.6:1}}>{deleting?"Deleting...":"Delete"}</button></div></div></div>}
+
+    {/* Section 1: Remixes (drafts exported at least once) */}
+    {exportedDrafts.length>0&&(
+      <div style={{marginBottom:32}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+          <h3 style={{fontSize:14,fontWeight:700,color:"var(--st)",margin:0}}>Remixes</h3>
+          <span style={{fontSize:11,color:"var(--std)",fontWeight:600,padding:"1px 8px",borderRadius:99,background:"rgba(255,255,255,0.06)"}}>{exportedDrafts.length}</span>
+          <span style={{fontSize:11,color:"var(--std)",opacity:0.6,marginLeft:4}}>Exported at least once</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {exportedDrafts.map(renderCard)}
+        </div>
+      </div>
+    )}
+
+    {/* Section 2: Saved Remix Drafts (not yet exported) */}
+    {unexportedDrafts.length>0&&(
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+          <h3 style={{fontSize:14,fontWeight:700,color:"var(--st)",margin:0}}>Saved Remix Drafts</h3>
+          <span style={{fontSize:11,color:"var(--std)",fontWeight:600,padding:"1px 8px",borderRadius:99,background:"rgba(255,255,255,0.06)"}}>{unexportedDrafts.length}</span>
+          <span style={{fontSize:11,color:"var(--std)",opacity:0.6,marginLeft:4}}>Work in progress</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {unexportedDrafts.map(renderCard)}
+        </div>
+      </div>
+    )}
   </>;
 }
 
@@ -1253,40 +1299,31 @@ export default function DesignStudioV2(){
       const outputBlob=new Blob([outputData],{type:"video/mp4"});
       console.log(`[remix] Output: ${outputBlob.size} bytes`);
 
-      // Upload to Cloudinary
-      setExportProgress(92);setExportStatus("Uploading to cloud...");
-      let cloudinaryUrl:string|null=null;
-      try{
-        const sigResp=await fetch("/api/cloudinary-signature",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder:"photo2video/remix-exports"})});
-        const sigData=await sigResp.json();
-        if(sigData.success){
-          const{signature,timestamp,cloudName,apiKey,folder:folderPath}=sigData.data;
-          const fd=new FormData();fd.append("file",outputBlob,`remix-${Date.now()}.mp4`);fd.append("api_key",apiKey);fd.append("timestamp",timestamp.toString());fd.append("signature",signature);fd.append("folder",folderPath);fd.append("resource_type","video");
-          const upResp=await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,{method:"POST",body:fd});
-          const upResult=await upResp.json();
-          cloudinaryUrl=upResult.secure_url||null;
-          console.log("[remix] Uploaded:",cloudinaryUrl);
-        }
-      }catch(e){console.error("[remix] Upload error:",e);}
-
-      // Save to DB
-      if(cloudinaryUrl){
-        setExportStatus("Saving...");
-        try{
-          const supabase=(await import("@/lib/supabase/client")).createClient();
-          const{data:{user}}=await supabase.auth.getUser();
-          if(user)await saveExportWithOverwrite(supabase,user.id,selectedPropertyId||null,`video_remix_${remixSize}`,cloudinaryUrl,{export_format:"mp4",overlay_video_url:cloudinaryUrl});
-          console.log("[remix] Saved to DB");
-        }catch(e){console.error("[remix] DB error:",e);}
-      }
-
-      // Download locally
-      setExportStatus("Downloading...");
+      // Download locally — exports are now ephemeral artifacts. The draft state IS
+      // the source of truth; re-rendering happens by reopening the draft and
+      // exporting again. Skipping the Cloudinary upload + design_exports insert
+      // saves bandwidth on every re-export of the same remix.
+      setExportProgress(92);setExportStatus("Downloading...");
       const downloadUrl=URL.createObjectURL(outputBlob);
       const link=document.createElement("a");link.download=`remix-${remixSize}-${Date.now()}.mp4`;link.href=downloadUrl;link.click();
       URL.revokeObjectURL(downloadUrl);
+      setExportProgress(96);
+
+      // If a draft is currently loaded, mark it as exported so the property page +
+      // studio gallery can show it under "Remixes" instead of "Saved Remix Drafts".
+      // Non-blocking: a failure here just means the draft stays in the "Drafts"
+      // bucket — the export already downloaded successfully.
+      if(currentDraft?.id){
+        try{
+          setExportStatus("Marking exported...");
+          await fetch(`/api/lens/remix/drafts/${encodeURIComponent(currentDraft.id)}/export`,{method:"POST"});
+          // Refresh the local drafts list so the section split reflects the change
+          await loadDraftsList(selectedPropertyId||null);
+        }catch(e){console.warn("[remix] mark-exported failed (non-fatal):",e);}
+      }
+
       setExportProgress(100);setExportStatus("Done!");
-      notify(cloudinaryUrl?"Remix exported & saved!":"Remix exported!");
+      notify("Remix exported!");
       setTimeout(()=>{setExportProgress(0);setExporting(false);setExportStatus("");},2000);return;
     }catch(err:any){
       console.error("[remix] Export error:",err);
@@ -1525,16 +1562,23 @@ export default function DesignStudioV2(){
     <div className={`sr ${theme==="light"?"light":""}`}>
       {/* TOP BAR */}
       <div className="st">
-        <a href="/dashboard" className="back-btn" title="Back to Dashboard"><ChevronLeft size={14}/></a>
         <div className="slg"><div className="slm" style={{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}}><Film size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Video Remix</span></div>
         <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
-        <div style={{marginLeft:12,display:"flex",alignItems:"center",gap:8}}>
-          <Home size={14} color="var(--sa)"/>
-          <select className="ps" value={selectedPropertyId||""} onChange={e=>handleSelectProperty(e.target.value)} style={{width:220}}>
-            <option value="">Select property...</option>
-            {userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}
-            <option value="__new__">{"\uff0b"} Enter manually</option>
-          </select>
+        <div style={{flex:1,minWidth:0,marginLeft:12,marginRight:12}}>
+          <ToolHeader
+            selectedPropertyId={selectedPropertyId}
+            onSelectProperty={(v)=>handleSelectProperty(v||"")}
+            properties={userProperties.map((p:any)=>({id:p.id,address:p.address,city:p.city,state:p.state}))}
+            backHref="/dashboard/lens"
+            allowManualEntry
+            manualEntryValue="__new__"
+          />
+        </div>
+        <div className="sac">
+          <button className="bi" title="Undo"><Undo2 size={15}/></button>
+          <button className="bi" title="Redo"><Redo2 size={15}/></button>
+          <div className="td"/>
+          <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
           {isRemixMode&&currentDraft&&(
             <div title={`Editing draft: ${currentDraft.name}`} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:99,background:"rgba(168,85,247,0.12)",border:"1px solid rgba(168,85,247,0.3)",fontSize:10,fontWeight:600,color:"var(--sa)",fontFamily:"var(--sf)",maxWidth:200}}>
               <Save size={10}/>
@@ -1542,13 +1586,6 @@ export default function DesignStudioV2(){
               <button onClick={()=>{setCurrentDraft(null);notify("Detached from draft");}} title="Stop editing this draft" style={{background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:2,display:"flex",alignItems:"center"}}><X size={10} color="var(--sa)"/></button>
             </div>
           )}
-        </div>
-        <div className="ssp"/>
-        <div className="sac">
-          <button className="bi" title="Undo"><Undo2 size={15}/></button>
-          <button className="bi" title="Redo"><Redo2 size={15}/></button>
-          <div className="td"/>
-          <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
           {isRemixMode&&remixClips.length>0&&(
             <>
               <button
@@ -1941,9 +1978,9 @@ export default function DesignStudioV2(){
         <div style={{maxWidth:1200,margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
             <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#7c3aed,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={16} color="#fff"/></div>
-            <div><h2 style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0}}>Your Remixes</h2><p style={{fontSize:11,color:"var(--std)",margin:0}}>All your exported remix videos</p></div>
+            <div><h2 style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0}}>Your Remixes</h2><p style={{fontSize:11,color:"var(--std)",margin:0}}>All your saved remix states. Click any card to load it into the editor.</p></div>
           </div>
-          <RemixLibraryGrid/>
+          <RemixLibraryGrid onLoadDraft={loadDraft} refreshKey={drafts.length}/>
         </div>
       </div>
 
