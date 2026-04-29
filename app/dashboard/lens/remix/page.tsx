@@ -290,8 +290,36 @@ const REMIX_SIZES=[
 interface RemixClip {
   id: string; sourceUrl: string; thumbnail: string | null; label: string;
   duration: number; trimStart: number; trimEnd: number; speed: number; order: number;
+  isAerial?: boolean;
 }
 const SPEED_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+// Drone heuristic: derives from clip description text. Imperfect but free.
+// Catches "Drone Front", "Aerial Backyard", "Above Pool", "Overhead", "Sky View" etc.
+function detectAerial(label: string): boolean {
+  if (!label) return false;
+  const s = label.toLowerCase();
+  return /\b(drone|aerial|overhead|bird'?s?[\s-]?eye|sky[\s-]?view|above|elevation|fly[\s-]?over)\b/.test(s);
+}
+
+// Resolve the best display name for an order's clip group.
+// Tries property_address first, then matches property_id against agent_properties.
+function resolveOrderDisplayName(
+  order: { property_address?: string | null; property_id?: string | null },
+  properties: Array<{ id: string; address?: string | null }>
+): string {
+  if (order.property_address && order.property_address.trim()) return order.property_address.trim();
+  if (order.property_id) {
+    const p = properties.find(x => x.id === order.property_id);
+    if (p?.address) return p.address;
+  }
+  return "Unknown Property";
+}
+
+// Normalize an address for fuzzy matching when merging orders by property.
+function normalizeAddr(a: string): string {
+  return (a || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
 function LensGate({children,locked,label}:{children:ReactNode;locked:boolean;label?:string}){
   if(!locked)return<>{children}</>;
@@ -479,7 +507,8 @@ export default function DesignStudioV2(){
   const[remixSize,setRemixSize]=useState("landscape");
   const[remixBranding,setRemixBranding]=useState(true);
   const[expandedClipId,setExpandedClipId]=useState<string|null>(null);
-  const[remixClipSources,setRemixClipSources]=useState<{orderId:string;address:string;date:string;clips:{url:string;thumbnail:string|null;label:string}[]}[]>([]);
+  const[remixClipSources,setRemixClipSources]=useState<{propertyKey:string;displayName:string;orderIds:string[];latestDate:string;clips:{url:string;thumbnail:string|null;label:string;isAerial:boolean;orderId:string;orderDate:string}[]}[]>([]);
+  const[hoverPreviewUrl,setHoverPreviewUrl]=useState<string|null>(null);
   const[loadingRemixClips,setLoadingRemixClips]=useState(false);
   const[isLensSubscriber,setIsLensSubscriber]=useState(false);
   const[savedBrandingCardUrl,setSavedBrandingCardUrl]=useState<string|null>(null);
@@ -632,18 +661,59 @@ export default function DesignStudioV2(){
     try{
       const supabase=(await import("@/lib/supabase/client")).createClient();
       const{data:{user}}=await supabase.auth.getUser();if(!user)return;
-      const{data:orders}=await supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,clip_urls,photos,created_at,property_address").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false});
-      const vids=(orders||[]).filter((o:any)=>o.unbranded_delivery_url||o.delivery_url);
+      // Fetch orders + agent_properties in parallel for the address resolution fallback
+      const[ordersRes,propsRes]=await Promise.all([
+        supabase.from("orders").select("order_id,delivery_url,unbranded_delivery_url,clip_urls,photos,created_at,property_address,property_id").eq("user_id",user.id).in("status",["complete","delivered","closed"]).order("created_at",{ascending:false}),
+        supabase.from("agent_properties").select("id,address").eq("user_id",user.id).is("merged_into_id",null),
+      ]);
+      const orders=ordersRes.data||[];
+      const properties=propsRes.data||[];
+      const vids=orders.filter((o:any)=>o.unbranded_delivery_url||o.delivery_url);
       setHasVideoOrders(vids.length>0);
       setUserVideos(vids.map((o:any)=>({orderId:o.order_id,url:o.unbranded_delivery_url||o.delivery_url,thumbnail:o.photos?.[0]?.secure_url||null,hasUnbranded:!!o.unbranded_delivery_url,date:new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})})));
-      const sources=vids.map((o:any)=>{
-        const clipData:any[]=Array.isArray(o.clip_urls)?o.clip_urls:[];
-        const addr=o.property_address||"Unknown Property";
-        const dt=new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+
+      // Group clips by property (merging multi-order properties).
+      // Key by normalized address so "302 Dionnes Way" and "302 dionnes way" land in the same bucket.
+      type ClipEntry={url:string;thumbnail:string|null;label:string;isAerial:boolean;orderId:string;orderDate:string;orderTimestamp:number;position:number};
+      const groups=new Map<string,{displayName:string;orderIds:Set<string>;latestTs:number;latestDate:string;clips:ClipEntry[]}>();
+
+      for(const o of vids){
+        const displayName=resolveOrderDisplayName({property_address:o.property_address,property_id:o.property_id},properties);
+        const key=normalizeAddr(displayName)||o.order_id; // fallback to orderId if no name at all
+        const ts=new Date(o.created_at).getTime();
+        const dateLabel=new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
         const orderThumb=o.photos?.[0]?.secure_url||null;
-        if(clipData.length>0){return{orderId:o.order_id,address:addr,date:dt,clips:clipData.sort((a:any,b:any)=>(a.position||0)-(b.position||0)).map((c:any)=>({url:c.url,thumbnail:c.photo_url||null,label:c.description||`Clip ${c.position||"?"}`}))};}
-        return{orderId:o.order_id,address:addr,date:dt,clips:[{url:o.unbranded_delivery_url||o.delivery_url,thumbnail:orderThumb,label:"Full Video"}]};
-      });
+        const clipData:any[]=Array.isArray(o.clip_urls)?o.clip_urls:[];
+        const entries:ClipEntry[]=clipData.length>0
+          ? clipData.map((c:any)=>{
+              const lbl=c.description||`Clip ${c.position||"?"}`;
+              return{url:c.url,thumbnail:c.photo_url||null,label:lbl,isAerial:detectAerial(lbl),orderId:o.order_id,orderDate:dateLabel,orderTimestamp:ts,position:c.position||0};
+            })
+          : [{url:o.unbranded_delivery_url||o.delivery_url,thumbnail:orderThumb,label:"Full Video",isAerial:false,orderId:o.order_id,orderDate:dateLabel,orderTimestamp:ts,position:0}];
+
+        const existing=groups.get(key);
+        if(existing){
+          existing.orderIds.add(o.order_id);
+          existing.clips.push(...entries);
+          if(ts>existing.latestTs){existing.latestTs=ts;existing.latestDate=dateLabel;existing.displayName=displayName;}
+        }else{
+          groups.set(key,{displayName,orderIds:new Set([o.order_id]),latestTs:ts,latestDate:dateLabel,clips:entries});
+        }
+      }
+
+      // Sort groups by most recent activity (newest first), and clips within each group
+      // by orderTimestamp desc, then by position asc.
+      const sources=Array.from(groups.entries())
+        .sort((a,b)=>b[1].latestTs-a[1].latestTs)
+        .map(([propertyKey,g])=>({
+          propertyKey,
+          displayName:g.displayName,
+          orderIds:Array.from(g.orderIds),
+          latestDate:g.latestDate,
+          clips:g.clips
+            .sort((a,b)=>b.orderTimestamp-a.orderTimestamp||a.position-b.position)
+            .map(c=>({url:c.url,thumbnail:c.thumbnail,label:c.label,isAerial:c.isAerial,orderId:c.orderId,orderDate:c.orderDate})),
+        }));
       setRemixClipSources(sources);
     }catch(err){console.error("Video load error:",err);}
     setLoadingVideos(false);
@@ -657,29 +727,29 @@ export default function DesignStudioV2(){
   const notify=(msg:string)=>{setNotification(msg);setTimeout(()=>setNotification(null),3000);};
 
   // ─── Remix helpers ───────────────────────────────────────────────────────
-  const addClipToRemix=(sourceUrl:string,thumbnail:string|null,label:string)=>{
+  const addClipToRemix=(sourceUrl:string,thumbnail:string|null,label:string,isAerial:boolean=false)=>{
     const clipId=String(Date.now())+Math.random().toString(36).slice(2,6);
-    // Probe actual duration
+    console.log("[remix] addClipToRemix probing duration for:",label);
+    // Probe duration FIRST, then insert. This eliminates the placeholder-then-update race
+    // that caused the playback engine to compute clip starts from stale durations.
     const probe=document.createElement("video");
-    probe.preload="metadata";probe.muted=true;probe.src=sourceUrl;
-    probe.onloadedmetadata=()=>{
-      const dur=probe.duration&&isFinite(probe.duration)?probe.duration:6;
-      setRemixClips(prev=>{
-        const existing=prev.find(c=>c.id===clipId);
-        if(existing)return prev.map(c=>c.id===clipId?{...c,duration:dur,trimEnd:dur}:c);
-        return[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:dur,trimStart:0,trimEnd:dur,speed:1,order:prev.length}];
-      });
+    probe.preload="metadata";probe.muted=true;probe.crossOrigin="anonymous";
+    let inserted=false;
+    const insertWith=(dur:number)=>{
+      if(inserted)return;inserted=true;
+      const safeDur=dur&&isFinite(dur)&&dur>0?dur:6;
+      console.log(`[remix] addClipToRemix inserting ${label} duration=${safeDur.toFixed(2)}s`);
+      setRemixClips(prev=>[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:safeDur,trimStart:0,trimEnd:safeDur,speed:1,order:prev.length,isAerial}]);
       probe.remove();
     };
+    probe.onloadedmetadata=()=>insertWith(probe.duration);
     probe.onerror=()=>{
-      setRemixClips(prev=>{
-        if(prev.find(c=>c.id===clipId))return prev;
-        return[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:6,trimStart:0,trimEnd:6,speed:1,order:prev.length}];
-      });
-      probe.remove();
+      console.warn("[remix] addClipToRemix probe failed for",label,"- inserting with default 6s");
+      insertWith(6);
     };
-    // Add immediately with placeholder duration, update when metadata loads
-    setRemixClips(prev=>[...prev,{id:clipId,sourceUrl,thumbnail,label,duration:6,trimStart:0,trimEnd:6,speed:1,order:prev.length}]);
+    // Hard timeout in case neither event fires (rare but possible on flaky networks)
+    setTimeout(()=>{if(!inserted){console.warn("[remix] addClipToRemix probe timed out for",label);insertWith(6);}},8000);
+    probe.src=sourceUrl;
   };
   const removeClipFromRemix=(id:string)=>setRemixClips(prev=>prev.filter(c=>c.id!==id).map((c,i)=>({...c,order:i})));
   const moveClipInRemix=(id:string,dir:-1|1)=>{
@@ -703,19 +773,50 @@ export default function DesignStudioV2(){
     const idx=idxForTime(t);
     const clip=remixClips[idx];if(!clip)return;
     const localT=(t-remixClipStarts[idx])*clip.speed+clip.trimStart;
+    const targetVideo=remixVideosRef.current.get(clip.id);
+    if(!targetVideo){
+      // Ref not registered yet — likely just remounted. Retry on next frame.
+      console.warn(`[remix-playback] ref for clip ${clip.id} (${clip.label}) not ready; retrying next frame`);
+      requestAnimationFrame(()=>{
+        const v2=remixVideosRef.current.get(clip.id);
+        if(v2){
+          v2.style.opacity="1";v2.style.zIndex="2";v2.playbackRate=clip.speed;
+          if(v2.readyState>=2){v2.currentTime=localT;if(shouldPlay)v2.play().catch(err=>console.error("[remix-playback] play() rejected:",err));}
+          else{const h=()=>{v2.currentTime=localT;if(shouldPlay)v2.play().catch(err=>console.error("[remix-playback] play() rejected:",err));v2.removeEventListener("loadeddata",h);};v2.addEventListener("loadeddata",h);}
+        }else{
+          console.error(`[remix-playback] ref for clip ${clip.id} still not ready after retry — playback will skip this clip`);
+        }
+      });
+      return;
+    }
     remixVideosRef.current.forEach((v,id)=>{
       if(id===clip.id){
         v.style.opacity="1";v.style.zIndex="2";
         v.playbackRate=clip.speed;
-        if(v.readyState>=2){v.currentTime=localT;if(shouldPlay&&v.paused)v.play().catch(()=>{});}
-        else{const h=()=>{v.currentTime=localT;if(shouldPlay)v.play().catch(()=>{});v.removeEventListener("canplay",h);};v.addEventListener("canplay",h);}
+        if(v.readyState>=2){
+          v.currentTime=localT;
+          if(shouldPlay&&v.paused){v.play().catch(err=>console.error("[remix-playback] play() rejected for",clip.label,":",err));}
+        }else{
+          // readyState < 2: video element exists but hasn't decoded a frame yet.
+          // Use 'loadeddata' (fires when first frame is ready) instead of 'canplay' (which can be flakier).
+          const h=()=>{
+            v.currentTime=localT;
+            if(shouldPlay)v.play().catch(err=>console.error("[remix-playback] play() rejected (deferred) for",clip.label,":",err));
+            v.removeEventListener("loadeddata",h);
+          };
+          v.addEventListener("loadeddata",h);
+          // Also ask the browser to start loading if it hasn't
+          if(v.networkState===v.NETWORK_IDLE||v.networkState===v.NETWORK_NO_SOURCE){v.load();}
+        }
       }else{v.style.opacity="0";v.style.zIndex="1";if(!v.paused)v.pause();}
     });
     if(idx!==remixIdxRef.current){remixIdxRef.current=idx;setRemixPlayingIdx(idx);}
   };
 
   const startRemixPlayback=()=>{
-    if(remixClips.length===0)return;
+    if(remixClips.length===0){console.warn("[remix-playback] startRemixPlayback called with no clips");return;}
+    console.log(`[remix-playback] starting playback: ${remixClips.length} clips, total ${remixTotalDuration.toFixed(1)}s`);
+    console.log("[remix-playback] registered video refs:",Array.from(remixVideosRef.current.keys()));
     const t=remixTimeRef.current;
     if(t>=remixTotalDuration){remixTimeRef.current=0;setRemixPlaybackTime(0);}
     setRemixPlaying(true);
@@ -1114,7 +1215,45 @@ export default function DesignStudioV2(){
       if(remixClips.length===0)return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:16,fontFamily:"var(--sf)"}}><div style={{width:120,height:120,borderRadius:24,border:"2px dashed rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={48} color="rgba(255,255,255,0.12)"/></div><p style={{fontSize:18,color:"rgba(255,255,255,0.3)",fontWeight:600,margin:0}}>Add clips from the left panel to start remixing</p></div>;
       const currentClip=remixClips[remixPlayingIdx]||remixClips[0];
       return<div style={{width:currentRemixSize.width,height:currentRemixSize.height,backgroundColor:"#0c0c10",position:"relative",overflow:"hidden"}}>
-        {remixClips.map((clip,i)=><video key={clip.id} ref={el=>{if(el){remixVideosRef.current.set(clip.id,el);}else remixVideosRef.current.delete(clip.id);}} src={clip.sourceUrl} muted playsInline preload="auto" onLoadedData={e=>{const v=e.target as HTMLVideoElement;if(v.currentTime<0.01)v.currentTime=clip.trimStart;}} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:i===remixPlayingIdx?1:0,zIndex:i===remixPlayingIdx?2:1,transition:"opacity 0.12s ease"}}/>)}
+        {remixClips.map((clip,i)=><video
+          key={clip.id}
+          data-clip-id={clip.id}
+          ref={el=>{
+            // Stable registration: only update the map when the element identity changes.
+            // Avoids tear-down churn during state updates that re-render the map without
+            // actually unmounting the <video>.
+            if(el){
+              if(remixVideosRef.current.get(clip.id)!==el){
+                remixVideosRef.current.set(clip.id,el);
+                console.log(`[remix-playback] video ref registered for ${clip.label} (${clip.id})`);
+              }
+            }else{
+              if(remixVideosRef.current.has(clip.id)){
+                remixVideosRef.current.delete(clip.id);
+                console.log(`[remix-playback] video ref removed for ${clip.id}`);
+              }
+            }
+          }}
+          src={clip.sourceUrl}
+          muted
+          playsInline
+          preload="auto"
+          crossOrigin="anonymous"
+          onLoadedMetadata={e=>{
+            const v=e.target as HTMLVideoElement;
+            console.log(`[remix-playback] loadedmetadata ${clip.label}: duration=${v.duration?.toFixed(2)}s readyState=${v.readyState}`);
+          }}
+          onLoadedData={e=>{
+            const v=e.target as HTMLVideoElement;
+            if(v.currentTime<0.01)v.currentTime=clip.trimStart;
+            console.log(`[remix-playback] loadeddata ${clip.label}: readyState=${v.readyState}`);
+          }}
+          onError={e=>{
+            const v=e.target as HTMLVideoElement;
+            console.error(`[remix-playback] video error for ${clip.label}:`,v.error);
+          }}
+          style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:i===remixPlayingIdx?1:0,zIndex:i===remixPlayingIdx?2:1,transition:"opacity 0.12s ease"}}
+        />)}
         {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",zIndex:5}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
         {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
         <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
@@ -1147,7 +1286,8 @@ export default function DesignStudioV2(){
     .bx{padding:7px 22px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--sa),#7c3aed);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all 0.2s;box-shadow:0 2px 12px rgba(99,102,241,0.3);font-family:var(--sf);}.bx:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(99,102,241,0.4);}.bx:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
     .sb{height:85vh;display:flex;overflow:hidden;}.slr{width:68px;background:var(--ss);border-right:1px solid var(--sbr);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px;flex-shrink:0;transition:background 0.3s;}
     .rb{width:54px;padding:9px 0;border-radius:9px;border:none;background:none;color:var(--std);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all 0.15s;font-family:var(--sf);}.rb span{font-size:9px;font-weight:600;}.rb:hover{background:var(--sih);color:var(--st);}.rb.ac{background:var(--sag);color:var(--sa);}
-    .slp{width:310px;background:var(--ss);border-right:1px solid var(--sbr);overflow-y:auto;flex-shrink:0;transition:background 0.3s;}.slp::-webkit-scrollbar{width:4px;}.slp::-webkit-scrollbar-thumb{background:rgba(128,128,128,0.3);border-radius:4px;}
+    .slp{width:310px;background:var(--ss);border-right:1px solid var(--sbr);overflow-y:auto;flex-shrink:0;transition:background 0.3s,width 0.2s ease;}.slp::-webkit-scrollbar{width:4px;}.slp::-webkit-scrollbar-thumb{background:rgba(128,128,128,0.3);border-radius:4px;}
+    .slp.remix-wide{width:380px;}
     .ph{padding:16px 20px 12px;font-size:14px;font-weight:800;letter-spacing:-0.02em;border-bottom:1px solid var(--sbr);display:flex;align-items:center;gap:7px;position:sticky;top:0;background:var(--ss);z-index:5;transition:background 0.3s;}
     .sc{flex:1;background:var(--sc);display:flex;flex-direction:column;position:relative;overflow:hidden;transition:background 0.3s;}
     .scb{position:absolute;inset:0;opacity:0.025;background-image:linear-gradient(45deg,var(--schk) 25%,transparent 25%),linear-gradient(-45deg,var(--schk) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--schk) 75%),linear-gradient(-45deg,transparent 75%,var(--schk) 75%);background-size:28px 28px;background-position:0 0,0 14px,14px -14px,-14px 0px;}
@@ -1177,7 +1317,7 @@ export default function DesignStudioV2(){
     .ps{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;appearance:none;cursor:pointer;}.ps:focus{border-color:var(--sa);}
     .thm-toggle{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:var(--std);}.thm-toggle:hover{background:var(--sih);color:var(--st);}
     .am-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--sbr);background:var(--si);cursor:pointer;font-size:11px;font-weight:600;color:var(--std);transition:all 0.15s;font-family:var(--sf);}.am-chip:hover{background:var(--sih);color:var(--st);}.am-chip.ac{border-color:var(--sa);background:var(--sag);color:var(--sa);}
-    @media(max-width:1100px){.slp{width:260px;}.srp{width:240px;}}
+    @media(max-width:1100px){.slp{width:260px;}.slp.remix-wide{width:320px;}.srp{width:240px;}}
     .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--ss);border-top:1px solid var(--sbr);z-index:25;padding:0 8px;align-items:center;justify-content:space-around;gap:2px;}
     .mob-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;color:var(--std);cursor:pointer;padding:6px 0;border-radius:8px;font-family:var(--sf);transition:all 0.15s;}
     .mob-nav button span{font-size:9px;font-weight:600;}.mob-nav button.ac{color:var(--sa);background:var(--sag);}
@@ -1227,7 +1367,7 @@ export default function DesignStudioV2(){
       <div className="sb">
         <div className="slr">{currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}</div>
 
-        <div className={`slp ${mobilePanel?"mob-open":""}`}>
+        <div className={`slp ${mobilePanel?"mob-open":""} ${isRemixMode?"remix-wide":""}`}>
 
           {/* ── LISTING FLYER PANELS ── */}
           {activeTab==="listing-flyer"&&leftPanel==="uploads"&&<>
@@ -1311,18 +1451,52 @@ export default function DesignStudioV2(){
 
           {/* ── VIDEO REMIX PANELS ── */}
           {activeTab==="video-remix"&&leftPanel==="clips"&&<>
-            <div className="ph"><Film size={15} color="var(--sa)"/>Your Clips</div>
+            <div className="ph"><Film size={15} color="var(--sa)"/>Your Clips{remixClipSources.length>0&&<span style={{fontSize:10,color:"var(--std)",fontWeight:500,marginLeft:4}}>({remixClipSources.reduce((n,s)=>n+s.clips.length,0)})</span>}</div>
             <div style={{padding:14}}>
               {loadingRemixClips||loadingVideos?<div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 0"}}><Loader2 size={20} color="var(--std)" className="animate-spin"/></div>
               :remixClipSources.length===0?<div style={{padding:"24px 0",textAlign:"center" as const}}>
                 {hasVideoOrders===false?<><Film size={28} color="var(--std)"/><p style={{fontSize:12,color:"var(--std)",margin:0,marginTop:8,lineHeight:1.6}}>Order a listing video to start remixing clips into social content.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:12,padding:"7px 18px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none"}}>Order a Video</a></>:<><p style={{fontSize:11,color:"var(--std)",margin:0,marginBottom:8}}>No completed videos found.</p><button onClick={()=>loadUserVideos()} className="bx" style={{margin:"0 auto",fontSize:11,padding:"6px 16px"}}>Reload</button></>}
               </div>
-              :<div style={{display:"flex",flexDirection:"column" as const,gap:16}}>
+              :<div style={{display:"flex",flexDirection:"column" as const,gap:18}}>
+                {/* Hover preview pane — shows the currently-hovered clip muted/looping */}
+                {hoverPreviewUrl&&<div style={{borderRadius:10,overflow:"hidden",border:"1px solid var(--sa)",background:"#000",aspectRatio:"16/9",position:"relative"}}>
+                  <video src={hoverPreviewUrl} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <div style={{position:"absolute",top:6,left:6,padding:"2px 8px",borderRadius:99,background:"rgba(0,0,0,0.7)",fontSize:9,fontWeight:700,color:"#fff",letterSpacing:"0.05em"}}>PREVIEW</div>
+                </div>}
                 {remixClipSources.map(src=>(
-                  <div key={src.orderId}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><span style={{fontSize:13}}>{"\ud83d\udce6"}</span><div><p style={{fontSize:11,fontWeight:700,color:"var(--st)",margin:0}}>Order {src.orderId.slice(0,8)} {"\u00b7"} {src.date}</p><p style={{fontSize:10,color:"var(--std)",margin:0}}>{src.address}</p></div></div>
+                  <div key={src.propertyKey}>
+                    {/* Property header: name primary, order metadata secondary */}
+                    <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                      <Home size={13} color="var(--sa)" style={{marginTop:2,flexShrink:0}}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <p style={{fontSize:12,fontWeight:700,color:"var(--st)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={src.displayName}>{src.displayName}</p>
+                        <p style={{fontSize:9,color:"var(--std)",margin:0,marginTop:1}}>{src.clips.length} clip{src.clips.length!==1?"s":""} {"\u00b7"} {src.latestDate}{src.orderIds.length>1?` · ${src.orderIds.length} orders`:""}</p>
+                      </div>
+                    </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                      {src.clips.map((clip,ci)=>{const onTL=isClipOnTimeline(clip.url);return<button key={ci} onClick={()=>{if(onTL){removeClipFromRemix(remixClips.find(c=>c.sourceUrl===clip.url)?.id||"");}else{addClipToRemix(clip.url,clip.thumbnail,`${src.address.slice(0,20)} \u00b7 ${clip.label}`);}}} style={{position:"relative",borderRadius:8,overflow:"hidden",border:onTL?"1px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",padding:0,fontFamily:"var(--sf)",opacity:onTL?0.85:1,transition:"all 0.15s"}}><div style={{aspectRatio:"16/9",backgroundColor:"rgba(255,255,255,0.04)",overflow:"hidden"}}>{clip.thumbnail?<img src={clip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={20} color="rgba(255,255,255,0.15)"/></div>}</div><div style={{padding:"4px 6px"}}><p style={{fontSize:9,fontWeight:600,color:"var(--st)",margin:0,textAlign:"left"}}>{clip.label}</p></div>{onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={10} color="#fff"/></div>}{!onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:700}}>+</div>}</button>;})}
+                      {src.clips.map((clip,ci)=>{
+                        const onTL=isClipOnTimeline(clip.url);
+                        return<button
+                          key={`${clip.orderId}-${ci}`}
+                          onClick={()=>{
+                            if(onTL){removeClipFromRemix(remixClips.find(c=>c.sourceUrl===clip.url)?.id||"");}
+                            else{addClipToRemix(clip.url,clip.thumbnail,`${src.displayName.slice(0,20)} \u00b7 ${clip.label}`,clip.isAerial);}
+                          }}
+                          onMouseEnter={()=>setHoverPreviewUrl(clip.url)}
+                          onMouseLeave={()=>setHoverPreviewUrl(prev=>prev===clip.url?null:prev)}
+                          style={{position:"relative",borderRadius:8,overflow:"hidden",border:onTL?"1px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",padding:0,fontFamily:"var(--sf)",opacity:onTL?0.85:1,transition:"all 0.15s"}}
+                        >
+                          <div style={{aspectRatio:"16/9",backgroundColor:"rgba(255,255,255,0.04)",overflow:"hidden",position:"relative"}}>
+                            {clip.thumbnail?<img src={clip.thumbnail} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><Film size={20} color="rgba(255,255,255,0.15)"/></div>}
+                            {clip.isAerial&&<div title="Aerial / drone footage" style={{position:"absolute",top:4,left:4,padding:"2px 6px",borderRadius:4,background:"rgba(8,145,178,0.85)",fontSize:8,fontWeight:800,color:"#fff",letterSpacing:"0.06em"}}>AERIAL</div>}
+                          </div>
+                          <div style={{padding:"4px 6px"}}>
+                            <p style={{fontSize:9,fontWeight:600,color:"var(--st)",margin:0,textAlign:"left" as const,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={clip.label}>{clip.label}</p>
+                          </div>
+                          {onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"var(--sa)",display:"flex",alignItems:"center",justifyContent:"center"}}><Check size={10} color="#fff"/></div>}
+                          {!onTL&&<div style={{position:"absolute",top:4,right:4,width:18,height:18,borderRadius:"50%",backgroundColor:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:700}}>+</div>}
+                        </button>;
+                      })}
                     </div>
                   </div>
                 ))}
