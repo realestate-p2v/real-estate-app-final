@@ -4,13 +4,21 @@
 //
 // This file is pure data + types. Zero runtime side effects, zero React.
 // The renderer (lib/remix-renderer.ts, PR #2) consumes these specs to build
-// FFmpeg filter chains. The modal (components/remix-preset-modal.tsx, PR #1)
-// consumes them to render slot-assignment UI.
+// FFmpeg filter chains. The modal (components/remix-preset-modal.tsx) consumes
+// them to render slot-assignment UI.
 //
 // Architectural rule (see handoff §4): v1 ships caption types, slot meanings,
 // zoompan, xfade. v1.1 plug-ins (J-cuts, speed ramps, beat sync, frame freeze,
 // match cuts, motion-blur transitions, SFX) are typed here as optional fields
 // so the renderer can grow without rewriting consumers.
+//
+// PACING DOCTRINE (the part that makes these scrollstopping):
+//   - Hero title must land in the first 1–2 seconds of a video. Period.
+//   - Slot durations are deliberately short (2.0–3.5s, not 6s).
+//   - Source clips are 6s; we trim aggressively, never play full-length.
+//   - paceMultiplier (Fast/Medium/Slow) scales slot durations globally per
+//     draft. Hero badge `heroDuration` does NOT scale — the hook timing is
+//     fixed regardless of pace.
 
 // ─── IDs ──────────────────────────────────────────────────────────────────────
 
@@ -51,17 +59,17 @@ export type CaptionPosition =
 
 export type SlotCaption =
   // Slab-font announcement. Full-frame intro then shrinks to a corner chip.
-  // Examples: "JUST LISTED", "PRICE DROP", "OPEN HOUSE"
+  // heroDuration does NOT scale with paceMultiplier — title-in-1s is a rule.
   | {
       kind: "hero_badge";
       text: string;
-      heroDuration: number; // seconds at full size
-      shrinkToChip?: CaptionPosition; // where the chip lands after shrink
+      heroDuration: number; // seconds at full size — fixed, never scaled
+      shrinkToChip?: CaptionPosition;
     }
   // Property address, mixed case, bottom-left.
   | {
       kind: "address_line";
-      fadeAfter: number; // seconds visible before fading
+      fadeAfter: number;
     }
   // Room name pulled from clip's raw label at render time. Two-line wrap before
   // truncate (handoff Q10 — never truncate without wrapping first).
@@ -79,24 +87,24 @@ export type SlotCaption =
   // Animated price reveal, last few seconds of slot.
   | {
       kind: "price_reveal";
-      animateInDuration: number; // seconds for the reveal animation
-      // Old/new are pulled from PresetInputs at render time, not stored here.
+      animateInDuration: number;
       strikethroughOld?: boolean;
     }
   // Small action hint, agent-toggleable in modal.
   | {
       kind: "rsvp_hint";
-      text: string; // e.g. "RSVP via link in bio"
+      text: string;
     };
 
 // ─── Slot ─────────────────────────────────────────────────────────────────────
 
 export type SlotSpec = {
   meaning: SlotMeaning;
-  // Default duration in seconds. Renderer trims clip to this length.
+  // Default duration in seconds at pace=1.0 (Medium). Renderer multiplies by
+  // the draft's paceMultiplier and clamps to [MIN_SCALED_DURATION, sourceClipDuration].
   defaultDuration: number;
   caption: SlotCaption | null;
-  // v1 zoompan: subtle 1.05x slow zoom on every slot per handoff §4.
+  // v1 zoompan: subtle slow zoom on every slot per handoff §4.
   zoom: {
     from: number;
     to: number;
@@ -105,51 +113,72 @@ export type SlotSpec = {
 
   // ── v1.1 OPTIONAL FIELDS ────────────────────────────────────────────────
   // These are typed for forward-compat. v1 renderer ignores them entirely.
-  // Adding them now keeps PRESETS data forward-compatible so v1.1 doesn't
-  // require a renderer rewrite — just a serializer pass.
 
   // Variable playback rate within a single slot.
-  // Example: { fromRate: 1.0, toRate: 1.4, startAt: 0.0, endAt: 0.8 } accelerates
-  // from 1x to 1.4x over the last 0.8s of the slot.
   speedRamp?: {
     fromRate: number;
     toRate: number;
-    startAt: number; // seconds from slot start
-    endAt: number; // seconds from slot start
+    startAt: number;
+    endAt: number;
   };
   // J-cut: this slot's audio starts N seconds before its picture appears.
-  // Implemented in the audio chain stitcher, not the slot fragment itself.
   jCutAudioOffset?: number;
-  // Frame freeze sting at end of slot. Last frame holds for N seconds.
+  // Frame freeze sting at end of slot. Does NOT scale with pace.
   frameFreeze?: {
-    duration: number; // seconds to hold the last frame
+    duration: number;
   };
-  // v1.1 — for match-cut sequencing on Open House.
+  // For match-cut sequencing on Open House.
   matchCutHint?: "horizontal" | "vertical" | "radial";
 };
 
-// ─── Inputs ───────────────────────────────────────────────────────────────────
+// ─── Pace ─────────────────────────────────────────────────────────────────────
 //
-// Per-preset agent inputs collected in the modal at generation time.
+// Per-draft pacing control. Multiplies slot durations globally.
+// Hero badges, frame freezes, and other "fixed timing" elements are NOT scaled
+// — the hook-in-1s rule is absolute.
+
+export type PaceId = "fast" | "medium" | "slow";
+
+export const PACE_PRESETS: Record<PaceId, number> = {
+  fast: 0.75,
+  medium: 1.0,
+  slow: 1.4,
+};
+
+// Anything shorter than this reads as a glitch on social.
+export const MIN_SCALED_DURATION = 1.2;
+
+// Source clips from the orders pipeline are 6s. Never trim beyond this.
+export const SOURCE_CLIP_DURATION = 6.0;
+
+// Apply pace to a slot's defaultDuration. Used by both preview and renderer.
+export function scaleSlotDuration(
+  defaultDuration: number,
+  pace: PaceId,
+  sourceClipDuration: number = SOURCE_CLIP_DURATION
+): number {
+  const scaled = defaultDuration * PACE_PRESETS[pace];
+  return Math.max(MIN_SCALED_DURATION, Math.min(scaled, sourceClipDuration));
+}
+
+// ─── Inputs ───────────────────────────────────────────────────────────────────
 
 export type PresetInputKind =
-  | "price_pair" // old + new (Price Drop)
-  | "price_single" // new only (Just Listed)
-  | "day_time"; // day + time (Open House)
+  | "price_pair"
+  | "price_single"
+  | "day_time";
 
 export type PresetInputDef = {
   kind: PresetInputKind;
   required: boolean;
 };
 
-// Concrete shape stored on the draft. All fields optional because not every
-// preset needs every input.
 export type PresetInputs = {
-  newPrice?: string; // raw, displayed as entered (handoff Q4)
+  newPrice?: string;
   oldPrice?: string;
-  day?: string; // free text, e.g. "Saturday", "Sat May 3"
-  time?: string; // free text, e.g. "1–3 PM"
-  showRsvpHint?: boolean; // Open House toggle for slot 6
+  day?: string;
+  time?: string;
+  showRsvpHint?: boolean;
 };
 
 // ─── Preset ───────────────────────────────────────────────────────────────────
@@ -157,140 +186,147 @@ export type PresetInputs = {
 export type PresetSpec = {
   id: RemixPresetId;
   displayName: string;
-  description: string; // 1-line for the preset card
-  durationTarget: [number, number]; // min, max seconds — informational only
+  description: string;
+  durationTarget: [number, number];
   outputSizeDefault: "square" | "landscape" | "portrait";
-  musicVibeDefault: string; // matches existing VIBES `key` in page.tsx
+  musicVibeDefault: string;
   transitionDefault: { kind: "xfade"; duration: number };
   slots: SlotSpec[];
-  // Agent can append up to N extra slots beyond the base count (handoff §3.5).
   maxExtraSlots: number;
   inputs: PresetInputDef[];
-  introSupported: boolean; // v1: only Just Listed (handoff §3.2)
-  // Themed colors for the preset card thumbnail (handoff Q6).
+  introSupported: boolean;
   cardTheme: { gradientFrom: string; gradientTo: string };
 };
 
 // ─── Draft metadata ───────────────────────────────────────────────────────────
-//
-// Stored on the draft state under state.preset when version === 2.
-// v1 drafts have no preset field; v2 drafts may have preset === null (manual).
 
 export type PresetDraftMeta = {
   id: RemixPresetId;
   inputs: PresetInputs;
-  extraSlotsCount: number; // how many extras the agent added beyond base
+  extraSlotsCount: number;
+  pace: PaceId; // per-draft pace (Fast/Medium/Slow)
 };
+
+// Compute the duration for an EXTRA slot (one the agent appended beyond the
+// preset's base slots). We use the average of the preset's slot durations so
+// the extra matches the preset's overall pacing rhythm. Then pace is applied.
+export function extraSlotDuration(presetId: RemixPresetId, pace: PaceId): number {
+  const preset = PRESETS[presetId];
+  const avg =
+    preset.slots.reduce((sum, s) => sum + s.defaultDuration, 0) /
+    preset.slots.length;
+  return scaleSlotDuration(avg, pace);
+}
 
 // Caption easing — Material standard per handoff Q1.
 export const CAPTION_EASING_IN = "cubic-bezier(0.4, 0, 0.2, 1)";
 export const CAPTION_FADE_OUT_SECONDS = 0.3;
 
 // ─── PRESETS ──────────────────────────────────────────────────────────────────
+//
+// All durations are at pace=1.0 (Medium). See PACING DOCTRINE at top of file.
 
 export const PRESETS: Record<RemixPresetId, PresetSpec> = {
   // ── Just Listed ─────────────────────────────────────────────────────────
-  // Handoff §2 Preset 1. 6 slots. Stops the scroll on social.
+  // 6 slots. Stops the scroll on social.
+  // Medium pace timing: 2.5 + (2.2×4) + 3.5 = 14.8s
+  // Fast pace: ~11.1s. Slow pace: ~20.7s.
   just_listed: {
     id: "just_listed",
     displayName: "Just Listed",
     description: "Announce a new listing with maximum hook.",
-    durationTarget: [18, 22],
+    durationTarget: [13, 17],
     outputSizeDefault: "portrait",
     musicVibeDefault: "upbeat_modern",
-    transitionDefault: { kind: "xfade", duration: 0.4 },
+    transitionDefault: { kind: "xfade", duration: 0.3 },
     maxExtraSlots: 3,
     introSupported: true,
-    cardTheme: { gradientFrom: "#a855f7", gradientTo: "#ec4899" }, // purple → pink
+    cardTheme: { gradientFrom: "#a855f7", gradientTo: "#ec4899" },
     inputs: [{ kind: "price_single", required: true }],
     slots: [
       // 1. Exterior wide / aerial if available — JUST LISTED hero badge.
+      // Hero hits in 1s. Slot lasts 2.5s — title lands, scene establishes.
       {
         meaning: "exterior_aerial_preferred",
-        defaultDuration: 3.5,
+        defaultDuration: 2.5,
         caption: {
           kind: "hero_badge",
           text: "JUST LISTED",
-          heroDuration: 1.5,
+          heroDuration: 1.0,
           shrinkToChip: "top-left",
         },
-        zoom: { from: 1.0, to: 1.05, ease: "easeOut" },
-        // v1.1: punch-zoom on last 0.5s + frame-freeze on text
-        speedRamp: { fromRate: 1.0, toRate: 1.0, startAt: 0, endAt: 3.5 },
+        zoom: { from: 1.0, to: 1.06, ease: "easeOut" },
       },
       // 2. Kitchen — address line.
       {
         meaning: "kitchen",
-        defaultDuration: 3.0,
-        caption: { kind: "address_line", fadeAfter: 2.0 },
+        defaultDuration: 2.2,
+        caption: { kind: "address_line", fadeAfter: 1.5 },
         zoom: { from: 1.0, to: 1.05, ease: "linear" },
       },
       // 3. Living room — room name.
       {
         meaning: "living_room",
-        defaultDuration: 3.0,
-        caption: { kind: "room_name", sourceField: "label", fadeAfter: 1.5 },
+        defaultDuration: 2.2,
+        caption: { kind: "room_name", sourceField: "label", fadeAfter: 1.2 },
         zoom: { from: 1.0, to: 1.05, ease: "linear" },
       },
       // 4. Primary bedroom — room name.
       {
         meaning: "primary_bedroom",
-        defaultDuration: 3.0,
-        caption: { kind: "room_name", sourceField: "label", fadeAfter: 1.5 },
+        defaultDuration: 2.2,
+        caption: { kind: "room_name", sourceField: "label", fadeAfter: 1.2 },
         zoom: { from: 1.0, to: 1.05, ease: "linear" },
       },
       // 5. Primary bath — room name.
       {
         meaning: "primary_bath",
-        defaultDuration: 3.0,
-        caption: { kind: "room_name", sourceField: "label", fadeAfter: 1.5 },
+        defaultDuration: 2.2,
+        caption: { kind: "room_name", sourceField: "label", fadeAfter: 1.2 },
         zoom: { from: 1.0, to: 1.05, ease: "linear" },
       },
       // 6. Backyard / feature — animated price reveal.
       {
         meaning: "backyard_feature",
-        defaultDuration: 4.0,
-        caption: { kind: "price_reveal", animateInDuration: 2.0 },
+        defaultDuration: 3.5,
+        caption: { kind: "price_reveal", animateInDuration: 1.5 },
         zoom: { from: 1.0, to: 1.08, ease: "easeOut" },
-        // v1.1: speed ramp last 0.8s (1x → 1.4x) + frame-freeze 0.4s on price
-        speedRamp: { fromRate: 1.0, toRate: 1.4, startAt: 3.2, endAt: 4.0 },
+        speedRamp: { fromRate: 1.0, toRate: 1.4, startAt: 2.7, endAt: 3.5 },
         frameFreeze: { duration: 0.4 },
       },
     ],
   },
 
   // ── Open House Teaser ───────────────────────────────────────────────────
-  // Handoff §2 Preset 2. 6 slots. Drives RSVP for a specific date+time.
+  // Medium pace timing: 3.0 + (2.8×4) + 2.5 = 16.7s
   open_house: {
     id: "open_house",
     displayName: "Open House",
     description: "Drive attendance to a specific date and time.",
-    durationTarget: [22, 26],
+    durationTarget: [15, 19],
     outputSizeDefault: "portrait",
     musicVibeDefault: "energetic_pop",
-    transitionDefault: { kind: "xfade", duration: 0.3 },
+    transitionDefault: { kind: "xfade", duration: 0.25 },
     maxExtraSlots: 3,
-    introSupported: false, // v1.1 will add intro support to remaining presets
-    cardTheme: { gradientFrom: "#f97316", gradientTo: "#fbbf24" }, // orange → amber
+    introSupported: false,
+    cardTheme: { gradientFrom: "#f97316", gradientTo: "#fbbf24" },
     inputs: [{ kind: "day_time", required: true }],
     slots: [
       // 1. Exterior — OPEN HOUSE badge + day/time hero.
       {
         meaning: "exterior",
-        defaultDuration: 3.5,
+        defaultDuration: 3.0,
         caption: {
           kind: "hero_badge",
           text: "OPEN HOUSE",
-          heroDuration: 2.0,
+          heroDuration: 1.5,
           shrinkToChip: "top-left",
         },
         zoom: { from: 1.0, to: 1.05, ease: "easeOut" },
       },
-      // 2-5. Interior highlights with sticky banner.
-      // Sticky banner text uses {day}/{time} tokens, resolved at render time.
       {
         meaning: "kitchen",
-        defaultDuration: 4.0,
+        defaultDuration: 2.8,
         caption: {
           kind: "sticky_banner",
           text: "OPEN HOUSE  ·  {day}  ·  {time}",
@@ -301,7 +337,7 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
       },
       {
         meaning: "living_room",
-        defaultDuration: 4.0,
+        defaultDuration: 2.8,
         caption: {
           kind: "sticky_banner",
           text: "OPEN HOUSE  ·  {day}  ·  {time}",
@@ -311,7 +347,7 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
       },
       {
         meaning: "primary_bedroom",
-        defaultDuration: 4.0,
+        defaultDuration: 2.8,
         caption: {
           kind: "sticky_banner",
           text: "OPEN HOUSE  ·  {day}  ·  {time}",
@@ -321,7 +357,7 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
       },
       {
         meaning: "primary_bath",
-        defaultDuration: 4.0,
+        defaultDuration: 2.8,
         caption: {
           kind: "sticky_banner",
           text: "OPEN HOUSE  ·  {day}  ·  {time}",
@@ -333,7 +369,7 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
       // 6. Outdoor — address + RSVP hint (toggleable).
       {
         meaning: "outdoor_feature",
-        defaultDuration: 3.0,
+        defaultDuration: 2.5,
         caption: { kind: "rsvp_hint", text: "RSVP via link in bio" },
         zoom: { from: 1.0, to: 1.05, ease: "easeOut" },
       },
@@ -341,75 +377,72 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
   },
 
   // ── Quick Tour ──────────────────────────────────────────────────────────
-  // Handoff §2 Preset 3. 7 slots. Walkthrough story.
+  // 7 slots. Walkthrough story.
+  // Medium pace timing: (2.8×6) + 4.0 = 20.8s
   quick_tour: {
     id: "quick_tour",
     displayName: "Quick Tour",
     description: "Virtual walkthrough, room by room.",
-    durationTarget: [24, 28],
+    durationTarget: [18, 24],
     outputSizeDefault: "portrait",
     musicVibeDefault: "chill_tropical",
     transitionDefault: { kind: "xfade", duration: 0.3 },
     maxExtraSlots: 3,
     introSupported: false,
-    cardTheme: { gradientFrom: "#0ea5e9", gradientTo: "#14b8a6" }, // blue → teal
-    inputs: [], // no agent inputs needed
+    cardTheme: { gradientFrom: "#0ea5e9", gradientTo: "#14b8a6" },
+    inputs: [],
     slots: [
-      // 7 walkthrough slots, agent-ordered. All same caption pattern.
-      // Slot 7 v1.1: speed ramp 1x → 0.7x last 1s, dreamy outro.
-      ...Array.from({ length: 7 }, (_, i) => ({
-        meaning: "walkthrough_any" as SlotMeaning,
-        defaultDuration: 3.5,
-        caption: {
-          kind: "room_name" as const,
-          sourceField: "label" as const,
-          fadeAfter: 2.0,
-        },
-        zoom: { from: 1.0, to: 1.05, ease: "linear" as const },
-        // J-cut on every transition — v1.1
-        jCutAudioOffset: i === 0 ? undefined : 0.5,
-        // v1.1: dreamy outro on last slot only
-        speedRamp:
-          i === 6
-            ? { fromRate: 1.0, toRate: 0.7, startAt: 2.5, endAt: 3.5 }
+      ...Array.from({ length: 7 }, (_, i) => {
+        const isLast = i === 6;
+        return {
+          meaning: "walkthrough_any" as SlotMeaning,
+          defaultDuration: isLast ? 4.0 : 2.8,
+          caption: {
+            kind: "room_name" as const,
+            sourceField: "label" as const,
+            fadeAfter: 1.5,
+          },
+          zoom: { from: 1.0, to: 1.05, ease: "linear" as const },
+          jCutAudioOffset: i === 0 ? undefined : 0.4,
+          speedRamp: isLast
+            ? { fromRate: 1.0, toRate: 0.7, startAt: 3.0, endAt: 4.0 }
             : undefined,
-      })),
+        };
+      }),
     ],
   },
 
   // ── Price Drop ──────────────────────────────────────────────────────────
-  // Handoff §2 Preset 4. 5 slots. Tightest, most urgent.
+  // 5 slots. Tightest, most urgent.
+  // Medium pace timing: 2.0 + (2.2×3) + 3.0 = 11.6s
   price_drop: {
     id: "price_drop",
     displayName: "Price Drop",
     description: "Punchy, urgency-driven price-reduction announcement.",
-    durationTarget: [14, 18],
+    durationTarget: [10, 14],
     outputSizeDefault: "portrait",
     musicVibeDefault: "bold_cinematic",
-    transitionDefault: { kind: "xfade", duration: 0.25 }, // fastest
+    transitionDefault: { kind: "xfade", duration: 0.2 },
     maxExtraSlots: 3,
     introSupported: false,
-    cardTheme: { gradientFrom: "#dc2626", gradientTo: "#f97316" }, // red → orange
+    cardTheme: { gradientFrom: "#dc2626", gradientTo: "#f97316" },
     inputs: [{ kind: "price_pair", required: true }],
     slots: [
-      // 1. Exterior — PRICE DROP slab, full frame 1s.
+      // 1. Exterior — PRICE DROP slab smashes in fast. 0.8s hero.
       {
         meaning: "exterior",
-        defaultDuration: 2.5,
+        defaultDuration: 2.0,
         caption: {
           kind: "hero_badge",
           text: "PRICE DROP",
-          heroDuration: 1.0,
+          heroDuration: 0.8,
           shrinkToChip: "top",
         },
         zoom: { from: 1.0, to: 1.1, ease: "easeOut" },
-        // v1.1: aggressive punch zoom + animated overlay text smash-in
-        speedRamp: { fromRate: 1.0, toRate: 1.0, startAt: 0, endAt: 2.5 },
       },
-      // 2. Hero interior — sticky WAS/NOW banner with strikethrough.
       {
         meaning: "feature_room",
-        defaultDuration: 3.0,
+        defaultDuration: 2.2,
         caption: {
           kind: "sticky_banner",
           text: "WAS {oldPrice}  ·  NOW {newPrice}",
@@ -417,10 +450,9 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
         },
         zoom: { from: 1.0, to: 1.05, ease: "linear" },
       },
-      // 3. Feature room — banner persists.
       {
         meaning: "feature_room",
-        defaultDuration: 3.0,
+        defaultDuration: 2.2,
         caption: {
           kind: "sticky_banner",
           text: "WAS {oldPrice}  ·  NOW {newPrice}",
@@ -428,10 +460,9 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
         },
         zoom: { from: 1.0, to: 1.05, ease: "linear" },
       },
-      // 4. Outdoor / feature — banner persists.
       {
         meaning: "outdoor_feature",
-        defaultDuration: 3.0,
+        defaultDuration: 2.2,
         caption: {
           kind: "sticky_banner",
           text: "WAS {oldPrice}  ·  NOW {newPrice}",
@@ -443,9 +474,8 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
       {
         meaning: "best_or_aerial",
         defaultDuration: 3.0,
-        caption: { kind: "address_line", fadeAfter: 2.5 },
+        caption: { kind: "address_line", fadeAfter: 2.2 },
         zoom: { from: 1.0, to: 1.08, ease: "easeOut" },
-        // v1.1: speed ramp on slot 5
         speedRamp: { fromRate: 1.0, toRate: 1.3, startAt: 2.0, endAt: 3.0 },
       },
     ],
@@ -453,15 +483,18 @@ export const PRESETS: Record<RemixPresetId, PresetSpec> = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// True iff `label` plausibly matches `meaning`. Used by the modal's default-fill
-// and Auto-Fill to pick a clip for each slot.
 //
-// Matching is intentionally loose. Real listing labels we've seen:
-//   "Front Exterior", "Entryway", "Living Room", "Kitchen",
-//   "Master Bedroom", "Master Bath", "Backyard", "Pool", "Patio"
+// Real listing labels we've seen on production orders:
+//   "Front Exterior", "Entryway", "Living Room", "Family Room", "Kitchen",
+//   "Master Bedroom", "Master Bath", "Bedroom 2", "Bathroom 2",
+//   "Dining Room", "Backyard", "Pool", "Patio"
+//
 // Both "Master ..." (legacy MLS) and "Primary ..." (modern MLS) match
 // primary_bedroom / primary_bath. Caption display still uses the raw label.
+//
+// REGEX NOTE: `\bbed\b` does NOT match "bedroom" because there is no word
+// boundary between "bed" and "room". Use `\bbed` (no trailing boundary) so
+// both "bed" and "bedroom" match.
 export function clipMatchesMeaning(
   label: string,
   isAerial: boolean,
@@ -484,8 +517,9 @@ export function clipMatchesMeaning(
       return /\b(living|great\s?room|family\s?room|den)\b/.test(s);
     case "primary_bedroom":
       // Match BOTH "Primary Bedroom" (modern) and "Master Bedroom" (legacy).
-      // Also catches "Owner's Suite".
-      return /\b(primary|master|owner'?s)\b.*\b(bed|suite)\b/.test(s);
+      // Trailing \b removed — "bedroom" has no word boundary between "bed"
+      // and "room", so \bbed\b would miss it.
+      return /\b(primary|master|owner'?s)\b.*\b(bed|suite)/.test(s);
     case "primary_bath":
       return /\b(primary|master|owner'?s)\b.*\bbath/.test(s);
     case "bathroom":
@@ -499,12 +533,69 @@ export function clipMatchesMeaning(
         s
       );
     case "feature_room":
-      // Anything that isn't pure exterior/walkway. Permissive.
       return !/\b(driveway|walkway|sidewalk)\b/.test(s);
     case "walkthrough_any":
       return true;
     case "best_or_aerial":
       return isAerial || /\b(exterior|backyard|pool|view|aerial)\b/.test(s);
+    default:
+      return false;
+  }
+}
+
+// Secondary (looser) match used as a fallback when the strict matcher above
+// finds nothing. Better to use a "Bedroom 2" clip for a Primary Bedroom slot
+// than to fall through to a random non-aerial clip like "Entryway".
+export function clipLooselyMatchesMeaning(
+  label: string,
+  isAerial: boolean,
+  meaning: SlotMeaning
+): boolean {
+  if (!label) return false;
+  const s = label.toLowerCase();
+
+  switch (meaning) {
+    case "primary_bedroom":
+      return /\b(bed|suite)/.test(s);
+    case "primary_bath":
+      return /\b(bath|powder)/.test(s);
+    case "bathroom":
+      return /\b(bath|powder)/.test(s);
+    case "exterior_aerial_preferred":
+      return isAerial || /\b(yard|outdoor|driveway)\b/.test(s);
+    case "backyard_feature":
+    case "outdoor_feature":
+      return /\b(yard|outdoor|driveway|landscape|porch|balcony)\b/.test(s);
+    case "feature_room":
+      return /\b(dining|family|great|den|office|study|library|foyer|hall|nook|loft)\b/.test(
+        s
+      );
+    default:
+      return false;
+  }
+}
+
+// Anti-match: labels we should NEVER auto-pick for a given meaning, even as a
+// last-resort fallback. Used by pickDefaultForSlot to skip "Entryway" when
+// looking for a bedroom rather than picking it just because it was first.
+export function clipShouldNotMatchMeaning(
+  label: string,
+  meaning: SlotMeaning
+): boolean {
+  if (!label) return false;
+  const s = label.toLowerCase();
+
+  switch (meaning) {
+    case "primary_bedroom":
+    case "primary_bath":
+    case "bathroom":
+      return /\b(exterior|front|facade|curb|driveway|entryway|entry|foyer|hallway)\b/.test(
+        s
+      );
+    case "kitchen":
+      return /\b(exterior|front|facade|curb|driveway|entryway|bath)\b/.test(s);
+    case "living_room":
+      return /\b(exterior|front|facade|curb|driveway|bath|bedroom)\b/.test(s);
     default:
       return false;
   }
