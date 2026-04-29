@@ -608,9 +608,13 @@ function PropertyPageInner() {
   const heroThumb = orderPhotos[0]?.secure_url ? thumbnailize(orderPhotos[0].secure_url, 800, 450) : null;
   const unreadShowings = showingRequests.filter(r => !r.read).length;
   const nonRemixExports = exports.filter((e: any) => !e.template_type?.startsWith("video_remix"));
-  const remixExports = exports.filter((e: any) => e.template_type?.startsWith("video_remix"));
+  // Split drafts into the two sections shown on the Media tab.
+  // exportedRemixDrafts → "Remixes" (rendered to MP4 at least once)
+  // unexportedRemixDrafts → "Saved Remix Drafts" (work in progress)
+  const exportedRemixDrafts = remixDrafts.filter((d: any) => d.exported_at);
+  const unexportedRemixDrafts = remixDrafts.filter((d: any) => !d.exported_at);
 
-  const mediaCount = videos.length + remixExports.length + remixDrafts.length + orderPhotos.length + orderClips.length + allCoachApproved.length;
+  const mediaCount = videos.length + remixDrafts.length + orderPhotos.length + orderClips.length + allCoachApproved.length;
   const marketingCount = nonRemixExports.length + stagings.length + descriptions.length;
 
   /* ─── Tab definitions (color-coded per section) ─── */
@@ -977,18 +981,64 @@ function PropertyPageInner() {
               )}
             </SectionCard>
 
-            {/* Remix sections — Saved Drafts (left) and exported Video Remixes (right). */}
-            {/* Two-column on lg+ screens, stacks on mobile/tablet. */}
+            {/* Remix sections — Remixes (exported at least once) and Saved Remix Drafts (WIP). */}
+            {/* Both sources are drafts; the split is driven by the exported_at timestamp.   */}
+            {/* Two-column on lg+ screens, stacks on mobile/tablet.                          */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Saved Remix Drafts — editable states, click to open in the remix tool. */}
-              <SectionCard title="Saved Remix Drafts" count={remixDrafts.length} icon={Save}
-                action={<Button asChild size="sm" className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-semibold"><Link href={`/dashboard/lens/remix?${qs}`}><PenTool className="h-3.5 w-3.5 mr-1.5" />New Draft</Link></Button>}>
-                {remixDrafts.length === 0 ? (
-                  <EmptyState icon={Save} title="No saved drafts yet" hint="Build a remix in the Video Remix tool and click Save to keep it here for later."
+              {/* Remixes — drafts that have been exported as MP4 at least once. */}
+              <SectionCard title="Remixes" count={exportedRemixDrafts.length} icon={Film}
+                action={<Button asChild size="sm" className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-semibold"><Link href={`/dashboard/lens/remix?${qs}`}><PenTool className="h-3.5 w-3.5 mr-1.5" />Create Remix</Link></Button>}>
+                {exportedRemixDrafts.length === 0 ? (
+                  <EmptyState icon={Film} title="No remixes yet" hint="Remixes show up here after you export them. They stay editable — open one anytime to re-render with changes."
                     action={<Button asChild className={`${a.btnBg} ${a.btnBgHover} text-white font-bold`}><Link href={`/dashboard/lens/remix?${qs}`}><Film className="h-4 w-4 mr-2" />Open Video Remix</Link></Button>} />
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
-                    {remixDrafts.map((draft: any) => {
+                    {exportedRemixDrafts.map((draft: any) => {
+                      const remixHref = `/dashboard/lens/remix?${qs}&draftId=${encodeURIComponent(draft.id)}`;
+                      return (
+                        <div key={draft.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] transition-colors overflow-hidden flex flex-col">
+                          <Link href={remixHref} className="flex-1 p-4 group">
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 ring-1 ring-emerald-400/30 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+                                <Film className="h-5 w-5 text-emerald-300" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-white truncate group-hover:text-emerald-200 transition-colors" title={draft.name}>{draft.name}</p>
+                                <p className="text-xs text-white/50 mt-1">
+                                  {draft.clip_count} clip{draft.clip_count !== 1 ? "s" : ""} · {draft.total_duration}s · {draft.size}
+                                </p>
+                                <p className="text-xs text-white/35 mt-0.5">Last exported {timeAgo(draft.exported_at)}</p>
+                              </div>
+                            </div>
+                          </Link>
+                          <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-white/[0.04] bg-white/[0.01]">
+                            <Link href={remixHref} className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200">
+                              <PenTool className="h-3.5 w-3.5" />Open & Re-export
+                            </Link>
+                            <button
+                              onClick={() => setDeleteDraftConfirm({ id: draft.id, name: draft.name })}
+                              className="text-red-400 hover:text-red-300 p-1"
+                              title="Delete remix"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Saved Remix Drafts — drafts that have not been exported yet. */}
+              <SectionCard title="Saved Remix Drafts" count={unexportedRemixDrafts.length} icon={Save}
+                action={<Button asChild size="sm" className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-semibold"><Link href={`/dashboard/lens/remix?${qs}`}><PenTool className="h-3.5 w-3.5 mr-1.5" />New Draft</Link></Button>}>
+                {unexportedRemixDrafts.length === 0 ? (
+                  <EmptyState icon={Save} title="No saved drafts yet" hint="Build a remix in the Video Remix tool and click Save Draft to keep working on it later."
+                    action={<Button asChild className={`${a.btnBg} ${a.btnBgHover} text-white font-bold`}><Link href={`/dashboard/lens/remix?${qs}`}><Film className="h-4 w-4 mr-2" />Open Video Remix</Link></Button>} />
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {unexportedRemixDrafts.map((draft: any) => {
                       const remixHref = `/dashboard/lens/remix?${qs}&draftId=${encodeURIComponent(draft.id)}`;
                       return (
                         <div key={draft.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] transition-colors overflow-hidden flex flex-col">
@@ -1017,39 +1067,6 @@ function PropertyPageInner() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </SectionCard>
-
-              {/* Video Remixes — exported MP4s. */}
-              <SectionCard title="Video Remixes" count={remixExports.length} icon={Film}
-                action={<Button asChild size="sm" className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-semibold"><Link href={`/dashboard/lens/remix?${qs}`}><PenTool className="h-3.5 w-3.5 mr-1.5" />Create Remix</Link></Button>}>
-                {remixExports.length === 0 ? (
-                  <EmptyState icon={Film} title="No remixes yet" hint="Remix your clips in the Video Remix tool to create social-ready videos."
-                    action={<Button asChild className={`${a.btnBg} ${a.btnBgHover} text-white font-bold`}><Link href={`/dashboard/lens/remix?${qs}`}><Film className="h-4 w-4 mr-2" />Open Video Remix</Link></Button>} />
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {remixExports.map((remix: any) => {
-                      const dl = remix.export_url || remix.overlay_video_url;
-                      const thumb = dl?.includes("cloudinary.com") && dl.includes("/video/upload/") ? thumbnailize(dl, 500, 280) : null;
-                      return (
-                        <div key={remix.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden group">
-                          <button onClick={() => setExportModal(remix)} className="block w-full">
-                            <div className="aspect-video relative bg-black">
-                              {thumb ? <img src={thumb} alt="Video Remix" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Film className="h-10 w-10 text-white/20" /></div>}
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30"><div className="h-14 w-14 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center"><Play className="h-6 w-6 text-white ml-0.5" /></div></div>
-                            </div>
-                          </button>
-                          <div className="p-3 flex items-center justify-between gap-2">
-                            <p className="text-sm text-white/50">{new Date(remix.created_at).toLocaleDateString()}</p>
-                            <div className="flex items-center gap-2">
-                              <a href={dl?.includes("/upload/") ? dl.replace("/upload/", "/upload/fl_attachment/") : dl} download className="text-sm font-semibold text-white/60 hover:text-white"><Download className="h-4 w-4" /></a>
-                              <button onClick={() => handleDeleteExport(remix)} className="text-red-400 hover:text-red-300"><Trash2 className="h-4 w-4" /></button>
-                            </div>
                           </div>
                         </div>
                       );
