@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
 import {
   ChevronDown, Download, Upload, Image as ImageIcon, PenTool, Home, DollarSign,
@@ -6,7 +6,7 @@ import {
   Calendar, Play, FileText, Sparkles, Film, Music, Check, Type, Eye, Layers,
   ZoomIn, ZoomOut, LayoutTemplate, Settings, RotateCcw, Share2, Undo2, Redo2,
   ChevronLeft, ChevronRight, Paintbrush, Sun, Moon, Printer, Globe, Video,
-  Clock, ArrowUp, ArrowDown, Trash2, Lock,
+  Clock, ArrowUp, ArrowDown, Trash2, Lock, Save, Copy,
 } from "lucide-react";
 import { GateOverlay } from "@/components/gate-overlay";
 
@@ -508,6 +508,16 @@ export default function DesignStudioV2(){
   const remixIdxRef=useRef(0);
   const remixDragging=useRef(false);
   const[brokenClipIds,setBrokenClipIds]=useState<Set<string>>(new Set());
+  // ── Draft state ──────────────────────────────────────────────────────────
+  type DraftSummary={id:string;name:string;property_id:string|null;created_at:string;updated_at:string;clip_count:number;total_duration:number;size:string};
+  const[currentDraft,setCurrentDraft]=useState<{id:string;name:string}|null>(null);
+  const[drafts,setDrafts]=useState<DraftSummary[]>([]);
+  const[loadingDrafts,setLoadingDrafts]=useState(false);
+  const[showSaveDialog,setShowSaveDialog]=useState(false);
+  const[saveDialogMode,setSaveDialogMode]=useState<"save"|"save_as_new">("save");
+  const[draftNameInput,setDraftNameInput]=useState("");
+  const[savingDraft,setSavingDraft]=useState(false);
+  const[deleteDraftConfirm,setDeleteDraftConfirm]=useState<{id:string;name:string}|null>(null);
   // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[exportStatus,setExportStatus]=useState("");const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
@@ -697,6 +707,152 @@ export default function DesignStudioV2(){
     }catch(err){console.error("[remix] Video load error:",err);}
     setLoadingVideos(false);
   };
+
+  // ── Draft helpers ────────────────────────────────────────────────────────
+  // packDraftState serializes the current editor into a JSON blob safe to store.
+  // The version field allows future schema changes via unpackDraftState.
+  const packDraftState=()=>({
+    version:1,
+    clips:remixClips,
+    music:selectedMusicTrack,
+    size:remixSize,
+    branding:remixBranding,
+  });
+  const unpackDraftState=(state:any)=>{
+    if(!state||state.version!==1){
+      notify("Draft format not recognized — clearing editor instead.");
+      return false;
+    }
+    setRemixClips(Array.isArray(state.clips)?state.clips:[]);
+    setSelectedMusicTrack(state.music||null);
+    setRemixSize(state.size||"landscape");
+    setRemixBranding(state.branding??true);
+    return true;
+  };
+
+  const loadDraftsList=async(propertyId:string|null)=>{
+    setLoadingDrafts(true);
+    try{
+      const url=propertyId?`/api/lens/remix/drafts?propertyId=${encodeURIComponent(propertyId)}`:`/api/lens/remix/drafts`;
+      const resp=await fetch(url);
+      if(!resp.ok){
+        const err=await resp.json().catch(()=>({}));
+        console.error("[drafts] list failed:",err);
+        setDrafts([]);
+        setLoadingDrafts(false);
+        return;
+      }
+      const data=await resp.json();
+      setDrafts(data.drafts||[]);
+    }catch(e){console.error("[drafts] list exception:",e);setDrafts([]);}
+    setLoadingDrafts(false);
+  };
+
+  const saveDraft=async(name:string,asNew:boolean)=>{
+    if(remixClips.length===0){notify("Add clips before saving a draft.");return;}
+    setSavingDraft(true);
+    try{
+      const body:any={
+        name,
+        property_id:selectedPropertyId||null,
+        state:packDraftState(),
+      };
+      // If updating in place (not "save as new") and we have a current draft, send id.
+      if(!asNew&&currentDraft?.id)body.id=currentDraft.id;
+      const resp=await fetch(`/api/lens/remix/drafts`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(body),
+      });
+      if(!resp.ok){
+        const err=await resp.json().catch(()=>({}));
+        console.error("[drafts] save failed:",err);
+        notify(err.error||"Failed to save draft");
+        setSavingDraft(false);
+        return;
+      }
+      const data=await resp.json();
+      setCurrentDraft({id:data.draft.id,name:data.draft.name});
+      notify(asNew||!currentDraft?"Draft saved!":"Draft updated!");
+      setShowSaveDialog(false);
+      // Refresh the drafts list so the new/updated entry shows
+      await loadDraftsList(selectedPropertyId||null);
+    }catch(e:any){console.error("[drafts] save exception:",e);notify("Failed to save draft");}
+    setSavingDraft(false);
+  };
+
+  const loadDraft=async(draftId:string)=>{
+    try{
+      const resp=await fetch(`/api/lens/remix/drafts/${encodeURIComponent(draftId)}`);
+      if(!resp.ok){
+        const err=await resp.json().catch(()=>({}));
+        console.error("[drafts] load failed:",err);
+        notify(err.error||"Couldn't load draft");
+        return;
+      }
+      const data=await resp.json();
+      const ok=unpackDraftState(data.draft.state);
+      if(ok){
+        setCurrentDraft({id:data.draft.id,name:data.draft.name});
+        // If draft is attached to a property and that property isn't already selected, select it.
+        if(data.draft.property_id&&data.draft.property_id!==selectedPropertyId){
+          handleSelectProperty(data.draft.property_id);
+        }
+        notify(`Loaded "${data.draft.name}"`);
+      }
+    }catch(e){console.error("[drafts] load exception:",e);notify("Couldn't load draft");}
+  };
+
+  const deleteDraft=async(draftId:string)=>{
+    try{
+      const resp=await fetch(`/api/lens/remix/drafts/${encodeURIComponent(draftId)}`,{method:"DELETE"});
+      if(!resp.ok){
+        const err=await resp.json().catch(()=>({}));
+        console.error("[drafts] delete failed:",err);
+        notify(err.error||"Failed to delete draft");
+        return;
+      }
+      // If deleted the currently-loaded draft, clear that link
+      if(currentDraft?.id===draftId)setCurrentDraft(null);
+      setDrafts(prev=>prev.filter(d=>d.id!==draftId));
+      notify("Draft deleted");
+    }catch(e){console.error("[drafts] delete exception:",e);notify("Failed to delete draft");}
+    setDeleteDraftConfirm(null);
+  };
+
+  const openSaveDialog=(mode:"save"|"save_as_new")=>{
+    setSaveDialogMode(mode);
+    // Pre-fill: if updating, use current name. If saving-as-new from a loaded draft,
+    // suggest a "(copy)" variant. If brand new, suggest a property-based default.
+    if(mode==="save"&&currentDraft){
+      setDraftNameInput(currentDraft.name);
+    }else if(mode==="save_as_new"&&currentDraft){
+      setDraftNameInput(`${currentDraft.name} (copy)`);
+    }else{
+      const propAddr=userProperties.find((p:any)=>p.id===selectedPropertyId)?.address;
+      const defaultName=propAddr?`${propAddr} remix`:`Remix ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
+      setDraftNameInput(defaultName);
+    }
+    setShowSaveDialog(true);
+  };
+
+  // Reload drafts list whenever selected property changes (and we're in remix mode).
+  useEffect(()=>{
+    if(activeTab==="video-remix"){loadDraftsList(selectedPropertyId||null);}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[selectedPropertyId,activeTab]);
+
+  // Read ?draftId= from URL on first mount and load that draft if present.
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    const params=new URLSearchParams(window.location.search);
+    const did=params.get("draftId");
+    if(did){
+      // Defer slightly so any prior auto-loaded videos/properties settle first
+      setTimeout(()=>{loadDraft(did);},300);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   const VIBES=[{key:"",label:"All"},{key:"upbeat_modern",label:"Upbeat"},{key:"chill_tropical",label:"Chill"},{key:"energetic_pop",label:"Energetic"},{key:"elegant_classical",label:"Elegant"},{key:"warm_acoustic",label:"Acoustic"},{key:"bold_cinematic",label:"Cinematic"},{key:"smooth_jazz",label:"Jazz"},{key:"ambient",label:"Ambient"}];
   const fetchMusicTracks=async(vibe:string="")=>{setLoadingMusic(true);try{const resp=await fetch(`/api/generate-music?library=true&vibe=${vibe}`);const data=await resp.json();setMusicTracks(data.tracks||[]);}catch(e){console.error(e);}setLoadingMusic(false);};
@@ -1379,6 +1535,13 @@ export default function DesignStudioV2(){
             {userProperties.map((p:any)=><option key={p.id} value={p.id}>{p.address}{p.city?`, ${p.city}`:""}</option>)}
             <option value="__new__">{"\uff0b"} Enter manually</option>
           </select>
+          {isRemixMode&&currentDraft&&(
+            <div title={`Editing draft: ${currentDraft.name}`} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:99,background:"rgba(168,85,247,0.12)",border:"1px solid rgba(168,85,247,0.3)",fontSize:10,fontWeight:600,color:"var(--sa)",fontFamily:"var(--sf)",maxWidth:200}}>
+              <Save size={10}/>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentDraft.name}</span>
+              <button onClick={()=>{setCurrentDraft(null);notify("Detached from draft");}} title="Stop editing this draft" style={{background:"none",border:"none",cursor:"pointer",padding:0,marginLeft:2,display:"flex",alignItems:"center"}}><X size={10} color="var(--sa)"/></button>
+            </div>
+          )}
         </div>
         <div className="ssp"/>
         <div className="sac">
@@ -1386,6 +1549,33 @@ export default function DesignStudioV2(){
           <button className="bi" title="Redo"><Redo2 size={15}/></button>
           <div className="td"/>
           <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
+          {isRemixMode&&remixClips.length>0&&(
+            <>
+              <button
+                onClick={()=>{
+                  // If updating an existing draft, save in place silently. If new, prompt for name.
+                  if(currentDraft)saveDraft(currentDraft.name,false);
+                  else openSaveDialog("save");
+                }}
+                disabled={savingDraft}
+                title={currentDraft?`Update "${currentDraft.name}"`:"Save as new draft"}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:9,border:"1px solid var(--sbr)",background:"rgba(255,255,255,0.04)",color:"var(--st)",fontSize:12,fontWeight:700,cursor:savingDraft?"not-allowed":"pointer",fontFamily:"var(--sf)",opacity:savingDraft?0.6:1}}
+              >
+                {savingDraft?<Loader2 size={13} className="animate-spin"/>:<Save size={13}/>}
+                {currentDraft?"Save":"Save Draft"}
+              </button>
+              {currentDraft&&(
+                <button
+                  onClick={()=>openSaveDialog("save_as_new")}
+                  disabled={savingDraft}
+                  title="Save as a new draft"
+                  style={{display:"inline-flex",alignItems:"center",gap:5,padding:"7px 10px",borderRadius:9,border:"1px solid var(--sbr)",background:"rgba(255,255,255,0.04)",color:"var(--std)",fontSize:11,fontWeight:600,cursor:savingDraft?"not-allowed":"pointer",fontFamily:"var(--sf)"}}
+                >
+                  <Copy size={12}/>Save as new
+                </button>
+              )}
+            </>
+          )}
           <button className="bx" onClick={handleExport} disabled={exporting} style={activeTab==="listing-flyer"?{background:"linear-gradient(135deg,#1e3a5f,#2563eb)"}:isRemixMode?{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}:isVideoMode?{background:"linear-gradient(135deg,#7c3aed,#6366f1)"}:undefined}>
             {exporting?<><Loader2 size={14} className="animate-spin"/>{exportProgress>0?`${exportProgress}%`:"Exporting..."}</>:activeTab==="listing-flyer"?<><Printer size={14}/>Export Flyer</>:isRemixMode?<><Film size={14}/>Export Remix</>:isVideoMode?<><Film size={14}/>Export MP4</>:<><Download size={14}/>Export</>}
           </button>
@@ -1688,6 +1878,42 @@ export default function DesignStudioV2(){
               {exporting&&exportStatus&&<p style={{fontSize:10,color:"var(--std)",textAlign:"center" as const,marginTop:6,lineHeight:1.4,fontFamily:"var(--sf)"}}>{exportStatus}</p>}
             </>}
           </Section>
+          {isRemixMode&&(
+            <Section title={`Saved Drafts${selectedPropertyId?" (this property)":""}`} icon={Save}>
+              {loadingDrafts?(
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"16px 0"}}><Loader2 size={16} color="var(--std)" className="animate-spin"/></div>
+              ):drafts.length===0?(
+                <p style={{fontSize:11,color:"var(--std)",margin:0,lineHeight:1.5,padding:"4px 0"}}>{selectedPropertyId?"No drafts saved for this property yet.":"No saved drafts yet. Build a remix and click Save Draft."}</p>
+              ):(
+                <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+                  {drafts.map(d=>{
+                    const isCurrent=currentDraft?.id===d.id;
+                    return(
+                      <div key={d.id} style={{position:"relative",borderRadius:8,border:isCurrent?"1px solid var(--sa)":"1px solid var(--sbr)",background:isCurrent?"var(--sag)":"rgba(255,255,255,0.02)",overflow:"hidden"}}>
+                        <button
+                          onClick={()=>{if(!isCurrent)loadDraft(d.id);}}
+                          disabled={isCurrent}
+                          style={{display:"block",width:"100%",padding:"8px 32px 8px 10px",background:"none",border:"none",cursor:isCurrent?"default":"pointer",textAlign:"left" as const,fontFamily:"var(--sf)"}}
+                        >
+                          <p style={{fontSize:11,fontWeight:700,color:isCurrent?"var(--sa)":"var(--st)",margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={d.name}>{d.name}</p>
+                          <p style={{fontSize:9,color:"var(--std)",margin:0,marginTop:2}}>
+                            {d.clip_count} clip{d.clip_count!==1?"s":""} {"\u00b7"} {d.total_duration}s {"\u00b7"} {d.size}
+                            {isCurrent&&<span style={{color:"var(--sa)",fontWeight:600}}> {"\u00b7"} editing</span>}
+                          </p>
+                          <p style={{fontSize:9,color:"var(--stm)",margin:0,marginTop:1}}>Updated {new Date(d.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</p>
+                        </button>
+                        <button
+                          onClick={()=>setDeleteDraftConfirm({id:d.id,name:d.name})}
+                          title="Delete draft"
+                          style={{position:"absolute",top:6,right:6,width:22,height:22,borderRadius:6,border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--std)"}}
+                        ><Trash2 size={11}/></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Section>
+          )}
           <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="video-remix"?[{n:"Clips",i:"\ud83c\udfac"},{n:"Music",i:"\ud83c\udfb5"},{n:"Branding",i:"\ud83d\udc64"},{n:"Timeline",i:"\u23f1\ufe0f"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
         </div>}
       </div>
@@ -1723,6 +1949,64 @@ export default function DesignStudioV2(){
 
 {notification&&<div className="toast"><CheckCircle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:7}}/>{notification}</div>}
       {showGate&&<GateOverlay gateType="buy_video" toolName="Video Remix" onClose={()=>setShowGate(false)}/>}
+
+      {/* ── Save Draft dialog ─────────────────────────────────────────────── */}
+      {showSaveDialog&&(
+        <div onClick={()=>!savingDraft&&setShowSaveDialog(false)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:440,width:"100%",fontFamily:"var(--sf)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,rgba(168,85,247,0.2),rgba(168,85,247,0.1))",display:"flex",alignItems:"center",justifyContent:"center"}}><Save size={16} color="var(--sa)"/></div>
+              <h3 style={{fontSize:16,fontWeight:800,color:"var(--st)",margin:0}}>{saveDialogMode==="save_as_new"?"Save as new draft":"Save remix draft"}</h3>
+            </div>
+            <p style={{fontSize:12,color:"var(--std)",margin:"0 0 16px",lineHeight:1.5}}>
+              {selectedPropertyId
+                ?<>This draft will be attached to <span style={{color:"var(--sa)",fontWeight:600}}>{userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||"the selected property"}</span> and visible from its property page.</>
+                :"This draft won't be attached to a property. Select one before saving to make it findable from the property page."}
+            </p>
+            <label className="fl">Draft name</label>
+            <input
+              className="fi"
+              value={draftNameInput}
+              onChange={e=>setDraftNameInput(e.target.value)}
+              onKeyDown={e=>{
+                if(e.key==="Enter"&&draftNameInput.trim()&&!savingDraft){saveDraft(draftNameInput.trim(),saveDialogMode==="save_as_new");}
+                if(e.key==="Escape"&&!savingDraft){setShowSaveDialog(false);}
+              }}
+              placeholder="e.g. Just Listed Cut"
+              autoFocus
+              maxLength={120}
+              style={{marginBottom:18}}
+            />
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <button onClick={()=>setShowSaveDialog(false)} disabled={savingDraft} style={{padding:"8px 18px",borderRadius:9,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:12,fontWeight:600,cursor:savingDraft?"not-allowed":"pointer",fontFamily:"var(--sf)"}}>Cancel</button>
+              <button
+                onClick={()=>saveDraft(draftNameInput.trim(),saveDialogMode==="save_as_new")}
+                disabled={savingDraft||!draftNameInput.trim()}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 20px",borderRadius:9,border:"none",background:"linear-gradient(135deg,var(--sa),#a855f7)",color:"#fff",fontSize:12,fontWeight:700,cursor:(savingDraft||!draftNameInput.trim())?"not-allowed":"pointer",fontFamily:"var(--sf)",opacity:(savingDraft||!draftNameInput.trim())?0.6:1}}
+              >
+                {savingDraft?<Loader2 size={13} className="animate-spin"/>:<Save size={13}/>}
+                {savingDraft?"Saving...":"Save Draft"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Draft confirm ──────────────────────────────────────────── */}
+      {deleteDraftConfirm&&(
+        <div onClick={()=>setDeleteDraftConfirm(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:380,width:"100%",textAlign:"center" as const,fontFamily:"var(--sf)"}}>
+            <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(239,68,68,0.1)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Trash2 size={22} color="#ef4444"/></div>
+            <h3 style={{fontSize:16,fontWeight:700,color:"var(--st)",margin:"0 0 8px"}}>Delete this draft?</h3>
+            <p style={{fontSize:13,color:"var(--std)",margin:"0 0 4px",lineHeight:1.5}}>"{deleteDraftConfirm.name}"</p>
+            <p style={{fontSize:12,color:"var(--std)",margin:"0 0 20px",opacity:0.7,lineHeight:1.5}}>This cannot be undone.</p>
+            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+              <button onClick={()=>setDeleteDraftConfirm(null)} style={{padding:"8px 20px",borderRadius:99,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}>Cancel</button>
+              <button onClick={()=>deleteDraft(deleteDraftConfirm.id)} style={{padding:"8px 20px",borderRadius:99,border:"none",background:"#ef4444",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)"}}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div></>
   );
 }
