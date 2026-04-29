@@ -1833,7 +1833,26 @@ export default function DesignStudioV2(){
       </div>
 
       <div className="sb">
-        <div className="slr">{currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}</div>
+        <div className="slr">
+          {(()=>{
+            // For video-remix, split the rail: Templates as its own top section,
+            // then a "MANUAL REMIX" header, then the rest. For other tabs, render
+            // panels flat (no grouping needed).
+            if(activeTab!=="video-remix"){
+              return currentPanels.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>);
+            }
+            const templates=currentPanels.filter(p=>p.id==="templates");
+            const manual=currentPanels.filter(p=>p.id!=="templates");
+            return(<>
+              {templates.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}
+              <div style={{display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,padding:"10px 4px 6px",margin:"4px 0 2px",borderTop:"1px solid var(--sbr)"}}>
+                <span style={{fontSize:9,fontWeight:800,color:"var(--std)",letterSpacing:"0.12em",textTransform:"uppercase" as const,fontFamily:"var(--sf)",lineHeight:1.15}}>Manual</span>
+                <span style={{fontSize:9,fontWeight:800,color:"var(--std)",letterSpacing:"0.12em",textTransform:"uppercase" as const,fontFamily:"var(--sf)",lineHeight:1.15}}>Remix</span>
+              </div>
+              {manual.map(p=><button key={p.id} className={`rb ${leftPanel===p.id?"ac":""}`} onClick={()=>setLeftPanel(p.id)}><p.icon size={18}/><span>{p.label}</span></button>)}
+            </>);
+          })()}
+        </div>
 
         <div className={`slp ${mobilePanel?"mob-open":""} ${isRemixMode?"remix-wide":""}`}>
 
@@ -1963,14 +1982,14 @@ export default function DesignStudioV2(){
                           <rect x="80" y="55" width="6" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
                         </svg>
                         {isCurrent&&(
-                          <div style={{position:"absolute",top:6,right:6,padding:"2px 7px",borderRadius:99,background:"rgba(0,0,0,0.55)",fontSize:8,fontWeight:800,color:"#fff",letterSpacing:"0.06em"}}>ACTIVE</div>
+                          <div style={{position:"absolute",top:8,right:8,padding:"4px 11px",borderRadius:99,background:"rgba(0,0,0,0.55)",fontSize:11,fontWeight:800,color:"#fff",letterSpacing:"0.06em"}}>ACTIVE</div>
                         )}
                       </div>
                       {/* Card body */}
-                      <div style={{padding:"8px 10px"}}>
-                        <p style={{fontSize:11,fontWeight:800,color:"var(--st)",margin:0,fontFamily:"var(--sf)"}}>{p.displayName}</p>
-                        <p style={{fontSize:9,color:"var(--std)",margin:0,marginTop:2,lineHeight:1.4,height:24,overflow:"hidden"}}>{p.description}</p>
-                        <p style={{fontSize:8,color:"var(--std)",margin:0,marginTop:3,fontWeight:600,opacity:0.7}}>
+                      <div style={{padding:"12px 14px"}}>
+                        <p style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0,fontFamily:"var(--sf)",lineHeight:1.2}}>{p.displayName}</p>
+                        <p style={{fontSize:14,color:"var(--std)",margin:0,marginTop:5,lineHeight:1.4,minHeight:38,overflow:"hidden"}}>{p.description}</p>
+                        <p style={{fontSize:13,color:"var(--std)",margin:0,marginTop:6,fontWeight:600,opacity:0.7}}>
                           {p.slots.length} clips · ~{Math.round((p.durationTarget[0]+p.durationTarget[1])/2)}s
                         </p>
                       </div>
