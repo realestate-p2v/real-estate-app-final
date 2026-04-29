@@ -669,8 +669,10 @@ export default function DesignStudioV2(){
     }catch{}
   };
 
-  const handleSelectProperty=(id:string)=>{
-    if(id==="__new__"){
+  const handleSelectProperty=(id:string|null)=>{
+    // Empty string / null = user cleared the selection ("Select a property..." option).
+    // Clear the selected id AND wipe the form so the canvas/exports don't carry stale data.
+    if(!id||id==="__new__"){
       setSelectedPropertyId(null);
       setAddress("");setAddressLine2("");setBeds("");setBaths("");setSqft("");setPrice("");
       setPdfAddress("");setPdfCityStateZip("");setPdfBeds("");setPdfBaths("");setPdfSqft("");setPdfPrice("");setPdfFeatures("");
@@ -1571,7 +1573,7 @@ export default function DesignStudioV2(){
         <div style={{flex:1,minWidth:0}}>
           <ToolHeader
             selectedPropertyId={selectedPropertyId}
-            onSelectProperty={(v)=>handleSelectProperty(v||"")}
+            onSelectProperty={handleSelectProperty}
             properties={userProperties.map((p:any)=>({id:p.id,address:p.address,city:p.city,state:p.state}))}
             backHref="/dashboard/lens"
             allowManualEntry
