@@ -11,7 +11,7 @@ import {
 import { GateOverlay } from "@/components/gate-overlay";
 import ToolHeader from "@/components/tool-header";
 import RemixPresetModal, { RemixSourceClip as PresetSourceClip, GenerateResult as PresetGenerateResult } from "@/components/remix-preset-modal";
-import { PRESETS, RemixPresetId, PresetDraftMeta } from "@/lib/remix-presets";
+import { PRESETS, RemixPresetId, PresetDraftMeta, PaceId, SOURCE_CLIP_DURATION, scaleSlotDuration, extraSlotDuration } from "@/lib/remix-presets";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
 function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
@@ -942,20 +942,40 @@ export default function DesignStudioV2(){
   // "Edit manually" (drops preset metadata, renders as plain manual draft).
   const buildDraftFromPreset=async(result:PresetGenerateResult,withMeta:boolean)=>{
     const preset=PRESETS[result.presetId];
-    // Map slots → RemixClip[]. Defaults: full-clip trim, speed=1.
-    // Renderer (PR #2) will override durations using slot.defaultDuration.
+    const pace:PaceId=result.pace;
+    const baseSlotCount=preset.slots.length;
+    // Map slots → RemixClip[]. Each slot gets its preset-defined duration
+    // scaled by the agent-chosen pace. This is what makes the timeline punchy
+    // by default instead of 6-8s flat holds. Source clips are 6.0s.
+    // Extras (beyond base) use the preset's slot-duration average × pace.
     const clips:RemixClip[]=result.slots.map((s,i)=>{
       const clipId=`preset-${Date.now()}-${i}`;
-      // We don't know clip source duration here — set conservative defaults.
-      const guessedDuration=8;
+      // Derive trim end. For base slots, look up the slot spec by slotIndex
+      // and scale its defaultDuration. For extras, use the preset average.
+      let trimEnd:number;
+      if(s.isExtra){
+        trimEnd=extraSlotDuration(result.presetId,pace);
+      }else{
+        const slotSpec=preset.slots[s.slotIndex];
+        // slotSpec must exist for non-extras (slotIndex < baseSlotCount).
+        trimEnd=slotSpec
+          ?scaleSlotDuration(slotSpec.defaultDuration,pace,SOURCE_CLIP_DURATION)
+          :scaleSlotDuration(2.5,pace,SOURCE_CLIP_DURATION);
+      }
+      // Belt-and-suspenders: never let trim exceed the source clip.
+      trimEnd=Math.min(trimEnd,SOURCE_CLIP_DURATION);
       return{
         id:clipId,
         sourceUrl:s.source.url,
         thumbnail:s.source.thumbnail,
         label:s.source.label,
-        duration:guessedDuration,
+        // Source clip duration. Real source clips from the orders pipeline are
+        // 6.0s — page.tsx's existing `<video onLoadedMetadata>` handler will
+        // overwrite this with the true duration once the element mounts, but
+        // we want the slider/UI to start with a correct value.
+        duration:SOURCE_CLIP_DURATION,
         trimStart:0,
-        trimEnd:guessedDuration,
+        trimEnd,
         speed:1,
         order:i,
         isAerial:s.source.isAerial,
@@ -967,6 +987,7 @@ export default function DesignStudioV2(){
       id:result.presetId,
       inputs:result.inputs,
       extraSlotsCount:result.slots.filter(s=>s.isExtra).length,
+      pace,
     }:null;
 
     // Default output size from preset (portrait → "story" in REMIX_SIZES).
@@ -978,6 +999,9 @@ export default function DesignStudioV2(){
     setRemixSize(targetSize);
     setCurrentPresetMeta(meta);
     setShowPresetModal(null);
+
+    // Suppress unused-variable warning for baseSlotCount (kept for clarity).
+    void baseSlotCount;
 
     // Build draft name. Property name + preset display name when both present.
     const propName=result.propertyDisplayName;
@@ -1619,7 +1643,21 @@ export default function DesignStudioV2(){
           crossOrigin="anonymous"
           onLoadedMetadata={e=>{
             const v=e.target as HTMLVideoElement;
-            console.log(`[remix-playback] loadedmetadata ${clip.label}: duration=${v.duration?.toFixed(2)}s readyState=${v.readyState}`);
+            const realDur=v.duration;
+            console.log(`[remix-playback] loadedmetadata ${clip.label}: duration=${realDur?.toFixed(2)}s readyState=${v.readyState}`);
+            // Persist the real source duration on the RemixClip so the trim
+            // slider's `max` is accurate. Only update if (a) we got a valid
+            // number and (b) it materially differs from what's stored. Don't
+            // touch trimStart/trimEnd — the preset chose those deliberately
+            // and we shouldn't widen them. But DO clamp trimEnd if it now
+            // exceeds the real duration (e.g. clip is 5.9s, trimEnd was 6.0).
+            if(Number.isFinite(realDur)&&realDur>0&&Math.abs(realDur-clip.duration)>0.05){
+              setRemixClips(prev=>prev.map(c=>{
+                if(c.id!==clip.id)return c;
+                const newTrimEnd=Math.min(c.trimEnd,realDur);
+                return{...c,duration:realDur,trimEnd:newTrimEnd};
+              }));
+            }
           }}
           onLoadedData={e=>{
             const v=e.target as HTMLVideoElement;
