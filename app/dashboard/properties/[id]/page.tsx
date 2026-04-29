@@ -15,7 +15,7 @@ import {
   Loader2, Lock, Copy, Download, ExternalLink, Image as ImageIcon, Play,
   ChevronDown, ShoppingCart, GripVertical, CheckCircle, Sparkles, Globe,
   Eye, Link2, CalendarDays, Mail, Phone, MessageSquare, Trash2,
-  LayoutGrid, Video, Megaphone, AlertCircle,
+  LayoutGrid, Video, Megaphone, AlertCircle, Save,
 } from "lucide-react";
 import PropertyVideoCard from "@/components/property-video-card";
 
@@ -255,6 +255,9 @@ function PropertyPageInner() {
   const [stagings, setStagings] = useState<any[]>([]);
   const [orderPhotos, setOrderPhotos] = useState<any[]>([]);
   const [orderClips, setOrderClips] = useState<any[]>([]);
+  const [remixDrafts, setRemixDrafts] = useState<any[]>([]);
+  const [deleteDraftConfirm, setDeleteDraftConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deletingDraft, setDeletingDraft] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Property>>({});
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
@@ -417,6 +420,22 @@ function PropertyPageInner() {
     const { data: stagingData } = await supabase.from("lens_staging").select("*").eq("property_id", propertyId).order("created_at", { ascending: false });
     setStagings(stagingData || []);
 
+    // Fetch remix drafts via API (uses RLS-gated route). Non-blocking — failure
+    // here doesn't prevent the property page from rendering.
+    try {
+      const draftsRes = await fetch(`/api/lens/remix/drafts?propertyId=${encodeURIComponent(propertyId)}`);
+      if (draftsRes.ok) {
+        const draftsData = await draftsRes.json();
+        setRemixDrafts(draftsData.drafts || []);
+      } else {
+        console.warn("[property] drafts fetch failed:", draftsRes.status);
+        setRemixDrafts([]);
+      }
+    } catch (e) {
+      console.warn("[property] drafts fetch exception:", e);
+      setRemixDrafts([]);
+    }
+
     setLoading(false);
   }, [supabase, propertyId, router]);
 
@@ -500,6 +519,26 @@ function PropertyPageInner() {
     } catch (e) { console.error("Delete export failed:", e); }
   };
 
+  const handleDeleteDraft = async (draftId: string) => {
+    setDeletingDraft(true);
+    try {
+      const res = await fetch(`/api/lens/remix/drafts/${encodeURIComponent(draftId)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("[property] delete draft failed:", err);
+        alert(err.error || "Failed to delete draft.");
+        return;
+      }
+      setRemixDrafts(prev => prev.filter(d => d.id !== draftId));
+    } catch (e) {
+      console.error("[property] delete draft exception:", e);
+      alert("Failed to delete draft.");
+    } finally {
+      setDeletingDraft(false);
+      setDeleteDraftConfirm(null);
+    }
+  };
+
   /* ─── Curation ─── */
   const toggleCuratedItem = (category: string, itemId: string) => {
     setPubCurated(prev => { const list = prev[category] || []; return list.includes(itemId) ? { ...prev, [category]: list.filter(x => x !== itemId) } : { ...prev, [category]: [...list, itemId] }; });
@@ -571,7 +610,7 @@ function PropertyPageInner() {
   const nonRemixExports = exports.filter((e: any) => !e.template_type?.startsWith("video_remix"));
   const remixExports = exports.filter((e: any) => e.template_type?.startsWith("video_remix"));
 
-  const mediaCount = videos.length + remixExports.length + orderPhotos.length + orderClips.length + allCoachApproved.length;
+  const mediaCount = videos.length + remixExports.length + remixDrafts.length + orderPhotos.length + orderClips.length + allCoachApproved.length;
   const marketingCount = nonRemixExports.length + stagings.length + descriptions.length;
 
   /* ─── Tab definitions (color-coded per section) ─── */
@@ -639,6 +678,35 @@ function PropertyPageInner() {
           </div>
         );
       })()}
+
+      {/* ═══ DELETE DRAFT CONFIRM ═══ */}
+      {deleteDraftConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm px-4" onClick={() => !deletingDraft && setDeleteDraftConfirm(null)}>
+          <div className="relative w-full max-w-sm bg-slate-900 ring-1 ring-white/10 rounded-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
+            <div className="h-12 w-12 rounded-full bg-red-500/10 ring-1 ring-red-400/30 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="h-5 w-5 text-red-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">Delete this draft?</h3>
+            <p className="text-sm text-white/60 mb-1">"{deleteDraftConfirm.name}"</p>
+            <p className="text-xs text-white/40 mb-5">This cannot be undone.</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => setDeleteDraftConfirm(null)}
+                disabled={deletingDraft}
+                className="px-5 py-2 rounded-full ring-1 ring-white/15 text-white text-sm font-semibold hover:bg-white/[0.05] disabled:opacity-50"
+              >Cancel</button>
+              <button
+                onClick={() => handleDeleteDraft(deleteDraftConfirm.id)}
+                disabled={deletingDraft}
+                className="px-5 py-2 rounded-full bg-red-500 hover:bg-red-400 text-white text-sm font-bold disabled:opacity-60 inline-flex items-center gap-1.5"
+              >
+                {deletingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {deletingDraft ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
      {/* ═══ HEADER with inline quick actions ═══ */}
       <div className="mc-animate flex items-start gap-3 mb-6">
@@ -902,6 +970,51 @@ function PropertyPageInner() {
                             loadProperty();
                           }}
                         />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Saved Remix Drafts — editable states, click to open in studio. */}
+            <SectionCard title="Saved Remix Drafts" count={remixDrafts.length} icon={Save}
+              action={<Button asChild size="sm" className="bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] text-white font-semibold"><Link href={`/dashboard/lens/design-studio?${qs}`}><PenTool className="h-3.5 w-3.5 mr-1.5" />New Draft</Link></Button>}>
+              {remixDrafts.length === 0 ? (
+                <EmptyState icon={Save} title="No saved drafts yet" hint="Build a remix in the Design Studio and click Save to keep it here for later."
+                  action={<Button asChild className={`${a.btnBg} ${a.btnBgHover} text-white font-bold`}><Link href={`/dashboard/lens/design-studio?${qs}`}><Film className="h-4 w-4 mr-2" />Open Video Remix</Link></Button>} />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {remixDrafts.map((draft: any) => {
+                    const studioHref = `/dashboard/lens/design-studio?${qs}&draftId=${encodeURIComponent(draft.id)}`;
+                    return (
+                      <div key={draft.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] transition-colors overflow-hidden flex flex-col">
+                        <Link href={studioHref} className="flex-1 p-4 group">
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-violet-500/10 ring-1 ring-violet-400/20 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-500/20 transition-colors">
+                              <Save className="h-5 w-5 text-violet-300" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white truncate group-hover:text-violet-200 transition-colors" title={draft.name}>{draft.name}</p>
+                              <p className="text-xs text-white/50 mt-1">
+                                {draft.clip_count} clip{draft.clip_count !== 1 ? "s" : ""} · {draft.total_duration}s · {draft.size}
+                              </p>
+                              <p className="text-xs text-white/35 mt-0.5">Updated {timeAgo(draft.updated_at)}</p>
+                            </div>
+                          </div>
+                        </Link>
+                        <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-white/[0.04] bg-white/[0.01]">
+                          <Link href={studioHref} className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 hover:text-violet-200">
+                            <PenTool className="h-3.5 w-3.5" />Open & Export
+                          </Link>
+                          <button
+                            onClick={() => setDeleteDraftConfirm({ id: draft.id, name: draft.name })}
+                            className="text-red-400 hover:text-red-300 p-1"
+                            title="Delete draft"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
