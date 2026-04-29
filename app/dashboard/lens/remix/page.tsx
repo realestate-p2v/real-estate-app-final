@@ -494,7 +494,6 @@ export default function DesignStudioV2(){
   const[remixBranding,setRemixBranding]=useState(true);
   const[expandedClipId,setExpandedClipId]=useState<string|null>(null);
   const[remixClipSources,setRemixClipSources]=useState<{propertyKey:string;displayName:string;orderIds:string[];latestDate:string;clips:{url:string;thumbnail:string|null;label:string;isAerial:boolean;orderId:string;orderDate:string}[]}[]>([]);
-  const[hoverPreviewUrl,setHoverPreviewUrl]=useState<string|null>(null);
   const[loadingRemixClips,setLoadingRemixClips]=useState(false);
   const[isLensSubscriber,setIsLensSubscriber]=useState(false);
   const[savedBrandingCardUrl,setSavedBrandingCardUrl]=useState<string|null>(null);
@@ -508,6 +507,7 @@ export default function DesignStudioV2(){
   const remixTimeRef=useRef(0);
   const remixIdxRef=useRef(0);
   const remixDragging=useRef(false);
+  const[brokenClipIds,setBrokenClipIds]=useState<Set<string>>(new Set());
   // UI
   const[exporting,setExporting]=useState(false);const[exportProgress,setExportProgress]=useState(0);const[exportStatus,setExportStatus]=useState("");const[showRight,setShowRight]=useState(true);const[notification,setNotification]=useState<string|null>(null);
   const[theme,setTheme]=useState<"dark"|"light">("dark");
@@ -1207,6 +1207,37 @@ export default function DesignStudioV2(){
     ):null)
   ):null;
 
+  // Stable ref-callback factory. The previous inline ref (`ref={el=>...}`) created a new
+  // function every render — React calls a "changed" ref with null then the new fn, which
+  // produced thousands of register/remove pairs per second during animation-frame playback.
+  // Caching one callback per clip.id keeps the function identity stable across renders.
+  const remixVideoRefCallbacks=useRef<Map<string,(el:HTMLVideoElement|null)=>void>>(new Map());
+  const getVideoRefCallback=(clipId:string,clipLabel:string)=>{
+    let cb=remixVideoRefCallbacks.current.get(clipId);
+    if(!cb){
+      cb=(el:HTMLVideoElement|null)=>{
+        if(el){remixVideosRef.current.set(clipId,el);}
+        else{remixVideosRef.current.delete(clipId);}
+      };
+      remixVideoRefCallbacks.current.set(clipId,cb);
+    }
+    return cb;
+  };
+  // Cleanup: when a clip is removed from the timeline, drop its cached callback so the Map
+  // doesn't grow unbounded over a long session.
+  useEffect(()=>{
+    const liveIds=new Set(remixClips.map(c=>c.id));
+    for(const id of Array.from(remixVideoRefCallbacks.current.keys())){
+      if(!liveIds.has(id))remixVideoRefCallbacks.current.delete(id);
+    }
+    // Also drop broken-clip flags for clips that have been removed
+    setBrokenClipIds(prev=>{
+      const next=new Set<string>();
+      prev.forEach(id=>{if(liveIds.has(id))next.add(id);});
+      return next.size===prev.size?prev:next;
+    });
+  },[remixClips]);
+
   const renderPreview=()=>{
     if(activeTab==="video-remix"){
       // Empty states are handled outside the scaled wrapper (see remixEmptyState above).
@@ -1219,22 +1250,7 @@ export default function DesignStudioV2(){
         {remixClips.map((clip,i)=><video
           key={clip.id}
           data-clip-id={clip.id}
-          ref={el=>{
-            // Stable registration: only update the map when the element identity changes.
-            // Avoids tear-down churn during state updates that re-render the map without
-            // actually unmounting the <video>.
-            if(el){
-              if(remixVideosRef.current.get(clip.id)!==el){
-                remixVideosRef.current.set(clip.id,el);
-                console.log(`[remix-playback] video ref registered for ${clip.label} (${clip.id})`);
-              }
-            }else{
-              if(remixVideosRef.current.has(clip.id)){
-                remixVideosRef.current.delete(clip.id);
-                console.log(`[remix-playback] video ref removed for ${clip.id}`);
-              }
-            }
-          }}
+          ref={getVideoRefCallback(clip.id,clip.label)}
           src={clip.sourceUrl}
           muted
           playsInline
@@ -1247,14 +1263,25 @@ export default function DesignStudioV2(){
           onLoadedData={e=>{
             const v=e.target as HTMLVideoElement;
             if(v.currentTime<0.01)v.currentTime=clip.trimStart;
-            console.log(`[remix-playback] loadeddata ${clip.label}: readyState=${v.readyState}`);
           }}
           onError={e=>{
             const v=e.target as HTMLVideoElement;
-            console.error(`[remix-playback] video error for ${clip.label}:`,v.error);
+            console.error(`[remix-playback] video error for ${clip.label}:`,v.error?.code,v.error?.message);
+            setBrokenClipIds(prev=>{if(prev.has(clip.id))return prev;const next=new Set(prev);next.add(clip.id);return next;});
           }}
           style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:i===remixPlayingIdx?1:0,zIndex:i===remixPlayingIdx?2:1,transition:"opacity 0.12s ease"}}
         />)}
+        {/* Broken-clip overlay: when the currently-displaying clip failed to load, show
+            a clear unavailable state instead of a silent black canvas. */}
+        {currentClip&&brokenClipIds.has(currentClip.id)&&(
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:14,zIndex:3,backgroundColor:"#0c0c10",fontFamily:"var(--sf)"}}>
+            <div style={{width:60,height:60,borderRadius:14,background:"rgba(239,68,68,0.12)",border:"1px solid rgba(239,68,68,0.35)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <X size={28} color="#ef4444"/>
+            </div>
+            <p style={{fontSize:280,color:"#ef4444",fontWeight:800,margin:0,letterSpacing:"-0.01em"}}>Clip unavailable</p>
+            <p style={{fontSize:140,color:"rgba(255,255,255,0.55)",fontWeight:500,margin:0,maxWidth:1400,lineHeight:1.4,textAlign:"center" as const,padding:"0 80px"}}>This clip's source video can't be loaded. Remove it from your timeline and pick another.</p>
+          </div>
+        )}
         {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",zIndex:5}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
         {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
         <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
@@ -1459,11 +1486,6 @@ export default function DesignStudioV2(){
                 {hasVideoOrders===false?<><Film size={28} color="var(--std)"/><p style={{fontSize:12,color:"var(--std)",margin:0,marginTop:8,lineHeight:1.6}}>Order a listing video to start remixing clips into social content.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:12,padding:"7px 18px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none"}}>Order a Video</a></>:<><p style={{fontSize:11,color:"var(--std)",margin:0,marginBottom:8}}>No completed videos found.</p><button onClick={()=>loadUserVideos()} className="bx" style={{margin:"0 auto",fontSize:11,padding:"6px 16px"}}>Reload</button></>}
               </div>
               :<div style={{display:"flex",flexDirection:"column" as const,gap:18}}>
-                {/* Hover preview pane — shows the currently-hovered clip muted/looping */}
-                {hoverPreviewUrl&&<div style={{borderRadius:10,overflow:"hidden",border:"1px solid var(--sa)",background:"#000",aspectRatio:"16/9",position:"relative"}}>
-                  <video src={hoverPreviewUrl} autoPlay loop muted playsInline crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                  <div style={{position:"absolute",top:6,left:6,padding:"2px 8px",borderRadius:99,background:"rgba(0,0,0,0.7)",fontSize:9,fontWeight:700,color:"#fff",letterSpacing:"0.05em"}}>PREVIEW</div>
-                </div>}
                 {remixClipSources.map(src=>(
                   <div key={src.propertyKey}>
                     {/* Property header: name primary, order metadata secondary */}
@@ -1483,8 +1505,6 @@ export default function DesignStudioV2(){
                             if(onTL){removeClipFromRemix(remixClips.find(c=>c.sourceUrl===clip.url)?.id||"");}
                             else{addClipToRemix(clip.url,clip.thumbnail,`${src.displayName.slice(0,20)} \u00b7 ${clip.label}`,clip.isAerial);}
                           }}
-                          onMouseEnter={()=>setHoverPreviewUrl(clip.url)}
-                          onMouseLeave={()=>setHoverPreviewUrl(prev=>prev===clip.url?null:prev)}
                           style={{position:"relative",borderRadius:8,overflow:"hidden",border:onTL?"1px solid var(--sa)":"1px solid var(--sbr)",background:"none",cursor:"pointer",padding:0,fontFamily:"var(--sf)",opacity:onTL?0.85:1,transition:"all 0.15s"}}
                         >
                           <div style={{aspectRatio:"16/9",backgroundColor:"rgba(255,255,255,0.04)",overflow:"hidden",position:"relative"}}>
@@ -1617,12 +1637,15 @@ export default function DesignStudioV2(){
               {/* Scrubber bar */}
               <div style={{padding:"0 16px 4px",cursor:"pointer"}} onMouseDown={onMouseDown}>
                 <div style={{position:"relative",height:36,display:"flex",gap:2,alignItems:"stretch",borderRadius:6,overflow:"hidden"}}>
-                  {remixClips.map((c,i)=><div key={c.id} style={{flex:remixClipDurations[i],display:"flex",flexDirection:"column" as const,justifyContent:"center",position:"relative",backgroundColor:TC[i%TC.length],opacity:i===remixPlayingIdx?1:0.5,transition:"opacity 0.15s",overflow:"hidden",borderRight:i<remixClips.length-1?"2px solid var(--ss)":"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,padding:"0 8px",minWidth:0}}>
-                      {c.thumbnail&&<img src={c.thumbnail} alt="" style={{width:24,height:16,objectFit:"cover",borderRadius:2,flexShrink:0}}/>}
-                      <span style={{fontSize:9,fontWeight:700,color:"#fff",textShadow:"0 1px 2px rgba(0,0,0,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</span>
-                    </div>
-                  </div>)}
+                  {remixClips.map((c,i)=>{
+                    const broken=brokenClipIds.has(c.id);
+                    return<div key={c.id} style={{flex:remixClipDurations[i],display:"flex",flexDirection:"column" as const,justifyContent:"center",position:"relative",backgroundColor:broken?"rgba(239,68,68,0.5)":TC[i%TC.length],opacity:i===remixPlayingIdx?1:0.5,transition:"opacity 0.15s",overflow:"hidden",borderRight:i<remixClips.length-1?"2px solid var(--ss)":"none",border:broken?"1px solid #ef4444":"none"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:4,padding:"0 8px",minWidth:0}}>
+                        {c.thumbnail&&<img src={c.thumbnail} alt="" style={{width:24,height:16,objectFit:"cover",borderRadius:2,flexShrink:0,opacity:broken?0.4:1}}/>}
+                        <span style={{fontSize:9,fontWeight:700,color:"#fff",textShadow:"0 1px 2px rgba(0,0,0,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{broken?"⚠ ":""}{c.label}</span>
+                      </div>
+                    </div>;
+                  })}
                   {/* Playhead */}
                   <div style={{position:"absolute",top:0,bottom:0,left:`${pct}%`,width:3,backgroundColor:"#fff",zIndex:3,boxShadow:"0 0 8px rgba(255,255,255,0.8),-1px 0 0 rgba(0,0,0,0.3),1px 0 0 rgba(0,0,0,0.3)",pointerEvents:"none"}}>
                     <div style={{position:"absolute",top:-4,left:-5,width:13,height:13,borderRadius:"50%",backgroundColor:"#fff",boxShadow:"0 0 6px rgba(0,0,0,0.4)"}}/>
