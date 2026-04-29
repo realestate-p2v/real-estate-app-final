@@ -1562,9 +1562,7 @@ export default function DesignStudioV2(){
     <div className={`sr ${theme==="light"?"light":""}`}>
       {/* TOP BAR */}
       <div className="st">
-        <div className="slg"><div className="slm" style={{background:"linear-gradient(135deg,#7c3aed,#ec4899)"}}><Film size={14} color="#fff"/></div><span style={{fontSize:14,fontWeight:800,letterSpacing:"-0.03em"}}>Video Remix</span></div>
-        <div className="stb">{TABS.map(t=><button key={t.id} className={`stbi ${activeTab===t.id?"ac":""}`} onClick={()=>setActiveTab(t.id)}><t.icon size={13}/>{t.label}</button>)}</div>
-        <div style={{flex:1,minWidth:0,marginLeft:12,marginRight:12}}>
+        <div style={{flex:1,minWidth:0}}>
           <ToolHeader
             selectedPropertyId={selectedPropertyId}
             onSelectProperty={(v)=>handleSelectProperty(v||"")}
