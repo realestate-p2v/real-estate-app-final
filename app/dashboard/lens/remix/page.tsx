@@ -554,6 +554,9 @@ export default function DesignStudioV2(){
   const remixIdxRef=useRef(0);
   const remixDragging=useRef(false);
   const[brokenClipIds,setBrokenClipIds]=useState<Set<string>>(new Set());
+  // Library: when a property is selected from the top dropdown, its clips pin to the
+  // top of the library and other properties collapse into an expandable section.
+  const[othersExpanded,setOthersExpanded]=useState(false);
   // ── Draft state ──────────────────────────────────────────────────────────
   type DraftSummary={id:string;name:string;property_id:string|null;created_at:string;updated_at:string;clip_count:number;total_duration:number;size:string};
   const[currentDraft,setCurrentDraft]=useState<{id:string;name:string}|null>(null);
@@ -1505,7 +1508,7 @@ export default function DesignStudioV2(){
     .ssp{flex:1;}.sac{display:flex;align-items:center;gap:6px;}
     .bi{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:var(--sf);}.bi:hover{background:var(--sih);color:var(--st);}
     .bx{padding:7px 22px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--sa),#7c3aed);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all 0.2s;box-shadow:0 2px 12px rgba(99,102,241,0.3);font-family:var(--sf);}.bx:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(99,102,241,0.4);}.bx:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
-    .sb{height:85vh;display:flex;overflow:hidden;}.slr{width:68px;background:var(--ss);border-right:1px solid var(--sbr);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px;flex-shrink:0;transition:background 0.3s;}
+    .sb{height:85vh;display:flex;overflow:hidden;position:relative;}.slr{width:68px;background:var(--ss);border-right:1px solid var(--sbr);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px;flex-shrink:0;transition:background 0.3s;}
     .rb{width:54px;padding:9px 0;border-radius:9px;border:none;background:none;color:var(--std);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all 0.15s;font-family:var(--sf);}.rb span{font-size:9px;font-weight:600;}.rb:hover{background:var(--sih);color:var(--st);}.rb.ac{background:var(--sag);color:var(--sa);}
     .slp{width:310px;background:var(--ss);border-right:1px solid var(--sbr);overflow-y:auto;flex-shrink:0;transition:background 0.3s,width 0.2s ease;}.slp::-webkit-scrollbar{width:4px;}.slp::-webkit-scrollbar-thumb{background:rgba(128,128,128,0.3);border-radius:4px;}
     .slp.remix-wide{width:380px;}
@@ -1537,6 +1540,9 @@ export default function DesignStudioV2(){
     .ta{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;resize:none;transition:all 0.15s;}.ta:focus{border-color:var(--sa);box-shadow:0 0 0 3px var(--sag);}
     .ps{width:100%;padding:8px 11px;border-radius:7px;border:1px solid var(--sbr);background:var(--si);color:var(--st);font-size:12px;font-family:var(--sf);outline:none;appearance:none;cursor:pointer;}.ps:focus{border-color:var(--sa);}
     .thm-toggle{width:34px;height:34px;border-radius:7px;border:1px solid var(--sbr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:var(--std);}.thm-toggle:hover{background:var(--sih);color:var(--st);}
+    .settings-reopen{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:9px;border:1px solid var(--sbr);background:var(--ss);color:var(--std);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.2s;}
+    .settings-reopen:hover{background:var(--sih);color:var(--sa);border-color:var(--sa);}
+    @media(max-width:850px){.settings-reopen{display:none;}}
     .am-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--sbr);background:var(--si);cursor:pointer;font-size:11px;font-weight:600;color:var(--std);transition:all 0.15s;font-family:var(--sf);}.am-chip:hover{background:var(--sih);color:var(--st);}.am-chip.ac{border-color:var(--sa);background:var(--sag);color:var(--sa);}
     @media(max-width:1100px){.slp{width:260px;}.slp.remix-wide{width:320px;}.srp{width:240px;}}
     .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--ss);border-top:1px solid var(--sbr);z-index:25;padding:0 8px;align-items:center;justify-content:space-around;gap:2px;}
@@ -1710,8 +1716,18 @@ export default function DesignStudioV2(){
               :remixClipSources.length===0?<div style={{padding:"24px 0",textAlign:"center" as const}}>
                 {hasVideoOrders===false?<><Film size={28} color="var(--std)"/><p style={{fontSize:12,color:"var(--std)",margin:0,marginTop:8,lineHeight:1.6}}>Order a listing video to start remixing clips into social content.</p><a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:12,padding:"7px 18px",borderRadius:8,background:"var(--sa)",color:"#fff",fontSize:11,fontWeight:700,textDecoration:"none"}}>Order a Video</a></>:<><p style={{fontSize:11,color:"var(--std)",margin:0,marginBottom:8}}>No completed videos found.</p><button onClick={()=>loadUserVideos()} className="bx" style={{margin:"0 auto",fontSize:11,padding:"6px 16px"}}>Reload</button></>}
               </div>
-              :<div style={{display:"flex",flexDirection:"column" as const,gap:18}}>
-                {remixClipSources.map(src=>(
+              :(()=>{
+                // Identify the selected property's source, if any. We match by normalized
+                // address because remixClipSources is keyed by address (orders carry
+                // addresses, not property_ids). If no property is selected or the selected
+                // property has no clips on file, every source falls into "others" and we
+                // render flat (matching pre-refactor behavior).
+                const selectedAddr=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||""):"";
+                const selectedKey=selectedAddr?normalizeAddr(selectedAddr):"";
+                const selectedSrc=selectedKey?remixClipSources.find(s=>s.propertyKey===selectedKey):undefined;
+                const otherSrcs=selectedSrc?remixClipSources.filter(s=>s.propertyKey!==selectedSrc.propertyKey):remixClipSources;
+
+                const renderSource=(src:typeof remixClipSources[number])=>(
                   <div key={src.propertyKey}>
                     {/* Property header: name primary, order metadata secondary */}
                     <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:8,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
@@ -1745,8 +1761,42 @@ export default function DesignStudioV2(){
                       })}
                     </div>
                   </div>
-                ))}
-              </div>}
+                );
+
+                return(
+                  <div style={{display:"flex",flexDirection:"column" as const,gap:18}}>
+                    {/* Selected property's clips, pinned at the top */}
+                    {selectedSrc&&(
+                      <div style={{position:"relative",padding:"10px",margin:"-2px",borderRadius:10,background:"rgba(168,85,247,0.04)",border:"1px solid rgba(168,85,247,0.18)"}}>
+                        <div style={{position:"absolute",top:-7,left:10,padding:"1px 8px",borderRadius:99,background:"var(--sa)",fontSize:8,fontWeight:800,color:"#fff",letterSpacing:"0.08em"}}>SELECTED</div>
+                        {renderSource(selectedSrc)}
+                      </div>
+                    )}
+
+                    {/* When a selected property exists AND we have other properties, gate them
+                        behind a collapsible header. When no property is selected, render all
+                        sources flat (the pre-refactor experience). */}
+                    {selectedSrc&&otherSrcs.length>0?(
+                      <div>
+                        <button
+                          onClick={()=>setOthersExpanded(v=>!v)}
+                          style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--sbr)",background:"rgba(255,255,255,0.02)",cursor:"pointer",fontFamily:"var(--sf)",color:"var(--st)"}}
+                          title={othersExpanded?"Hide other properties":"Show clips from other properties"}
+                        >
+                          {othersExpanded?<ChevronDown size={13}/>:<ChevronRight size={13}/>}
+                          <span style={{fontSize:11,fontWeight:700,flex:1,textAlign:"left" as const}}>Other properties</span>
+                          <span style={{fontSize:10,color:"var(--std)",fontWeight:600}}>{otherSrcs.length}{" \u00b7 "}{otherSrcs.reduce((n,s)=>n+s.clips.length,0)} clips</span>
+                        </button>
+                        {othersExpanded&&(
+                          <div style={{display:"flex",flexDirection:"column" as const,gap:18,marginTop:14}}>
+                            {otherSrcs.map(renderSource)}
+                          </div>
+                        )}
+                      </div>
+                    ):otherSrcs.map(renderSource)}
+                  </div>
+                );
+              })()}
               <div style={{marginTop:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><UploadZone label="Headshot" imageUrl={headshot} onUpload={f=>{const u=URL.createObjectURL(f);setHeadshot(u);setBrandHeadshot(u);}} onClear={()=>{setHeadshot(null);setBrandHeadshot(null);}} uploading={false} compact/><UploadZone label="Logo" imageUrl={logo} onUpload={f=>{const u=URL.createObjectURL(f);setLogo(u);setBrandLogo(u);}} onClear={()=>{setLogo(null);setBrandLogo(null);}} uploading={false} compact/></div>
             </div>
           </>}
@@ -1951,6 +2001,17 @@ export default function DesignStudioV2(){
           )}
           <Section title="Layers" icon={Layers} defaultOpen={false}><div style={{display:"flex",flexDirection:"column" as const,gap:3}}>{(activeTab==="listing-flyer"?[{n:"Branding Bar",i:"\ud83d\udc64"},{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Amenities",i:"\u2728"},{n:"URL Links",i:"\ud83d\udd17"}]:activeTab==="video-remix"?[{n:"Clips",i:"\ud83c\udfac"},{n:"Music",i:"\ud83c\udfb5"},{n:"Branding",i:"\ud83d\udc64"},{n:"Timeline",i:"\u23f1\ufe0f"}]:activeTab==="templates"?[{n:"Badge",i:"\ud83c\udff7\ufe0f"},{n:"Price",i:"\ud83d\udcb2"},{n:"Info Bar",i:"\ud83d\udccb"},{n:"Agent",i:"\ud83d\udc64"},{n:"Photo",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="yard-sign"?[{n:"Header",i:"\ud83c\udff7\ufe0f"},{n:"Agent",i:"\ud83d\udc64"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]:activeTab==="property-pdf"?[{n:"Photos",i:"\ud83d\uddbc\ufe0f"},{n:"Details",i:"\ud83d\udccb"},{n:"Features",i:"\u2728"}]:[{n:"Headshot",i:"\ud83d\udc64"},{n:"Info",i:"\ud83d\udccb"},{n:"Background",i:"\ud83d\uddbc\ufe0f"}]).map((l,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 9px",borderRadius:7,background:"rgba(255,255,255,0.02)",border:"1px solid var(--sbr)",fontSize:11,color:"var(--std)"}}><span>{l.i}</span><span style={{flex:1,fontWeight:600}}>{l.n}</span><Eye size={13} color="var(--sa)"/></div>)}</div></Section>
         </div>}
+
+        {/* Reopen Settings — floating tab on the right edge, only visible when the rail is closed.
+            Hidden on mobile (where the rail is already hidden via media query). */}
+        {!showRight&&(
+          <button
+            className="settings-reopen"
+            onClick={()=>setShowRight(true)}
+            title="Show Remix Settings"
+            aria-label="Show Remix Settings"
+          ><Settings size={16}/></button>
+        )}
       </div>
 
       {/* MOBILE NAV */}
