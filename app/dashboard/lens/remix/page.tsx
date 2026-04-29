@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { GateOverlay } from "@/components/gate-overlay";
 import ToolHeader from "@/components/tool-header";
+import RemixPresetModal, { RemixSourceClip as PresetSourceClip, GenerateResult as PresetGenerateResult } from "@/components/remix-preset-modal";
+import { PRESETS, RemixPresetId, PresetDraftMeta } from "@/lib/remix-presets";
 
 function isLightColor(hex:string):boolean{const c=hex.replace("#","");if(c.length<6)return true;const r=parseInt(c.substring(0,2),16),g=parseInt(c.substring(2,4),16),b=parseInt(c.substring(4,6),16);return(r*299+g*587+b*114)/1000>160;}
 function hexToRgba(hex:string,alpha:number):string{const c=hex.replace("#","");if(c.length<6)return `rgba(0,0,0,${alpha})`;return `rgba(${parseInt(c.substring(0,2),16)},${parseInt(c.substring(2,4),16)},${parseInt(c.substring(4,6),16)},${alpha})`;}
@@ -336,7 +338,7 @@ const TABS=[
   {id:"video-remix",label:"Video Remix",icon:Film},
 ];
 const LEFT_PANELS:Record<string,{id:string;label:string;icon:any}[]>={
-  "video-remix":[{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],
+  "video-remix":[{id:"templates",label:"Templates",icon:Sparkles},{id:"clips",label:"Clips",icon:Film},{id:"timeline",label:"Timeline",icon:LayoutTemplate},{id:"music",label:"Music",icon:Music},{id:"styles",label:"Styles",icon:Palette}],
   templates:[{id:"templates",label:"Templates",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Styles",icon:Palette}],
   "listing-flyer":[{id:"uploads",label:"Photos",icon:ImageIcon},{id:"text",label:"Details",icon:Type},{id:"urls",label:"URLs",icon:Globe},{id:"styles",label:"Styles",icon:Palette}],
   "yard-sign":[{id:"design",label:"Design",icon:LayoutTemplate},{id:"uploads",label:"Uploads",icon:Upload},{id:"text",label:"Details",icon:Type},{id:"styles",label:"Colors",icon:Palette}],
@@ -554,6 +556,12 @@ export default function DesignStudioV2(){
   const remixIdxRef=useRef(0);
   const remixDragging=useRef(false);
   const[brokenClipIds,setBrokenClipIds]=useState<Set<string>>(new Set());
+  // Preset modal + active preset metadata (PR #1 — Step C). Modal opens when
+  // user taps a preset card. currentPresetMeta is set when a v2 preset draft is
+  // loaded; null for manual / v1 drafts.
+  const[showPresetModal,setShowPresetModal]=useState<RemixPresetId|null>(null);
+  const[currentPresetMeta,setCurrentPresetMeta]=useState<PresetDraftMeta|null>(null);
+  const[confirmSwitchTo,setConfirmSwitchTo]=useState<RemixPresetId|null>(null);
   // Library: when a property is selected from the top dropdown, its clips pin to the
   // top of the library and other properties collapse into an expandable section.
   const[othersExpanded,setOthersExpanded]=useState(false);
@@ -762,15 +770,18 @@ export default function DesignStudioV2(){
   // ── Draft helpers ────────────────────────────────────────────────────────
   // packDraftState serializes the current editor into a JSON blob safe to store.
   // The version field allows future schema changes via unpackDraftState.
+  // v2 (PR #1 Step C) adds optional `preset` metadata. v1 drafts continue to
+  // load successfully via unpackDraftState's compatibility branch.
   const packDraftState=()=>({
-    version:1,
+    version:2,
+    preset:currentPresetMeta,
     clips:remixClips,
     music:selectedMusicTrack,
     size:remixSize,
     branding:remixBranding,
   });
   const unpackDraftState=(state:any)=>{
-    if(!state||state.version!==1){
+    if(!state||(state.version!==1&&state.version!==2)){
       notify("Draft format not recognized — clearing editor instead.");
       return false;
     }
@@ -778,6 +789,12 @@ export default function DesignStudioV2(){
     setSelectedMusicTrack(state.music||null);
     setRemixSize(state.size||"landscape");
     setRemixBranding(state.branding??true);
+    // v1 has no preset field → null. v2 may have null (manual) or a meta object.
+    if(state.version===2&&state.preset&&typeof state.preset==="object"){
+      setCurrentPresetMeta(state.preset as PresetDraftMeta);
+    }else{
+      setCurrentPresetMeta(null);
+    }
     return true;
   };
 
@@ -886,6 +903,152 @@ export default function DesignStudioV2(){
     }
     setShowSaveDialog(true);
   };
+
+  // ── Preset modal helpers (PR #1 Step C) ──────────────────────────────────
+  // Map remixClipSources into the flat shape the modal consumes. Splits clips
+  // into "primary" (selected property's clips) and "crossProperty" (everything
+  // else, used only when the agent opts in to cross-property fill).
+  const buildPresetClipPools=()=>{
+    const selectedAddr=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||""):"";
+    const selectedKey=selectedAddr?normalizeAddr(selectedAddr):"";
+    const flatten=(src:typeof remixClipSources[number]):PresetSourceClip[]=>
+      src.clips.map(c=>({url:c.url,thumbnail:c.thumbnail,label:c.label,isAerial:c.isAerial,orderId:c.orderId,orderDate:c.orderDate,propertyDisplayName:src.displayName}));
+    let primary:PresetSourceClip[]=[];
+    let cross:PresetSourceClip[]=[];
+    if(selectedKey){
+      for(const src of remixClipSources){
+        if(src.propertyKey===selectedKey)primary.push(...flatten(src));
+        else cross.push(...flatten(src));
+      }
+    }else{
+      // No property selected — treat all sources as primary, no cross.
+      for(const src of remixClipSources)primary.push(...flatten(src));
+    }
+    return{primary,cross};
+  };
+
+  // brokenClipIds tracks RemixClip.id (timeline ids). Translate to a Set of
+  // sourceUrl values so the modal can dedupe by URL across re-pickings.
+  const brokenSourceUrls=(()=>{
+    const urls=new Set<string>();
+    for(const c of remixClips){
+      if(brokenClipIds.has(c.id))urls.add(c.sourceUrl);
+    }
+    return urls;
+  })();
+
+  // Core: take a GenerateResult from the modal and turn it into draft state +
+  // save + load. Used for both "Generate" (preserves preset metadata) and
+  // "Edit manually" (drops preset metadata, renders as plain manual draft).
+  const buildDraftFromPreset=async(result:PresetGenerateResult,withMeta:boolean)=>{
+    const preset=PRESETS[result.presetId];
+    // Map slots → RemixClip[]. Defaults: full-clip trim, speed=1.
+    // Renderer (PR #2) will override durations using slot.defaultDuration.
+    const clips:RemixClip[]=result.slots.map((s,i)=>{
+      const clipId=`preset-${Date.now()}-${i}`;
+      // We don't know clip source duration here — set conservative defaults.
+      const guessedDuration=8;
+      return{
+        id:clipId,
+        sourceUrl:s.source.url,
+        thumbnail:s.source.thumbnail,
+        label:s.source.label,
+        duration:guessedDuration,
+        trimStart:0,
+        trimEnd:guessedDuration,
+        speed:1,
+        order:i,
+        isAerial:s.source.isAerial,
+      };
+    });
+
+    // Build preset metadata for the draft state.
+    const meta:PresetDraftMeta|null=withMeta?{
+      id:result.presetId,
+      inputs:result.inputs,
+      extraSlotsCount:result.slots.filter(s=>s.isExtra).length,
+    }:null;
+
+    // Default output size from preset (portrait → "story" in REMIX_SIZES).
+    const sizeMap:Record<string,string>={portrait:"story",landscape:"landscape",square:"square"};
+    const targetSize=sizeMap[preset.outputSizeDefault]||"story";
+
+    // Apply state synchronously so packDraftState picks it up below.
+    setRemixClips(clips);
+    setRemixSize(targetSize);
+    setCurrentPresetMeta(meta);
+    setShowPresetModal(null);
+
+    // Build draft name. Property name + preset display name when both present.
+    const propName=result.propertyDisplayName;
+    const draftName=withMeta&&propName
+      ?`${preset.displayName} · ${propName}`
+      :withMeta
+        ?`${preset.displayName} · ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}`
+        :propName?`${propName} remix`:`Remix ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
+
+    // Save the draft. We can't reuse saveDraft() directly because state hasn't
+    // flushed yet — call the API with the assembled state.
+    setSavingDraft(true);
+    try{
+      const stateBlob={
+        version:2,
+        preset:meta,
+        clips,
+        music:selectedMusicTrack,
+        size:targetSize,
+        branding:remixBranding,
+      };
+      const resp=await fetch(`/api/lens/remix/drafts`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({name:draftName,property_id:selectedPropertyId||null,state:stateBlob}),
+      });
+      if(!resp.ok){
+        const err=await resp.json().catch(()=>({}));
+        console.error("[remix-preset] save failed:",err);
+        notify(err.error||"Failed to save preset draft");
+      }else{
+        const data=await resp.json();
+        setCurrentDraft({id:data.draft.id,name:data.draft.name});
+        await loadDraftsList(selectedPropertyId||null);
+        notify(withMeta?`${preset.displayName} draft created`:`Manual draft created from ${preset.displayName}`);
+        // Switch to Timeline panel so the agent sees their slots immediately.
+        setLeftPanel("timeline");
+      }
+    }catch(e){
+      console.error("[remix-preset] save exception:",e);
+      notify("Failed to save preset draft");
+    }
+    setSavingDraft(false);
+  };
+
+  // Click handler for preset cards. Confirms switch if a preset is already active.
+  const handlePresetCardClick=(id:RemixPresetId)=>{
+    if(remixClipSources.length===0){notify("Order a video first to use presets.");return;}
+    if(currentPresetMeta&&currentPresetMeta.id!==id){
+      setConfirmSwitchTo(id);
+      return;
+    }
+    if(remixClips.length>0&&!currentPresetMeta){
+      // Manual draft in progress — confirm overwrite too.
+      setConfirmSwitchTo(id);
+      return;
+    }
+    setShowPresetModal(id);
+  };
+
+  const handleConfirmSwitch=()=>{
+    if(!confirmSwitchTo)return;
+    const target=confirmSwitchTo;
+    // Clear state before opening modal (per Q9 — no smart retention in v1).
+    setRemixClips([]);
+    setCurrentPresetMeta(null);
+    setCurrentDraft(null);
+    setConfirmSwitchTo(null);
+    setShowPresetModal(target);
+  };
+
 
   // Reload drafts list whenever selected property changes (and we're in remix mode).
   useEffect(()=>{
@@ -1585,6 +1748,12 @@ export default function DesignStudioV2(){
           <button className="bi" title="Redo"><Redo2 size={15}/></button>
           <div className="td"/>
           <button className="thm-toggle" title="Toggle theme" onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>{theme==="dark"?<Sun size={15}/>:<Moon size={15}/>}</button>
+          {isRemixMode&&currentPresetMeta&&(
+            <div title={`Preset: ${PRESETS[currentPresetMeta.id].displayName}`} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:99,background:`linear-gradient(135deg, ${PRESETS[currentPresetMeta.id].cardTheme.gradientFrom}22, ${PRESETS[currentPresetMeta.id].cardTheme.gradientTo}22)`,border:`1px solid ${PRESETS[currentPresetMeta.id].cardTheme.gradientFrom}55`,fontSize:10,fontWeight:700,color:"var(--st)",fontFamily:"var(--sf)",maxWidth:180}}>
+              <Sparkles size={10}/>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{PRESETS[currentPresetMeta.id].displayName}</span>
+            </div>
+          )}
           {isRemixMode&&currentDraft&&(
             <div title={`Editing draft: ${currentDraft.name}`} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:99,background:"rgba(168,85,247,0.12)",border:"1px solid rgba(168,85,247,0.3)",fontSize:10,fontWeight:600,color:"var(--sa)",fontFamily:"var(--sf)",maxWidth:200}}>
               <Save size={10}/>
@@ -1711,6 +1880,86 @@ export default function DesignStudioV2(){
           </>}
 
           {/* ── VIDEO REMIX PANELS ── */}
+          {activeTab==="video-remix"&&leftPanel==="templates"&&<>
+            <div className="ph"><Sparkles size={15} color="var(--sa)"/>Templates</div>
+            <div style={{padding:14,display:"flex",flexDirection:"column" as const,gap:14}}>
+              <p style={{fontSize:11,color:"var(--std)",lineHeight:1.55,margin:0}}>
+                One-tap social videos. Pick a preset, fill in the blanks, and we'll auto-assign clips you can swap. Free with any video order.
+              </p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                {(["just_listed","open_house","quick_tour","price_drop"] as RemixPresetId[]).map(pid=>{
+                  const p=PRESETS[pid];
+                  const disabled=remixClipSources.length===0;
+                  const isCurrent=currentPresetMeta?.id===pid;
+                  return(
+                    <button
+                      key={pid}
+                      disabled={disabled}
+                      onClick={()=>handlePresetCardClick(pid)}
+                      title={disabled?"Order a video first to use presets":p.description}
+                      style={{
+                        position:"relative",
+                        textAlign:"left" as const,
+                        padding:0,
+                        borderRadius:12,
+                        border:isCurrent?`1px solid ${p.cardTheme.gradientFrom}`:"1px solid var(--sbr)",
+                        background:"none",
+                        cursor:disabled?"not-allowed":"pointer",
+                        opacity:disabled?0.5:1,
+                        overflow:"hidden",
+                        fontFamily:"var(--sf)",
+                        boxShadow:isCurrent?`0 0 0 2px ${p.cardTheme.gradientFrom}40`:"none",
+                        transition:"all 0.15s",
+                      }}
+                    >
+                      {/* Thumbnail — themed gradient SVG */}
+                      <div style={{position:"relative",aspectRatio:"4/3",background:`linear-gradient(135deg, ${p.cardTheme.gradientFrom}, ${p.cardTheme.gradientTo})`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg viewBox="0 0 100 75" style={{width:"55%",height:"55%",opacity:0.95}} xmlns="http://www.w3.org/2000/svg">
+                          {/* Decorative film/play motif */}
+                          <rect x="8" y="14" width="84" height="48" rx="5" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                          <polygon points="40,28 40,50 60,39" fill="rgba(255,255,255,0.95)"/>
+                          {/* Film perforations */}
+                          <rect x="14" y="18" width="6" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
+                          <rect x="14" y="55" width="6" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
+                          <rect x="80" y="18" width="6" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
+                          <rect x="80" y="55" width="6" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
+                        </svg>
+                        {isCurrent&&(
+                          <div style={{position:"absolute",top:6,right:6,padding:"2px 7px",borderRadius:99,background:"rgba(0,0,0,0.55)",fontSize:8,fontWeight:800,color:"#fff",letterSpacing:"0.06em"}}>ACTIVE</div>
+                        )}
+                      </div>
+                      {/* Card body */}
+                      <div style={{padding:"8px 10px"}}>
+                        <p style={{fontSize:11,fontWeight:800,color:"var(--st)",margin:0,fontFamily:"var(--sf)"}}>{p.displayName}</p>
+                        <p style={{fontSize:9,color:"var(--std)",margin:0,marginTop:2,lineHeight:1.4,height:24,overflow:"hidden"}}>{p.description}</p>
+                        <p style={{fontSize:8,color:"var(--std)",margin:0,marginTop:3,fontWeight:600,opacity:0.7}}>
+                          {p.slots.length} clips · ~{Math.round((p.durationTarget[0]+p.durationTarget[1])/2)}s
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {remixClipSources.length===0&&(
+                <div style={{padding:"10px 12px",borderRadius:10,background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.2)"}}>
+                  <p style={{fontSize:10,color:"#f59e0b",fontWeight:600,margin:0,lineHeight:1.5}}>
+                    Order a listing video to unlock presets. You'll get clips to remix into one-tap social cuts.
+                  </p>
+                </div>
+              )}
+              {currentPresetMeta&&(
+                <div style={{padding:"8px 10px",borderRadius:8,background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.2)"}}>
+                  <p style={{fontSize:10,color:"var(--sa)",fontWeight:700,margin:0,fontFamily:"var(--sf)"}}>
+                    Editing: {PRESETS[currentPresetMeta.id].displayName}
+                  </p>
+                  <p style={{fontSize:9,color:"var(--std)",margin:0,marginTop:2,lineHeight:1.4}}>
+                    Switch presets above to start fresh. Your current clips will be replaced.
+                  </p>
+                </div>
+              )}
+            </div>
+          </>}
+
           {activeTab==="video-remix"&&leftPanel==="clips"&&<>
             <div className="ph"><Film size={15} color="var(--sa)"/>Your Clips{remixClipSources.length>0&&<span style={{fontSize:10,color:"var(--std)",fontWeight:500,marginLeft:4}}>({remixClipSources.reduce((n,s)=>n+s.clips.length,0)})</span>}</div>
             <div style={{padding:14}}>
@@ -2105,6 +2354,47 @@ export default function DesignStudioV2(){
           </div>
         </div>
       )}
+
+      {/* ── Preset switch confirmation ───────────────────────────────────── */}
+      {confirmSwitchTo&&(
+        <div onClick={()=>setConfirmSwitchTo(null)} style={{position:"fixed",inset:0,zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--ss)",borderRadius:16,border:"1px solid var(--sbr)",padding:24,maxWidth:400,width:"100%",fontFamily:"var(--sf)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+              <div style={{width:40,height:40,borderRadius:10,background:`linear-gradient(135deg, ${PRESETS[confirmSwitchTo].cardTheme.gradientFrom}, ${PRESETS[confirmSwitchTo].cardTheme.gradientTo})`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Sparkles size={18} color="#fff"/>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <h3 style={{fontSize:14,fontWeight:800,color:"var(--st)",margin:0}}>Switch to {PRESETS[confirmSwitchTo].displayName}?</h3>
+                <p style={{fontSize:11,color:"var(--std)",margin:0,marginTop:3,lineHeight:1.5}}>Your current timeline will be replaced.</p>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={()=>setConfirmSwitchTo(null)} style={{padding:"8px 16px",borderRadius:9,border:"1px solid var(--sbr)",background:"none",color:"var(--st)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--sf)"}}>Cancel</button>
+              <button onClick={handleConfirmSwitch} style={{padding:"8px 18px",borderRadius:9,border:"none",background:`linear-gradient(135deg, ${PRESETS[confirmSwitchTo].cardTheme.gradientFrom}, ${PRESETS[confirmSwitchTo].cardTheme.gradientTo})`,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--sf)"}}>Switch</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Preset modal ─────────────────────────────────────────────────── */}
+      {showPresetModal&&(()=>{
+        const{primary,cross}=buildPresetClipPools();
+        const propName=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||null):null;
+        return(
+          <RemixPresetModal
+            presetId={showPresetModal}
+            primaryClips={primary}
+            crossPropertyClips={cross}
+            selectedPropertyDisplayName={propName}
+            brokenClipIds={brokenClipIds}
+            brokenSourceUrls={brokenSourceUrls}
+            isLensSubscriber={isLensSubscriber}
+            onClose={()=>setShowPresetModal(null)}
+            onGenerate={(result)=>buildDraftFromPreset(result,true)}
+            onEditManually={(result)=>buildDraftFromPreset(result,false)}
+          />
+        );
+      })()}
     </div></>
   );
 }
