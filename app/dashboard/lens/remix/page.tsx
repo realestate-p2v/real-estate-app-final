@@ -1242,7 +1242,7 @@ export default function DesignStudioV2(){
         // instance is fresh each time exportRemix runs.
         setExportStatus("Loading caption font...");
         try{
-          const fontUrl="https://cdn.jsdelivr.net/gh/dejavu-fonts/dejavu-fonts-ttf@2.37/ttf/DejaVuSans-Bold.ttf";
+          const fontUrl="https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf";
           const fontResp=await fetch(fontUrl);
           if(!fontResp.ok)throw new Error(`Font fetch failed: HTTP ${fontResp.status}`);
           const fontAb=await fontResp.arrayBuffer();
