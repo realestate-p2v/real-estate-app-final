@@ -990,14 +990,25 @@ export default function DesignStudioV2(){
       pace,
     }:null;
 
-    // Default output size from preset (portrait → "story" in REMIX_SIZES).
+    // Output size: prefer the modal's choice; fall back to preset default.
     const sizeMap:Record<string,string>={portrait:"story",landscape:"landscape",square:"square"};
-    const targetSize=sizeMap[preset.outputSizeDefault]||"story";
+    const targetSize=result.outputSize||sizeMap[preset.outputSizeDefault]||"story";
 
     // Apply state synchronously so packDraftState picks it up below.
     setRemixClips(clips);
     setRemixSize(targetSize);
     setCurrentPresetMeta(meta);
+    // Apply modal music override (selectedMusic === null explicitly means "no music").
+    // Only touch music if the field is present in the result (undefined = leave alone).
+    if(result.selectedMusic!==undefined){
+      setSelectedMusicTrack(result.selectedMusic);
+    }
+    if(result.branding!==undefined){
+      setRemixBranding(result.branding);
+    }
+    if(result.fontId){
+      setFontId(result.fontId);
+    }
     setShowPresetModal(null);
 
     // Suppress unused-variable warning for baseSlotCount (kept for clarity).
@@ -1012,16 +1023,20 @@ export default function DesignStudioV2(){
         :propName?`${propName} remix`:`Remix ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
 
     // Save the draft. We can't reuse saveDraft() directly because state hasn't
-    // flushed yet — call the API with the assembled state.
+    // flushed yet — call the API with the assembled state. Use the modal's
+    // own choices (result.*), falling back to the parent's existing state for
+    // any field the modal didn't override.
+    const finalMusic = result.selectedMusic !== undefined ? result.selectedMusic : selectedMusicTrack;
+    const finalBranding = result.branding !== undefined ? result.branding : remixBranding;
     setSavingDraft(true);
     try{
       const stateBlob={
         version:2,
         preset:meta,
         clips,
-        music:selectedMusicTrack,
+        music:finalMusic,
         size:targetSize,
-        branding:remixBranding,
+        branding:finalBranding,
       };
       const resp=await fetch(`/api/lens/remix/drafts`,{
         method:"POST",
@@ -2437,6 +2452,8 @@ export default function DesignStudioV2(){
       {showPresetModal&&(()=>{
         const{primary,cross}=buildPresetClipPools();
         const propName=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||null):null;
+        const initSize=(remixSize==="story"||remixSize==="square"||remixSize==="landscape")?remixSize:undefined;
+        const initFont=(fontId==="serif"||fontId==="sans"||fontId==="modern"||fontId==="elegant")?fontId:undefined;
         return(
           <RemixPresetModal
             presetId={showPresetModal}
@@ -2446,6 +2463,10 @@ export default function DesignStudioV2(){
             brokenClipIds={brokenClipIds}
             brokenSourceUrls={brokenSourceUrls}
             isLensSubscriber={isLensSubscriber}
+            initialMusic={selectedMusicTrack}
+            initialOutputSize={initSize}
+            initialBranding={remixBranding}
+            initialFontId={initFont}
             onClose={()=>setShowPresetModal(null)}
             onGenerate={(result)=>buildDraftFromPreset(result,true)}
             onEditManually={(result)=>buildDraftFromPreset(result,false)}
