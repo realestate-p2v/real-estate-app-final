@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   X, Check, Plus, Film, Sparkles, AlertTriangle, Lock,
-  ArrowRight, Shuffle, Pencil, ChevronDown, Music, Type, Layers, Loader2,
+  ArrowRight, Shuffle, Pencil, ChevronDown, Music, Loader2,
 } from "lucide-react";
 import {
   PRESETS,
@@ -58,12 +58,6 @@ export type ModalMusicTrack = {
   name: string;
 };
 
-// Output size IDs — must match REMIX_SIZES in page.tsx.
-export type ModalOutputSize = "landscape" | "story" | "square";
-
-// Font IDs — must match FONT_OPTIONS in page.tsx.
-export type ModalFontId = "serif" | "sans" | "modern" | "elegant";
-
 // What the modal emits to parent on Generate. One entry per chosen slot,
 // in slot order (extras appended at end). Parent maps these into RemixClips.
 export type GeneratedSlot = {
@@ -77,13 +71,9 @@ export type GenerateResult = {
   slots: GeneratedSlot[];
   inputs: PresetInputs;
   pace: PaceId;
-  // Style + music overrides chosen in the modal. Parent applies these to
-  // remixSize / selectedMusicTrack / brandingFlag / fontId. All optional —
-  // when omitted the parent's existing state stays put.
-  outputSize?: ModalOutputSize;
-  selectedMusic?: ModalMusicTrack | null; // null explicitly clears music
-  branding?: boolean;
-  fontId?: ModalFontId;
+  // Music override. null explicitly clears music; undefined leaves the
+  // parent's existing music untouched.
+  selectedMusic?: ModalMusicTrack | null;
   // For naming the resulting draft.
   presetId: RemixPresetId;
   propertyDisplayName: string | null;
@@ -101,13 +91,10 @@ type Props = {
                                   // here we use sourceUrl as the equivalent key
   brokenSourceUrls: Set<string>;  // alternative key — pass either or both
   isLensSubscriber: boolean;
-  // Initial music + style values from the parent. Allow the modal to start
-  // with the parent's current selections (so opening the modal doesn't clobber
-  // a music track the agent already picked in the rail). Falsy = use preset defaults.
+  // Initial music value from the parent. Allow the modal to start with the
+  // parent's currently-selected track so opening the modal doesn't clobber
+  // a track the agent already picked in the rail.
   initialMusic?: ModalMusicTrack | null;
-  initialOutputSize?: ModalOutputSize;
-  initialBranding?: boolean;
-  initialFontId?: ModalFontId;
   onClose(): void;
   onGenerate(result: GenerateResult): void;
   // Manual-mode downgrade: close modal and pass the chosen slots without
@@ -115,27 +102,7 @@ type Props = {
   onEditManually(result: GenerateResult): void;
 };
 
-// ─── Static config (mirrors page.tsx) ────────────────────────────────────────
-
-// Must mirror REMIX_SIZES in page.tsx.
-const SIZE_OPTIONS: { id: ModalOutputSize; label: string; sublabel: string }[] = [
-  { id: "story", label: "Reel", sublabel: "9:16" },
-  { id: "square", label: "Square", sublabel: "1:1" },
-  { id: "landscape", label: "Wide", sublabel: "16:9" },
-];
-
-// Must mirror FONT_OPTIONS in page.tsx.
-const MODAL_FONT_OPTIONS: {
-  id: ModalFontId;
-  label: string;
-  family: string;
-  sample: string;
-}[] = [
-  { id: "serif", label: "Classic", family: "Georgia, 'Times New Roman', serif", sample: "Aa" },
-  { id: "sans", label: "Clean", family: "'Helvetica Neue', Arial, sans-serif", sample: "Aa" },
-  { id: "modern", label: "Modern", family: "'Trebuchet MS', 'Gill Sans', sans-serif", sample: "Aa" },
-  { id: "elegant", label: "Elegant", family: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", sample: "Aa" },
-];
+// ─── Static config ────────────────────────────────────────────────────────────
 
 // Music vibe options — must match VIBES in page.tsx.
 const MUSIC_VIBES: { key: string; label: string }[] = [
@@ -226,9 +193,6 @@ export default function RemixPresetModal(props: Props) {
     brokenSourceUrls,
     isLensSubscriber,
     initialMusic,
-    initialOutputSize,
-    initialBranding,
-    initialFontId,
     onClose,
     onGenerate,
     onEditManually,
@@ -255,18 +219,6 @@ export default function RemixPresetModal(props: Props) {
   // Per-draft pace (Fast/Medium/Slow). Persists into PresetDraftMeta.
   const [pace, setPace] = useState<PaceId>("medium");
 
-  // ── Style overrides ─────────────────────────────────────────────────────
-  // Initialize from parent's current state if provided, otherwise use the
-  // preset's defaults. Output size: prefer parent's current pick, else preset.
-  const [outputSize, setOutputSize] = useState<ModalOutputSize>(() => {
-    if (initialOutputSize) return initialOutputSize;
-    if (preset.outputSizeDefault === "portrait") return "story";
-    if (preset.outputSizeDefault === "landscape") return "landscape";
-    return "square";
-  });
-  const [branding, setBranding] = useState<boolean>(initialBranding ?? true);
-  const [fontId, setFontId] = useState<ModalFontId>(initialFontId ?? "sans");
-
   // ── Music ───────────────────────────────────────────────────────────────
   const [selectedMusic, setSelectedMusic] = useState<ModalMusicTrack | null>(
     initialMusic ?? null
@@ -276,8 +228,7 @@ export default function RemixPresetModal(props: Props) {
   const [musicLoading, setMusicLoading] = useState(false);
   // Default vibe = preset's recommendation. Agent can change.
   const [musicVibe, setMusicVibe] = useState<string>(preset.musicVibeDefault);
-  const [musicLoaded, setMusicLoaded] = useState(false); // gate against fetching twice
-  // Local audio for preview in the modal. Independent of parent's playback.
+  const [musicLoaded, setMusicLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -499,10 +450,7 @@ export default function RemixPresetModal(props: Props) {
       slots,
       inputs,
       pace,
-      outputSize,
       selectedMusic,
-      branding,
-      fontId,
       presetId,
       propertyDisplayName: selectedPropertyDisplayName,
     };
@@ -1058,232 +1006,6 @@ export default function RemixPresetModal(props: Props) {
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Style cluster — Output Size + Branding + Font */}
-          <div
-            style={{
-              padding: "12px 14px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid var(--sbr)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-            }}
-          >
-            {/* Output size */}
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 6,
-                }}
-              >
-                <Layers size={11} color="var(--std)" />
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: "var(--std)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    fontFamily: "var(--sf)",
-                  }}
-                >
-                  Output size
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  borderRadius: 8,
-                  border: "1px solid var(--sbr)",
-                  overflow: "hidden",
-                }}
-              >
-                {SIZE_OPTIONS.map((s, i) => {
-                  const isActive = outputSize === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => setOutputSize(s.id)}
-                      style={{
-                        flex: 1,
-                        padding: "8px 6px",
-                        border: "none",
-                        borderLeft: i > 0 ? "1px solid var(--sbr)" : "none",
-                        background: isActive
-                          ? `linear-gradient(135deg, ${preset.cardTheme.gradientFrom}, ${preset.cardTheme.gradientTo})`
-                          : "rgba(255,255,255,0.02)",
-                        color: isActive ? "#fff" : "var(--st)",
-                        cursor: "pointer",
-                        fontFamily: "var(--sf)",
-                      }}
-                    >
-                      <div style={{ fontSize: 10, fontWeight: 700 }}>
-                        {s.label}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          opacity: 0.75,
-                          marginTop: 1,
-                        }}
-                      >
-                        {s.sublabel}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Branding toggle */}
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  width: 32,
-                  height: 18,
-                  borderRadius: 99,
-                  background: branding ? "var(--sa)" : "rgba(255,255,255,0.1)",
-                  border: "1px solid var(--sbr)",
-                  flexShrink: 0,
-                  transition: "background 0.15s",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 1,
-                    left: branding ? 15 : 1,
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    background: "#fff",
-                    transition: "left 0.15s",
-                  }}
-                />
-              </div>
-              <input
-                type="checkbox"
-                checked={branding}
-                onChange={(e) => setBranding(e.target.checked)}
-                style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "var(--st)",
-                    margin: 0,
-                    fontFamily: "var(--sf)",
-                  }}
-                >
-                  Branding overlay
-                </p>
-                <p
-                  style={{
-                    fontSize: 10,
-                    color: "var(--std)",
-                    margin: 0,
-                    marginTop: 1,
-                    fontFamily: "var(--sf)",
-                  }}
-                >
-                  Show your name and contact on the final slide
-                </p>
-              </div>
-            </label>
-
-            {/* Font */}
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 6,
-                }}
-              >
-                <Type size={11} color="var(--std)" />
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: "var(--std)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    fontFamily: "var(--sf)",
-                  }}
-                >
-                  Font
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                  gap: 4,
-                }}
-              >
-                {MODAL_FONT_OPTIONS.map((f) => {
-                  const isActive = fontId === f.id;
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => setFontId(f.id)}
-                      style={{
-                        padding: "6px 4px",
-                        borderRadius: 7,
-                        border: isActive
-                          ? `1px solid ${preset.cardTheme.gradientFrom}`
-                          : "1px solid var(--sbr)",
-                        background: isActive
-                          ? `${preset.cardTheme.gradientFrom}1a`
-                          : "rgba(255,255,255,0.02)",
-                        cursor: "pointer",
-                        fontFamily: "var(--sf)",
-                        textAlign: "center",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 700,
-                          color: "var(--std)",
-                        }}
-                      >
-                        {f.label}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: "var(--st)",
-                          marginTop: 2,
-                          fontFamily: f.family,
-                        }}
-                      >
-                        {f.sample}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </div>
 
