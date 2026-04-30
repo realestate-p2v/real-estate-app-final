@@ -252,6 +252,10 @@ function buildCaptionFilters(
       const fontSize = Math.round(outH * 0.075);
       const padX = Math.round(outW * 0.04);
       const padY = Math.round(fontSize * 0.35);
+      // boxborderw in FFmpeg 5.x only accepts a single int (uniform border).
+      // Average the intended H/V pad — slightly tighter sides, slightly more
+      // top/bottom, but visually within ~10px of the design intent.
+      const padHero = Math.round((padX + padY) / 2);
       const pillBg = hexToFFColor(accent);
       const pillTxt = isLightHex(accent) ? "0x111111" : "0xFFFFFF";
       const text = escapeDrawtext(caption.text);
@@ -262,7 +266,7 @@ function buildCaptionFilters(
           `fontsize=${fontSize}:` +
           `fontcolor=${pillTxt}:` +
           `x=(w-text_w)/2:y=(h-text_h)/2:` +
-          `box=1:boxcolor=${pillBg}:boxborderw=${padX}|${padY}:` +
+          `box=1:boxcolor=${pillBg}:boxborderw=${padHero}:` +
           `enable='between(t,0,${heroEnd.toFixed(2)})'`
       );
       // After hero window, optionally shrink to a corner chip.
@@ -270,6 +274,7 @@ function buildCaptionFilters(
         const chipFontSize = Math.round(fontSize * 0.42);
         const chipPadX = Math.round(chipFontSize * 0.5);
         const chipPadY = Math.round(chipFontSize * 0.3);
+        const chipPad = Math.round((chipPadX + chipPadY) / 2);
         let cx = "(w-text_w)/2", cy = "h*0.05";
         if (caption.shrinkToChip === "top-left") {
           cx = `${Math.round(outW * 0.04)}`;
@@ -283,7 +288,7 @@ function buildCaptionFilters(
             `fontsize=${chipFontSize}:` +
             `fontcolor=${pillTxt}:` +
             `x=${cx}:y=${cy}:` +
-            `box=1:boxcolor=${pillBg}:boxborderw=${chipPadX}|${chipPadY}:` +
+            `box=1:boxcolor=${pillBg}:boxborderw=${chipPad}:` +
             `enable='between(t,${heroEnd.toFixed(2)},${slotDuration.toFixed(2)})'`
         );
       }
@@ -334,6 +339,7 @@ function buildCaptionFilters(
       const text = escapeDrawtext(resolved);
       const padX = Math.round(fontSize * 0.7);
       const padY = Math.round(fontSize * 0.3);
+      const padBanner = Math.round((padX + padY) / 2);
       const bg = hexToFFColor(bar);
       const txt = isLightHex(bar) ? "0x111111" : "0xFFFFFF";
       let xExpr = "(w-text_w)/2", yExpr = `${Math.round(outH * 0.04)}`;
@@ -344,7 +350,7 @@ function buildCaptionFilters(
         `drawtext=text='${text}':` +
           `fontsize=${fontSize}:fontcolor=${txt}:` +
           `x=${xExpr}:y=${yExpr}:` +
-          `box=1:boxcolor=${bg}@0.85:boxborderw=${padX}|${padY}`
+          `box=1:boxcolor=${bg}@0.85:boxborderw=${padBanner}`
       );
       break;
     }
@@ -355,6 +361,7 @@ function buildCaptionFilters(
       const fontSize = Math.round(outH * 0.10);
       const padX = Math.round(fontSize * 0.4);
       const padY = Math.round(fontSize * 0.25);
+      const padPrice = Math.round((padX + padY) / 2);
       const bg = hexToFFColor(accent);
       const txt = isLightHex(accent) ? "0x111111" : "0xFFFFFF";
       // Reveal animates in at start of last animateInDuration seconds of slot.
@@ -364,7 +371,7 @@ function buildCaptionFilters(
         `drawtext=text='${text}':` +
           `fontsize=${fontSize}:fontcolor=${txt}:` +
           `x=(w-text_w)/2:y=(h-text_h)/2:` +
-          `box=1:boxcolor=${bg}:boxborderw=${padX}|${padY}:` +
+          `box=1:boxcolor=${bg}:boxborderw=${padPrice}:` +
           `enable='between(t,${revealStart.toFixed(2)},${slotDuration.toFixed(2)})'`
       );
       // Old price strikethrough (if applicable) — drawn smaller above.
