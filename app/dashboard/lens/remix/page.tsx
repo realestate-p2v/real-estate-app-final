@@ -1226,7 +1226,63 @@ export default function DesignStudioV2(){
         console.log("[remix] No saved branding card URL found — skipping branding");
       }
 
-      // Build FFmpeg command
+      // ── Preset renderer branch ───────────────────────────────────────────
+      // If this draft was generated from a preset, route through the new
+      // renderer (lib/remix-renderer.ts) — captions, zoompan, xfade, fadeout
+      // music. Manual drafts continue through the existing chain below.
+      // Inputs (clip files + optional music.mp3) are already written to the
+      // FFmpeg virtual FS by the loops above, so the renderer reuses them.
+      if(currentPresetMeta){
+        const presetSpec=PRESETS[currentPresetMeta.id];
+        console.log("[remix-preset] Routing through preset renderer:",presetSpec.id);
+        const{renderPresetExport}=await import("@/lib/remix-renderer");
+        const propAddr=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||""):"";
+        const presetBlob=await renderPresetExport({
+          ffmpeg,
+          preset:presetSpec,
+          presetMeta:currentPresetMeta,
+          draftClips:remixClips.map((c,i)=>({
+            fsPath:`clip_${i}.mp4`,
+            trimStart:c.trimStart,
+            trimEnd:c.trimEnd,
+            label:c.label,
+            isAerial:!!c.isAerial,
+          })),
+          branding:{
+            fontFamily,
+            accentColor:accentColor||"#A855F7",
+            barColor:barColor||"#111827",
+            address:propAddr,
+          },
+          outputSize:{width:outW,height:outH},
+          hasMusic,
+          onProgress:(pct:number)=>setExportProgress(pct),
+          onStatus:(msg:string)=>setExportStatus(msg),
+        });
+        console.log(`[remix-preset] Output: ${presetBlob.size} bytes`);
+        // Reuse the existing download + mark-exported tail.
+        setExportProgress(92);setExportStatus("Downloading...");
+        const presetUrl=URL.createObjectURL(presetBlob);
+        const presetLink=document.createElement("a");
+        presetLink.download=`${presetSpec.id.replace(/_/g,"-")}-${remixSize}-${Date.now()}.mp4`;
+        presetLink.href=presetUrl;
+        presetLink.click();
+        URL.revokeObjectURL(presetUrl);
+        setExportProgress(96);
+        if(currentDraft?.id){
+          try{
+            setExportStatus("Marking exported...");
+            await fetch(`/api/lens/remix/drafts/${encodeURIComponent(currentDraft.id)}/export`,{method:"POST"});
+            await loadDraftsList(selectedPropertyId||null);
+          }catch(e){console.warn("[remix-preset] mark-exported failed (non-fatal):",e);}
+        }
+        setExportProgress(100);setExportStatus("Done!");
+        notify(`${presetSpec.displayName} exported!`);
+        setTimeout(()=>{setExportProgress(0);setExporting(false);setExportStatus("");},2000);
+        return;
+      }
+
+      // Build FFmpeg command (manual chain below — preset drafts returned above)
       setExportProgress(32);setExportStatus("Building video...");
       console.log("[remix] Building filter_complex...");
       const filterParts:string[]=[];
