@@ -1235,6 +1235,26 @@ export default function DesignStudioV2(){
       if(currentPresetMeta){
         const presetSpec=PRESETS[currentPresetMeta.id];
         console.log("[remix-preset] Routing through preset renderer:",presetSpec.id);
+        // FFmpeg 5.x's drawtext filter requires an explicit font file path —
+        // there is no system font fallback in WASM. Fetch DejaVu Sans Bold
+        // from a CDN (public domain TTF, ~700KB) and write it into the
+        // FFmpeg virtual FS as font.ttf. Done once per export — the FFmpeg
+        // instance is fresh each time exportRemix runs.
+        setExportStatus("Loading caption font...");
+        try{
+          const fontUrl="https://cdn.jsdelivr.net/gh/dejavu-fonts/dejavu-fonts-ttf@2.37/ttf/DejaVuSans-Bold.ttf";
+          const fontResp=await fetch(fontUrl);
+          if(!fontResp.ok)throw new Error(`Font fetch failed: HTTP ${fontResp.status}`);
+          const fontAb=await fontResp.arrayBuffer();
+          if(fontAb.byteLength<10000)throw new Error(`Font file too small: ${fontAb.byteLength} bytes`);
+          await ffmpeg.writeFile("font.ttf",new Uint8Array(fontAb));
+          console.log(`[remix-preset] Font loaded: ${fontAb.byteLength} bytes`);
+        }catch(fontErr:any){
+          console.error("[remix-preset] Font load failed:",fontErr);
+          notify("Couldn't load caption font. Try again or check your connection.");
+          setExporting(false);setExportProgress(0);setExportStatus("");
+          return;
+        }
         const{renderPresetExport}=await import("@/lib/remix-renderer");
         const propAddr=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||""):"";
         const presetBlob=await renderPresetExport({
@@ -1256,6 +1276,7 @@ export default function DesignStudioV2(){
           },
           outputSize:{width:outW,height:outH},
           hasMusic,
+          fontFilePath:"font.ttf",
           onProgress:(pct:number)=>setExportProgress(pct),
           onStatus:(msg:string)=>setExportStatus(msg),
         });
