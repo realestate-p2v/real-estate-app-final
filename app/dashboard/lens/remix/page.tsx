@@ -990,24 +990,19 @@ export default function DesignStudioV2(){
       pace,
     }:null;
 
-    // Output size: prefer the modal's choice; fall back to preset default.
+    // Output size: always use the preset's default (output size is no longer
+    // adjustable from the modal — agent uses the rail under the canvas to
+    // override after generation).
     const sizeMap:Record<string,string>={portrait:"story",landscape:"landscape",square:"square"};
-    const targetSize=result.outputSize||sizeMap[preset.outputSizeDefault]||"story";
+    const targetSize=sizeMap[preset.outputSizeDefault]||"story";
 
     // Apply state synchronously so packDraftState picks it up below.
     setRemixClips(clips);
     setRemixSize(targetSize);
     setCurrentPresetMeta(meta);
-    // Apply modal music override (selectedMusic === null explicitly means "no music").
-    // Only touch music if the field is present in the result (undefined = leave alone).
+    // Music override: undefined = leave alone, null = explicit clear, value = set.
     if(result.selectedMusic!==undefined){
       setSelectedMusicTrack(result.selectedMusic);
-    }
-    if(result.branding!==undefined){
-      setRemixBranding(result.branding);
-    }
-    if(result.fontId){
-      setFontId(result.fontId);
     }
     setShowPresetModal(null);
 
@@ -1023,11 +1018,8 @@ export default function DesignStudioV2(){
         :propName?`${propName} remix`:`Remix ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
 
     // Save the draft. We can't reuse saveDraft() directly because state hasn't
-    // flushed yet — call the API with the assembled state. Use the modal's
-    // own choices (result.*), falling back to the parent's existing state for
-    // any field the modal didn't override.
+    // flushed yet — call the API with the assembled state.
     const finalMusic = result.selectedMusic !== undefined ? result.selectedMusic : selectedMusicTrack;
-    const finalBranding = result.branding !== undefined ? result.branding : remixBranding;
     setSavingDraft(true);
     try{
       const stateBlob={
@@ -1036,7 +1028,7 @@ export default function DesignStudioV2(){
         clips,
         music:finalMusic,
         size:targetSize,
-        branding:finalBranding,
+        branding:remixBranding,
       };
       const resp=await fetch(`/api/lens/remix/drafts`,{
         method:"POST",
@@ -1698,8 +1690,6 @@ export default function DesignStudioV2(){
         )}
         {!remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:96,height:96,borderRadius:"50%",background:"rgba(0,0,0,0.55)",border:"3px solid rgba(255,255,255,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",zIndex:5}}><Play size={42} color="#fff" style={{marginLeft:5}}/></button>}
         {remixPlaying&&<button onClick={toggleRemixPlayback} style={{position:"absolute",inset:0,background:"transparent",border:"none",cursor:"pointer",zIndex:5}}/>}
-        <div style={{position:"absolute",top:16,right:16,padding:"6px 14px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:14,color:"#fff",fontWeight:700,fontFamily:"var(--sf)",zIndex:4}}>{Math.round(remixPlaybackTime)}s / {Math.round(remixTotalDuration)}s</div>
-        <div style={{position:"absolute",top:16,left:16,padding:"5px 12px",borderRadius:8,backgroundColor:"rgba(0,0,0,0.7)",fontSize:12,color:"#fff",fontWeight:600,fontFamily:"var(--sf)",maxWidth:"60%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",zIndex:4}}>{currentClip.label}</div>
         {remixBranding&&isLensSubscriber&&<div data-branding-card style={{display:"none",position:"absolute",top:0,left:0}}><BrandingCardTemplate orientation={BRAND_ORIENTATIONS[0]} logo={logo} headshot={headshot} agentName={agentName} phone={phone} email={agentEmail} brokerage={brokerage} tagline="" website="" bgColor={barColor} accentColor={accentColor} fontFamily={fontFamily}/></div>}
       </div>;
     }
@@ -1982,10 +1972,14 @@ export default function DesignStudioV2(){
                         fontFamily:"var(--sf)",
                         boxShadow:isCurrent?`0 0 0 2px ${p.cardTheme.gradientFrom}40`:"none",
                         transition:"all 0.15s",
+                        display:"flex",
+                        flexDirection:"column" as const,
                       }}
                     >
-                      {/* Thumbnail — themed gradient SVG */}
-                      <div style={{position:"relative",aspectRatio:"4/3",background:`linear-gradient(135deg, ${p.cardTheme.gradientFrom}, ${p.cardTheme.gradientTo})`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {/* Thumbnail — themed gradient SVG. flexShrink:0 anchors it
+                          to the top of the card so when description text varies
+                          and the grid stretches the cell, no black bar appears. */}
+                      <div style={{position:"relative",aspectRatio:"4/3",background:`linear-gradient(135deg, ${p.cardTheme.gradientFrom}, ${p.cardTheme.gradientTo})`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,width:"100%"}}>
                         <svg viewBox="0 0 100 75" style={{width:"55%",height:"55%",opacity:0.95}} xmlns="http://www.w3.org/2000/svg">
                           {/* Decorative film/play motif */}
                           <rect x="8" y="14" width="84" height="48" rx="5" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
@@ -2001,7 +1995,7 @@ export default function DesignStudioV2(){
                         )}
                       </div>
                       {/* Card body */}
-                      <div style={{padding:"12px 14px"}}>
+                      <div style={{padding:"12px 14px",flex:1}}>
                         <p style={{fontSize:18,fontWeight:800,color:"var(--st)",margin:0,fontFamily:"var(--sf)",lineHeight:1.2}}>{p.displayName}</p>
                         <p style={{fontSize:14,color:"var(--std)",margin:0,marginTop:5,lineHeight:1.4,minHeight:38,overflow:"hidden"}}>{p.description}</p>
                         <p style={{fontSize:13,color:"var(--std)",margin:0,marginTop:6,fontWeight:600,opacity:0.7}}>
@@ -2452,8 +2446,6 @@ export default function DesignStudioV2(){
       {showPresetModal&&(()=>{
         const{primary,cross}=buildPresetClipPools();
         const propName=selectedPropertyId?(userProperties.find((p:any)=>p.id===selectedPropertyId)?.address||null):null;
-        const initSize=(remixSize==="story"||remixSize==="square"||remixSize==="landscape")?remixSize:undefined;
-        const initFont=(fontId==="serif"||fontId==="sans"||fontId==="modern"||fontId==="elegant")?fontId:undefined;
         return(
           <RemixPresetModal
             presetId={showPresetModal}
@@ -2464,9 +2456,6 @@ export default function DesignStudioV2(){
             brokenSourceUrls={brokenSourceUrls}
             isLensSubscriber={isLensSubscriber}
             initialMusic={selectedMusicTrack}
-            initialOutputSize={initSize}
-            initialBranding={remixBranding}
-            initialFontId={initFont}
             onClose={()=>setShowPresetModal(null)}
             onGenerate={(result)=>buildDraftFromPreset(result,true)}
             onEditManually={(result)=>buildDraftFromPreset(result,false)}
