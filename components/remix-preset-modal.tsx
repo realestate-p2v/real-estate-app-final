@@ -16,10 +16,10 @@
 // - Switch-preset confirmation lives in the PARENT, not here. The modal
 //   doesn't know about currentPresetMeta. It just opens cleanly.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   X, Check, Plus, Film, Sparkles, AlertTriangle, Lock,
-  ArrowRight, Shuffle, Pencil, ChevronDown,
+  ArrowRight, Shuffle, Pencil, ChevronDown, Music, Type, Layers, Loader2,
 } from "lucide-react";
 import {
   PRESETS,
@@ -50,6 +50,20 @@ export type RemixSourceClip = {
   propertyDisplayName: string;  // for cross-property labeling in picker
 };
 
+// Music track shape — matches the parent's `selectedMusicTrack` shape
+// (from /api/generate-music?library=true).
+export type ModalMusicTrack = {
+  id: string;
+  url: string;
+  name: string;
+};
+
+// Output size IDs — must match REMIX_SIZES in page.tsx.
+export type ModalOutputSize = "landscape" | "story" | "square";
+
+// Font IDs — must match FONT_OPTIONS in page.tsx.
+export type ModalFontId = "serif" | "sans" | "modern" | "elegant";
+
 // What the modal emits to parent on Generate. One entry per chosen slot,
 // in slot order (extras appended at end). Parent maps these into RemixClips.
 export type GeneratedSlot = {
@@ -63,6 +77,13 @@ export type GenerateResult = {
   slots: GeneratedSlot[];
   inputs: PresetInputs;
   pace: PaceId;
+  // Style + music overrides chosen in the modal. Parent applies these to
+  // remixSize / selectedMusicTrack / brandingFlag / fontId. All optional —
+  // when omitted the parent's existing state stays put.
+  outputSize?: ModalOutputSize;
+  selectedMusic?: ModalMusicTrack | null; // null explicitly clears music
+  branding?: boolean;
+  fontId?: ModalFontId;
   // For naming the resulting draft.
   presetId: RemixPresetId;
   propertyDisplayName: string | null;
@@ -80,11 +101,60 @@ type Props = {
                                   // here we use sourceUrl as the equivalent key
   brokenSourceUrls: Set<string>;  // alternative key — pass either or both
   isLensSubscriber: boolean;
+  // Initial music + style values from the parent. Allow the modal to start
+  // with the parent's current selections (so opening the modal doesn't clobber
+  // a music track the agent already picked in the rail). Falsy = use preset defaults.
+  initialMusic?: ModalMusicTrack | null;
+  initialOutputSize?: ModalOutputSize;
+  initialBranding?: boolean;
+  initialFontId?: ModalFontId;
   onClose(): void;
   onGenerate(result: GenerateResult): void;
   // Manual-mode downgrade: close modal and pass the chosen slots without
   // preset metadata so the parent loads them as a vanilla manual draft.
   onEditManually(result: GenerateResult): void;
+};
+
+// ─── Static config (mirrors page.tsx) ────────────────────────────────────────
+
+// Must mirror REMIX_SIZES in page.tsx.
+const SIZE_OPTIONS: { id: ModalOutputSize; label: string; sublabel: string }[] = [
+  { id: "story", label: "Reel", sublabel: "9:16" },
+  { id: "square", label: "Square", sublabel: "1:1" },
+  { id: "landscape", label: "Wide", sublabel: "16:9" },
+];
+
+// Must mirror FONT_OPTIONS in page.tsx.
+const MODAL_FONT_OPTIONS: {
+  id: ModalFontId;
+  label: string;
+  family: string;
+  sample: string;
+}[] = [
+  { id: "serif", label: "Classic", family: "Georgia, 'Times New Roman', serif", sample: "Aa" },
+  { id: "sans", label: "Clean", family: "'Helvetica Neue', Arial, sans-serif", sample: "Aa" },
+  { id: "modern", label: "Modern", family: "'Trebuchet MS', 'Gill Sans', sans-serif", sample: "Aa" },
+  { id: "elegant", label: "Elegant", family: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", sample: "Aa" },
+];
+
+// Music vibe options — must match VIBES in page.tsx.
+const MUSIC_VIBES: { key: string; label: string }[] = [
+  { key: "", label: "All" },
+  { key: "upbeat_modern", label: "Upbeat" },
+  { key: "chill_tropical", label: "Chill" },
+  { key: "energetic_pop", label: "Energy" },
+  { key: "elegant_classical", label: "Elegant" },
+  { key: "warm_acoustic", label: "Acoustic" },
+  { key: "bold_cinematic", label: "Cinematic" },
+  { key: "smooth_jazz", label: "Jazz" },
+  { key: "ambient", label: "Ambient" },
+];
+
+type MusicTrackRecord = {
+  id: string;
+  display_name: string;
+  file_url: string;
+  duration_seconds?: number;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -155,6 +225,10 @@ export default function RemixPresetModal(props: Props) {
     selectedPropertyDisplayName,
     brokenSourceUrls,
     isLensSubscriber,
+    initialMusic,
+    initialOutputSize,
+    initialBranding,
+    initialFontId,
     onClose,
     onGenerate,
     onEditManually,
@@ -181,12 +255,99 @@ export default function RemixPresetModal(props: Props) {
   // Per-draft pace (Fast/Medium/Slow). Persists into PresetDraftMeta.
   const [pace, setPace] = useState<PaceId>("medium");
 
+  // ── Style overrides ─────────────────────────────────────────────────────
+  // Initialize from parent's current state if provided, otherwise use the
+  // preset's defaults. Output size: prefer parent's current pick, else preset.
+  const [outputSize, setOutputSize] = useState<ModalOutputSize>(() => {
+    if (initialOutputSize) return initialOutputSize;
+    if (preset.outputSizeDefault === "portrait") return "story";
+    if (preset.outputSizeDefault === "landscape") return "landscape";
+    return "square";
+  });
+  const [branding, setBranding] = useState<boolean>(initialBranding ?? true);
+  const [fontId, setFontId] = useState<ModalFontId>(initialFontId ?? "sans");
+
+  // ── Music ───────────────────────────────────────────────────────────────
+  const [selectedMusic, setSelectedMusic] = useState<ModalMusicTrack | null>(
+    initialMusic ?? null
+  );
+  const [musicExpanded, setMusicExpanded] = useState(false);
+  const [musicTracks, setMusicTracks] = useState<MusicTrackRecord[]>([]);
+  const [musicLoading, setMusicLoading] = useState(false);
+  // Default vibe = preset's recommendation. Agent can change.
+  const [musicVibe, setMusicVibe] = useState<string>(preset.musicVibeDefault);
+  const [musicLoaded, setMusicLoaded] = useState(false); // gate against fetching twice
+  // Local audio for preview in the modal. Independent of parent's playback.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
   // Are we using the cross-property pool? Toggled by the under-clip warning.
   const [useCrossProperty, setUseCrossProperty] = useState(false);
 
   // Currently-open clip picker (slot index, or null).
   // -1 means "extra slot" picker.
   const [pickerForSlot, setPickerForSlot] = useState<number | null>(null);
+
+  // ── Music fetching ──────────────────────────────────────────────────────
+  // Fetch tracks for a vibe. Lazy: only runs when user expands the picker.
+  const fetchMusicTracks = async (vibe: string) => {
+    setMusicLoading(true);
+    try {
+      const resp = await fetch(`/api/generate-music?library=true&vibe=${encodeURIComponent(vibe)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setMusicTracks(data.tracks || []);
+      } else {
+        setMusicTracks([]);
+      }
+    } catch (e) {
+      console.error("[remix-preset] music fetch failed:", e);
+      setMusicTracks([]);
+    }
+    setMusicLoading(false);
+    setMusicLoaded(true);
+  };
+
+  // Lazy-load when expanded.
+  useEffect(() => {
+    if (musicExpanded && !musicLoaded) {
+      fetchMusicTracks(musicVibe);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [musicExpanded]);
+
+  // Stop preview audio when modal closes/unmounts.
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const handlePlayPreview = (id: string, url: string) => {
+    if (playingId === id) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    const a = new Audio(url);
+    a.volume = 0.7;
+    a.onended = () => setPlayingId(null);
+    a.play().catch((e) => console.error("[remix-preset] audio play failed:", e));
+    audioRef.current = a;
+    setPlayingId(id);
+  };
+
+  const handleVibeChange = (vibe: string) => {
+    setMusicVibe(vibe);
+    setMusicLoaded(false);
+    fetchMusicTracks(vibe);
+  };
 
   const isBroken = (c: RemixSourceClip) => brokenSourceUrls.has(c.url);
 
@@ -338,6 +499,10 @@ export default function RemixPresetModal(props: Props) {
       slots,
       inputs,
       pace,
+      outputSize,
+      selectedMusic,
+      branding,
+      fontId,
       presetId,
       propertyDisplayName: selectedPropertyDisplayName,
     };
@@ -894,6 +1059,503 @@ export default function RemixPresetModal(props: Props) {
                 );
               })}
             </div>
+          </div>
+
+          {/* Style cluster — Output Size + Branding + Font */}
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid var(--sbr)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            {/* Output size */}
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginBottom: 6,
+                }}
+              >
+                <Layers size={11} color="var(--std)" />
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "var(--std)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    fontFamily: "var(--sf)",
+                  }}
+                >
+                  Output size
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  borderRadius: 8,
+                  border: "1px solid var(--sbr)",
+                  overflow: "hidden",
+                }}
+              >
+                {SIZE_OPTIONS.map((s, i) => {
+                  const isActive = outputSize === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setOutputSize(s.id)}
+                      style={{
+                        flex: 1,
+                        padding: "8px 6px",
+                        border: "none",
+                        borderLeft: i > 0 ? "1px solid var(--sbr)" : "none",
+                        background: isActive
+                          ? `linear-gradient(135deg, ${preset.cardTheme.gradientFrom}, ${preset.cardTheme.gradientTo})`
+                          : "rgba(255,255,255,0.02)",
+                        color: isActive ? "#fff" : "var(--st)",
+                        cursor: "pointer",
+                        fontFamily: "var(--sf)",
+                      }}
+                    >
+                      <div style={{ fontSize: 10, fontWeight: 700 }}>
+                        {s.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 9,
+                          opacity: 0.75,
+                          marginTop: 1,
+                        }}
+                      >
+                        {s.sublabel}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Branding toggle */}
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: 32,
+                  height: 18,
+                  borderRadius: 99,
+                  background: branding ? "var(--sa)" : "rgba(255,255,255,0.1)",
+                  border: "1px solid var(--sbr)",
+                  flexShrink: 0,
+                  transition: "background 0.15s",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 1,
+                    left: branding ? 15 : 1,
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    background: "#fff",
+                    transition: "left 0.15s",
+                  }}
+                />
+              </div>
+              <input
+                type="checkbox"
+                checked={branding}
+                onChange={(e) => setBranding(e.target.checked)}
+                style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--st)",
+                    margin: 0,
+                    fontFamily: "var(--sf)",
+                  }}
+                >
+                  Branding overlay
+                </p>
+                <p
+                  style={{
+                    fontSize: 10,
+                    color: "var(--std)",
+                    margin: 0,
+                    marginTop: 1,
+                    fontFamily: "var(--sf)",
+                  }}
+                >
+                  Show your name and contact on the final slide
+                </p>
+              </div>
+            </label>
+
+            {/* Font */}
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginBottom: 6,
+                }}
+              >
+                <Type size={11} color="var(--std)" />
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "var(--std)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    fontFamily: "var(--sf)",
+                  }}
+                >
+                  Font
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  gap: 4,
+                }}
+              >
+                {MODAL_FONT_OPTIONS.map((f) => {
+                  const isActive = fontId === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => setFontId(f.id)}
+                      style={{
+                        padding: "6px 4px",
+                        borderRadius: 7,
+                        border: isActive
+                          ? `1px solid ${preset.cardTheme.gradientFrom}`
+                          : "1px solid var(--sbr)",
+                        background: isActive
+                          ? `${preset.cardTheme.gradientFrom}1a`
+                          : "rgba(255,255,255,0.02)",
+                        cursor: "pointer",
+                        fontFamily: "var(--sf)",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "var(--std)",
+                        }}
+                      >
+                        {f.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: "var(--st)",
+                          marginTop: 2,
+                          fontFamily: f.family,
+                        }}
+                      >
+                        {f.sample}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Music section */}
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid var(--sbr)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Music size={14} color="var(--std)" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--st)",
+                    margin: 0,
+                    fontFamily: "var(--sf)",
+                  }}
+                >
+                  Music
+                </p>
+                <p
+                  style={{
+                    fontSize: 10,
+                    color: "var(--std)",
+                    margin: 0,
+                    marginTop: 1,
+                    fontFamily: "var(--sf)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {selectedMusic
+                    ? selectedMusic.name
+                    : `Default for this preset (${
+                        MUSIC_VIBES.find((v) => v.key === preset.musicVibeDefault)
+                          ?.label || "Vibe"
+                      })`}
+                </p>
+              </div>
+              {selectedMusic && (
+                <button
+                  onClick={() => {
+                    setSelectedMusic(null);
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      setPlayingId(null);
+                    }
+                  }}
+                  style={{
+                    fontSize: 10,
+                    color: "var(--std)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "var(--sf)",
+                    textDecoration: "underline",
+                    flexShrink: 0,
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={() => setMusicExpanded((v) => !v)}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 7,
+                  border: "1px solid var(--sbr)",
+                  background: musicExpanded
+                    ? `${preset.cardTheme.gradientFrom}1a`
+                    : "rgba(255,255,255,0.04)",
+                  color: "var(--st)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "var(--sf)",
+                  flexShrink: 0,
+                }}
+              >
+                {musicExpanded ? "Close" : "Change"}
+              </button>
+            </div>
+
+            {musicExpanded && (
+              <div style={{ marginTop: 12 }}>
+                {/* Vibe filter */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 4,
+                    marginBottom: 10,
+                  }}
+                >
+                  {MUSIC_VIBES.map((v) => {
+                    const isActive = musicVibe === v.key;
+                    return (
+                      <button
+                        key={v.key}
+                        onClick={() => handleVibeChange(v.key)}
+                        style={{
+                          padding: "4px 9px",
+                          borderRadius: 6,
+                          border: isActive
+                            ? `1px solid ${preset.cardTheme.gradientFrom}`
+                            : "1px solid rgba(255,255,255,0.1)",
+                          background: isActive
+                            ? `${preset.cardTheme.gradientFrom}1a`
+                            : "none",
+                          color: isActive
+                            ? preset.cardTheme.gradientFrom
+                            : "var(--std)",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "var(--sf)",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {v.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Track list */}
+                {musicLoading ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      padding: "16px 0",
+                    }}
+                  >
+                    <Loader2 size={16} color="var(--std)" className="animate-spin" />
+                  </div>
+                ) : musicTracks.length === 0 ? (
+                  <p
+                    style={{
+                      fontSize: 10,
+                      color: "var(--std)",
+                      textAlign: "center",
+                      padding: "12px 0",
+                      margin: 0,
+                      fontFamily: "var(--sf)",
+                    }}
+                  >
+                    No tracks for this vibe.
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      maxHeight: 200,
+                      overflowY: "auto",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                    }}
+                  >
+                    {musicTracks.map((t) => {
+                      const isSelected = selectedMusic?.id === t.id;
+                      const isPlaying = playingId === t.id;
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() =>
+                            setSelectedMusic({
+                              id: t.id,
+                              url: t.file_url,
+                              name: t.display_name,
+                            })
+                          }
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "7px 9px",
+                            borderRadius: 8,
+                            border: isSelected
+                              ? `1px solid ${preset.cardTheme.gradientFrom}`
+                              : "1px solid rgba(255,255,255,0.06)",
+                            background: isSelected
+                              ? `${preset.cardTheme.gradientFrom}14`
+                              : "rgba(255,255,255,0.02)",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlayPreview(t.id, t.file_url);
+                            }}
+                            aria-label={isPlaying ? "Stop preview" : "Play preview"}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              background: isPlaying
+                                ? preset.cardTheme.gradientFrom
+                                : "rgba(255,255,255,0.08)",
+                              border: "none",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 9,
+                                color: isPlaying ? "#fff" : "var(--std)",
+                                fontWeight: 700,
+                                marginLeft: isPlaying ? 0 : 1,
+                              }}
+                            >
+                              {isPlaying ? "■" : "▶"}
+                            </span>
+                          </button>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "var(--st)",
+                              flex: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              fontFamily: "var(--sf)",
+                            }}
+                          >
+                            {t.display_name}
+                          </span>
+                          {t.duration_seconds != null && (
+                            <span
+                              style={{
+                                fontSize: 9,
+                                color: "var(--std)",
+                                flexShrink: 0,
+                                fontFamily: "var(--sf)",
+                              }}
+                            >
+                              {t.duration_seconds}s
+                            </span>
+                          )}
+                          {isSelected && (
+                            <Check
+                              size={12}
+                              color={preset.cardTheme.gradientFrom}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Slot rows */}
